@@ -1,0 +1,7 @@
+server:
+  port: 5000
+  privK: "serverprivatekey"
+geth:
+  url: "https://ropsten.infura.io/apitoken"
+contractsAddress:
+  identities: "identitiescontractaddress"
