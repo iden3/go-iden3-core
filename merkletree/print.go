@@ -39,7 +39,7 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 		fmt.Println(EmptyNodeValue.Bytes())
 	}
 	iLevel--
-	if len(node.ChildR) > 0 && iLevel > maxLevel && nodeType != byte(emptyNodeType) && nodeType != byte(finalNodeType) {
+	if len(node.ChildR) > 0 && iLevel > maxLevel && nodeType != byte(EmptyNodeType) && nodeType != byte(finalNodeType) {
 		mt.printLevel(node.ChildL, iLevel, maxLevel)
 		mt.printLevel(node.ChildR, iLevel, maxLevel)
 	}

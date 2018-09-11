@@ -8,7 +8,7 @@ import (
 
 const (
 	// emptyNodeType indicates the type of an EmptyNodeValue Node
-	emptyNodeType = 00
+	EmptyNodeType = 00
 	// normalNodeType indicates the type of a middle Node
 	normalNodeType = 01
 	// finalNodeType indicates the type of middle Node that is in an optimized branch, then in the value contains the value of the final leaf node of that branch
