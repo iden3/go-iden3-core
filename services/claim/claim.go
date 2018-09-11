@@ -101,11 +101,10 @@ func ResolvAssignNameClaim(mt *merkletree.MerkleTree, nameid, namespace string) 
 	domain := s[1]
 
 	// build the AssignNameClaim Partial with the given data of the Index
-	namespaceHash := merkletree.HashBytes([]byte(namespace))
 	nameHash := merkletree.HashBytes([]byte(name))
 	domainHash := merkletree.HashBytes([]byte(domain))
 	// domainHash := merkletree.HashBytes([]byte(domain))
-	claimPartial := core.NewAssignNameClaim(namespaceHash, nameHash, domainHash, common.Address{})
+	claimPartial := core.NewAssignNameClaim(namespace, nameHash, domainHash, common.Address{})
 	version, err := GetNextVersion(mt, claimPartial.Hi())
 	if err != nil {
 		return core.AssignNameClaim{}, err
@@ -152,8 +151,7 @@ func AddAuthorizeKSignClaim(mt *merkletree.MerkleTree, ethID common.Address, aut
 	}
 
 	// create new SetRootClaim
-	namespaceHash := merkletree.HashBytes([]byte("iden3.io"))
-	setRootClaim := core.NewSetRootClaim(namespaceHash, authorizeKSignClaimMsg.AuthorizeKSignClaim.ExtraIndex.KeyToAuthorize, userMT.Root())
+	setRootClaim := core.NewSetRootClaim("iden3.io", authorizeKSignClaimMsg.AuthorizeKSignClaim.ExtraIndex.KeyToAuthorize, userMT.Root())
 	// get next version of the claim
 	version, err := GetNextVersion(mt, setRootClaim.Hi())
 	if err != nil {
@@ -212,8 +210,7 @@ func AddUserIDClaim(mt *merkletree.MerkleTree, namespace string, ethID common.Ad
 
 	// setRootClaim of the user in the Relay Merkle Tree
 	// create new SetRootClaim
-	namespaceHash := merkletree.HashBytes([]byte(namespace))
-	setRootClaim := core.NewSetRootClaim(namespaceHash, ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
 	setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim)
@@ -250,8 +247,7 @@ func GetIDRoot(mt *merkletree.MerkleTree, ethID common.Address) (merkletree.Hash
 		return merkletree.Hash{}, []byte{}, err
 	}
 	// build SetRootClaim of the user id
-	namespaceHash := merkletree.HashBytes([]byte("iden3.io"))
-	setRootClaim := core.NewSetRootClaim(namespaceHash, ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
 	// get proof of SetRootProof in the Relay tree
 	idRootProof, err := mt.GenerateProof(setRootClaim)
 	if err != nil {
@@ -284,8 +280,7 @@ func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Addr
 		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
 	}
 	// build SetRootClaim
-	namespaceHash := merkletree.HashBytes([]byte(namespace))
-	setRootClaim := core.NewSetRootClaim(namespaceHash, ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
 	setRootClaim.BaseIndex.Version++ // TODO autoincrement version
 	// get the proof of the SetRootClaim in the Relay Tree
 	relayProof, err := mt.GenerateProof(setRootClaim)

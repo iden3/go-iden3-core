@@ -12,7 +12,7 @@ import (
 	"github.com/iden3/go-iden3/services/claim"
 	"github.com/iden3/go-iden3/utils"
 )
-
+ 
 // VinculateID creates an adds a AssignNameClaim vinculating a name and an address, into the merkletree
 func VinculateID(mt *merkletree.MerkleTree, vinculateIDMsg VinculateIDMsg, identitiesContractHex string, relayPrivK *ecdsa.PrivateKey) (core.AssignNameClaim, error) {
 	// TODO calculate EthID from the AssignNameClaim.RawIdentityTx
@@ -30,10 +30,9 @@ func VinculateID(mt *merkletree.MerkleTree, vinculateIDMsg VinculateIDMsg, ident
 		return core.AssignNameClaim{}, errors.New("signature can not be verified")
 	}
 	// add AssignNameClaim to merkle tree
-	namespaceHash := merkletree.HashBytes([]byte(config.C.Namespace))
 	nameHash := merkletree.HashBytes([]byte(vinculateIDMsg.Msg.Name))
 	domainHash := merkletree.HashBytes([]byte(config.C.Domain))
-	assignNameClaim := core.NewAssignNameClaim(namespaceHash, nameHash, domainHash, ethID)
+	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethID)
 	// signature, err := utils.Sign(assignNameClaim.Ht(), relayPrivK)
 	// if err != nil {
 	// 	return core.AssignNameClaim{}, errors.New("error signing")

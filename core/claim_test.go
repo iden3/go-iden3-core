@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io/ioutil"
 	"testing"
 
@@ -59,7 +60,7 @@ func TestClaimGenerationAndParse(t *testing.T) {
 }
 
 func TestAssignNameClaim(t *testing.T) {
-	assignNameClaim := NewAssignNameClaim(merkletree.HashBytes([]byte("iden3.io")), merkletree.HashBytes([]byte("john")), merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
+	assignNameClaim := NewAssignNameClaim("iden3.io", merkletree.HashBytes([]byte("john")), merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
 	assignNameClaimParsed, err := ParseAssignNameClaimBytes(assignNameClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(assignNameClaimParsed.Bytes(), assignNameClaim.Bytes()) {
@@ -84,7 +85,7 @@ func TestAuthorizeKSign(t *testing.T) {
 
 }
 func TestSetRootClaim(t *testing.T) {
-	setRootClaim := NewSetRootClaim(merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), merkletree.HashBytes([]byte("root of the MT")))
+	setRootClaim := NewSetRootClaim("iden3.io", common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), merkletree.HashBytes([]byte("root of the MT")))
 	setRootClaimParsed, err := ParseSetRootClaimBytes(setRootClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(setRootClaimParsed.Bytes(), setRootClaim.Bytes()) {
@@ -96,7 +97,7 @@ func TestSetRootClaim(t *testing.T) {
 	assert.Equal(t, "0x9dbb985810faf851379c8c66f00d62fc9f346b8c3269774820bdd833b02a1cea", setRootClaim.Ht().Hex())
 }
 
-func TestClaimInterop(t *testing.T) {
+func TestKSignClaimInterop(t *testing.T) {
 
 	// address 0xee602447b5a75cf4f25367f5d199b860844d10c4
 	// pvk     8A85AAA2A8CE0D24F66D3EAA7F9F501F34992BACA0FF942A8EDF7ECE6B91F713
@@ -140,4 +141,58 @@ func TestClaimInterop(t *testing.T) {
 	assert.Equal(t, "0xc98ce0dbbf4cd1fc05f2093b2ebb8b2fc4699cb4cde2b8e4c0a37f957c72e64f", ksignClaim.Ht().Hex())
 	assert.Equal(t, "0x562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", root.Hex())
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
+}
+
+func TestSetRootClaimInterop(t *testing.T) {
+
+	dir, err := ioutil.TempDir("", "db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sto, err := merkletree.NewLevelDbStorage(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sto.Close()
+
+	mt, err := merkletree.New(sto, 140)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	setRootClaim := NewSetRootClaim(
+		"iden3.io",
+		common.HexToAddress("0xd79ae0a65e7dd29db1eac700368e693de09610b8"),
+		hexToHash("0x562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3"),
+	)
+
+	if err = mt.Add(setRootClaim); err != nil {
+		t.Fatal(err)
+	}
+	root := mt.Root()
+	proof, err := mt.GenerateProof(setRootClaim)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.True(t, merkletree.CheckProof(root, proof, setRootClaim, 140))
+	assert.Equal(t, uint32(0x58), setRootClaim.IndexLength())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000d79ae0a65e7dd29db1eac700368e693de09610b8562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", common3.BytesToHex(setRootClaim.Bytes()))
+	assert.Equal(t, "0xaaad7b30f89608e270551f207688ea8f112bb3416e4ca07018d9e80bb05f26a8", setRootClaim.Hi().Hex())
+	assert.Equal(t, "0xfa9cd70ad96d731f5d24d38baeba7a6a8d89c6910bdc430793b870a39d2f81d7", setRootClaim.Ht().Hex())
+	assert.Equal(t, "0x1dce20a20a0f93a139de6069dcfb16b91f0a7d3a540eee0a57d1fa78c2f401c3", root.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
+}
+
+// HexToBytes converts from a hex string into an array of bytes
+func hexToHash(hexstr string) merkletree.Hash {
+	var h merkletree.Hash
+	b, err := hex.DecodeString(hexstr[2:])
+	if err != nil {
+		panic(err)
+	}
+	if len(b) != len(h) {
+		panic("Invalid hash length")
+	}
+	copy(h[:], b[:])
+	return h
 }

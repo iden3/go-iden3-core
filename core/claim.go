@@ -334,9 +334,9 @@ func NewClaimDefault(namespaceStr, typeStr string, data []byte) ClaimDefault {
 }
 
 // NewAssignNameClaim returns a AssignNameClaim object with the given parameters
-func NewAssignNameClaim(namespaceStr, name, domain merkletree.Hash, ethID common.Address) AssignNameClaim {
+func NewAssignNameClaim(namespaceStr string, name, domain merkletree.Hash, ethID common.Address) AssignNameClaim {
 	var c AssignNameClaim
-	c.BaseIndex.Namespace = namespaceStr
+	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
 	c.BaseIndex.Type = assignnameTypeHash
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.Name = name
@@ -360,9 +360,9 @@ func NewAuthorizeKSignClaim(namespaceStr string, keyToAuthorize common.Address, 
 }
 
 // NewSetRootClaim returns a SetRootClaim object with the given parameters
-func NewSetRootClaim(namespaceStr merkletree.Hash, ethID common.Address, root merkletree.Hash) SetRootClaim {
+func NewSetRootClaim(namespaceStr string, ethID common.Address, root merkletree.Hash) SetRootClaim {
 	var c SetRootClaim
-	c.BaseIndex.Namespace = namespaceStr
+	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
 	c.BaseIndex.Type = setRootTypeHash
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.EthID = ethID
