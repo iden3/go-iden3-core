@@ -1,5 +1,6 @@
 package namesrv
 
+/*
 import (
 	"io/ioutil"
 	"testing"
@@ -71,3 +72,4 @@ func TestVinculateID(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "0xaa5a987f33c986616fe49c291448ddde00ef80b555fdeed35fe4d87b3f7445e7", assignNameClaim.Ht().Hex())
 }
+*/
