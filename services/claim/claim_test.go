@@ -1,18 +1,14 @@
 package claimsrv
 
-/*
 import (
-	"bytes"
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3/cmd/id/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/web3"
-	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -87,6 +83,25 @@ func TestGetNextVersion(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(0x2000002), version)
 }
+func TestGetNextVersionClaim(t *testing.T) {
+	initializeEnvironment()
+	claim := core.NewClaimDefault("c1", "default", []byte("c1"))
+
+	err := mt.Add(claim)
+	assert.Nil(t, err)
+
+	version, err := GetNextVersion(mt, claim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), version)
+
+	value, mp, root, err := GetNextVersionClaim(mt, claim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, "0x7c1b16802b304761acd81e033c1db5a9721da4b32959e4a8361983cfacacbbeccfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000016331", common3.BytesToHex(value.Bytes()))
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(mp))
+	assert.Equal(t, "0x8f021d00c39dcd768974ddfe0d21f5d13f7215bea28db1f1cb29842b111332e7", root.Hex())
+}
+
+/*
 func TestAssignNameClaim(t *testing.T) {
 	initializeEnvironment()
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
