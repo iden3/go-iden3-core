@@ -10,6 +10,8 @@ Go implementation of the iden3 system.
 $ go get github.com/iden3/go-iden3
 ```
 
+## Usage
+- Relay Documentation: https://github.com/iden3/go-iden3/blob/master/Relay.md
 
 ## Testing
 `go test ./...`

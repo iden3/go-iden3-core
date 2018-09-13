@@ -96,9 +96,9 @@ func handlePostClaim(c *gin.Context) {
 		}
 		// return claim with proofs and signatures
 		c.JSON(200, gin.H{
-			"claimProof":  claimProof,
+			"claimProof":  common3.BytesToHex(claimProof),
 			"root":        mt.Root().Hex(),
-			"idRootProof": idRootProof,
+			"idRootProof": common3.BytesToHex(idRootProof),
 		})
 		return
 	case merkletree.HashBytes([]byte("setroot")).Hex():
@@ -117,9 +117,9 @@ func handleGetIDRoot(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"root":        mt.Root().Hex(), // relay root
-		"idRoot":      idRoot,          // user id root
-		"idRootProof": idRootProof,     // user id root proof in the relay merkletree
+		"root":        mt.Root().Hex(),                 // relay root
+		"idRoot":      idRoot.Hex(),                    // user id root
+		"idRootProof": common3.BytesToHex(idRootProof), // user id root proof in the relay merkletree
 	})
 	return
 }
@@ -143,7 +143,7 @@ func handleGetClaimByHi(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"claim":        common3.BytesToHex(claim.Bytes()),
 		"idProof":      common3.BytesToHex(idProof),
-		"setClaimRoot": common3.BytesToHex(setClaimRoot.Bytes()),
+		"setRootClaim": common3.BytesToHex(setClaimRoot.Bytes()),
 		"idRoot":       idRoot.Hex(),
 		"relayProof":   common3.BytesToHex(relayProof),
 		"relayRoot":    relayRoot.Hex(),

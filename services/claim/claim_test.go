@@ -104,11 +104,15 @@ func TestGetNextVersionClaim(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
-	value, mp, root, err := GetNextVersionClaim(mt, claim.Hi())
+	nextVersionValue, mp, root, err := GetNextVersionClaim(mt, claim.Hi())
+	// color.Yellow("nextversion hash: " + merkletree.HashBytes(nextVersionValue.Bytes()).Hex())
 	assert.Nil(t, err)
-	assert.Equal(t, "0x7c1b16802b304761acd81e033c1db5a9721da4b32959e4a8361983cfacacbbeccfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000016331", common3.BytesToHex(value.Bytes()))
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(mp))
+	assert.Equal(t, "0x7c1b16802b304761acd81e033c1db5a9721da4b32959e4a8361983cfacacbbeccfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000016331", common3.BytesToHex(nextVersionValue.Bytes()))
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(mp))
 	assert.Equal(t, "0x8f021d00c39dcd768974ddfe0d21f5d13f7215bea28db1f1cb29842b111332e7", root.Hex())
+	// mt.PrintFullMT()
+	verified := merkletree.CheckProofOfEmpty(root, mp, nextVersionValue, mt.NumLevels())
+	assert.True(t, verified)
 }
 
 /*

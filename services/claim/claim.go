@@ -62,7 +62,9 @@ func GetNextVersionClaim(mt *merkletree.MerkleTree, hi merkletree.Hash) (merklet
 		return value, []byte{}, merkletree.Hash{}, err
 	}
 	mp, err := mt.GenerateProof(value)
-
+	if err != nil {
+		return value, []byte{}, merkletree.Hash{}, err
+	}
 	return value, mp, mt.Root(), nil
 }
 
