@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -159,9 +158,8 @@ func AddAuthorizeKSignClaim(mt *merkletree.MerkleTree, ethID common.Address, aut
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
-	msgHash := authorizeKSignClaimMsg.AuthorizeKSignClaim.Ht()
-	fmt.Println(common3.BytesToHex(signature))
-	fmt.Println(ethID.Hex())
+	msgHash := utils.EthHash(authorizeKSignClaimMsg.AuthorizeKSignClaim.Bytes())
+	signature[64] -= 27
 	if !utils.VerifySig(ethID, signature, msgHash[:]) {
 		return []byte{}, []byte{}, errors.New("signature can not be verified")
 	}

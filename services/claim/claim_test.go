@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/iden3/go-iden3/cmd/id/config"
+	"github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
@@ -18,6 +18,7 @@ const (
 )
 
 var mt *merkletree.MerkleTree
+var c config.Config
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -32,9 +33,18 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	mt, err := merkletree.New(sto, numLevels)
 	return mt, err
 }
+func loadConfig() {
+	c.Server.Port = "5000"
+	c.Server.PrivK = "d7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
+	c.Geth.URL = ""
+	c.ContractsAddress.Identities = "0x101d2fa51f8259df207115af9eaa73f3f4e52e60"
+	c.Domain = "iden3.io"
+	c.Namespace = "iden3.io"
+}
 func initializeEnvironment() error {
 	// initialize
-	config.MustRead("../../cmd/relay", "config")
+	loadConfig()
+
 	// MerkleTree leveldb
 	var err error
 	mt, err = newTestingMerkle(140)
