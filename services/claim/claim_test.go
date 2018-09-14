@@ -1,18 +1,15 @@
 package claimsrv
 
-/*
 import (
-	"bytes"
 	"io/ioutil"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/cmd/id/config"
+	"github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/web3"
-	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,6 +19,7 @@ const (
 )
 
 var mt *merkletree.MerkleTree
+var c config.Config
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -36,9 +34,18 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	mt, err := merkletree.New(sto, numLevels)
 	return mt, err
 }
+func loadConfig() {
+	c.Server.Port = "5000"
+	c.Server.PrivK = "d7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
+	c.Geth.URL = ""
+	c.ContractsAddress.Identities = "0x101d2fa51f8259df207115af9eaa73f3f4e52e60"
+	c.Domain = "iden3.io"
+	c.Namespace = "iden3.io"
+}
 func initializeEnvironment() error {
 	// initialize
-	config.MustRead("../../cmd/relay", "config")
+	loadConfig()
+
 	// MerkleTree leveldb
 	var err error
 	mt, err = newTestingMerkle(140)
@@ -87,6 +94,67 @@ func TestGetNextVersion(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(0x2000002), version)
 }
+
+func TestGetNonRevocationProof(t *testing.T) {
+	initializeEnvironment()
+	claim := core.NewClaimDefault("c1", "default", []byte("c1"))
+
+	err := mt.Add(claim)
+	assert.Nil(t, err)
+
+	version, err := GetNextVersion(mt, claim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, uint32(1), version)
+
+	nextVersionHi, mp, root, err := GetNonRevocationProof(mt, claim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, "0xa69792a4cff51f40b7a1f7ae596c6ded4aba241646a47538898f17f2a8dff647", nextVersionHi.Hex())
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(mp))
+	assert.Equal(t, "0x8f021d00c39dcd768974ddfe0d21f5d13f7215bea28db1f1cb29842b111332e7", root.Hex())
+	verified := merkletree.CheckProof(root, mp, nextVersionHi, merkletree.EmptyNodeValue, mt.NumLevels())
+	assert.True(t, verified)
+}
+
+func TestGetClaimByHi(t *testing.T) {
+	privKHex := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
+	testPrivK, err := crypto.HexToECDSA(privKHex)
+	assert.Nil(t, err)
+	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
+
+	namespace := "iden3.io"
+	claim := core.NewClaimDefault(namespace, "default", []byte("dataasdf"))
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := mt.Storage().WithPrefix(ethID.Bytes())
+	// open the MerkleTree of the user
+	userMT, err := merkletree.New(stoUserID, 140)
+	assert.Nil(t, err)
+
+	// add claim in User ID Merkle Tree
+	err = userMT.Add(claim)
+	assert.Nil(t, err)
+
+	// setRootClaim of the user in the Relay Merkle Tree
+	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
+	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
+	// add User's ID Merkle Root into the Relay's Merkle Tree
+	err = mt.Add(setRootClaim)
+	assert.Nil(t, err)
+
+	v, mp, r, sr, mpSR, rSR, hiNRv, mpNRv, hiNRsr, mpNRsr, err := GetClaimByHi(mt, namespace, ethID, claim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006461746161736466", common3.BytesToHex(v.Bytes()))
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(mp))
+	assert.Equal(t, "0x7f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", r.Hex())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000970e8128ab834e8eac17ab8e3812f010678cf7917f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", common3.BytesToHex(sr.Bytes()))
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(mpSR))
+	assert.Equal(t, "0x0ed2c466f17d854cb7f751e58592638bdacc9d5b276c3d5b43819b398fe5c9e6", rSR.Hex())
+	assert.Equal(t, "0x702dfd96be536a3f6180bf93429972e3b284dc34fec42d90c6ccf4686b015c3a", hiNRv.Hex())
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000015cfd45ddb95cccd5d20a792b23648de56679b57fe2ddeae9aa97e559aad9d533", common3.BytesToHex(mpNRv))
+	assert.Equal(t, "0xfa9174b7e62c909d3e342cb152ed70891b14ddf1aaf9ce18f7d288d2a660c8ad", hiNRsr.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000001b27fc56135bb9e92dc0a08b9d3a66a0fccb7b31adc9b220d1043e57368a77d11", common3.BytesToHex(mpNRsr))
+}
+
+/*
 func TestAssignNameClaim(t *testing.T) {
 	initializeEnvironment()
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)

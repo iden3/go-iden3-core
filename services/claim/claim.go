@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"errors"
-	"fmt"
 	"log"
 	"strings"
 
@@ -35,6 +34,41 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi merkletree.Hash) (uint32, erro
 	version++
 	// return version
 	return version, nil
+}
+
+// GetNonRevocationProof returns the next version Hi (that don't exist in the tree, it's value is Empty) with merkleproof and root
+func GetNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (merkletree.Hash, []byte, merkletree.Hash, error) {
+	var value merkletree.Value
+	// get claim value in bytes
+	b, err := mt.GetValueInPos(hi)
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, merkletree.Hash{}, err
+	}
+	// if bytes.Equal(b, merkletree.EmptyNodeValue[:]) {
+	// 	return merkletree.Hash{}, []byte{}, merkletree.Hash{}, errors.New("getting value in Hi position to generate non revocation proof, value not found in merkle tree")
+	// }
+
+	nextVersion, err := GetNextVersion(mt, hi)
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, merkletree.Hash{}, err
+	}
+
+	// get claim with version+1 from the merkletree
+	nextVersionBytes, err := core.Uint32ToEthBytes(nextVersion)
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, merkletree.Hash{}, err
+	}
+	copy(b[64:68], nextVersionBytes)
+
+	value, err = core.ParseValueFromBytes(b)
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, merkletree.Hash{}, err
+	}
+	mp, err := mt.GenerateProof(value)
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, merkletree.Hash{}, err
+	}
+	return merkletree.HashBytes(value.Bytes()[:value.IndexLength()]), mp, mt.Root(), nil
 }
 
 // AddAssignNameClaim adds AssignNameClaim into the merkletree, updates the root in the smart contract, and returns the merkle proof of the claim in the merkletree
@@ -129,9 +163,8 @@ func AddAuthorizeKSignClaim(mt *merkletree.MerkleTree, ethID common.Address, aut
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
-	msgHash := authorizeKSignClaimMsg.AuthorizeKSignClaim.Ht()
-	fmt.Println(common3.BytesToHex(signature))
-	fmt.Println(ethID.Hex())
+	msgHash := utils.EthHash(authorizeKSignClaimMsg.AuthorizeKSignClaim.Bytes())
+	signature[64] -= 27
 	if !utils.VerifySig(ethID, signature, msgHash[:]) {
 		return []byte{}, []byte{}, errors.New("signature can not be verified")
 	}
@@ -257,37 +290,53 @@ func GetIDRoot(mt *merkletree.MerkleTree, ethID common.Address) (merkletree.Hash
 }
 
 // GetClaimByHi given a Hash(index) (Hi) and an ID, returns the Claim in that Hi position inside the ID's merkletree, and the SetRootClaim with the ID's root in the Relay's merkletree
-func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Address, hi merkletree.Hash) (merkletree.Value, []byte, merkletree.Hash, merkletree.Value, []byte, merkletree.Hash, error) {
+func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Address, hi merkletree.Hash) (merkletree.Value, []byte, merkletree.Hash, merkletree.Value, []byte, merkletree.Hash,
+	merkletree.Hash, []byte, merkletree.Hash, []byte, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := mt.Storage().WithPrefix(ethID.Bytes())
+
 	// open the MerkleTree of the user
 	userMT, err := merkletree.New(stoUserID, 140)
 	if err != nil {
-		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
 	}
+
 	// get the value in the hi position
 	valueBytes, err := userMT.GetValueInPos(hi)
 	if err != nil {
-		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
 	}
 	value, err := core.ParseValueFromBytes(valueBytes)
 	if err != nil {
-		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
 	}
+
 	// get the proof of the value in the User ID Tree
 	idProof, err := userMT.GenerateProof(value)
 	if err != nil {
-		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
 	}
+
 	// build SetRootClaim
-	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
-	setRootClaim.BaseIndex.Version++ // TODO autoincrement version
+	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root()) // TODO manage version
+
 	// get the proof of the SetRootClaim in the Relay Tree
 	relayProof, err := mt.GenerateProof(setRootClaim)
 	if err != nil {
-		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, err
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
 	}
 
-	return value, idProof, userMT.Root(), setRootClaim, relayProof, mt.Root(), nil
+	// get non revocation proofs of the claim
+	hiNRValue, mpNRValue, _, err := GetNonRevocationProof(userMT, merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
+	if err != nil {
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
+	}
+	hiNRSetRootClaim, mNRSetRootClaimp, _, err := GetNonRevocationProof(mt, merkletree.HashBytes(setRootClaim.Bytes()[:setRootClaim.IndexLength()]))
+	if err != nil {
+		return nil, []byte{}, merkletree.Hash{}, nil, []byte{}, merkletree.Hash{}, merkletree.Hash{}, []byte{}, merkletree.Hash{}, []byte{}, err
+	}
+
+	return value, idProof, userMT.Root(), setRootClaim, relayProof, mt.Root(),
+		hiNRValue, mpNRValue, hiNRSetRootClaim, mNRSetRootClaimp, nil
 
 }

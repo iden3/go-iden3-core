@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/fatih/color"
@@ -33,6 +34,14 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 		// claim := core.ParseClaimDefaultBytes(nodeBytes)
 		fmt.Print("[FinalTree]:")
 		color.Cyan("final tree node: " + HashBytes(nodeBytes).Hex())
+		_, _, leafNodeBytes, err := mt.storage.Get(HashBytes(nodeBytes))
+		if err != nil {
+			color.Red(err.Error())
+		}
+		for i := mt.numLevels - 1; i > iLevel; i-- {
+			fmt.Print("	")
+		}
+		color.Cyan("					leaf value: 0x" + hex.EncodeToString(leafNodeBytes))
 	} else {
 		//EMPTY_NODE
 		fmt.Print("[EmptyBranch]:")

@@ -101,6 +101,9 @@ func (mt *MerkleTree) Add(v Value) error {
 		mt.Unlock()
 	}()
 
+	// add the leaf that we are adding
+	tx.Insert(HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+
 	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
 
@@ -198,11 +201,25 @@ func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
 	nodeHash := mt.root
 
 	for level := 0; level < mt.numLevels-1; level++ {
-		nodeType, _, nodeBytes, err := mt.storage.Get(nodeHash)
+		nodeType, indexLength, nodeBytes, err := mt.storage.Get(nodeHash)
 		if err != nil {
 			return nil, err
 		}
 		if nodeType == byte(finalNodeType) {
+			realValueInPos, err := mt.GetValueInPos(hi)
+			if err != nil {
+				return nil, err
+			}
+			// TODO valid for all levels where this condition happens
+			if level == 0 && bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
+				// get the child hash of the node where is stored the finalNode
+				hashLeaf := HashBytes(nodeBytes)
+				leafHi := HashBytes(nodeBytes[:indexLength])
+				nodeChildPath := getPath(mt.numLevels, leafHi)
+				nodeChildHash := calcHashFromLeafAndLevel(mt.NumLevels()-level-2, nodeChildPath, hashLeaf)
+				setbitmap(empties[:], uint(level))
+				siblings = append([]Hash{nodeChildHash}, siblings...)
+			}
 			break
 		}
 		node := parseNodeBytes(nodeBytes)
@@ -231,7 +248,6 @@ func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
 
 // GetValueInPos returns the merkletree value in the position of the Hash of the Index (Hi)
 func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
-
 	mt.RLock()
 	defer mt.RUnlock()
 
@@ -316,8 +332,7 @@ func (mt *MerkleTree) replaceLeaf(tx StorageTx, siblings []Hash, path []bool, ne
 }
 
 // CheckProof validates the Merkle Proof for the claimHash and root
-func CheckProof(root Hash, proof []byte, v Value, numLevels int) bool {
-
+func CheckProof(root Hash, proof []byte, hi Hash, ht Hash, numLevels int) bool {
 	var empties [32]byte
 	copy(empties[:], proof[:len(empties)])
 	hashLen := len(EmptyNodeValue)
@@ -329,35 +344,41 @@ func CheckProof(root Hash, proof []byte, v Value, numLevels int) bool {
 		siblings = append(siblings, siblingHash)
 	}
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(numLevels, hi)
-
-	nodeHash := HashBytes(v.Bytes())
+	nodeHash := ht
 	siblingUsedPos := 0
 
 	for level := numLevels - 2; level >= 0; level-- {
-
 		var sibling Hash
-
 		if testbitmap(empties[:], uint(level)) {
 			sibling = siblings[siblingUsedPos]
 			siblingUsedPos++
 		} else {
 			sibling = EmptyNodeValue
 		}
-
+		if bytes.Equal(ht.Bytes(), EmptyNodeValue[:]) {
+			// if inside, is checking Proof of a non existing element, swap nodeHash - sibling
+			siblingCopy := sibling
+			sibling = nodeHash
+			nodeHash = siblingCopy
+		}
 		// calculate the nodeHash with the current nodeHash and the sibling
+		var node treeNode
 		if path[numLevels-level-2] {
-			node := treeNode{
+			node = treeNode{
 				ChildL: sibling,
 				ChildR: nodeHash,
 			}
-			nodeHash = node.Ht()
 		} else {
-			node := treeNode{
+			node = treeNode{
 				ChildL: nodeHash,
 				ChildR: sibling,
 			}
+		}
+		// if both childs are EmptyNodeValue, the parent will be EmptyNodeValue
+		if bytes.Equal(nodeHash[:], EmptyNodeValue[:]) && bytes.Equal(sibling[:], EmptyNodeValue[:]) {
+			nodeHash = EmptyNodeValue
+		} else {
 			nodeHash = node.Ht()
 		}
 	}

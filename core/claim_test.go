@@ -133,7 +133,7 @@ func TestKSignClaimInterop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, merkletree.CheckProof(root, proof, ksignClaim, 140))
+	assert.True(t, merkletree.CheckProof(root, proof, ksignClaim.Hi(), ksignClaim.Ht(), 140))
 
 	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a05ed7726d7932a1f00000000ee602447b5a75cf4f25367f5d199b860844d10c4d6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fbdad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb3406200000000259e9d8000000000967a7600", common3.BytesToHex(ksignClaim.Bytes()))
 	assert.Equal(t, uint32(0x58), ksignClaim.IndexLength())
@@ -174,7 +174,7 @@ func TestSetRootClaimInterop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.True(t, merkletree.CheckProof(root, proof, setRootClaim, 140))
+	assert.True(t, merkletree.CheckProof(root, proof, setRootClaim.Hi(), setRootClaim.Ht(), 140))
 	assert.Equal(t, uint32(0x58), setRootClaim.IndexLength())
 	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000d79ae0a65e7dd29db1eac700368e693de09610b8562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", common3.BytesToHex(setRootClaim.Bytes()))
 	assert.Equal(t, "0xaaad7b30f89608e270551f207688ea8f112bb3416e4ca07018d9e80bb05f26a8", setRootClaim.Hi().Hex())

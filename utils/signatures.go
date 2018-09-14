@@ -19,6 +19,11 @@ func Sign(msgHash merkletree.Hash, privK *ecdsa.PrivateKey) ([]byte, error) {
 	return sig, nil
 }
 
+func EthHash(b []byte) merkletree.Hash {
+	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(b), b)
+	return merkletree.HashBytes([]byte(msg))
+}
+
 // VerifySig verifies a given signature and the msgHash with the expected address
 func VerifySig(addr common.Address, sig, msgHash []byte) bool {
 	recoveredPub, err := crypto.Ecrecover(msgHash, sig)
