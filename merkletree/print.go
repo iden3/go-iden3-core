@@ -12,7 +12,7 @@ import (
 //
 
 func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
-	for i := mt.numLevels - 1; i > iLevel; i-- {
+	for i := 0; i < iLevel; i++ {
 		fmt.Print("	")
 	}
 	fmt.Print("level ")
@@ -38,7 +38,7 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 		if err != nil {
 			color.Red(err.Error())
 		}
-		for i := mt.numLevels - 1; i > iLevel; i-- {
+		for i := 0; i < iLevel; i++ {
 			fmt.Print("	")
 		}
 		color.Cyan("					leaf value: 0x" + hex.EncodeToString(leafNodeBytes))
@@ -47,8 +47,8 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 		fmt.Print("[EmptyBranch]:")
 		fmt.Println(EmptyNodeValue.Bytes())
 	}
-	iLevel--
-	if len(node.ChildR) > 0 && iLevel > maxLevel && nodeType != byte(EmptyNodeType) && nodeType != byte(finalNodeType) {
+	iLevel++
+	if len(node.ChildR) > 0 && iLevel < maxLevel && nodeType != byte(EmptyNodeType) && nodeType != byte(finalNodeType) {
 		mt.printLevel(node.ChildL, iLevel, maxLevel)
 		mt.printLevel(node.ChildR, iLevel, maxLevel)
 	}
@@ -56,14 +56,14 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 
 // PrintFullMT prints the tree in the terminal, all the levels with all the nodes
 func (mt *MerkleTree) PrintFullMT() {
-	mt.printLevel(mt.root, mt.numLevels-1, mt.numLevels-1-1000)
+	mt.printLevel(mt.root, 0, mt.numLevels-1)
 	fmt.Print("root: ")
 	color.Yellow(mt.Root().Hex())
 }
 
 // PrintLevelsMT prints the tree in the terminal until a specified depth
 func (mt *MerkleTree) PrintLevelsMT(maxLevel int) {
-	mt.printLevel(mt.root, mt.numLevels-1, mt.numLevels-1-maxLevel)
+	mt.printLevel(mt.root, 0, mt.numLevels-1-maxLevel)
 	fmt.Print("root: ")
 	color.Yellow(mt.Root().Hex())
 }

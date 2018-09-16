@@ -101,17 +101,16 @@ func TestGetNonRevocationProof(t *testing.T) {
 
 	err := mt.Add(claim)
 	assert.Nil(t, err)
-
 	version, err := GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
-	nextVersionHi, mp, root, err := GetNonRevocationProof(mt, claim.Hi())
+	claimProof, err := GetNonRevocationProof(mt, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, "0xa69792a4cff51f40b7a1f7ae596c6ded4aba241646a47538898f17f2a8dff647", nextVersionHi.Hex())
-	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(mp))
-	assert.Equal(t, "0x8f021d00c39dcd768974ddfe0d21f5d13f7215bea28db1f1cb29842b111332e7", root.Hex())
-	verified := merkletree.CheckProof(root, mp, nextVersionHi, merkletree.EmptyNodeValue, mt.NumLevels())
+	assert.Equal(t, "0xa69792a4cff51f40b7a1f7ae596c6ded4aba241646a47538898f17f2a8dff647", claimProof.Hi.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000004bf8e980d2ed328ae97f65c30c25520aeb53ff837579e392ea1464934c7c1feb9", common3.BytesToHex(claimProof.Proof))
+	assert.Equal(t, "0x8f021d00c39dcd768974ddfe0d21f5d13f7215bea28db1f1cb29842b111332e7", claimProof.Root.Hex())
+	verified := merkletree.CheckProof(claimProof.Root, claimProof.Proof, claimProof.Hi, merkletree.EmptyNodeValue, mt.NumLevels())
 	assert.True(t, verified)
 }
 
@@ -140,18 +139,33 @@ func TestGetClaimByHi(t *testing.T) {
 	err = mt.Add(setRootClaim)
 	assert.Nil(t, err)
 
-	v, mp, r, sr, mpSR, rSR, hiNRv, mpNRv, hiNRsr, mpNRsr, err := GetClaimByHi(mt, namespace, ethID, claim.Hi())
+	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := GetClaimByHi(mt, namespace, ethID, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006461746161736466", common3.BytesToHex(v.Bytes()))
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(mp))
-	assert.Equal(t, "0x7f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", r.Hex())
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000970e8128ab834e8eac17ab8e3812f010678cf7917f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", common3.BytesToHex(sr.Bytes()))
-	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(mpSR))
-	assert.Equal(t, "0x0ed2c466f17d854cb7f751e58592638bdacc9d5b276c3d5b43819b398fe5c9e6", rSR.Hex())
-	assert.Equal(t, "0x702dfd96be536a3f6180bf93429972e3b284dc34fec42d90c6ccf4686b015c3a", hiNRv.Hex())
-	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000015cfd45ddb95cccd5d20a792b23648de56679b57fe2ddeae9aa97e559aad9d533", common3.BytesToHex(mpNRv))
-	assert.Equal(t, "0xfa9174b7e62c909d3e342cb152ed70891b14ddf1aaf9ce18f7d288d2a660c8ad", hiNRsr.Hex())
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000001b27fc56135bb9e92dc0a08b9d3a66a0fccb7b31adc9b220d1043e57368a77d11", common3.BytesToHex(mpNRsr))
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006461746161736466", common3.BytesToHex(claimProof.Leaf))
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(claimProof.Proof))
+	assert.Equal(t, "0x7f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", claimProof.Root.Hex())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000970e8128ab834e8eac17ab8e3812f010678cf7917f689881980c9dd618b336b682aef9005dd7efe92bf3171ed9539b37a093f22b", common3.BytesToHex(setRootClaimProof.Leaf))
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000014869628267e3825e8ca70c482b48a0d85ccb5eac95c597e0bb44b4880224684e", common3.BytesToHex(setRootClaimProof.Proof))
+	assert.Equal(t, "0x0ed2c466f17d854cb7f751e58592638bdacc9d5b276c3d5b43819b398fe5c9e6", setRootClaimProof.Root.Hex())
+	assert.Equal(t, "0x702dfd96be536a3f6180bf93429972e3b284dc34fec42d90c6ccf4686b015c3a", claimNonRevocationProof.Hi.Hex())
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000200659a30d0f5c439e765d7d1c1b0a1d35a9c9c39e2fdd04567b6dba5c9bb303b5", common3.BytesToHex(claimNonRevocationProof.Proof))
+	assert.Equal(t, "0xfa9174b7e62c909d3e342cb152ed70891b14ddf1aaf9ce18f7d288d2a660c8ad", setRootClaimNonRevocationProof.Hi.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000003068ee2bb387d0fbcef094d939259d527c893d97665abdb47e01a1449bbad481bb27fc56135bb9e92dc0a08b9d3a66a0fccb7b31adc9b220d1043e57368a77d11", common3.BytesToHex(setRootClaimNonRevocationProof.Proof))
+
+	assert.Equal(t, claimProof.Root.Bytes(), claimNonRevocationProof.Root.Bytes())
+	assert.Equal(t, setRootClaimProof.Root.Bytes(), setRootClaimNonRevocationProof.Root.Bytes())
+
+	verified := merkletree.CheckProof(claimProof.Root, claimProof.Proof, claimProof.Hi, merkletree.HashBytes(claimProof.Leaf), 140)
+	assert.True(t, verified)
+
+	verified = merkletree.CheckProof(setRootClaimProof.Root, setRootClaimProof.Proof, setRootClaimProof.Hi, merkletree.HashBytes(setRootClaimProof.Leaf), 140)
+	assert.True(t, verified)
+
+	verified = merkletree.CheckProof(claimNonRevocationProof.Root, claimNonRevocationProof.Proof, claimNonRevocationProof.Hi, merkletree.EmptyNodeValue, 140)
+	assert.True(t, verified)
+
+	verified = merkletree.CheckProof(setRootClaimNonRevocationProof.Root, setRootClaimNonRevocationProof.Proof, setRootClaimNonRevocationProof.Hi, merkletree.EmptyNodeValue, 140)
+	assert.True(t, verified)
 }
 
 /*
