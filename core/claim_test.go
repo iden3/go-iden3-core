@@ -129,7 +129,7 @@ func TestKSignClaimInterop(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := mt.Root()
-	proof, err := mt.GenerateProof(ksignClaim)
+	proof, err := mt.GenerateProof(ksignClaim.Hi())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestSetRootClaimInterop(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := mt.Root()
-	proof, err := mt.GenerateProof(setRootClaim)
+	proof, err := mt.GenerateProof(setRootClaim.Hi())
 	if err != nil {
 		t.Fatal(err)
 	}

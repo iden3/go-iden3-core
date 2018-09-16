@@ -189,13 +189,12 @@ func (mt *MerkleTree) Add(v Value) error {
 }
 
 // GenerateProof generates the Merkle Proof from a given claimHash for the current root
-func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
+func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
 	mt.RLock()
 	defer mt.RUnlock()
 
 	var empties [32]byte
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
 	var siblings []Hash
 	nodeHash := mt.root
@@ -211,14 +210,23 @@ func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
 				return nil, err
 			}
 			// TODO valid for all levels where this condition happens
-			if level == 0 && bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
-				// get the child hash of the node where is stored the finalNode
-				hashLeaf := HashBytes(nodeBytes)
-				leafHi := HashBytes(nodeBytes[:indexLength])
-				nodeChildPath := getPath(mt.numLevels, leafHi)
-				nodeChildHash := calcHashFromLeafAndLevel(mt.NumLevels()-level-2, nodeChildPath, hashLeaf)
-				setbitmap(empties[:], uint(level))
-				siblings = append([]Hash{nodeChildHash}, siblings...)
+			if bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
+				// go until the path is different, then get the nodes between this FinalNode and the node in the diffPath, they will be the siblings of the merkle proof
+				leafHi := HashBytes(nodeBytes[:indexLength]) // hi of element that was in the end of the branch (the finalNode)
+				pathChild := getPath(mt.numLevels, leafHi)
+
+				// get the position where the path is different
+				posDiff := comparePaths(pathChild, path)
+				if posDiff == -1 {
+					return nil, ErrNodeAlreadyExists
+				}
+
+				if posDiff != mt.NumLevels()-1-level {
+					sibling := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
+					setbitmap(empties[:], uint(mt.NumLevels()-2-posDiff))
+					siblings = append([]Hash{sibling}, siblings...)
+				}
+
 			}
 			break
 		}
@@ -355,12 +363,6 @@ func CheckProof(root Hash, proof []byte, hi Hash, ht Hash, numLevels int) bool {
 			siblingUsedPos++
 		} else {
 			sibling = EmptyNodeValue
-		}
-		if bytes.Equal(ht.Bytes(), EmptyNodeValue[:]) {
-			// if inside, is checking Proof of a non existing element, swap nodeHash - sibling
-			siblingCopy := sibling
-			sibling = nodeHash
-			nodeHash = siblingCopy
 		}
 		// calculate the nodeHash with the current nodeHash and the sibling
 		var node treeNode

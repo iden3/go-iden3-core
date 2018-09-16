@@ -135,22 +135,16 @@ func handleGetClaimByHi(c *gin.Context) {
 	var hi merkletree.Hash
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
-	claim, idProof, idRoot, setRootClaim, relayProof, relayRoot, hiClaimNR, idProofNR, hiSetRootClaimNR, relayProofNR, err := claimsrv.GetClaimByHi(mt, config.C.Namespace, idaddr, hi)
+	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := claimsrv.GetClaimByHi(mt, config.C.Namespace, idaddr, hi)
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"claim":                      common3.BytesToHex(claim.Bytes()),
-		"idProof":                    common3.BytesToHex(idProof),
-		"setRootClaim":               common3.BytesToHex(setRootClaim.Bytes()),
-		"idRoot":                     idRoot.Hex(),
-		"relayProof":                 common3.BytesToHex(relayProof),
-		"relayRoot":                  relayRoot.Hex(),
-		"hiClaimNonRevocated":        hiClaimNR.Hex(),
-		"idProofNonRevocated":        common3.BytesToHex(idProofNR),
-		"hiSetRootClaimNonRevocated": hiSetRootClaimNR.Hex(),
-		"relayProofNonRevocated":     common3.BytesToHex(relayProofNR),
+		"claimProof":                     claimProof.Hex(),
+		"setRootClaimProof":              setRootClaimProof.Hex(),
+		"claimNonRevocationProof":        claimNonRevocationProof.Hex(),
+		"setRootClaimNonRevocationProof": setRootClaimNonRevocationProof.Hex(),
 	})
 	return
 }
