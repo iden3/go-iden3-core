@@ -36,7 +36,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 }
 func loadConfig() {
 	c.Server.Port = "5000"
-	c.Server.PrivK = "d7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
+	c.Server.PrivK = "da7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
 	c.Geth.URL = ""
 	c.ContractsAddress.Identities = "0x101d2fa51f8259df207115af9eaa73f3f4e52e60"
 	c.Domain = "iden3.io"
@@ -64,12 +64,11 @@ func initializeEnvironment() error {
 func TestGetNextVersion(t *testing.T) {
 	initializeEnvironment()
 
-	claim := core.NewClaimDefault("c1", "c1", []byte("c1"))
+	claim := core.NewClaimDefault("c1", "default", []byte("c1"))
 
 	version, err := GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(0), version)
-
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
 	version, err = GetNextVersion(mt, claim.Hi())
@@ -80,19 +79,19 @@ func TestGetNextVersion(t *testing.T) {
 	mt.Add(claim)
 	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, uint32(0x1000001), version)
+	assert.Equal(t, uint32(2), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
 	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, uint32(0x1000002), version)
+	assert.Equal(t, uint32(3), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
 	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, uint32(0x2000002), version)
+	assert.Equal(t, uint32(4), version)
 }
 
 func TestGetNonRevocationProof(t *testing.T) {
@@ -179,9 +178,9 @@ func TestAssignNameClaim(t *testing.T) {
 	mt.Add(core.NewClaimDefault("c3", "c3", []byte("c3")))
 
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
-	domainHash := merkletree.HashBytes([]byte(config.C.Domain))
+	domainHash := merkletree.HashBytes([]byte(c.Domain))
 	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
-	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethID)
+	assignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethID)
 	// signature, err := utils.Sign(assignNameClaim.Ht(), testPrivK)
 	// assert.Nil(t, err)
 	// signatureHex := common3.BytesToHex(signature)
@@ -189,9 +188,9 @@ func TestAssignNameClaim(t *testing.T) {
 	// 	assignNameClaim,
 	// 	signatureHex,
 	// }
-	privK, err := crypto.HexToECDSA(config.C.Server.PrivK)
+	privK, err := crypto.HexToECDSA(c.Server.PrivK)
 	assert.Nil(t, err)
-	root, mp, _, err := AddAssignNameClaim(mt, assignNameClaim, config.C.ContractsAddress.Identities, privK)
+	root, mp, _, err := AddAssignNameClaim(mt, assignNameClaim, c.ContractsAddress.Identities, privK)
 	assert.Nil(t, err)
 	mtRoot := mt.Root()
 	if !bytes.Equal(root[:], mtRoot[:]) {
@@ -209,11 +208,11 @@ func TestAssignNameClaim(t *testing.T) {
 
 func TestResolvAssignNameClaim(t *testing.T) {
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
-	domainHash := merkletree.HashBytes([]byte(config.C.Domain))
+	domainHash := merkletree.HashBytes([]byte(c.Domain))
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
 	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
-	originalAssignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethID)
-	assignNameClaim, err := ResolvAssignNameClaim(mt, "johndoe@iden3.io", config.C.Namespace)
+	originalAssignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethID)
+	assignNameClaim, err := ResolvAssignNameClaim(mt, "johndoe@iden3.io", c.Namespace)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -230,15 +229,19 @@ func TestNewAuthorizeKSignClaim(t *testing.T) {
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 
 	authorizeKSignClaim := core.NewAuthorizeKSignClaim("iden3.io", testAddr, "app1", "appauthz", 1535208350, 1535208350)
-	signature, err := utils.Sign(authorizeKSignClaim.Ht(), testPrivK)
+	msgHash := utils.EthHash(authorizeKSignClaim.Bytes())
+	signature, err := utils.Sign(msgHash, testPrivK)
 	assert.Nil(t, err)
 	signatureHex := common3.BytesToHex(signature)
 	authorizeKSignClaimMsg := AuthorizeKSignClaimMsg{
 		authorizeKSignClaim,
 		signatureHex,
 	}
-	claimProof, idRootProof, err := AddAuthorizeKSignClaim(mt, testAddr, authorizeKSignClaimMsg, config.C.ContractsAddress.Identities)
+	claimProof, idRootProof, err := AddAuthorizeKSignClaim(mt, testAddr, authorizeKSignClaimMsg, c.ContractsAddress.Identities)
 	assert.Nil(t, err)
+	if err != nil {
+		panic(err)
+	}
 	assert.Equal(t, "0x771e1ef9fab9bdf7f55ba7c24112b9c4b9d7e55cd94f57efd0fd4ef174565b66", mt.Root().Hex())
 
 	// check userIDRoot
@@ -263,14 +266,15 @@ func TestMultipleAuthorizeKSignClaim(t *testing.T) {
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 
 	authorizeKSignClaim := core.NewAuthorizeKSignClaim("iden3.io", testAddr, "app1", "appauthz", 1535208355, 1535208355)
-	signature, err := utils.Sign(authorizeKSignClaim.Ht(), testPrivK)
+	msgHash := utils.EthHash(authorizeKSignClaim.Bytes())
+	signature, err := utils.Sign(msgHash, testPrivK)
 	assert.Nil(t, err)
 	signatureHex := common3.BytesToHex(signature)
 	authorizeKSignClaimMsg := AuthorizeKSignClaimMsg{
 		authorizeKSignClaim,
 		signatureHex,
 	}
-	claimProof, idRootProof, err := AddAuthorizeKSignClaim(mt, testAddr, authorizeKSignClaimMsg, config.C.ContractsAddress.Identities)
+	claimProof, idRootProof, err := AddAuthorizeKSignClaim(mt, testAddr, authorizeKSignClaimMsg, c.ContractsAddress.Identities)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -293,14 +297,15 @@ func TestMultipleAuthorizeKSignClaim(t *testing.T) {
 	assert.Nil(t, err)
 	testAddr2 := crypto.PubkeyToAddress(testPrivK2.PublicKey)
 	authorizeKSignClaim2 := core.NewAuthorizeKSignClaim("iden3.io", testAddr2, "app1", "appauthz", 1535208355, 1535208355)
-	signature2, err := utils.Sign(authorizeKSignClaim2.Ht(), testPrivK2)
+	msgHash = utils.EthHash(authorizeKSignClaim2.Bytes())
+	signature2, err := utils.Sign(msgHash, testPrivK2)
 	assert.Nil(t, err)
 	signatureHex2 := common3.BytesToHex(signature2)
 	authorizeKSignClaimMsg2 := AuthorizeKSignClaimMsg{
 		authorizeKSignClaim2,
 		signatureHex2,
 	}
-	claimProof2, idRootProof2, err := AddAuthorizeKSignClaim(mt, testAddr2, authorizeKSignClaimMsg2, config.C.ContractsAddress.Identities)
+	claimProof2, idRootProof2, err := AddAuthorizeKSignClaim(mt, testAddr2, authorizeKSignClaimMsg2, c.ContractsAddress.Identities)
 	assert.Nil(t, err)
 
 	assert.Equal(t, "0xf6c57457fd9ebcd6c21acd511a41303f63e59e74c7c47d98fd0813a9bf39b392", mt.Root().Hex())
@@ -331,7 +336,7 @@ func TestNewUserIDClaim(t *testing.T) {
 		claim,
 		signatureHex,
 	}
-	claimProof, idRootProof, err := AddUserIDClaim(mt, "iden3.io", testAddr, claimValueMsg, config.C.ContractsAddress.Identities)
+	claimProof, idRootProof, err := AddUserIDClaim(mt, "iden3.io", testAddr, claimValueMsg, c.ContractsAddress.Identities)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -377,7 +382,7 @@ func TestGetClaimByHiThatDontExist(t *testing.T) {
 	assert.Nil(t, err)
 	hi := merkletree.Hash{}
 	copy(hi[:], hiBytes)
-	_, _, _, _, _, _, err = GetClaimByHi(mt, "namespace.io", testAddr, hi)
+	_, _, _, _, err = GetClaimByHi(mt, "namespace.io", testAddr, hi)
 	assert.NotNil(t, err)
 }
 
@@ -395,27 +400,30 @@ func TestAddClaimAndGetClaimByHi(t *testing.T) {
 		claim,
 		signatureHex,
 	}
-	claimProof, idRootProof, err := AddUserIDClaim(mt, "namespace.io", testAddr, claimValueMsg, config.C.ContractsAddress.Identities)
+	claimProof1, idRootProof1, err := AddUserIDClaim(mt, "namespace.io", testAddr, claimValueMsg, c.ContractsAddress.Identities)
 	assert.Nil(t, err)
 	hi := claim.Hi()
-	value, idProof, idRoot, setRootClaim, relayProof, relayRoot, err := GetClaimByHi(mt, "namespace.io", testAddr, hi)
+	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := GetClaimByHi(mt, "namespace.io", testAddr, hi)
 	if err != nil {
 		panic(err)
 	}
 	assert.Nil(t, err)
-	assert.Equal(t, "0xa92591b1ee18783f95fbf358517afed09d888b9db8286c0d19e2419036941d68cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006461746161736466", common3.BytesToHex(value.Bytes()))
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000002546f8feb74144a5ee688f26ee5c5c202051386d6682164b1746d7481c4c5fda0", common3.BytesToHex(idProof))
-	assert.Equal(t, "0x174798396a958603a3c6b2f60b21a4735000429be4d5dded269b93ba37945898", idRoot.Hex())
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000017c29ecab32fdae08849361b5c7140a83442ccea6a6b94fe55b1cda5e2b52681015def58d649018d988ff4d4c7cf9cbc4ab7590d58fa06e76b28f802212e2b5083f9e894a02f51799114c844c03d5859069afb4c7287a5403c6c4fba577467bed57370e48c8a338794dd181314bbd080e4263a802803686bcc2c2d3f554e3a50de", common3.BytesToHex(relayProof))
-	assert.Equal(t, "0x23a44df999057bf245c43f196948bbbd7d4282dbb4d6027a30a14fcd4798aa2e", relayRoot.Hex())
+	assert.Equal(t, "0xa92591b1ee18783f95fbf358517afed09d888b9db8286c0d19e2419036941d68cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006461746161736466", common3.BytesToHex(claimProof.Leaf))
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000002546f8feb74144a5ee688f26ee5c5c202051386d6682164b1746d7481c4c5fda0", common3.BytesToHex(claimProof.Proof))
+	assert.Equal(t, "0x174798396a958603a3c6b2f60b21a4735000429be4d5dded269b93ba37945898", claimProof.Root.Hex())
+	assert.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000325030b375e7fb70ce357852c717818479d67f15003b30048798c61d8a3e381fc7e57e8df413edef8ca83461bccf69e18815802e3815765b7384185aca868a7f6", common3.BytesToHex(setRootClaimProof.Proof))
+	assert.Equal(t, "0x7b71af6e80b3db0c67ee967e46808fd42a0f87b82c6068ced1007297261320f5", setRootClaimProof.Root.Hex())
 
-	assert.Equal(t, claimProof, idProof)
-	assert.Equal(t, idRootProof, relayProof)
-	verified := merkletree.CheckProof(idRoot, idProof, value, 140)
+	assert.Equal(t, claimProof1, claimProof.Proof)
+	assert.Equal(t, idRootProof1, setRootClaimProof.Proof)
+	verified := merkletree.CheckProof(claimProof.Root, claimProof.Proof, claimProof.Hi, merkletree.HashBytes(claimProof.Leaf), 140)
 	assert.True(t, verified)
-	assert.Equal(t, mt.Root().Bytes(), relayRoot.Bytes())
-	verified = merkletree.CheckProof(relayRoot, relayProof, setRootClaim, mt.NumLevels())
+	assert.Equal(t, mt.Root().Bytes(), setRootClaimProof.Root.Bytes())
+	verified = merkletree.CheckProof(setRootClaimProof.Root, setRootClaimProof.Proof, setRootClaimProof.Hi, merkletree.HashBytes(setRootClaimProof.Leaf), mt.NumLevels())
 	assert.True(t, verified)
-
+	verified = merkletree.CheckProof(claimNonRevocationProof.Root, claimNonRevocationProof.Proof, claimNonRevocationProof.Hi, merkletree.EmptyNodeValue, 140)
+	assert.True(t, verified)
+	verified = merkletree.CheckProof(setRootClaimNonRevocationProof.Root, setRootClaimNonRevocationProof.Proof, setRootClaimNonRevocationProof.Hi, merkletree.EmptyNodeValue, 140)
+	assert.True(t, verified)
 }
 */

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
@@ -18,20 +17,35 @@ import (
 
 // GetNextVersion returns the next version of a claim, given a Hash(index)
 func GetNextVersion(mt *merkletree.MerkleTree, hi merkletree.Hash) (uint32, error) {
+	var version uint32
+	// loop until found a nextversion that don't exist
+	for {
+		// merkletree.GetValueInPos(hi)
+		b, err := mt.GetValueInPos(hi)
+		if err != nil {
+			return 0, err
+		}
+		// if value not exist, return version 0
+		if bytes.Equal(merkletree.EmptyNodeValue[:], b) {
+			break
+		}
+		// get version bytes
+		versionBytes := b[64:68]
+		version = core.EthBytesToUint32(versionBytes)
+		version++
 
-	// merkletree.GetValueInPos(hi)
-	b, err := mt.GetValueInPos(hi)
-	if err != nil {
-		return 0, err
+		// get claim with version+1 from the merkletree
+		versionBytes, err = core.Uint32ToEthBytes(version)
+		if err != nil {
+			return 0, err
+		}
+		copy(b[64:68], versionBytes)
+		value, err := core.ParseValueFromBytes(b)
+		if err != nil {
+			return 0, err
+		}
+		hi = merkletree.HashBytes(value.Bytes()[:value.IndexLength()])
 	}
-	// if value not exist, return version 0
-	if bytes.Equal(merkletree.EmptyNodeValue[:], b) {
-		return 0, nil
-	}
-	// get version bytes
-	versionBytes := b[64:68]
-	version := common3.BytesToUint32(versionBytes)
-	version++
 	// return version
 	return version, nil
 }
@@ -44,9 +58,9 @@ func GetNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 	if err != nil {
 		return ProofOfTreeLeaf{}, err
 	}
-	// if bytes.Equal(b, merkletree.EmptyNodeValue[:]) {
-	// 	return merkletree.Hash{}, []byte{}, merkletree.Hash{}, errors.New("getting value in Hi position to generate non revocation proof, value not found in merkle tree")
-	// }
+	if bytes.Equal(b, merkletree.EmptyNodeValue[:]) {
+		return ProofOfTreeLeaf{}, errors.New("Hi not found in the merkle tree")
+	}
 
 	nextVersion, err := GetNextVersion(mt, hi)
 	if err != nil {
@@ -97,7 +111,7 @@ func AddAssignNameClaim(mt *merkletree.MerkleTree, assignNameClaim core.AssignNa
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, []byte{}, err
 	}
-	assignNameClaim.Version = version
+	assignNameClaim.BaseIndex.Version = version
 
 	// add AssignNameClaim to the Relay's merkletree
 	// err := mt.Add(assignNameClaimMsg.AssignNameClaim)
@@ -122,11 +136,7 @@ func AddAssignNameClaim(mt *merkletree.MerkleTree, assignNameClaim core.AssignNa
 	// TODO add proof of non revocated
 
 	// sign root
-	// privK, err := crypto.HexToECDSA(relayPrivK)
-	// if err != nil {
-	// 	return merkletree.Hash{}, []byte{}, []byte{}, err
-	// }
-	sig, err := crypto.Sign(mt.Root().Bytes(), relayPrivK)
+	sig, err := utils.Sign(mt.Root(), relayPrivK)
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, []byte{}, err
 	}
@@ -164,6 +174,7 @@ func ResolvAssignNameClaim(mt *merkletree.MerkleTree, nameid, namespace string) 
 
 // AddAuthorizeKSignClaim adds AuthorizeKSignClaim into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a SetRootClaim. Returns the merkle proof of both Claims
 func AddAuthorizeKSignClaim(mt *merkletree.MerkleTree, ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg, identitiesContractHex string) ([]byte, []byte, error) {
+	// TODO this function is almost the same than AddUserIDClaim() function. Maybe delete this one and keep the generic one
 	// verify signature of the AuthorizeKSignClaim
 	signature, err := common3.HexToBytes(authorizeKSignClaimMsg.Signature)
 	if err != nil {
@@ -190,13 +201,14 @@ func AddAuthorizeKSignClaim(mt *merkletree.MerkleTree, ethID common.Address, aut
 	}
 
 	// create new SetRootClaim
-	setRootClaim := core.NewSetRootClaim("iden3.io", authorizeKSignClaimMsg.AuthorizeKSignClaim.ExtraIndex.KeyToAuthorize, userMT.Root())
+	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
 	// get next version of the claim
 	version, err := GetNextVersion(mt, setRootClaim.Hi())
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
-	setRootClaim.Version = version
+	setRootClaim.BaseIndex.Version = version
+
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim)
 	if err != nil {
@@ -228,7 +240,9 @@ func AddUserIDClaim(mt *merkletree.MerkleTree, namespace string, ethID common.Ad
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
-	msgHash := merkletree.HashBytes(claimValueMsg.ClaimValue.Bytes())
+	// msgHash := merkletree.HashBytes(claimValueMsg.ClaimValue.Bytes())
+	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
+	signature[64] -= 27
 	if !utils.VerifySig(ethID, signature, msgHash[:]) {
 		return []byte{}, []byte{}, errors.New("signature can not be verified")
 	}
@@ -250,7 +264,12 @@ func AddUserIDClaim(mt *merkletree.MerkleTree, namespace string, ethID common.Ad
 	// setRootClaim of the user in the Relay Merkle Tree
 	// create new SetRootClaim
 	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
-	setRootClaim.BaseIndex.Version++ // TODO autoincrement
+	version, err := GetNextVersion(mt, setRootClaim.Hi())
+	if err != nil {
+		return []byte{}, []byte{}, err
+	}
+	setRootClaim.BaseIndex.Version = version
+
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim)
 	if err != nil {
@@ -274,7 +293,6 @@ func AddUserIDClaim(mt *merkletree.MerkleTree, namespace string, ethID common.Ad
 		return []byte{}, []byte{}, err
 	}
 	return claimProof, idRootProof, nil
-
 }
 
 // GetIDRoot returns the root of an ID tree, and the proof of that Root ID tree in the Relay Merkle Tree
@@ -288,6 +306,11 @@ func GetIDRoot(mt *merkletree.MerkleTree, ethID common.Address) (merkletree.Hash
 	}
 	// build SetRootClaim of the user id
 	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
+	version, err := GetNextVersion(mt, setRootClaim.Hi())
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, err
+	}
+	setRootClaim.BaseIndex.Version = version - 1
 	// get proof of SetRootProof in the Relay tree
 	idRootProof, err := mt.GenerateProof(setRootClaim.Hi())
 	if err != nil {
@@ -331,8 +354,12 @@ func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Addr
 	}
 
 	// build SetRootClaim
-	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root()) // TODO manage version
-
+	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
+	version, err := GetNextVersion(mt, setRootClaim.Hi())
+	if err != nil {
+		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+	}
+	setRootClaim.BaseIndex.Version = version - 1
 	// get the proof of the SetRootClaim in the Relay Tree
 	relayProof, err := mt.GenerateProof(setRootClaim.Hi())
 	if err != nil {
@@ -344,7 +371,6 @@ func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Addr
 		Proof: relayProof,
 		Root:  mt.Root(),
 	}
-
 	// get non revocation proofs of the claim
 	claimNonRevocationProof, err := GetNonRevocationProof(userMT, merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
 	if err != nil {
@@ -356,5 +382,4 @@ func GetClaimByHi(mt *merkletree.MerkleTree, namespace string, ethID common.Addr
 	}
 
 	return claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, nil
-
 }
