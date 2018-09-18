@@ -178,6 +178,7 @@ func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...i
 	}
 
 	signer := types.NewEIP155Signer(networkid)
+	// TODO: check properties
 	sig := make([]byte, 65, 65)
 	for i := 0; i < len(sig); i++ {
 		sig[i] = 1
@@ -217,4 +218,13 @@ func (c *Contract) ByteCode() []byte {
 
 func (c *Contract) Address() *common.Address {
 	return c.address
+}
+
+func (c *Contract) At(address *common.Address) *Contract {
+	return &Contract{
+		client:   c.client,
+		abi:      c.abi,
+		byteCode: c.byteCode,
+		address:  address,
+	}
 }

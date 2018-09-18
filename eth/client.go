@@ -16,6 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,17 +30,19 @@ var (
 )
 
 type Client interface {
-	BalanceInfo() (string, error)
+	SendRawTx(tx []byte);
 	SendTransactionSync(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction, *types.Receipt, error)
 	Call(to *common.Address, value *big.Int, calldata []byte) ([]byte, error)
 	Sign(data ...[]byte) ([3][32]byte, error)
 	NetworkID() (*big.Int,error)
 	CodeAt(account common.Address) ([]byte, error)
+	BalanceInfo() (string, error)
 }
 
 // Web3Client defines a connection to a client via websockets
 type Web3Client struct {
 	mutex    	   *sync.Mutex
+	rpcclient      *rpc.Client
 	ethclient      *ethclient.Client
 	account        *accounts.Account
 	ks             *keystore.KeyStore
@@ -49,15 +53,14 @@ type Web3Client struct {
 // NewWeb3Client creates a client, using a keystore and an account for transactions
 func NewClientWithURL(rpcURL string, ks *keystore.KeyStore, account *accounts.Account) (*Web3Client, error) {
 
-	var err error
-
-	client, err := ethclient.Dial(rpcURL)
+	rpcClient, err := rpc.DialContext(context.TODO(), rpcURL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Web3Client{
-		ethclient:      client,
+		rpcclient:      rpcClient,
+		ethclient:      ethclient.NewClient(rpcClient),
 		ks:             ks,
 		account:        account,
 		receiptTimeout: 120 * time.Second,
@@ -173,26 +176,34 @@ func (c *Web3Client) SendTransactionSync(to *common.Address, value *big.Int, gas
 		return nil, nil, err
 	}
 
+	receipt, err = c.waitRecipt(tx.Hash())
+
+	return tx, receipt, err
+}
+func (c *Web3Client) waitRecipt(txid common.Hash) (*types.Receipt, error) {
+	var err error
+	var receipt *types.Receipt
+
 	start := time.Now()
 	for receipt == nil && time.Now().Sub(start) < c.receiptTimeout {
-		receipt, err = c.ethclient.TransactionReceipt(ctx, tx.Hash())
+		receipt, err = c.ethclient.TransactionReceipt(context.TODO(), txid)
 		if receipt == nil {
 			time.Sleep(200 * time.Millisecond)
 		}
 	}
 
 	if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
-		log.WithField("tx", tx.Hash().Hex()).Error("WEB3 Failed transaction receipt")
-		return tx, receipt, errReceiptStatusFailed
+		log.WithField("tx", txid.Hex()).Error("WEB3 Failed transaction receipt")
+		return receipt, errReceiptStatusFailed
 	}
 
 	if receipt == nil {
-		log.WithField("tx", tx.Hash().Hex()).Error("WEB3 Failed transaction")
-		return tx, receipt, errReceiptNotRecieved
+		log.WithField("tx", txid.Hex()).Error("WEB3 Failed transaction")
+		return receipt, errReceiptNotRecieved
 	}
-	log.WithField("tx", tx.Hash().Hex()).Debug("WEB3 Success transaction")
+	log.WithField("tx", txid.Hex()).Debug("WEB3 Success transaction")
 
-	return tx, receipt, err
+return receipt, err
 }
 
 // Call an constant method
@@ -239,3 +250,13 @@ func (c *Web3Client) NetworkID() (*big.Int,error) {
 func (c *Web3Client) CodeAt(account common.Address) ([]byte, error) {
 	return c.ethclient.CodeAt(context.TODO(),account,nil)
 }
+
+func (c *Web3Client) SendRawTxSync(data []byte) (*types.Receipt,error) {
+	txid := crypto.Keccak256Hash(data)
+	err := c.rpcclient.CallContext(context.TODO(), nil, "eth_sendRawTransaction", common.ToHex(data))
+	if err != nil {
+		return nil, err
+	}
+	return c.waitRecipt(txid)
+}
+
