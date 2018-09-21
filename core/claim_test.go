@@ -165,7 +165,7 @@ func TestSetRootClaimInterop(t *testing.T) {
 	setRootClaim := NewSetRootClaim(
 		"iden3.io",
 		common.HexToAddress("0xd79ae0a65e7dd29db1eac700368e693de09610b8"),
-		hexToHash("0x562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3"),
+		hexToHash("0x532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6"),
 	)
 
 	if err = mt.Add(setRootClaim); err != nil {
@@ -180,10 +180,10 @@ func TestSetRootClaimInterop(t *testing.T) {
 	assert.Equal(t, uint32(84), setRootClaim.BaseIndex.IndexLength)
 	assert.Equal(t, 84, int(setRootClaim.IndexLength()))
 	assert.Equal(t, uint32(0x54), setRootClaim.IndexLength())
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000d79ae0a65e7dd29db1eac700368e693de09610b8562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", common3.BytesToHex(setRootClaim.Bytes()))
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000d79ae0a65e7dd29db1eac700368e693de09610b8532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6", common3.BytesToHex(setRootClaim.Bytes()))
 	assert.Equal(t, "0x497d8626567f90e3e14de025961133ca7e4959a686c75a062d4d4db750d607b0", setRootClaim.Hi().Hex())
-	assert.Equal(t, "0x4920867cc5963579b7c919dbb8a1cf3164fdde0c9f06b2af3d6613b3346c7f9e", setRootClaim.Ht().Hex())
-	assert.Equal(t, "0x585d9dcd51abce33f55f7be8ba04719aef308a2f9e4280593eaef981672be24c", root.Hex())
+	assert.Equal(t, "0x40b8ce3bbd8c288ad3e8d2edf683bc7aa86fee687d862e049f303601508c9b66", setRootClaim.Ht().Hex())
+	assert.Equal(t, "0xffeac62de27cfb7595cf106cd488e6b492c86f0cadf78166bef4327332ebde12", root.Hex())
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
 }
 
