@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -18,6 +17,7 @@ import (
 )
 
 // Contract is a smartcontract with optional address
+
 type Contract struct {
 	abi      *abi.ABI
 	client   Client
@@ -121,13 +121,10 @@ func (c *Contract) SendTransactionSync(value *big.Int, gasLimit uint64, funcname
 // Deploy the contract
 func (c *Contract) DeploySync(params ...interface{}) (*types.Transaction, *types.Receipt, error) {
 
-	init, err := c.abi.Pack("", params...)
+	code, err := c.CreationBytes(params)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	code := append([]byte(nil), c.byteCode...)
-	code = append(code, init...)
 
 	tx, receipt, err := c.client.SendTransactionSync(nil, big.NewInt(0), 0, code)
 
@@ -152,16 +149,23 @@ func (c *Contract) Call(ret interface{}, funcname string, params ...interface{})
 	return c.abi.Unpack(ret, funcname, output)
 }
 
-func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...interface{}) (creator, contract common.Address, rawtx []byte, err error) {
-
+func (c *Contract) CreationBytes(params ...interface{}) ([]byte, error) {
 	// build the contract code + init parameters
 	init, err := c.abi.Pack("", params...)
 	if err != nil {
-		fmt.Println("error unpacking")
-		return common.Address{}, common.Address{}, nil, err
+		return nil, err
 	}
 	code := append([]byte(nil), c.byteCode...)
 	code = append(code, init...)
+	return nil, err
+}
+
+func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...interface{}) (creator, contract common.Address, rawtx []byte, err error) {
+
+	code, err := c.CreationBytes(params)
+	if err != nil {
+		return common.Address{}, common.Address{}, nil, err
+	}
 
 	// get the creator address
 	tx := types.NewContractCreation(
@@ -177,8 +181,8 @@ func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...i
 		return common.Address{}, common.Address{}, nil, err
 	}
 
-	signer := types.NewEIP155Signer(networkid)
 	// TODO: check properties
+	signer := types.NewEIP155Signer(networkid)
 	sig := make([]byte, 65, 65)
 	for i := 0; i < len(sig); i++ {
 		sig[i] = 1
