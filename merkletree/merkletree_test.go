@@ -246,6 +246,35 @@ func TestProofOfEmpty(t *testing.T) { // proof of a non revocated leaf, prove th
 	assert.Equal(t, EmptyNodeValue.Bytes(), valueInPos)
 }
 
+func DifferentNonExistenceProofs(t *testing.T) {
+	mt1 := newTestingMerkle(t, 140)
+	defer mt1.Storage().Close()
+
+	mt2 := newTestingMerkle(t, 140)
+	defer mt2.Storage().Close()
+
+	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
+	claim2 := newTestClaim("iden3.io_1", "typespec_1", []byte("c2"))
+
+	assert.Nil(t, mt1.Add(claim1))
+	assert.Nil(t, mt2.Add(claim2))
+
+	claim1.Version++
+	claim2.Version++
+
+	np1, err := mt1.GenerateProof(claim1.hi())
+	assert.Nil(t, err)
+	np2, err := mt2.GenerateProof(claim2.hi())
+	assert.Nil(t, err)
+
+	assert.True(t, CheckProof(mt1.Root(), np1, claim1.hi(), EmptyNodeValue, mt1.NumLevels()))
+	assert.True(t, CheckProof(mt2.Root(), np2, claim2.hi(), EmptyNodeValue, mt2.NumLevels()))
+
+	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000010a40617c8c3390736831d00b2003e2133353190f5d3b3a586cf829f0f2009aacc", hex.EncodeToString(np1))
+	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001b274a34a3bd95915fe982a0163e3e0a2f79a371b8307661341f8914e22b313e1", hex.EncodeToString(np2))
+
+}
+
 func TestGetClaimInPos(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()

@@ -97,94 +97,87 @@ func TestSetRootClaim(t *testing.T) {
 	assert.Equal(t, "0xaf49c9214bb28b886e197df5b5e38c0ea54b3334039f419375e0fb4d1f70e44c", setRootClaim.Ht().Hex())
 }
 
-func TestKSignClaimInterop(t *testing.T) {
+func TestForwardingInterop(t *testing.T) {
 
 	// address 0xee602447b5a75cf4f25367f5d199b860844d10c4
 	// pvk     8A85AAA2A8CE0D24F66D3EAA7F9F501F34992BACA0FF942A8EDF7ECE6B91F713
 
 	dir, err := ioutil.TempDir("", "db")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sto, err := merkletree.NewLevelDbStorage(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sto.Close()
+	assert.Nil(t, err)
+
+	stobase, err := merkletree.NewLevelDbStorage(dir)
+	assert.Nil(t, err)
+	defer stobase.Close()
+
+	sto := stobase.WithPrefix([]byte{1})
 
 	mt, err := merkletree.New(sto, 140)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 
-	ksignClaim := NewAuthorizeKSignClaim(
+	// create ksignclaim ----------------------------------------------
+
+	ksignClaim := NewOperationalKSignClaim(
 		"iden3.io",
 		common.HexToAddress("0xee602447b5a75cf4f25367f5d199b860844d10c4"),
-		"app", "authz",
 		631152000,  // 1990
 		2524608000, // 2050
 	)
 
-	if err = mt.Add(ksignClaim); err != nil {
-		t.Fatal(err)
-	}
-	root := mt.Root()
-	proof, err := mt.GenerateProof(ksignClaim.Hi())
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.True(t, merkletree.CheckProof(root, proof, ksignClaim.Hi(), ksignClaim.Ht(), 140))
+	assert.Nil(t, mt.Add(ksignClaim))
 
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a0000005400000000ee602447b5a75cf4f25367f5d199b860844d10c4d6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fbdad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb3406200000000259e9d8000000000967a7600", common3.BytesToHex(ksignClaim.Bytes()))
+	kroot := mt.Root()
+	kproof, err := mt.GenerateProof(ksignClaim.Hi())
+	assert.Nil(t, err)
+	assert.True(t, merkletree.CheckProof(kroot, kproof, ksignClaim.Hi(), ksignClaim.Ht(), 140))
+
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a0000005400000000ee602447b5a75cf4f25367f5d199b860844d10c40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000259e9d8000000000967a7600", common3.BytesToHex(ksignClaim.Bytes()))
 	assert.Equal(t, uint32(84), ksignClaim.BaseIndex.IndexLength)
 	assert.Equal(t, 84, int(ksignClaim.IndexLength()))
-	assert.Equal(t, uint32(0x54), ksignClaim.IndexLength())
 	assert.Equal(t, "0x68be938284f64944bd8ebc172792687f680fb8db13e383227c8c668820b40078", ksignClaim.Hi().Hex())
-	assert.Equal(t, "0x63b43ece0a9f5f63a4333143563896d6d4e8b0ce8acd8dd2e6f7aaec52a007bb", ksignClaim.Ht().Hex())
-	assert.Equal(t, "0x532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6", root.Hex())
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
-}
+	assert.Equal(t, "0xd440292f476cde9f575d8fed36fbf096f5d2986fb11190ce0ee5d0e448bf1113", ksignClaim.Ht().Hex())
+	assert.Equal(t, "0x0c7fbb73b49a62b75c44cc0b8559a67af866bcd942fa3bc1e7888d43e2f186f2", kroot.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(kproof))
 
-func TestSetRootClaimInterop(t *testing.T) {
+	ksignClaim.BaseIndex.Version = 1
+	kproofneg, err := mt.GenerateProof(ksignClaim.Hi())
+	assert.Nil(t, err)
+	assert.Equal(t, "0xeab0608b8891dcca4f421c69244b17f208fbed899b540d01115ca7d907cbf6a5", ksignClaim.Hi().Hex())
+	assert.True(t, merkletree.CheckProof(kroot, kproofneg, ksignClaim.Hi(), merkletree.EmptyNodeValue, 140))
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000017a0ec823c79c6d1756a29edbf52eb228a69c5435ead519eb96cdb2412927b865", common3.BytesToHex(kproofneg))
 
-	dir, err := ioutil.TempDir("", "db")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sto, err := merkletree.NewLevelDbStorage(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sto.Close()
+	// create setrootclaim ----------------------------------------------
 
-	mt, err := merkletree.New(sto, 140)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sto = stobase.WithPrefix([]byte{2})
+
+	mt, err = merkletree.New(sto, 140)
+	assert.Nil(t, err)
 
 	setRootClaim := NewSetRootClaim(
 		"iden3.io",
 		common.HexToAddress("0xd79ae0a65e7dd29db1eac700368e693de09610b8"),
-		hexToHash("0x532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6"),
+		kroot,
 	)
 
-	if err = mt.Add(setRootClaim); err != nil {
-		t.Fatal(err)
-	}
-	root := mt.Root()
-	proof, err := mt.GenerateProof(setRootClaim.Hi())
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.True(t, merkletree.CheckProof(root, proof, setRootClaim.Hi(), setRootClaim.Ht(), 140))
+	assert.Nil(t, mt.Add(setRootClaim))
+
+	rroot := mt.Root()
+	rproof, err := mt.GenerateProof(setRootClaim.Hi())
+	assert.Nil(t, err)
+
+	assert.True(t, merkletree.CheckProof(rroot, rproof, setRootClaim.Hi(), setRootClaim.Ht(), 140))
 	assert.Equal(t, uint32(84), setRootClaim.BaseIndex.IndexLength)
 	assert.Equal(t, 84, int(setRootClaim.IndexLength()))
-	assert.Equal(t, uint32(0x54), setRootClaim.IndexLength())
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000d79ae0a65e7dd29db1eac700368e693de09610b8532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6", common3.BytesToHex(setRootClaim.Bytes()))
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000d79ae0a65e7dd29db1eac700368e693de09610b80c7fbb73b49a62b75c44cc0b8559a67af866bcd942fa3bc1e7888d43e2f186f2", common3.BytesToHex(setRootClaim.Bytes()))
 	assert.Equal(t, "0x497d8626567f90e3e14de025961133ca7e4959a686c75a062d4d4db750d607b0", setRootClaim.Hi().Hex())
-	assert.Equal(t, "0x40b8ce3bbd8c288ad3e8d2edf683bc7aa86fee687d862e049f303601508c9b66", setRootClaim.Ht().Hex())
-	assert.Equal(t, "0xffeac62de27cfb7595cf106cd488e6b492c86f0cadf78166bef4327332ebde12", root.Hex())
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
+	assert.Equal(t, "0xb4f391a7eb28eb66adf447fb16da9d25408806a4f9154ffb7c6b13bb1f2bfd79", setRootClaim.Ht().Hex())
+	assert.Equal(t, "0xa392bc7458973721c1266b2ac65db038a87bb6ad2e822c2509298803e9941119", rroot.Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(rproof))
+
+	setRootClaim.BaseIndex.Version++
+	rproofneg, err := mt.GenerateProof(setRootClaim.Hi())
+	assert.Nil(t, err)
+	assert.True(t, merkletree.CheckProof(rroot, rproofneg, setRootClaim.Hi(), merkletree.EmptyNodeValue, 140))
+	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000016602097464f2c4a8f7854f1c29a7671a85d5aa670dbbe04a65f9d9c50a70626d", common3.BytesToHex(rproofneg))
 }
 
 // hexToBytes converts from a hex string into an array of bytes
