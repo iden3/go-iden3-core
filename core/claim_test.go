@@ -14,7 +14,7 @@ import (
 
 func TestParseTypeClaimBytes(t *testing.T) {
 	// default claim
-	claimHex := "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006331"
+	claimHex := "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000040000000006331"
 	claimBytes, err := common3.HexToBytes(claimHex)
 	assert.Nil(t, err)
 	claimType, err := ParseTypeClaimBytes(claimBytes)
@@ -22,7 +22,7 @@ func TestParseTypeClaimBytes(t *testing.T) {
 	assert.Equal(t, "default", claimType)
 
 	// assignNameClaim type
-	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae9f22abc828264ab70000000009c4b7a6b4af91b44be8d9bb66d41e82589f01974702d3bf1d9b4407a55593c3c3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074101d2fa51f8259df207115af9eaa73f3f4e52e60"
+	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae900000080000000009c4b7a6b4af91b44be8d9bb66d41e82589f01974702d3bf1d9b4407a55593c3c3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074101d2fa51f8259df207115af9eaa73f3f4e52e60"
 	claimBytes, err = common3.HexToBytes(claimHex)
 	assert.Nil(t, err)
 	claimType, err = ParseTypeClaimBytes(claimBytes)
@@ -30,7 +30,7 @@ func TestParseTypeClaimBytes(t *testing.T) {
 	assert.Equal(t, "assignname", claimType)
 
 	// authorizeKSignClaim type
-	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a05ed7726d7932a1f00000000101d2fa51f8259df207115af9eaa73f3f4e52e602077bb3f0400dd62421c97220536fd6ed2be29228e8db1315e8c6d7525f4bdf4dad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb340623135333534363739333431353335343637393334"
+	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a0000005400000000101d2fa51f8259df207115af9eaa73f3f4e52e602077bb3f0400dd62421c97220536fd6ed2be29228e8db1315e8c6d7525f4bdf4dad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb34062000000005b816b9e000000005b816b9e"
 	claimBytes, err = common3.HexToBytes(claimHex)
 	assert.Nil(t, err)
 	claimType, err = ParseTypeClaimBytes(claimBytes)
@@ -38,7 +38,7 @@ func TestParseTypeClaimBytes(t *testing.T) {
 	assert.Equal(t, "authorizeksign", claimType)
 
 	// setRootClaim type
-	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000101d2fa51f8259df207115af9eaa73f3f4e52e607d2e30055477edf346d81dac92720729aed3ef830cf26b012b38f2f8304ac18c"
+	claimHex = "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000101d2fa51f8259df207115af9eaa73f3f4e52e607d2e30055477edf346d81dac92720729aed3ef830cf26b012b38f2f8304ac18c"
 	claimBytes, err = common3.HexToBytes(claimHex)
 	assert.Nil(t, err)
 	claimType, err = ParseTypeClaimBytes(claimBytes)
@@ -46,11 +46,11 @@ func TestParseTypeClaimBytes(t *testing.T) {
 	assert.Equal(t, "setroot", claimType)
 }
 func TestClaimGenerationAndParse(t *testing.T) {
-	claim := NewClaimDefault("iden3.io", "default", []byte("c1"))
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db0a02a7d2d5bc66728000000006331", common3.BytesToHex(claim.Bytes()))
+	claim := NewClaimDefault("iden3.io", "default", []byte("c1"), []byte{})
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000042000000006331", common3.BytesToHex(claim.Bytes()))
 
 	claimHt := claim.Ht()
-	assert.Equal(t, "0x54f22c228c99b424f787ad0673782f44cf83d13cb13c74924b0746e120135e4b", common3.BytesToHex(claimHt[:]))
+	assert.Equal(t, "0x0fce11cbd33e15d137a3a1953cda71aa81898ee8b917c21615073b59cd4dca8c", common3.BytesToHex(claimHt[:]))
 
 	claimParsed, err := ParseClaimDefaultBytes(claim.Bytes())
 	assert.Nil(t, err)
@@ -66,10 +66,10 @@ func TestAssignNameClaim(t *testing.T) {
 	if !bytes.Equal(assignNameClaimParsed.Bytes(), assignNameClaim.Bytes()) {
 		t.Errorf("assignNameClaim and assignNameClaim parsed are not equals")
 	}
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae9f22abc828264ab70000000009c4b7a6b4af91b44be8d9bb66d41e82589f01974702d3bf1d9b4407a55593c3c3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074101d2fa51f8259df207115af9eaa73f3f4e52e60", common3.BytesToHex(assignNameClaim.Bytes()))
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae900000080000000009c4b7a6b4af91b44be8d9bb66d41e82589f01974702d3bf1d9b4407a55593c3c3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074101d2fa51f8259df207115af9eaa73f3f4e52e60", common3.BytesToHex(assignNameClaim.Bytes()))
 
-	assert.Equal(t, "0x635c15786ced9f7b29aa0abdbcb7ab0b18d207a3ba79a8061488308df4cec8c2", assignNameClaim.Hi().Hex())
-	assert.Equal(t, "0x85c181e833edd9e12fb1df71c3996bbcb3e26791cf4b39e0d47c9dec6428aa02", assignNameClaim.Ht().Hex())
+	assert.Equal(t, "0xfa7c93d75fc4b617a8ab43afd1def1a06ffc0c227ce25edc93b235e4df084cf0", assignNameClaim.Hi().Hex())
+	assert.Equal(t, "0xa09dafa7ebe716f4c35a316c4c332d47b2bb3c101402f9ba4467ed676719d45a", assignNameClaim.Ht().Hex())
 }
 
 func TestAuthorizeKSign(t *testing.T) {
@@ -79,9 +79,9 @@ func TestAuthorizeKSign(t *testing.T) {
 	if !bytes.Equal(authorizeKSignClaimParsed.Bytes(), authorizeKSignClaim.Bytes()) {
 		t.Errorf("ksignClaim and ksignClaim parsed are not equals")
 	}
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a05ed7726d7932a1f00000000101d2fa51f8259df207115af9eaa73f3f4e52e602077bb3f0400dd62421c97220536fd6ed2be29228e8db1315e8c6d7525f4bdf4dad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb34062000000005b816b9e000000005b816b9e", common3.BytesToHex(authorizeKSignClaim.Bytes()))
-	assert.Equal(t, "0xf94b1fbc765c2925f59fc266861d7e585eda11f804340769b62b41e1d7df9e89", authorizeKSignClaim.Hi().Hex())
-	assert.Equal(t, "0x8282b432d409ef113ad443bb8ec95e5accdeb63bba0bcd10d1bc9d1155952fe0", authorizeKSignClaim.Ht().Hex())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a0000005400000000101d2fa51f8259df207115af9eaa73f3f4e52e602077bb3f0400dd62421c97220536fd6ed2be29228e8db1315e8c6d7525f4bdf4dad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb34062000000005b816b9e000000005b816b9e", common3.BytesToHex(authorizeKSignClaim.Bytes()))
+	assert.Equal(t, "0xb98902d35fe0861daaeb78ada21e60e1d7c009b6e56d85127e892aeb4ed37ef2", authorizeKSignClaim.Hi().Hex())
+	assert.Equal(t, "0x9a1d4978ced5adfd4c4de9ee1bb4f850e0db426855737a5ecf0749d150620422", authorizeKSignClaim.Ht().Hex())
 
 }
 func TestSetRootClaim(t *testing.T) {
@@ -91,10 +91,10 @@ func TestSetRootClaim(t *testing.T) {
 	if !bytes.Equal(setRootClaimParsed.Bytes(), setRootClaim.Bytes()) {
 		t.Errorf("setRootClaim and setRootClaim parsed are not equals")
 	}
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000101d2fa51f8259df207115af9eaa73f3f4e52e607d2e30055477edf346d81dac92720729aed3ef830cf26b012b38f2f8304ac18c", common3.BytesToHex(setRootClaim.Bytes()))
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000101d2fa51f8259df207115af9eaa73f3f4e52e607d2e30055477edf346d81dac92720729aed3ef830cf26b012b38f2f8304ac18c", common3.BytesToHex(setRootClaim.Bytes()))
 
-	assert.Equal(t, "0x988f9b94f3904b1b2e18f821068e517e7c2ba9fbf401086c79ecc55c84fb4475", setRootClaim.Hi().Hex())
-	assert.Equal(t, "0x9dbb985810faf851379c8c66f00d62fc9f346b8c3269774820bdd833b02a1cea", setRootClaim.Ht().Hex())
+	assert.Equal(t, "0x7e76f2faee2b80b1d794271fe06b6fa52b06bcabc48441473ae28aa281b19965", setRootClaim.Hi().Hex())
+	assert.Equal(t, "0xaf49c9214bb28b886e197df5b5e38c0ea54b3334039f419375e0fb4d1f70e44c", setRootClaim.Ht().Hex())
 }
 
 func TestKSignClaimInterop(t *testing.T) {
@@ -135,11 +135,13 @@ func TestKSignClaimInterop(t *testing.T) {
 	}
 	assert.True(t, merkletree.CheckProof(root, proof, ksignClaim.Hi(), ksignClaim.Ht(), 140))
 
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a05ed7726d7932a1f00000000ee602447b5a75cf4f25367f5d199b860844d10c4d6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fbdad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb3406200000000259e9d8000000000967a7600", common3.BytesToHex(ksignClaim.Bytes()))
-	assert.Equal(t, uint32(0x58), ksignClaim.IndexLength())
-	assert.Equal(t, "0xefaf444c30354019722a8da1b5a1eca8fd4ff454aff3bfd477c8eb4ce05e75f0", ksignClaim.Hi().Hex())
-	assert.Equal(t, "0xc98ce0dbbf4cd1fc05f2093b2ebb8b2fc4699cb4cde2b8e4c0a37f957c72e64f", ksignClaim.Ht().Hex())
-	assert.Equal(t, "0x562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", root.Hex())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a0000005400000000ee602447b5a75cf4f25367f5d199b860844d10c4d6f028ca0e8edb4a8c9757ca4fdccab25fa1e0317da1188108f7d2dee14902fbdad9966a2e7371f0a24b1929ed765c0e7a3f2b4665a76a19d58173308bb3406200000000259e9d8000000000967a7600", common3.BytesToHex(ksignClaim.Bytes()))
+	assert.Equal(t, uint32(84), ksignClaim.BaseIndex.IndexLength)
+	assert.Equal(t, 84, int(ksignClaim.IndexLength()))
+	assert.Equal(t, uint32(0x54), ksignClaim.IndexLength())
+	assert.Equal(t, "0x68be938284f64944bd8ebc172792687f680fb8db13e383227c8c668820b40078", ksignClaim.Hi().Hex())
+	assert.Equal(t, "0x63b43ece0a9f5f63a4333143563896d6d4e8b0ce8acd8dd2e6f7aaec52a007bb", ksignClaim.Ht().Hex())
+	assert.Equal(t, "0x532abdf4d17d806893915c6d04ebd669ea02f127bd0f48b897dabbac75764ed6", root.Hex())
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
 }
 
@@ -175,15 +177,17 @@ func TestSetRootClaimInterop(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.True(t, merkletree.CheckProof(root, proof, setRootClaim.Hi(), setRootClaim.Ht(), 140))
-	assert.Equal(t, uint32(0x58), setRootClaim.IndexLength())
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc6b6858214fe963e0e00000000d79ae0a65e7dd29db1eac700368e693de09610b8562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", common3.BytesToHex(setRootClaim.Bytes()))
-	assert.Equal(t, "0xaaad7b30f89608e270551f207688ea8f112bb3416e4ca07018d9e80bb05f26a8", setRootClaim.Hi().Hex())
-	assert.Equal(t, "0xfa9cd70ad96d731f5d24d38baeba7a6a8d89c6910bdc430793b870a39d2f81d7", setRootClaim.Ht().Hex())
-	assert.Equal(t, "0x1dce20a20a0f93a139de6069dcfb16b91f0a7d3a540eee0a57d1fa78c2f401c3", root.Hex())
+	assert.Equal(t, uint32(84), setRootClaim.BaseIndex.IndexLength)
+	assert.Equal(t, 84, int(setRootClaim.IndexLength()))
+	assert.Equal(t, uint32(0x54), setRootClaim.IndexLength())
+	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000d79ae0a65e7dd29db1eac700368e693de09610b8562c7589149679a8dce7c53c16475eb572ea4b75d23539132d3093b483b8f1a3", common3.BytesToHex(setRootClaim.Bytes()))
+	assert.Equal(t, "0x497d8626567f90e3e14de025961133ca7e4959a686c75a062d4d4db750d607b0", setRootClaim.Hi().Hex())
+	assert.Equal(t, "0x4920867cc5963579b7c919dbb8a1cf3164fdde0c9f06b2af3d6613b3346c7f9e", setRootClaim.Ht().Hex())
+	assert.Equal(t, "0x585d9dcd51abce33f55f7be8ba04719aef308a2f9e4280593eaef981672be24c", root.Hex())
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(proof))
 }
 
-// HexToBytes converts from a hex string into an array of bytes
+// hexToBytes converts from a hex string into an array of bytes
 func hexToHash(hexstr string) merkletree.Hash {
 	var h merkletree.Hash
 	b, err := hex.DecodeString(hexstr[2:])

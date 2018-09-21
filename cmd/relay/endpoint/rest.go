@@ -51,11 +51,11 @@ func handlePostClaim(c *gin.Context) {
 		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
 		return
 	}
-	typeBytes := bytesValue[32:64]
+	typeBytes := bytesValue[32:56]
 	switch common3.BytesToHex(typeBytes) {
-	case merkletree.HashBytes([]byte("default")).Hex():
+	case common3.BytesToHex(core.DefaultTypeHash[:24]):
 		break
-	case merkletree.HashBytes([]byte("assignname")).Hex():
+	case common3.BytesToHex(core.AssignNameTypeHash[:24]):
 		assignNameClaim, err := core.ParseAssignNameClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AssignNameClaim bytes", err)
@@ -79,7 +79,7 @@ func handlePostClaim(c *gin.Context) {
 			"mp":   mp,
 		})
 		return
-	case merkletree.HashBytes([]byte("authorizeksign")).Hex():
+	case common3.BytesToHex(core.AuthorizeksignTypeHash[:24]):
 		authorizeKSignClaim, err := core.ParseAuthorizeKSignClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AuthorizeKSignClaim bytes", err)
@@ -101,7 +101,7 @@ func handlePostClaim(c *gin.Context) {
 			"idRootProof": common3.BytesToHex(idRootProof),
 		})
 		return
-	case merkletree.HashBytes([]byte("setroot")).Hex():
+	case common3.BytesToHex(core.SetRootTypeHash[:24]):
 		break
 	default:
 		fail(c, "type not found", errors.New("claim type not found"))

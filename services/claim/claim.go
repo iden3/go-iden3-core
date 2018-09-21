@@ -30,7 +30,7 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi merkletree.Hash) (uint32, erro
 			break
 		}
 		// get version bytes
-		versionBytes := b[64:68]
+		versionBytes := b[60:64]
 		version = core.EthBytesToUint32(versionBytes)
 		version++
 
@@ -39,7 +39,7 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi merkletree.Hash) (uint32, erro
 		if err != nil {
 			return 0, err
 		}
-		copy(b[64:68], versionBytes)
+		copy(b[60:64], versionBytes)
 		value, err := core.ParseValueFromBytes(b)
 		if err != nil {
 			return 0, err
@@ -72,7 +72,7 @@ func GetNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 	if err != nil {
 		return ProofOfTreeLeaf{}, err
 	}
-	copy(b[64:68], nextVersionBytes)
+	copy(b[60:64], nextVersionBytes)
 
 	value, err = core.ParseValueFromBytes(b)
 	if err != nil {
