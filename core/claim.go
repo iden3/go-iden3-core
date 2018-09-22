@@ -398,6 +398,20 @@ func NewAuthorizeKSignClaim(namespaceStr string, keyToAuthorize common.Address, 
 	return c
 }
 
+func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address, validFrom, validUntil uint64) AuthorizeKSignClaim {
+	var c AuthorizeKSignClaim
+	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
+	copy(c.BaseIndex.Type[:], AuthorizeksignTypeHash[:24])
+	c.BaseIndex.IndexLength = 84
+	c.BaseIndex.Version = 0
+	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
+	c.Application = merkletree.Hash{}
+	c.ApplicationAuthz = merkletree.Hash{}
+	c.ValidFrom = validFrom
+	c.ValidUntil = validUntil
+	return c
+}
+
 // NewSetRootClaim returns a SetRootClaim object with the given parameters
 func NewSetRootClaim(namespaceStr string, ethID common.Address, root merkletree.Hash) SetRootClaim {
 	var c SetRootClaim
