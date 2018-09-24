@@ -30,7 +30,6 @@ var (
 )
 
 type Client interface {
-	SendRawTx(tx []byte);
 	SendTransactionSync(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction, *types.Receipt, error)
 	Call(to *common.Address, value *big.Int, calldata []byte) ([]byte, error)
 	Sign(data ...[]byte) ([3][32]byte, error)
@@ -46,12 +45,12 @@ type Web3Client struct {
 	ethclient      *ethclient.Client
 	account        *accounts.Account
 	ks             *keystore.KeyStore
-	receiptTimeout time.Duration
-	maxGasPrice    uint64
+	ReceiptTimeout time.Duration
+	MaxGasPrice    uint64
 }
 
 // NewWeb3Client creates a client, using a keystore and an account for transactions
-func NewClientWithURL(rpcURL string, ks *keystore.KeyStore, account *accounts.Account) (*Web3Client, error) {
+func NewWeb3Client(rpcURL string, ks *keystore.KeyStore, account *accounts.Account) (*Web3Client, error) {
 
 	rpcClient, err := rpc.DialContext(context.TODO(), rpcURL)
 	if err != nil {
@@ -59,24 +58,14 @@ func NewClientWithURL(rpcURL string, ks *keystore.KeyStore, account *accounts.Ac
 	}
 
 	return &Web3Client{
+		mutex : 		&sync.Mutex{},
 		rpcclient:      rpcClient,
 		ethclient:      ethclient.NewClient(rpcClient),
 		ks:             ks,
 		account:        account,
-		receiptTimeout: 120 * time.Second,
+		ReceiptTimeout: 120 * time.Second,
+		MaxGasPrice:    4000000000,
 	}, nil
-}
-
-// NewWeb3Client creates a client, using a keystore and an account for transactions
-func NewWeb3Client(client *ethclient.Client, ks *keystore.KeyStore, account *accounts.Account) *Web3Client {
-
-	return &Web3Client{
-		ethclient:         client,
-		ks:             ks,
-		account:        account,
-		receiptTimeout: 120 * time.Second,
-		maxGasPrice:    4000000000,
-	}
 }
 
 // BalanceInfo retieves information about the default account
@@ -118,8 +107,8 @@ func (c *Web3Client) SendTransactionSync(to *common.Address, value *big.Int, gas
 		return nil, nil, err
 	}
 
-	if gasPrice.Uint64() > c.maxGasPrice {
-		return nil, nil, fmt.Errorf("Max gas price reached %v > %v", gasPrice, c.maxGasPrice)
+	if c.MaxGasPrice >0 && gasPrice.Uint64() > c.MaxGasPrice {
+		return nil, nil, fmt.Errorf("Max gas price reached %v > %v", gasPrice, c.MaxGasPrice)
 	}
 
 	callmsg := ethereum.CallMsg{
@@ -185,7 +174,7 @@ func (c *Web3Client) waitRecipt(txid common.Hash) (*types.Receipt, error) {
 	var receipt *types.Receipt
 
 	start := time.Now()
-	for receipt == nil && time.Now().Sub(start) < c.receiptTimeout {
+	for receipt == nil && time.Now().Sub(start) < c.ReceiptTimeout {
 		receipt, err = c.ethclient.TransactionReceipt(context.TODO(), txid)
 		if receipt == nil {
 			time.Sleep(200 * time.Millisecond)
@@ -251,12 +240,4 @@ func (c *Web3Client) CodeAt(account common.Address) ([]byte, error) {
 	return c.ethclient.CodeAt(context.TODO(),account,nil)
 }
 
-func (c *Web3Client) SendRawTxSync(data []byte) (*types.Receipt,error) {
-	txid := crypto.Keccak256Hash(data)
-	err := c.rpcclient.CallContext(context.TODO(), nil, "eth_sendRawTransaction", common.ToHex(data))
-	if err != nil {
-		return nil, err
-	}
-	return c.waitRecipt(txid)
-}
 

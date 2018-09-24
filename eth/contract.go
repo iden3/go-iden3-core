@@ -121,7 +121,7 @@ func (c *Contract) SendTransactionSync(value *big.Int, gasLimit uint64, funcname
 // Deploy the contract
 func (c *Contract) DeploySync(params ...interface{}) (*types.Transaction, *types.Receipt, error) {
 
-	code, err := c.CreationBytes(params)
+	code, err := c.CreationBytes(params...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -156,8 +156,7 @@ func (c *Contract) CreationBytes(params ...interface{}) ([]byte, error) {
 		return nil, err
 	}
 	code := append([]byte(nil), c.byteCode...)
-	code = append(code, init...)
-	return nil, err
+	return append(code, init...), err
 }
 
 func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...interface{}) (creator, contract common.Address, rawtx []byte, err error) {

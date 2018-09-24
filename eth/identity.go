@@ -2,12 +2,13 @@ package eth
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
-	common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type IdentityManager struct {
@@ -16,25 +17,42 @@ type IdentityManager struct {
 	impl     *Contract
 	proxy    *Contract
 }
+
 type Identity struct {
-	operational common.Address
-	relayer     common.Address
-	recovery    common.Address
-	revoke      common.Address
-	impl        common.Address
+	Operational common.Address
+	Relayer     common.Address
+	Recovery    common.Address
+	Revoke      common.Address
+	Impl        common.Address
 }
 
-func NewIdentityManager(client Client, deployer, impl *common.Address) *IdentityManager {
-	deployerAbi, deployerCode := deployerContract.mustGet()
-	proxyAbi, proxyCode := iden3proxyContract.mustGet()
-	implAbi, implCode := iden3implContract.mustGet()
+const (
+	deployerContract = "deployer"
+	proxyContract    = "proxy"
+	implContract     = "impl"
+)
+
+func NewIdentityManager(client Client, store ContractStore, deployer, impl *common.Address) (*IdentityManager, error) {
+
+	deployerAbi, deployerCode, err := store.Get(deployerContract)
+	if err != nil {
+		return nil, err
+	}
+	proxyAbi, proxyCode, err := store.Get(proxyContract)
+	if err != nil {
+		return nil, err
+	}
+	implAbi, implCode, err := store.Get(implContract)
+	if err != nil {
+		return nil, err
+	}
 
 	return &IdentityManager{
 		client:   client,
-		deployer: NewContract(client, &deployerAbi, deployerCode, deployer),
-		proxy:    NewContract(client, &proxyAbi, proxyCode, nil),
-		impl:     NewContract(client, &implAbi, implCode, impl),
-	}
+		deployer: NewContract(client, deployerAbi, deployerCode, deployer),
+		proxy:    NewContract(client, proxyAbi, proxyCode, nil),
+		impl:     NewContract(client, implAbi, implCode, impl),
+	}, err
 }
 
 func (i *IdentityManager) Initialized() bool {
@@ -43,10 +61,12 @@ func (i *IdentityManager) Initialized() bool {
 
 func (i *IdentityManager) Initialize() error {
 
+	log.Info("Deploying deployer")
 	_, _, err := i.deployer.DeploySync()
 	if err != nil {
 		return err
 	}
+	log.Info("Deploying implementation")
 	_, _, err = i.impl.DeploySync()
 	if err != nil {
 		return err
@@ -58,21 +78,27 @@ func (i *IdentityManager) Initialize() error {
 }
 
 func (m *IdentityManager) codeAndAddress(id *Identity) (common.Address, []byte, error) {
-	code, err := m.deployer.CreationBytes(
-		id.operational,
-		id.relayer,
-		id.recovery,
-		id.revoke,
-		id.impl,
+	code, err := m.proxy.CreationBytes(
+		id.Operational,
+		id.Relayer,
+		id.Recovery,
+		id.Revoke,
+		id.Impl,
 	)
 	if err != nil {
 		return common.Address{}, nil, err
 	}
-	return crypto.CreateAddress2(
+	addr := crypto.CreateAddress2(
 		*m.deployer.Address(),
 		common.BigToHash(big.NewInt(0)),
 		code,
-	), code, nil
+	)
+	log.Info("caller=", m.deployer.Address().Hex(),
+		" salt=", common.BigToHash(big.NewInt(0)).Hex(),
+		" code=", hex.EncodeToString(code),
+		" adress=", addr.Hex())
+
+	return addr, code, nil
 }
 
 func (m *IdentityManager) AddressOf(id *Identity) (common.Address, error) {
@@ -104,18 +130,58 @@ func (m *IdentityManager) Deploy(id *Identity) (common.Address, error) {
 	if err != nil {
 		return common.Address{}, err
 	}
-
 	_, _, err = m.deployer.SendTransactionSync(nil, 0, "create", code)
 	if err != nil {
 		return common.Address{}, err
 	}
-	deployedcode, err := m.client.CodeAt(addr)
+	log.Info("Deployed identity at ", addr.Hex())
+	return addr, nil
+}
+
+func (m *IdentityManager) Ping(id *Identity) error {
+	addr, err := m.AddressOf(id)
 	if err != nil {
-		return common.Address{}, err
+		return err
 	}
-	if bytes.Compare(code, deployedcode) != 0 {
-		return common.Address{}, fmt.Errorf("Bad deployed code")
+	var pong string
+	err = m.impl.At(&addr).Call(&pong, "ping")
+	if err != nil {
+		return err
+	}
+	if pong != "pong" {
+		return fmt.Errorf("Not returned pong (%v instead)", pong)
+	}
+	return nil
+}
+
+func (m *IdentityManager) Forward(
+	id *Identity,
+	to common.Address,
+	data []byte,
+	value *big.Int,
+	gas *big.Int,
+	sig []byte,
+	auth []byte,
+) (common.Hash, error) {
+
+	addr, _, err := m.codeAndAddress(id)
+	if err != nil {
+		return common.Hash{}, err
 	}
 
-	return addr, nil
+	proxy := m.impl.At(&addr)
+	tx, _, err := proxy.SendTransactionSync(
+		big.NewInt(0), 0,
+		"forward",
+		to, data, value, gas, sig, auth,
+	)
+
+	return tx.Hash(), err
+}
+
+func (m *IdentityManager) DeployerAddr() *common.Address {
+	return m.deployer.Address()
+}
+func (m *IdentityManager) ImplAddr() *common.Address {
+	return m.impl.Address()
 }

@@ -36,3 +36,8 @@ func (m *ClientMock) CodeAt(account common.Address) ([]byte, error) {
 	args := m.Called(account)
 	return args.Get(0).([]byte), args.Error(1)
 }
+
+func (m *ClientMock) SendRawTxSync(rawtx []byte) (*types.Receipt, error) {
+	args := m.Called(rawtx)
+	return args.Get(0).(*types.Receipt), args.Error(1)
+}
