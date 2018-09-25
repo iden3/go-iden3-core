@@ -195,7 +195,7 @@ func TestGenerateProof(t *testing.T) {
 	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
 	assert.Nil(t, mt.Add(claim1))
 
-	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()))
+	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()).hi())
 	assert.Nil(t, err)
 
 	mpHexExpected := "0000000000000000000000000000000000000000000000000000000000000002beb0fd6dcf18d37fe51cf34beacd4c524d9c039ef9da2a27ccd3e7edf662c39c"
@@ -212,11 +212,38 @@ func TestCheckProof(t *testing.T) {
 	claim3 := newTestClaim("iden3.io_3", "typespec_3", []byte("c3"))
 	assert.Nil(t, mt.Add(claim3))
 
-	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()))
+	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()).hi())
 	assert.Nil(t, err)
-	verified := CheckProof(mt.Root(), mp, parseTestClaimBytes(claim1.Bytes()), mt.NumLevels())
+	verified := CheckProof(mt.Root(), mp, claim1.hi(), HashBytes(claim1.Bytes()), mt.NumLevels())
 	assert.True(t, verified)
 
+}
+
+func TestProofOfEmpty(t *testing.T) { // proof of a non revocated leaf, prove that is empty the hi position of the leaf.version+1
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
+	// proof when there is nothing in the tree
+	mp, err := mt.GenerateProof(claim1.hi())
+	assert.Nil(t, err)
+	verified := CheckProof(mt.Root(), mp, claim1.hi(), EmptyNodeValue, mt.NumLevels())
+	assert.True(t, verified)
+
+	// add the first claim
+	assert.Nil(t, mt.Add(claim1))
+
+	// proof when there is only one leaf in the tree
+	claim2 := newTestClaim("iden3.io_2", "typespec_2", []byte("c2"))
+	mp, err = mt.GenerateProof(claim2.hi())
+	assert.Nil(t, err)
+	verified = CheckProof(mt.Root(), mp, claim2.hi(), EmptyNodeValue, mt.NumLevels())
+	assert.True(t, verified)
+
+	// check that the value in Hi is Empty
+	valueInPos, err := mt.GetValueInPos(claim2.hi())
+	assert.Nil(t, err)
+	assert.Equal(t, EmptyNodeValue.Bytes(), valueInPos)
 }
 
 func TestGetClaimInPos(t *testing.T) {
@@ -254,15 +281,16 @@ func TestVector4(t *testing.T) {
 	defer mt.Storage().Close()
 
 	zeros := make([]byte, 32, 32)
+	zeros[31] = 1 // to avoid adding Empty element
 	assert.Nil(t, mt.Add(vt{zeros, uint32(1)}))
 	v := vt{zeros, uint32(2)}
 	assert.Nil(t, mt.Add(v))
-	proof, _ := mt.GenerateProof(v)
-	assert.True(t, CheckProof(mt.Root(), proof, v, mt.NumLevels()))
+	proof, _ := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
+	assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
 	assert.Equal(t, 4, mt.NumLevels())
-	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(v.Bytes()))
-	assert.Equal(t, "0x8a18703d002272f39b71c3a586a265a92a841bbb2f553b93c7d7951ec892769d", mt.Root().Hex())
-	assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000000268a11c64aff5642515fe2cb8b46166fdf5b1661b81b2e7fe30fa5d6f9039b573", hex.EncodeToString(proof))
+	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001", hex.EncodeToString(v.Bytes()))
+	assert.Equal(t, "0xc1b95ffbb999a6dd7a472a610a98891ffae95cc973d1d1e21acfdd68db830b51", mt.Root().Hex())
+	assert.Equal(t, "00000000000000000000000000000000000000000000000000000000000000023cf025e4b4fc3ebe57374bf0e0c78ceb0009bdc4466a45174d80e8f508d1a4e3", hex.EncodeToString(proof))
 }
 
 func TestVector140(t *testing.T) {
@@ -270,18 +298,19 @@ func TestVector140(t *testing.T) {
 	defer mt.Storage().Close()
 
 	zeros := make([]byte, 32, 32)
+	zeros[31] = 1 // to avoid adding Empty element
 	for i := 1; i < len(zeros)-1; i++ {
 		v := vt{zeros, uint32(i)}
 		assert.Nil(t, mt.Add(v))
-		proof, err := mt.GenerateProof(v)
+		proof, err := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
 		assert.Nil(t, err)
-		assert.True(t, CheckProof(mt.Root(), proof, v, mt.NumLevels()))
+		assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
 		if i == len(zeros)-2 {
 			assert.Equal(t, 140, mt.NumLevels())
 			assert.Equal(t, uint32(30), v.IndexLength())
-			assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(v.Bytes()))
-			assert.Equal(t, "0xf5ba7c6348183578db9218f9259ab2a7112034b1828583ee933da64b7f62200f", mt.Root().Hex())
-			assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000001f4267ed627de2aa903e6cf65af0779e870961e47f055a61ffbbfd015711338ff602e699e9c8bcdcdd7b26d899201d982ddd6a19c3617e2d2b2a9297696f0cd04ccc7bf435ab5eb2e08a788ad08a5dd3eb2546b727c40a51d1a4f59a6bac60525f047f00ce6f67cb17f9218bfb92dcaa7f7d2ce21eeb5435d7bab2e8fbc5e5f86b02d992bd0ba4d8dcfdc7c8f71b73eff00b794a3a7907fc3e6e3ddb6d9b6bf93b", hex.EncodeToString(proof))
+			assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001", hex.EncodeToString(v.Bytes()))
+			assert.Equal(t, "0x35f83288adf03bfb61d8d57fab9ed092da79833b58bbdbe9579b636753494ebd", mt.Root().Hex())
+			assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000001f0d1f363115f3333197a009b6674f46bba791308af220ad71515567702b3b44a2b540c1abad0ff81386a78b77e8907a56b7268d24513928ae83497adf4ad93a55e380267ead8305202da0640c1518e144dee87717c732b738fa182c6ef458defd6baf50022b01e3222715d4fca4c198e94536101f6ac314b3d261d3aaa0684395c1db60626e01c39fe4f69418055c2ebd70e0c07b6d9db5c4aed0a11ed2b6a773", hex.EncodeToString(proof))
 		}
 	}
 }

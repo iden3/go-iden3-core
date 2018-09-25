@@ -2,14 +2,16 @@
 
 Go implementation of the iden3 system.
 
- [![Go Report Card](https://goreportcard.com/badge/github.com/iden3/go-iden3)](https://goreportcard.com/report/github.com/iden3/go-iden3)
-
+[![Go Report Card](https://goreportcard.com/badge/github.com/iden3/go-iden3)](https://goreportcard.com/report/github.com/iden3/go-iden3)
+[![Build Status](https://travis-ci.org/iden3/go-iden3.svg?branch=master)](https://travis-ci.org/iden3/go-iden3)
 
 ## Install
 ```
 $ go get github.com/iden3/go-iden3
 ```
 
+## Usage
+- Relay Documentation: https://github.com/iden3/go-iden3/blob/master/Relay.md
 
 ## Testing
 `go test ./...`

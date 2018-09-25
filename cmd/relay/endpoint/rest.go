@@ -51,11 +51,11 @@ func handlePostClaim(c *gin.Context) {
 		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
 		return
 	}
-	typeBytes := bytesValue[32:64]
+	typeBytes := bytesValue[32:56]
 	switch common3.BytesToHex(typeBytes) {
-	case merkletree.HashBytes([]byte("default")).Hex():
+	case common3.BytesToHex(core.DefaultTypeHash[:24]):
 		break
-	case merkletree.HashBytes([]byte("assignname")).Hex():
+	case common3.BytesToHex(core.AssignNameTypeHash[:24]):
 		assignNameClaim, err := core.ParseAssignNameClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AssignNameClaim bytes", err)
@@ -79,7 +79,7 @@ func handlePostClaim(c *gin.Context) {
 			"mp":   mp,
 		})
 		return
-	case merkletree.HashBytes([]byte("authorizeksign")).Hex():
+	case common3.BytesToHex(core.AuthorizeksignTypeHash[:24]):
 		authorizeKSignClaim, err := core.ParseAuthorizeKSignClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AuthorizeKSignClaim bytes", err)
@@ -96,12 +96,12 @@ func handlePostClaim(c *gin.Context) {
 		}
 		// return claim with proofs and signatures
 		c.JSON(200, gin.H{
-			"claimProof":  claimProof,
+			"claimProof":  common3.BytesToHex(claimProof),
 			"root":        mt.Root().Hex(),
-			"idRootProof": idRootProof,
+			"idRootProof": common3.BytesToHex(idRootProof),
 		})
 		return
-	case merkletree.HashBytes([]byte("setroot")).Hex():
+	case common3.BytesToHex(core.SetRootTypeHash[:24]):
 		break
 	default:
 		fail(c, "type not found", errors.New("claim type not found"))
@@ -117,9 +117,9 @@ func handleGetIDRoot(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"root":        mt.Root().Hex(), // relay root
-		"idRoot":      idRoot,          // user id root
-		"idRootProof": idRootProof,     // user id root proof in the relay merkletree
+		"root":        mt.Root().Hex(),                 // relay root
+		"idRoot":      idRoot.Hex(),                    // user id root
+		"idRootProof": common3.BytesToHex(idRootProof), // user id root proof in the relay merkletree
 	})
 	return
 }
@@ -135,18 +135,16 @@ func handleGetClaimByHi(c *gin.Context) {
 	var hi merkletree.Hash
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
-	claim, idProof, idRoot, setClaimRoot, relayProof, relayRoot, err := claimsrv.GetClaimByHi(mt, config.C.Namespace, idaddr, hi)
+	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := claimsrv.GetClaimByHi(mt, config.C.Namespace, idaddr, hi)
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"claim":        common3.BytesToHex(claim.Bytes()),
-		"idProof":      common3.BytesToHex(idProof),
-		"setClaimRoot": common3.BytesToHex(setClaimRoot.Bytes()),
-		"idRoot":       idRoot.Hex(),
-		"relayProof":   common3.BytesToHex(relayProof),
-		"relayRoot":    relayRoot.Hex(),
+		"claimProof":                     claimProof.Hex(),
+		"setRootClaimProof":              setRootClaimProof.Hex(),
+		"claimNonRevocationProof":        claimNonRevocationProof.Hex(),
+		"setRootClaimNonRevocationProof": setRootClaimNonRevocationProof.Hex(),
 	})
 	return
 }

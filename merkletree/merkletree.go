@@ -101,6 +101,9 @@ func (mt *MerkleTree) Add(v Value) error {
 		mt.Unlock()
 	}()
 
+	// add the leaf that we are adding
+	tx.Insert(HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+
 	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
 
@@ -186,23 +189,45 @@ func (mt *MerkleTree) Add(v Value) error {
 }
 
 // GenerateProof generates the Merkle Proof from a given claimHash for the current root
-func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
+func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
 	mt.RLock()
 	defer mt.RUnlock()
 
 	var empties [32]byte
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
 	var siblings []Hash
 	nodeHash := mt.root
 
 	for level := 0; level < mt.numLevels-1; level++ {
-		nodeType, _, nodeBytes, err := mt.storage.Get(nodeHash)
+		nodeType, indexLength, nodeBytes, err := mt.storage.Get(nodeHash)
 		if err != nil {
 			return nil, err
 		}
 		if nodeType == byte(finalNodeType) {
+			realValueInPos, err := mt.GetValueInPos(hi)
+			if err != nil {
+				return nil, err
+			}
+			// TODO valid for all levels where this condition happens
+			if bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
+				// go until the path is different, then get the nodes between this FinalNode and the node in the diffPath, they will be the siblings of the merkle proof
+				leafHi := HashBytes(nodeBytes[:indexLength]) // hi of element that was in the end of the branch (the finalNode)
+				pathChild := getPath(mt.numLevels, leafHi)
+
+				// get the position where the path is different
+				posDiff := comparePaths(pathChild, path)
+				if posDiff == -1 {
+					return nil, ErrNodeAlreadyExists
+				}
+
+				if posDiff != mt.NumLevels()-1-level {
+					sibling := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
+					setbitmap(empties[:], uint(mt.NumLevels()-2-posDiff))
+					siblings = append([]Hash{sibling}, siblings...)
+				}
+
+			}
 			break
 		}
 		node := parseNodeBytes(nodeBytes)
@@ -231,7 +256,6 @@ func (mt *MerkleTree) GenerateProof(v Value) ([]byte, error) {
 
 // GetValueInPos returns the merkletree value in the position of the Hash of the Index (Hi)
 func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
-
 	mt.RLock()
 	defer mt.RUnlock()
 
@@ -316,8 +340,7 @@ func (mt *MerkleTree) replaceLeaf(tx StorageTx, siblings []Hash, path []bool, ne
 }
 
 // CheckProof validates the Merkle Proof for the claimHash and root
-func CheckProof(root Hash, proof []byte, v Value, numLevels int) bool {
-
+func CheckProof(root Hash, proof []byte, hi Hash, ht Hash, numLevels int) bool {
 	var empties [32]byte
 	copy(empties[:], proof[:len(empties)])
 	hashLen := len(EmptyNodeValue)
@@ -329,35 +352,35 @@ func CheckProof(root Hash, proof []byte, v Value, numLevels int) bool {
 		siblings = append(siblings, siblingHash)
 	}
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(numLevels, hi)
-
-	nodeHash := HashBytes(v.Bytes())
+	nodeHash := ht
 	siblingUsedPos := 0
 
 	for level := numLevels - 2; level >= 0; level-- {
-
 		var sibling Hash
-
 		if testbitmap(empties[:], uint(level)) {
 			sibling = siblings[siblingUsedPos]
 			siblingUsedPos++
 		} else {
 			sibling = EmptyNodeValue
 		}
-
 		// calculate the nodeHash with the current nodeHash and the sibling
+		var node treeNode
 		if path[numLevels-level-2] {
-			node := treeNode{
+			node = treeNode{
 				ChildL: sibling,
 				ChildR: nodeHash,
 			}
-			nodeHash = node.Ht()
 		} else {
-			node := treeNode{
+			node = treeNode{
 				ChildL: nodeHash,
 				ChildR: sibling,
 			}
+		}
+		// if both childs are EmptyNodeValue, the parent will be EmptyNodeValue
+		if bytes.Equal(nodeHash[:], EmptyNodeValue[:]) && bytes.Equal(sibling[:], EmptyNodeValue[:]) {
+			nodeHash = EmptyNodeValue
+		} else {
 			nodeHash = node.Ht()
 		}
 	}

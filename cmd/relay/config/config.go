@@ -14,7 +14,7 @@ type geth struct {
 type contractsAddress struct {
 	Identities string
 }
-type config struct {
+type Config struct {
 	Server           server
 	Geth             geth
 	ContractsAddress contractsAddress
@@ -22,7 +22,7 @@ type config struct {
 	Namespace        string
 }
 
-var C config
+var C Config
 
 func MustRead(path, filename string) {
 	viper.SetConfigName(filename)

@@ -19,6 +19,10 @@ func TestSign(t *testing.T) {
 	msgHash := merkletree.HashBytes([]byte("to sign"))
 	signature, err := Sign(msgHash, testPrivK)
 	assert.Equal(t, "0xd45d0a89d5bbe9770ce3241cf8672aefdcdd2f204b5d63c8500e9770335314c532d0b16e3b41caabd1dde37c62a7cb6273d97c09b7394080ae7d1d8d211e05fb00", common3.BytesToHex(signature))
+
+	msgHash = merkletree.HashBytes([]byte("test"))
+	signature, err = Sign(msgHash, testPrivK)
+	assert.Equal(t, "0xbc5a47a1d4ad475be6679b15e9f71e3f2ee2bb58b2d5086ba42cc766fd27794f68efe72fb87d3bd3501c42cf146493c1c9faa4436760f8c67927fcb8de7f3b6801", common3.BytesToHex(signature))
 }
 
 func TestVerifySig(t *testing.T) {

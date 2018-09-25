@@ -1,6 +1,7 @@
 package claimsrv
 
 import (
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 )
@@ -39,4 +40,31 @@ type SetRootClaimMsg struct {
 type ClaimValueMsg struct {
 	ClaimValue merkletree.Value
 	Signature  string
+}
+
+// ProofOfTreeLeaf contains all the parameters needed to proof that a Leaf is in a merkletree with a given Root
+type ProofOfTreeLeaf struct {
+	Leaf  []byte
+	Hi    merkletree.Hash
+	Proof []byte
+	Root  merkletree.Hash
+}
+
+// ProofOfTreeLeafHex is the same data structure than ProofOfTreeLeaf but in Hexadecimal string representation
+type ProofOfTreeLeafHex struct {
+	Leaf  string
+	Hi    string
+	Proof string
+	Root  string
+}
+
+// Hex returns a ProofOfTreeLeafHex data structure
+func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
+	r := ProofOfTreeLeafHex{
+		common3.BytesToHex(pl.Leaf),
+		pl.Hi.Hex(),
+		common3.BytesToHex(pl.Proof),
+		pl.Root.Hex(),
+	}
+	return r
 }
