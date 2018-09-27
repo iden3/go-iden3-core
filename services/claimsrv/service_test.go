@@ -4,22 +4,45 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/web3"
+	"github.com/ipfsconsortium/go-ipfsc/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-const (
-	testPrivKHex = "da7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
-	gethURL      = "https://ropsten.infura.io/TFnR8BWJlqZOKxHHZNcs"
-)
-
+var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
+
+type RootServiceMock struct {
+	mock.Mock
+}
+
+func (m *RootServiceMock) Start() {
+
+}
+func (m *RootServiceMock) StopAndJoin() {
+
+}
+func (m *RootServiceMock) GetRoot(addr common.Address) (merkletree.Hash, error) {
+	args := m.Called(addr)
+	return args.Get(0).(merkletree.Hash), args.Error(1)
+}
+func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
+	m.Called(hash)
+}
+
+type SignServiceMock struct {
+	mock.Mock
+}
+
+func (m *SignServiceMock) SignHash(h merkletree.Hash) ([]byte, error) {
+	args := m.Called(h)
+	return args.Get(0).([]byte), args.Error(1)
+}
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -34,6 +57,8 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	mt, err := merkletree.New(sto, numLevels)
 	return mt, err
 }
+
+/*
 func loadConfig() {
 	c.Server.Port = "5000"
 	c.Server.PrivK = "da7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
@@ -42,69 +67,63 @@ func loadConfig() {
 	c.Domain = "iden3.io"
 	c.Namespace = "iden3.io"
 }
-func initializeEnvironment() error {
-	// initialize
-	loadConfig()
+*/
+func initializeEnvironment(t *testing.T) {
 
 	// MerkleTree leveldb
 	var err error
 	mt, err = newTestingMerkle(140)
 	if err != nil {
-		return err
+		t.Error(err)
 	}
 
-	// Ethereum
-	err = web3srv.Open(gethURL, testPrivKHex)
-	if err != nil {
-		return err
-	}
-	return nil
+	service = New(mt, &RootServiceMock{}, &SignServiceMock{})
 }
 
 func TestGetNextVersion(t *testing.T) {
-	initializeEnvironment()
+	initializeEnvironment(t)
 
 	claim := core.NewClaimDefault("c1", "default", []byte("c1"), []byte{})
 
-	version, err := GetNextVersion(mt, claim.Hi())
+	version, err := getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(0), version)
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = GetNextVersion(mt, claim.Hi())
+	version, err = getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = GetNextVersion(mt, claim.Hi())
+	version, err = getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(2), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = GetNextVersion(mt, claim.Hi())
+	version, err = getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(3), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = GetNextVersion(mt, claim.Hi())
+	version, err = getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(4), version)
 }
 
 func TestGetNonRevocationProof(t *testing.T) {
-	initializeEnvironment()
+	initializeEnvironment(t)
 	claim := core.NewClaimDefault("c1", "default", []byte("c1"), []byte{})
 
 	err := mt.Add(claim)
 	assert.Nil(t, err)
-	version, err := GetNextVersion(mt, claim.Hi())
+	version, err := getNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
-	claimProof, err := GetNonRevocationProof(mt, claim.Hi())
+	claimProof, err := getNonRevocationProof(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, "0x7d219a3c0ec6d0a48d0bff8d1385b49839bafb4e2addea4efc7003b422a6bcde", claimProof.Hi.Hex())
 	assert.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000020012174493a3222e491377aae3a1ed614ab1277c8651a9c97954c199d1ce1cb4e4", common3.BytesToHex(claimProof.Proof))
@@ -113,16 +132,15 @@ func TestGetNonRevocationProof(t *testing.T) {
 	assert.True(t, verified)
 }
 
+/*
 func TestGetClaimByHi(t *testing.T) {
-	privKHex := "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
-	testPrivK, err := crypto.HexToECDSA(privKHex)
-	assert.Nil(t, err)
-	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
+	initializeEnvironment(t)
 
+	ethID := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 	namespace := "iden3.io"
 	claim := core.NewClaimDefault(namespace, "default", []byte("dataasdf"), []byte{})
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := mt.Storage().WithPrefix(ethID.Hash().Bytes())
 	// open the MerkleTree of the user
 	userMT, err := merkletree.New(stoUserID, 140)
 	assert.Nil(t, err)
@@ -138,7 +156,7 @@ func TestGetClaimByHi(t *testing.T) {
 	err = mt.Add(setRootClaim)
 	assert.Nil(t, err)
 
-	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := GetClaimByHi(mt, namespace, ethID, claim.Hi())
+	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := service.GetClaimByHi(namespace, ethID, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000048000000006461746161736466", common3.BytesToHex(claimProof.Leaf))
 	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(claimProof.Proof))
@@ -166,7 +184,7 @@ func TestGetClaimByHi(t *testing.T) {
 	verified = merkletree.CheckProof(setRootClaimNonRevocationProof.Root, setRootClaimNonRevocationProof.Proof, setRootClaimNonRevocationProof.Hi, merkletree.EmptyNodeValue, 140)
 	assert.True(t, verified)
 }
-
+*/
 /*
 func TestAssignNameClaim(t *testing.T) {
 	initializeEnvironment()

@@ -1,21 +1,31 @@
-package eth
+package identitysrv
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/eth"
+
 	log "github.com/sirupsen/logrus"
 )
 
-type IdentityManager struct {
-	client   Client
-	deployer *Contract
-	impl     *Contract
-	proxy    *Contract
+type Service interface {
+	Initialized() bool
+	Initialize() error
+	AddressOf(id *Identity) (common.Address, error)
+	Deploy(id *Identity) (common.Address, error)
+	Forward(id *Identity, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
+	DeployerAddr() *common.Address
+	ImplAddr() *common.Address
+}
+
+type ServiceImpl struct {
+	deployer *eth.Contract
+	impl     *eth.Contract
+	proxy    *eth.Contract
 }
 
 type Identity struct {
@@ -32,34 +42,19 @@ const (
 	implContract     = "impl"
 )
 
-func NewIdentityManager(client Client, store ContractStore, deployer, impl *common.Address) (*IdentityManager, error) {
-
-	deployerAbi, deployerCode, err := store.Get(deployerContract)
-	if err != nil {
-		return nil, err
+func New(deployer, impl, proxy *eth.Contract) *ServiceImpl {
+	return &ServiceImpl{
+		deployer: deployer,
+		proxy:    proxy,
+		impl:     impl,
 	}
-	proxyAbi, proxyCode, err := store.Get(proxyContract)
-	if err != nil {
-		return nil, err
-	}
-	implAbi, implCode, err := store.Get(implContract)
-	if err != nil {
-		return nil, err
-	}
-
-	return &IdentityManager{
-		client:   client,
-		deployer: NewContract(client, deployerAbi, deployerCode, deployer),
-		proxy:    NewContract(client, proxyAbi, proxyCode, nil),
-		impl:     NewContract(client, implAbi, implCode, impl),
-	}, err
 }
 
-func (i *IdentityManager) Initialized() bool {
+func (i *ServiceImpl) Initialized() bool {
 	return i.deployer.Address() != nil && i.impl.Address() != nil
 }
 
-func (i *IdentityManager) Initialize() error {
+func (i *ServiceImpl) Initialize() error {
 
 	log.Info("Deploying deployer")
 	_, _, err := i.deployer.DeploySync()
@@ -77,7 +72,7 @@ func (i *IdentityManager) Initialize() error {
 	return nil
 }
 
-func (m *IdentityManager) codeAndAddress(id *Identity) (common.Address, []byte, error) {
+func (m *ServiceImpl) codeAndAddress(id *Identity) (common.Address, []byte, error) {
 	code, err := m.proxy.CreationBytes(
 		id.Operational,
 		id.Relayer,
@@ -101,30 +96,27 @@ func (m *IdentityManager) codeAndAddress(id *Identity) (common.Address, []byte, 
 	return addr, code, nil
 }
 
-func (m *IdentityManager) AddressOf(id *Identity) (common.Address, error) {
+func (m *ServiceImpl) AddressOf(id *Identity) (common.Address, error) {
 	addr, _, err := m.codeAndAddress(id)
 	return addr, err
 }
 
-func (m *IdentityManager) Deployed(id *Identity) (bool, error) {
-	addr, code, err := m.codeAndAddress(id)
+func (m *ServiceImpl) Deployed(id *Identity) (bool, error) {
+	addr, _, err := m.codeAndAddress(id)
 	if err != nil {
 		return false, err
 	}
-	deployedcode, err := m.client.CodeAt(addr)
+	deployedcode, err := m.deployer.Client().CodeAt(addr)
 	if err != nil {
 		return false, err
 	}
 	if len(deployedcode) == 0 {
 		return false, nil
 	}
-	if bytes.Compare(code, deployedcode) != 0 {
-		return false, fmt.Errorf("Bad deployed code")
-	}
 	return true, nil
 }
 
-func (m *IdentityManager) Deploy(id *Identity) (common.Address, error) {
+func (m *ServiceImpl) Deploy(id *Identity) (common.Address, error) {
 
 	addr, code, err := m.codeAndAddress(id)
 	if err != nil {
@@ -138,7 +130,7 @@ func (m *IdentityManager) Deploy(id *Identity) (common.Address, error) {
 	return addr, nil
 }
 
-func (m *IdentityManager) Ping(id *Identity) error {
+func (m *ServiceImpl) Ping(id *Identity) error {
 	addr, err := m.AddressOf(id)
 	if err != nil {
 		return err
@@ -154,7 +146,7 @@ func (m *IdentityManager) Ping(id *Identity) error {
 	return nil
 }
 
-func (m *IdentityManager) Forward(
+func (m *ServiceImpl) Forward(
 	id *Identity,
 	to common.Address,
 	data []byte,
@@ -179,9 +171,9 @@ func (m *IdentityManager) Forward(
 	return tx.Hash(), err
 }
 
-func (m *IdentityManager) DeployerAddr() *common.Address {
+func (m *ServiceImpl) DeployerAddr() *common.Address {
 	return m.deployer.Address()
 }
-func (m *IdentityManager) ImplAddr() *common.Address {
+func (m *ServiceImpl) ImplAddr() *common.Address {
 	return m.impl.Address()
 }

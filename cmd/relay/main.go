@@ -1,51 +1,36 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/fatih/color"
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/cmd/relay/endpoint"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/web3"
 )
 
 func main() {
+
 	config.MustRead(".", "config")
+	ks, acc := config.LoadKeyStore()
+	client := config.LoadWeb3(ks, &acc)
+	mt := config.LoadMerkele()
+	defer mt.Storage().Close()
 
-	storage, err := merkletree.NewLevelDbStorage("./db/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	mt, err := merkletree.New(storage, 140)
-	if err != nil {
-		log.Fatal(err)
-	}
+	rootservice := config.LoadRootsService(client)
+	claimservice := config.LoadClaimService(mt, rootservice, ks, acc)
 
-	defer storage.Close()
-
-	fmt.Println("mt.Root: " + mt.Root().Hex())
-
-	// Ethereum
-	err = web3srv.Open(config.C.Geth.URL, config.C.Server.PrivK)
+	// Check for founds
+	balance, err := client.BalanceAt(acc.Address)
 	if err != nil {
-		color.Red(err.Error())
-		log.Fatal(err)
-	}
-	balance, err := web3srv.GetBalance(web3srv.Address)
-	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	log.WithFields(log.Fields{
 		"balance": balance.String(),
-		"address": web3srv.Address.Hex(),
-	}).Info("contract info")
+		"address": acc.Address.Hex(),
+	}).Info("Account balance retrieved")
 	if balance.Int64() < 3000000 {
-		color.Red("Not enough funds in the relay address")
-		os.Exit(0)
+		log.Panic("Not enough funds in the relay address")
 	}
-	endpoint.Serve(mt)
+	rootservice.Start()
+
+	endpoint.Serve(rootservice, claimservice)
 }

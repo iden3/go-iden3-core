@@ -2,8 +2,10 @@ package utils
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -11,12 +13,8 @@ import (
 )
 
 // Sign performs the signature over a Hash
-func Sign(msgHash merkletree.Hash, privK *ecdsa.PrivateKey) ([]byte, error) {
-	sig, err := crypto.Sign(msgHash[:], privK)
-	if err != nil {
-		return []byte{}, err
-	}
-	return sig, nil
+func Sign(h merkletree.Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
+	return ks.SignHash(acc, h[:])
 }
 
 func EthHash(b []byte) merkletree.Hash {

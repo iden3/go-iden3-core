@@ -3,12 +3,12 @@ package endpoint
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/rootsrv"
 )
 
-var mt *merkletree.MerkleTree
-var dbNameResolver *leveldb.DB
+var claimservice claimsrv.Service
+var rootservice rootsrv.Service
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -19,9 +19,10 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func Serve(mtree *merkletree.MerkleTree) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
-	mt = mtree
+	claimservice = cs
+	rootservice = rs
 
 	r := gin.Default()
 	r.Use(corsMiddleware())
@@ -29,5 +30,5 @@ func Serve(mtree *merkletree.MerkleTree) {
 	r.POST("/claim/:idaddr", handlePostClaim)
 	r.GET("/claim/:idaddr/root", handleGetIDRoot)
 	r.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
-	r.Run(":" + config.C.Server.Port)
+	r.Run(config.C.Server.ServiceApi)
 }

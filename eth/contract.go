@@ -9,9 +9,9 @@ import (
 	"io/ioutil"
 	"math/big"
 
-	abi "github.com/ethereum/go-ethereum/accounts/abi"
-	common "github.com/ethereum/go-ethereum/common"
-	types "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	log "github.com/sirupsen/logrus"
 )
@@ -20,8 +20,8 @@ import (
 
 type Contract struct {
 	abi      *abi.ABI
-	client   Client
 	byteCode []byte
+	client   Client
 	address  *common.Address
 }
 
@@ -110,9 +110,13 @@ func (c *Contract) SendTransactionSync(value *big.Int, gasLimit uint64, funcname
 		log.Println("Failed packing ", funcname)
 		return nil, nil, err
 	}
-	tx, receipt, err := c.client.SendTransactionSync(c.address, value, gasLimit, msg)
+	tx, err := c.client.SendTransaction(c.address, value, gasLimit, msg)
 	if err != nil {
 		log.Println("Failed calling ", funcname)
+	}
+	receipt, err := c.client.WaitReceipt(tx.Hash())
+	if err != nil {
+		log.Println("Failed wating receipt ", funcname)
 	}
 
 	return tx, receipt, err
@@ -126,7 +130,14 @@ func (c *Contract) DeploySync(params ...interface{}) (*types.Transaction, *types
 		return nil, nil, err
 	}
 
-	tx, receipt, err := c.client.SendTransactionSync(nil, big.NewInt(0), 0, code)
+	tx, err := c.client.SendTransaction(nil, big.NewInt(0), 0, code)
+	if err != nil {
+		log.Println("Failed sending transaction ", tx.Hash())
+	}
+	receipt, err := c.client.WaitReceipt(tx.Hash())
+	if err != nil {
+		log.Println("Failed wating receipt ", tx.Hash())
+	}
 
 	if err == nil {
 		c.address = &receipt.ContractAddress

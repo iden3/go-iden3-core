@@ -2,13 +2,8 @@ package endpoint
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/id/config"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/iden3/go-iden3/services/claimsrv"
 )
-
-var mt *merkletree.MerkleTree
-var dbNameResolver *leveldb.DB
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -19,13 +14,14 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func Serve(mtree *merkletree.MerkleTree) {
+func Serve(cs *claimsrv.Service) {
+	/*
+		claimservice = cs
 
-	mt = mtree
-
-	r := gin.Default()
-	r.Use(corsMiddleware())
-	r.POST("/vinculateid", handleVinculateID)
-	r.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
-	r.Run(":" + config.C.Server.Port)
+		r := gin.Default()
+		r.Use(corsMiddleware())
+		r.POST("/vinculateid", handleVinculateID)
+		r.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
+		r.Run(":" + config.C.Server.Port)
+	*/
 }
