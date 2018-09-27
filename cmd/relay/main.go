@@ -1,36 +1,52 @@
 package main
 
 import (
+	"os"
+
 	log "github.com/sirupsen/logrus"
 
-	"github.com/iden3/go-iden3/cmd/relay/config"
-	"github.com/iden3/go-iden3/cmd/relay/endpoint"
+	"github.com/iden3/go-iden3/cmd/relay/commands"
+	"github.com/urfave/cli"
 )
 
 func main() {
 
-	config.MustRead(".", "config")
-	ks, acc := config.LoadKeyStore()
-	client := config.LoadWeb3(ks, &acc)
-	mt := config.LoadMerkele()
-	defer mt.Storage().Close()
+	app := cli.NewApp()
 
-	rootservice := config.LoadRootsService(client)
-	claimservice := config.LoadClaimService(mt, rootservice, ks, acc)
+	flags := []cli.Flag{
+		cli.StringFlag{Name: "config"},
+	}
 
-	// Check for founds
-	balance, err := client.BalanceAt(acc.Address)
+	app.Commands = []cli.Command{
+		{
+			Name:    "start",
+			Aliases: []string{},
+			Usage:   "start the server",
+			Action:  commands.Start,
+		},
+		{
+			Name:    "contract",
+			Aliases: []string{},
+			Usage:   "operate with contracts",
+			Subcommands: []cli.Command{
+				{
+					Name:   "info",
+					Usage:  "show information about contracts",
+					Action: commands.ContractInfo,
+				},
+				{
+					Name:   "deploy",
+					Usage:  "deploy contract",
+					Action: commands.ContractDeploy,
+				},
+			},
+		},
+	}
+
+	app.Flags = flags
+
+	err := app.Run(os.Args)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
-	log.WithFields(log.Fields{
-		"balance": balance.String(),
-		"address": acc.Address.Hex(),
-	}).Info("Account balance retrieved")
-	if balance.Int64() < 3000000 {
-		log.Panic("Not enough funds in the relay address")
-	}
-	rootservice.Start()
-
-	endpoint.Serve(rootservice, claimservice)
 }

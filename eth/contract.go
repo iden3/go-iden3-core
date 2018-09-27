@@ -107,16 +107,16 @@ func (c *Contract) SendTransactionSync(value *big.Int, gasLimit uint64, funcname
 
 	msg, err := c.abi.Pack(funcname, params...)
 	if err != nil {
-		log.Println("Failed packing ", funcname)
+		log.Warn("Failed packing ", funcname)
 		return nil, nil, err
 	}
 	tx, err := c.client.SendTransaction(c.address, value, gasLimit, msg)
 	if err != nil {
-		log.Println("Failed calling ", funcname)
+		log.Warn("Failed calling ", funcname)
 	}
 	receipt, err := c.client.WaitReceipt(tx.Hash())
 	if err != nil {
-		log.Println("Failed wating receipt ", funcname)
+		log.Warn("Failed wating receipt ", funcname)
 	}
 
 	return tx, receipt, err
@@ -132,11 +132,12 @@ func (c *Contract) DeploySync(params ...interface{}) (*types.Transaction, *types
 
 	tx, err := c.client.SendTransaction(nil, big.NewInt(0), 0, code)
 	if err != nil {
-		log.Println("Failed sending transaction ", tx.Hash())
+		//	log.Warn("Failed sending transaction ", tx.Hash())
+		return nil, nil, err
 	}
 	receipt, err := c.client.WaitReceipt(tx.Hash())
 	if err != nil {
-		log.Println("Failed wating receipt ", tx.Hash())
+		log.Warn("Failed wating receipt ", tx.Hash())
 	}
 
 	if err == nil {

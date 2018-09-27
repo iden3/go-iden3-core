@@ -14,7 +14,6 @@ import (
 
 type Service interface {
 	Initialized() bool
-	Initialize() error
 	AddressOf(id *Identity) (common.Address, error)
 	Deploy(id *Identity) (common.Address, error)
 	Forward(id *Identity, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
@@ -52,24 +51,6 @@ func New(deployer, impl, proxy *eth.Contract) *ServiceImpl {
 
 func (i *ServiceImpl) Initialized() bool {
 	return i.deployer.Address() != nil && i.impl.Address() != nil
-}
-
-func (i *ServiceImpl) Initialize() error {
-
-	log.Info("Deploying deployer")
-	_, _, err := i.deployer.DeploySync()
-	if err != nil {
-		return err
-	}
-	log.Info("Deploying implementation")
-	_, _, err = i.impl.DeploySync()
-	if err != nil {
-		return err
-	}
-
-	log.Info("Deployer created at ", i.deployer.Address().Hex())
-	log.Info("Implementation created at ", i.impl.Address().Hex())
-	return nil
 }
 
 func (m *ServiceImpl) codeAndAddress(id *Identity) (common.Address, []byte, error) {

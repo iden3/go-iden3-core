@@ -1,9 +1,14 @@
 package config
 
 import (
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"github.com/urfave/cli"
 )
+
+type ContractInfo struct {
+	JsonABI string
+	Address string
+}
 
 type Config struct {
 	Server struct {
@@ -19,21 +24,10 @@ type Config struct {
 		Password string
 	}
 	Contracts struct {
-		RootCommits struct {
-			JsonABI string
-			Address string
-		}
-		Iden3Impl struct {
-			JsonABI string
-			Address string
-		}
-		Iden3Deployer struct {
-			JsonABI string
-			Address string
-		}
-		Iden3Proxy struct {
-			JsonABI string
-		}
+		RootCommits   ContractInfo
+		Iden3Impl     ContractInfo
+		Iden3Deployer ContractInfo
+		Iden3Proxy    ContractInfo
 	}
 	Storage struct {
 		Path string
@@ -44,15 +38,24 @@ type Config struct {
 
 var C Config
 
-func MustRead(path, filename string) {
-	viper.SetConfigName(filename)
-	viper.AddConfigPath(path)
+func MustRead(c *cli.Context) error {
+
 	viper.SetConfigType("yaml")
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")      // adding home directory as first search path
+	viper.SetEnvPrefix("relay2i") // so viper.AutomaticEnv will get matching envvars starting with O2M_
+	viper.AutomaticEnv()          // read in environment variables that match
+
+	if c.GlobalString("config") != "" {
+		viper.SetConfigFile(c.GlobalString("config"))
+	}
+
 	if err := viper.ReadInConfig(); err != nil {
-		log.Panic(err)
+		return err
 	}
 	err := viper.Unmarshal(&C)
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
+	return nil
 }

@@ -114,8 +114,12 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 	if gasLimit == 0 {
 		gasLimit, err = c.ethclient.EstimateGas(ctx, callmsg)
 		if err != nil {
+			sendto := "nil"
+			if  callmsg.To != nil {
+				sendto = callmsg.To.Hex()
+			}
 			log.Errorf("WEB3 Failed EstimateGas from=%v to=%v value=%v data=%v",
-				callmsg.From.Hex(), callmsg.To.Hex(),
+				callmsg.From.Hex(), sendto,
 				callmsg.Value, hex.EncodeToString(callmsg.Data),
 			)
 			return nil, err
@@ -163,6 +167,8 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 func (c *Web3Client) WaitReceipt(txid common.Hash) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
+
+	log.WithField("tx", txid.Hex()).Info("Waiting for receipt")
 
 	start := time.Now()
 	for receipt == nil && time.Now().Sub(start) < c.ReceiptTimeout {
