@@ -19,7 +19,7 @@ import (
 type Service interface {
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) (merkletree.Hash, []byte, []byte, error)
 	ResolvAssignNameClaim(nameid, namespace string) (core.AssignNameClaim, error)
-	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) ([]byte, []byte, error)
+	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) ([]byte, []byte, error)
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
 	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, error)
@@ -79,7 +79,7 @@ func (cs *ServiceImpl) ResolvAssignNameClaim(nameid, namespace string) (core.Ass
 		return core.AssignNameClaim{}, fmt.Errorf("Invalid nameid %v", s)
 	}
 	name := s[0]
-	domain := s[1] 
+	domain := s[1]
 
 	// build the AssignNameClaim Partial with the given data of the Index
 	nameHash := merkletree.HashBytes([]byte(name))
@@ -104,17 +104,17 @@ func (cs *ServiceImpl) ResolvAssignNameClaim(nameid, namespace string) (core.Ass
 }
 
 // AddAuthorizeKSignClaim adds AuthorizeKSignClaim into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a SetRootClaim. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) ([]byte, []byte, error) {
+func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error {
 	// TODO this function is almost the same than AddUserIDClaim() function. Maybe delete this one and keep the generic one
 	// verify signature of the AuthorizeKSignClaim
 	signature, err := common3.HexToBytes(authorizeKSignClaimMsg.Signature)
 	if err != nil {
-		return []byte{}, []byte{}, err
+		return err
 	}
 	msgHash := utils.EthHash(authorizeKSignClaimMsg.AuthorizeKSignClaim.Bytes())
 	signature[64] -= 27
 	if !utils.VerifySig(ethID, signature, msgHash[:]) {
-		return []byte{}, []byte{}, errors.New("signature can not be verified")
+		return errors.New("signature can not be verified")
 	}
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
@@ -123,13 +123,13 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	// open the MerkleTree of the user
 	userMT, err := merkletree.New(stoUserID, 140)
 	if err != nil {
-		return []byte{}, []byte{}, err
+		return err
 	}
 
 	// add AuthorizeKSignClaim into the User's ID Merkle Tree
 	err = userMT.Add(authorizeKSignClaimMsg.AuthorizeKSignClaim)
 	if err != nil {
-		return []byte{}, []byte{}, err
+		return err
 	}
 
 	// create new SetRootClaim
@@ -138,29 +138,31 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	// get next version of the claim
 	version, err := getNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	setRootClaim.BaseIndex.Version = version
 
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = cs.mt.Add(setRootClaim)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// update Relay's Root in the Smart Contract
 	cs.rootsrv.SetRoot(cs.mt.Root())
 
 	// return the proof of the AuthorizeKSignClaim, and the proof of the SetRootClaim
-	claimProof, err := userMT.GenerateProof(authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
-	if err != nil {
-		return nil, nil, err
-	}
-	idRootProof, err := cs.mt.GenerateProof(setRootClaim.Hi())
-	if err != nil {
-		return nil, nil, err
-	}
-	return claimProof, idRootProof, nil
+	// claimProof, err := userMT.GenerateProof(authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	// idRootProof, err := cs.mt.GenerateProof(setRootClaim.Hi())
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
+	// return claimProof, idRootProof, nil
+
+	return nil
 }
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree

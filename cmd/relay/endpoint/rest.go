@@ -37,13 +37,13 @@ func handleGetRoot(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"root":         claimservice.MT().Root().Hex(),
 		"contractRoot": common3.BytesToHex(root[:]),
-	}) 
+	})
 }
 
 func handlePostClaim(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
-	var bytesSignedMsg claimsrv.BytesSignedMsg 
+	var bytesSignedMsg claimsrv.BytesSignedMsg
 	c.BindJSON(&bytesSignedMsg)
 	bytesValue, err := common3.HexToBytes(bytesSignedMsg.ValueHex)
 	if err != nil {
@@ -86,16 +86,22 @@ func handlePostClaim(c *gin.Context) {
 			authorizeKSignClaim,
 			bytesSignedMsg.SignatureHex,
 		}
-		claimProof, idRootProof, err := claimservice.AddAuthorizeKSignClaim(idaddr, authorizeKSignClaimMsg)
+		err = claimservice.AddAuthorizeKSignClaim(idaddr, authorizeKSignClaimMsg)
 		if err != nil {
 			fail(c, "error on AddAuthorizeKSignClaim", err)
 			return
 		}
-		// return claim with proofs and signatures
+		// return claim with proofs
+		claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
+		if err != nil {
+			fail(c, "error on GetClaimByHi", err)
+			return
+		}
 		c.JSON(200, gin.H{
-			"claimProof":  common3.BytesToHex(claimProof),
-			"root":        claimservice.MT().Root().Hex(),
-			"idRootProof": common3.BytesToHex(idRootProof),
+			"claimProof":                     claimProof.Hex(),
+			"setRootClaimProof":              setRootClaimProof.Hex(),
+			"claimNonRevocationProof":        claimNonRevocationProof.Hex(),
+			"setRootClaimNonRevocationProof": setRootClaimNonRevocationProof.Hex(),
 		})
 		return
 
