@@ -11,7 +11,16 @@ import (
 	"github.com/iden3/go-iden3/cmd/relay/endpoint"
 )
 
-func Start(c *cli.Context) error {
+var ServerCommands = []cli.Command{
+	{
+		Name:    "start",
+		Aliases: []string{},
+		Usage:   "start the server",
+		Action:  cmdStart,
+	},
+}
+
+func cmdStart(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err

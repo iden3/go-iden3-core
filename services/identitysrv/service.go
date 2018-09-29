@@ -1,8 +1,8 @@
 package identitysrv
 
 import (
-	"encoding/hex"
-	"fmt"
+	"bytes"
+	"encoding/binary"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,6 +16,8 @@ type Service interface {
 	Initialized() bool
 	AddressOf(id *Identity) (common.Address, error)
 	Deploy(id *Identity) (common.Address, error)
+	IsDeployed(idaddr common.Address) (bool, error)
+	Info(idaddr common.Address) (*Info, error)
 	Forward(id *Identity, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
 	DeployerAddr() *common.Address
 	ImplAddr() *common.Address
@@ -30,16 +32,19 @@ type ServiceImpl struct {
 type Identity struct {
 	Operational common.Address
 	Relayer     common.Address
-	Recovery    common.Address
-	Revoke      common.Address
+	Recoverer   common.Address
+	Revokator   common.Address
 	Impl        common.Address
 }
 
-const (
-	deployerContract = "deployer"
-	proxyContract    = "proxy"
-	implContract     = "impl"
-)
+type Info struct {
+	Impl          common.Address
+	Recoverer     common.Address
+	RecovererProp common.Address
+	Revoker       common.Address
+	Relay         common.Address
+	LastNonce     *big.Int
+}
 
 func New(deployer, impl, proxy *eth.Contract) *ServiceImpl {
 	return &ServiceImpl{
@@ -53,26 +58,22 @@ func (i *ServiceImpl) Initialized() bool {
 	return i.deployer.Address() != nil && i.impl.Address() != nil
 }
 
-func (m *ServiceImpl) codeAndAddress(id *Identity) (common.Address, []byte, error) {
-	code, err := m.proxy.CreationBytes(
+func (s *ServiceImpl) codeAndAddress(id *Identity) (common.Address, []byte, error) {
+	code, err := s.proxy.CreationBytes(
 		id.Operational,
 		id.Relayer,
-		id.Recovery,
-		id.Revoke,
+		id.Recoverer,
+		id.Revokator,
 		id.Impl,
 	)
 	if err != nil {
 		return common.Address{}, nil, err
 	}
 	addr := crypto.CreateAddress2(
-		*m.deployer.Address(),
+		*s.deployer.Address(),
 		common.BigToHash(big.NewInt(0)),
 		code,
 	)
-	log.Info("caller=", m.deployer.Address().Hex(),
-		" salt=", common.BigToHash(big.NewInt(0)).Hex(),
-		" code=", hex.EncodeToString(code),
-		" adress=", addr.Hex())
 
 	return addr, code, nil
 }
@@ -82,12 +83,8 @@ func (m *ServiceImpl) AddressOf(id *Identity) (common.Address, error) {
 	return addr, err
 }
 
-func (m *ServiceImpl) Deployed(id *Identity) (bool, error) {
-	addr, _, err := m.codeAndAddress(id)
-	if err != nil {
-		return false, err
-	}
-	deployedcode, err := m.deployer.Client().CodeAt(addr)
+func (m *ServiceImpl) IsDeployed(idaddr common.Address) (bool, error) {
+	deployedcode, err := m.deployer.Client().CodeAt(idaddr)
 	if err != nil {
 		return false, err
 	}
@@ -111,23 +108,20 @@ func (m *ServiceImpl) Deploy(id *Identity) (common.Address, error) {
 	return addr, nil
 }
 
-func (m *ServiceImpl) Ping(id *Identity) error {
-	addr, err := m.AddressOf(id)
-	if err != nil {
-		return err
+func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
+
+	var info Info
+	if err := s.impl.At(&idaddr).Call(&info, "info"); err != nil {
+		return nil, err
 	}
-	var pong string
-	err = m.impl.At(&addr).Call(&pong, "ping")
-	if err != nil {
-		return err
+	if err := s.impl.At(&idaddr).Call(&info.LastNonce, "lastNonce"); err != nil {
+		return nil, err
 	}
-	if pong != "pong" {
-		return fmt.Errorf("Not returned pong (%v instead)", pong)
-	}
-	return nil
+	return &info, nil
+
 }
 
-func (m *ServiceImpl) Forward(
+func (s *ServiceImpl) Forward(
 	id *Identity,
 	to common.Address,
 	data []byte,
@@ -137,12 +131,12 @@ func (m *ServiceImpl) Forward(
 	auth []byte,
 ) (common.Hash, error) {
 
-	addr, _, err := m.codeAndAddress(id)
+	addr, _, err := s.codeAndAddress(id)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	proxy := m.impl.At(&addr)
+	proxy := s.impl.At(&addr)
 	tx, _, err := proxy.SendTransactionSync(
 		big.NewInt(0), 0,
 		"forward",
@@ -152,9 +146,37 @@ func (m *ServiceImpl) Forward(
 	return tx.Hash(), err
 }
 
-func (m *ServiceImpl) DeployerAddr() *common.Address {
-	return m.deployer.Address()
+func (s *ServiceImpl) DeployerAddr() *common.Address {
+	return s.deployer.Address()
 }
-func (m *ServiceImpl) ImplAddr() *common.Address {
-	return m.impl.Address()
+
+func (s *ServiceImpl) ImplAddr() *common.Address {
+	return s.impl.Address()
+}
+
+func PackAuth(
+	kclaimBytes, kclaimRoot, kclaimExistenceProof, kclaimNonNextExistenceProof []byte,
+	rclaimBytes, rclaimRoot, rclaimExistenceProof, rclaimNonNextExistenceProof []byte,
+	rclaimSigDate uint64,
+	rclaimSigR, rclaimSigS []byte, rclaimSigV uint8) []byte {
+
+	var b bytes.Buffer
+	b.Write(kclaimBytes)
+	b.Write(kclaimRoot)
+	b.Write(kclaimExistenceProof)
+	b.Write(kclaimNonNextExistenceProof)
+	b.Write(rclaimBytes)
+	b.Write(rclaimRoot)
+	b.Write(rclaimExistenceProof)
+	b.Write(rclaimNonNextExistenceProof)
+
+	var v [4]byte
+	binary.LittleEndian.PutUint64(v[:], rclaimSigDate)
+	b.Write(v[:])
+
+	b.Write(rclaimSigR)
+	b.Write(rclaimSigS)
+	b.Write([]byte{rclaimSigV})
+
+	return b.Bytes()
 }
