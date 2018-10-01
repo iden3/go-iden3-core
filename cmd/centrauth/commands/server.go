@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/signal"
 
-	cfg "github.com/iden3/go-iden3/cmd/cauth/config"
-	"github.com/iden3/go-iden3/cmd/cauth/endpoint"
+	cfg "github.com/iden3/go-iden3/cmd/centrauth/config"
+	"github.com/iden3/go-iden3/cmd/centrauth/endpoint"
 	"github.com/urfave/cli"
 )
 

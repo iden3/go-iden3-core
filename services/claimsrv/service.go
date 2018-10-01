@@ -22,7 +22,7 @@ type Service interface {
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) ([]byte, []byte, error)
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
-	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, error)
+	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
 	MT() *merkletree.MerkleTree
 }
 
@@ -151,17 +151,6 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	// update Relay's Root in the Smart Contract
 	cs.rootsrv.SetRoot(cs.mt.Root())
 
-	// return the proof of the AuthorizeKSignClaim, and the proof of the SetRootClaim
-	// claimProof, err := userMT.GenerateProof(authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-	// idRootProof, err := cs.mt.GenerateProof(setRootClaim.Hi())
-	// if err != nil {
-	// 	return nil, nil, err
-	// }
-	// return claimProof, idRootProof, nil
-
 	return nil
 }
 
@@ -250,30 +239,30 @@ func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte,
 }
 
 // GetClaimByHi given a Hash(index) (Hi) and an ID, returns the Claim in that Hi position inside the ID's merkletree, and the SetRootClaim with the ID's root in the Relay's merkletree
-func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, ProofOfTreeLeaf, error) {
+func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.New(stoUserID, 140)
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 
 	// get the value in the hi position
 	valueBytes, err := userMT.GetValueInPos(hi)
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 	value, err := core.ParseValueFromBytes(valueBytes)
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 
 	// get the proof of the value in the User ID Tree
 	idProof, err := userMT.GenerateProof(merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 
 	claimProof := ProofOfTreeLeaf{
@@ -287,14 +276,14 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
 	version, err := getNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 	setRootClaim.BaseIndex.Version = version - 1
 
 	// get the proof of the SetRootClaim in the Relay Tree
 	relayProof, err := cs.mt.GenerateProof(setRootClaim.Hi())
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 	setRootClaimProof := ProofOfTreeLeaf{
 		Leaf:  setRootClaim.Bytes(),
@@ -306,14 +295,20 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	// get non revocation proofs of the claim
 	claimNonRevocationProof, err := getNonRevocationProof(userMT, merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 	setRootClaimNonRevocationProof, err := getNonRevocationProof(cs.mt, setRootClaim.Hi())
 	if err != nil {
-		return ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, ProofOfTreeLeaf{}, err
+		return ProofOfClaim{}, err
 	}
 
-	return claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, nil
+	proofOfClaim := ProofOfClaim{
+		claimProof,
+		setRootClaimProof,
+		claimNonRevocationProof,
+		setRootClaimNonRevocationProof,
+	}
+	return proofOfClaim, nil
 }
 func (cs *ServiceImpl) MT() *merkletree.MerkleTree {
 	return cs.mt

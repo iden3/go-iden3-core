@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/iden3/go-iden3/cmd/cauth/commands"
+	"github.com/iden3/go-iden3/cmd/centrauth/commands"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )

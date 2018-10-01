@@ -92,16 +92,13 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 		// return claim with proofs
-		claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return
 		}
 		c.JSON(200, gin.H{
-			"claimProof":                     claimProof.Hex(),
-			"setRootClaimProof":              setRootClaimProof.Hex(),
-			"claimNonRevocationProof":        claimNonRevocationProof.Hex(),
-			"setRootClaimNonRevocationProof": setRootClaimNonRevocationProof.Hex(),
+			"proofOfClaim": proofOfClaim.Hex(),
 		})
 		return
 
@@ -140,16 +137,13 @@ func handleGetClaimByHi(c *gin.Context) {
 	var hi merkletree.Hash
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
-	claimProof, setRootClaimProof, claimNonRevocationProof, setRootClaimNonRevocationProof, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, hi)
+	proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, hi)
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"claimProof":                     claimProof.Hex(),
-		"setRootClaimProof":              setRootClaimProof.Hex(),
-		"claimNonRevocationProof":        claimNonRevocationProof.Hex(),
-		"setRootClaimNonRevocationProof": setRootClaimNonRevocationProof.Hex(),
+		"proofOfClaim": proofOfClaim.Hex(),
 	})
 	return
 }

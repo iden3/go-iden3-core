@@ -1,4 +1,4 @@
-package challenge
+package centrauthsrv
 
 import (
 	"strconv"

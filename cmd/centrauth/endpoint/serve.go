@@ -2,7 +2,7 @@ package endpoint
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/cauth/config"
+	"github.com/iden3/go-iden3/cmd/centrauth/config"
 )
 
 func corsMiddleware() gin.HandlerFunc {
