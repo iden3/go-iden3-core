@@ -158,7 +158,12 @@ func (c *Contract) Call(ret interface{}, funcname string, params ...interface{})
 	if err != nil {
 		return err
 	}
-	return c.abi.Unpack(ret, funcname, output)
+	if len(output) > 0 {
+		// TODO(amb) check 0x outputs in eth_call for addresses
+		return c.abi.Unpack(ret, funcname, output)
+	} else {
+		return nil
+	}
 }
 
 func (c *Contract) CreationBytes(params ...interface{}) ([]byte, error) {

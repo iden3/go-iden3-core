@@ -26,6 +26,7 @@ type ServiceImpl struct {
 func New(rootcommits *eth.Contract) *ServiceImpl {
 	return &ServiceImpl{
 		stopch:      make(chan (interface{})),
+		stoppedch:   make(chan (interface{})),
 		rootcommits: rootcommits,
 	}
 }
@@ -36,29 +37,29 @@ func (s *ServiceImpl) Start() {
 	go func() {
 		log.Info("Starting root publisher")
 		for {
-			switch {
+			select {
 			case <-s.stopch:
-				s.stoppedch <- nil
 				break
-			case lastRoot != s.lastRoot:
-				lastRoot = s.lastRoot
-				_, _, err := s.rootcommits.SendTransactionSync(nil, 0, "AddRoot", lastRoot)
-				if err != nil {
-					log.Error("Failed to add root", err)
-					lastRoot = merkletree.Hash{}
-					time.Sleep(1)
+			case <-time.After(time.Second):
+				if lastRoot != s.lastRoot {
+					lastRoot = s.lastRoot
+					_, _, err := s.rootcommits.SendTransactionSync(nil, 0, "setRoot", lastRoot)
+					if err != nil {
+						log.Error("Failed to add root", err)
+						lastRoot = merkletree.Hash{}
+					}
 				}
-			default:
-				time.Sleep(1)
 			}
+			log.Info("Root publisher finalized")
+			s.stoppedch <- nil
+			return
 		}
-		log.Info("Root publisher finialized")
 	}()
 }
 
 func (s *ServiceImpl) GetRoot(addr common.Address) (merkletree.Hash, error) {
 	var res merkletree.Hash
-	err := s.rootcommits.Call(&res, "GetRoot", addr)
+	err := s.rootcommits.Call(&res, "getRoot", addr)
 	return res, err
 }
 
@@ -67,6 +68,8 @@ func (s *ServiceImpl) SetRoot(hash merkletree.Hash) {
 }
 
 func (s *ServiceImpl) StopAndJoin() {
-	s.stopch <- nil
+	go func() {
+		s.stopch <- nil
+	}()
 	<-s.stoppedch
 }
