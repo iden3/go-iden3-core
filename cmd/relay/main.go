@@ -12,38 +12,16 @@ import (
 func main() {
 
 	app := cli.NewApp()
-
-	flags := []cli.Flag{
+	app.Name = "relayeri3"
+	app.Version = "0.1.0-alpha"
+	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "config"},
 	}
 
-	app.Commands = []cli.Command{
-		{
-			Name:    "start",
-			Aliases: []string{},
-			Usage:   "start the server",
-			Action:  commands.Start,
-		},
-		{
-			Name:    "contract",
-			Aliases: []string{},
-			Usage:   "operate with contracts",
-			Subcommands: []cli.Command{
-				{
-					Name:   "info",
-					Usage:  "show information about contracts",
-					Action: commands.ContractInfo,
-				},
-				{
-					Name:   "deploy",
-					Usage:  "deploy contract",
-					Action: commands.ContractDeploy,
-				},
-			},
-		},
-	}
-
-	app.Flags = flags
+	app.Commands = []cli.Command{}
+	app.Commands = append(app.Commands, commands.ServerCommands...)
+	app.Commands = append(app.Commands, commands.IdCommands...)
+	app.Commands = append(app.Commands, commands.ContractCommands...)
 
 	err := app.Run(os.Args)
 	if err != nil {

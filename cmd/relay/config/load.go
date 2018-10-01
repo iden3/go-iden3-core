@@ -34,7 +34,7 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 	acc, err := ks.Find(accounts.Account{
 		Address: common.HexToAddress(C.KeyStore.Address),
 	})
-	assert("Cannot find ksystore account", err)
+	assert("Cannot find keystore account", err)
 
 	assert("Cannot unlock account", ks.Unlock(acc, string(passwd)))
 	log.WithField("acc", acc.Address.Hex()).Info("Keystore and account unlocked sucessfully")

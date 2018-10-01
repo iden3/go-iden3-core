@@ -9,15 +9,32 @@ import (
 	"github.com/urfave/cli"
 )
 
+var ContractCommands = []cli.Command{{
+	Name:  "contract",
+	Usage: "operate with contracts",
+	Subcommands: []cli.Command{
+		{
+			Name:   "info",
+			Usage:  "show information about contracts",
+			Action: cmdInfo,
+		},
+		{
+			Name:   "deploy",
+			Usage:  "deploy contract",
+			Action: cmdDeploy,
+		},
+	},
+}}
+
 func contractInfo() map[string]cfg.ContractInfo {
 	var info map[string]cfg.ContractInfo = make(map[string]cfg.ContractInfo)
 	info["rootcommits"] = cfg.C.Contracts.RootCommits
-	info["idimpl"] = cfg.C.Contracts.Iden3Impl
-	info["deployer"] = cfg.C.Contracts.Iden3Deployer
+	info["iden3impl"] = cfg.C.Contracts.Iden3Impl
+	info["iden3deployer"] = cfg.C.Contracts.Iden3Deployer
 	return info
 }
 
-func ContractInfo(c *cli.Context) error {
+func cmdInfo(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err
@@ -48,7 +65,7 @@ func ContractInfo(c *cli.Context) error {
 	return nil
 }
 
-func ContractDeploy(c *cli.Context) error {
+func cmdDeploy(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err

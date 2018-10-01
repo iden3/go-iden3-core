@@ -3,7 +3,7 @@
 ## Usage
 In the `go-iden3/cmd/relay` directory, run:
 ```
-go run main.go
+go run main.go --config path-to-config/config.yaml start
 ```
 
 Also can be build using:
