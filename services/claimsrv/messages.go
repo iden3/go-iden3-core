@@ -85,12 +85,14 @@ type ProofOfClaim struct {
 	SetRootClaimProof              ProofOfTreeLeaf
 	ClaimNonRevocationProof        ProofOfTreeLeaf
 	SetRootClaimNonRevocationProof ProofOfTreeLeaf
+	Signature                      []byte // signature of the Root of the Relay
 }
 type ProofOfClaimHex struct {
 	ClaimProof                     ProofOfTreeLeafHex
 	SetRootClaimProof              ProofOfTreeLeafHex
 	ClaimNonRevocationProof        ProofOfTreeLeafHex
 	SetRootClaimNonRevocationProof ProofOfTreeLeafHex
+	Signature                      string // signature of the Root of the Relay
 }
 
 func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
@@ -99,15 +101,21 @@ func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
 		pc.SetRootClaimProof.Hex(),
 		pc.ClaimNonRevocationProof.Hex(),
 		pc.SetRootClaimNonRevocationProof.Hex(),
+		common3.BytesToHex(pc.Signature),
 	}
 	return r
 }
-func (pch *ProofOfClaimHex) Unhex() ProofOfClaim {
+func (pch *ProofOfClaimHex) Unhex() (ProofOfClaim, error) {
+	sigBytes, err := common3.HexToBytes(pch.Signature)
+	if err != nil {
+		return ProofOfClaim{}, err
+	}
 	r := ProofOfClaim{
 		pch.ClaimProof.Unhex(),
 		pch.SetRootClaimProof.Unhex(),
 		pch.ClaimNonRevocationProof.Unhex(),
 		pch.SetRootClaimNonRevocationProof.Unhex(),
+		sigBytes,
 	}
-	return r
+	return r, nil
 }
