@@ -39,7 +39,9 @@ func (s *ServiceImpl) Start() {
 		for {
 			select {
 			case <-s.stopch:
-				break
+				log.Info("Root publisher finalized")
+				s.stoppedch <- nil
+				return
 			case <-time.After(time.Second):
 				if lastRoot != s.lastRoot {
 					lastRoot = s.lastRoot
@@ -50,9 +52,6 @@ func (s *ServiceImpl) Start() {
 					}
 				}
 			}
-			log.Info("Root publisher finalized")
-			s.stoppedch <- nil
-			return
 		}
 	}()
 }

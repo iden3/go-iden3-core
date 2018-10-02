@@ -16,12 +16,12 @@ var ContractCommands = []cli.Command{{
 		{
 			Name:   "info",
 			Usage:  "show information about contracts",
-			Action: cmdInfo,
+			Action: cmdContractInfo,
 		},
 		{
 			Name:   "deploy",
 			Usage:  "deploy contract",
-			Action: cmdDeploy,
+			Action: cmdContractDeploy,
 		},
 	},
 }}
@@ -34,7 +34,7 @@ func contractInfo() map[string]cfg.ContractInfo {
 	return info
 }
 
-func cmdInfo(c *cli.Context) error {
+func cmdContractInfo(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err
@@ -65,7 +65,7 @@ func cmdInfo(c *cli.Context) error {
 	return nil
 }
 
-func cmdDeploy(c *cli.Context) error {
+func cmdContractDeploy(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err

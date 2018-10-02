@@ -1,8 +1,10 @@
 package commands
 
 import (
-	"os"
-	"os/signal"
+	"bytes"
+	"io/ioutil"
+	"net/http"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -17,6 +19,18 @@ var ServerCommands = []cli.Command{
 		Aliases: []string{},
 		Usage:   "start the server",
 		Action:  cmdStart,
+	},
+	{
+		Name:    "stop",
+		Aliases: []string{},
+		Usage:   "stops the server",
+		Action:  cmdStop,
+	},
+	{
+		Name:    "info",
+		Aliases: []string{},
+		Usage:   "server status",
+		Action:  cmdInfo,
 	},
 }
 
@@ -46,18 +60,52 @@ func cmdStart(c *cli.Context) error {
 	if balance.Int64() < 3000000 {
 		log.Panic("Not enough funds in the relay address")
 	}
-	rootservice.Start()
 
-	ossig := make(chan os.Signal, 1)
-	signal.Notify(ossig, os.Interrupt)
-	go func() {
-		for sig := range ossig {
-			if sig == os.Interrupt {
-				rootservice.StopAndJoin()
-				os.Exit(1)
-			}
-		}
-	}()
 	endpoint.Serve(rootservice, claimservice)
 	return nil
+}
+
+func postAdminApi(command string) (string, error) {
+
+	hostport := strings.Split(cfg.C.Server.AdminApi, ":")
+	if hostport[0] == "0.0.0.0" {
+		hostport[0] = "127.0.0.1"
+	}
+	url := "http://" + hostport[0] + ":" + hostport[1] + "/" + command
+
+	var body bytes.Buffer
+	resp, err := http.Post(url, "text/plain", &body)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	output, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
+}
+
+func cmdStop(c *cli.Context) error {
+	if err := cfg.MustRead(c); err != nil {
+		return err
+	}
+	output, err := postAdminApi("stop")
+	if err == nil {
+		log.Info("Server response: ", output)
+	}
+	return err
+}
+
+func cmdInfo(c *cli.Context) error {
+	if err := cfg.MustRead(c); err != nil {
+		return err
+	}
+	output, err := postAdminApi("info")
+	if err == nil {
+		log.Info("Server response: ", output)
+	}
+	return err
 }
