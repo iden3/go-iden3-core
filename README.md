@@ -12,6 +12,7 @@ $ go get github.com/iden3/go-iden3
 
 ## Usage
 - Relay Documentation: https://github.com/iden3/go-iden3/blob/master/Relay.md
+- Centralized Authentication Backend Documentation: https://github.com/iden3/go-iden3/blob/master/CentrAuth.md
 
 ## Testing
 `go test ./...`

@@ -58,6 +58,17 @@ type ProofOfTreeLeafHex struct {
 	Root  string
 }
 
+func (plh *ProofOfTreeLeafHex) Unhex() ProofOfTreeLeaf {
+	var r ProofOfTreeLeaf
+	r.Leaf, _ = common3.HexToBytes(plh.Leaf)
+	hiBytes, _ := common3.HexToBytes(plh.Hi)
+	copy(r.Hi[:], hiBytes[:32])
+	r.Proof, _ = common3.HexToBytes(plh.Proof)
+	rootBytes, _ := common3.HexToBytes(plh.Root)
+	copy(r.Root[:], rootBytes[:32])
+	return r
+}
+
 // Hex returns a ProofOfTreeLeafHex data structure
 func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 	r := ProofOfTreeLeafHex{
@@ -65,6 +76,38 @@ func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 		pl.Hi.Hex(),
 		common3.BytesToHex(pl.Proof),
 		pl.Root.Hex(),
+	}
+	return r
+}
+
+type ProofOfClaim struct {
+	ClaimProof                     ProofOfTreeLeaf
+	SetRootClaimProof              ProofOfTreeLeaf
+	ClaimNonRevocationProof        ProofOfTreeLeaf
+	SetRootClaimNonRevocationProof ProofOfTreeLeaf
+}
+type ProofOfClaimHex struct {
+	ClaimProof                     ProofOfTreeLeafHex
+	SetRootClaimProof              ProofOfTreeLeafHex
+	ClaimNonRevocationProof        ProofOfTreeLeafHex
+	SetRootClaimNonRevocationProof ProofOfTreeLeafHex
+}
+
+func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
+	r := ProofOfClaimHex{
+		pc.ClaimProof.Hex(),
+		pc.SetRootClaimProof.Hex(),
+		pc.ClaimNonRevocationProof.Hex(),
+		pc.SetRootClaimNonRevocationProof.Hex(),
+	}
+	return r
+}
+func (pch *ProofOfClaimHex) Unhex() ProofOfClaim {
+	r := ProofOfClaim{
+		pch.ClaimProof.Unhex(),
+		pch.SetRootClaimProof.Unhex(),
+		pch.ClaimNonRevocationProof.Unhex(),
+		pch.SetRootClaimNonRevocationProof.Unhex(),
 	}
 	return r
 }
