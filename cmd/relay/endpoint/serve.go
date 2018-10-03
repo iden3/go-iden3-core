@@ -1,7 +1,13 @@
 package endpoint
 
 import (
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+
 	"github.com/gin-contrib/cors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -26,10 +32,11 @@ func init() {
 	gin.SetMode(gin.ReleaseMode)
 }
 
-func serveServiceApi() *http.Server{
+func serveServiceApi() *http.Server {
 	// start serviceapi
 	serviceapi := gin.Default()
-	serviceapi.Use(corsMiddleware())
+	// serviceapi.Use(corsMiddleware())
+	serviceapi.Use(cors.Default())
 
 	serviceapi.GET("/root", handleGetRoot)
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
@@ -45,19 +52,19 @@ func serveServiceApi() *http.Server{
 	return serviceapisrv
 }
 
-func serveAdminApi(stopch chan interface{}) *http.Server{
+func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
 	adminapi.Use(corsMiddleware())
 
 	adminapi.POST("/stop", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/stop
-		c.String(http.StatusOK,"got it, shutdowning server")
+		c.String(http.StatusOK, "got it, shutdowning server")
 		stopch <- nil
 	})
 
 	adminapi.POST("/info", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/info
-		c.String(http.StatusOK,"ping? pong!")
+		c.String(http.StatusOK, "ping? pong!")
 	})
 
 	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: adminapi}
@@ -70,22 +77,11 @@ func serveAdminApi(stopch chan interface{}) *http.Server{
 	return adminapisrv
 }
 
-
 func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
 	claimservice = cs
 	rootservice = rs
 
-<<<<<<< HEAD
-	r := gin.Default()
-	// r.Use(corsMiddleware())
-	r.Use(cors.Default())
-	r.GET("/root", handleGetRoot)
-	r.POST("/claim/:idaddr", handlePostClaim)
-	r.GET("/claim/:idaddr/root", handleGetIDRoot)
-	r.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
-	r.Run(config.C.Server.ServiceApi)
-=======
 	stopch := make(chan interface{})
 
 	// catch ^C to send the stop signal
@@ -101,8 +97,8 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
 	// start servers
 	rootservice.Start()
-	serviceapisrv:=serveServiceApi()
-	adminapisrv :=serveAdminApi(stopch)
+	serviceapisrv := serveServiceApi()
+	adminapisrv := serveAdminApi(stopch)
 
 	// wait until shutdown signal
 	<-stopch
@@ -118,5 +114,4 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 		log.Error("AdminApi Shutdown:", err)
 	}
 
->>>>>>> 4739c4bade9163aead6c46fe820b22b1cb4aca48
 }
