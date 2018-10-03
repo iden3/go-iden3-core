@@ -105,7 +105,7 @@ func TestForwardingInterop(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
 	assert.Nil(t, err)
 
-	stobase, err := merkletree.NewLevelDbStorage(dir)
+	stobase, err := merkletree.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
 	defer stobase.Close()
 

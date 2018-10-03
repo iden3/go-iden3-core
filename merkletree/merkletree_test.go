@@ -71,7 +71,7 @@ func newTestingMerkle(f Fatalable, numLevels int) *MerkleTree {
 		f.Fatal(err)
 		return nil
 	}
-	sto, err := NewLevelDbStorage(dir)
+	sto, err := NewLevelDbStorage(dir, false)
 	if err != nil {
 		f.Fatal(err)
 		return nil

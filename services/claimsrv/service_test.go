@@ -49,7 +49,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}
-	sto, err := merkletree.NewLevelDbStorage(dir)
+	sto, err := merkletree.NewLevelDbStorage(dir, false)
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}

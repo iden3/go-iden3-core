@@ -13,7 +13,7 @@ func newTestingStorage(f Fatalable) Storage {
 		f.Fatal(err)
 		return nil
 	}
-	sto, err := NewLevelDbStorage(dir)
+	sto, err := NewLevelDbStorage(dir, false)
 	if err != nil {
 		f.Fatal(err)
 		return nil
