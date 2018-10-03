@@ -52,7 +52,7 @@ func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 
 func LoadMerkele() *merkletree.MerkleTree {
 	// Open database
-	storage, err := merkletree.NewLevelDbStorage(C.Storage.Path)
+	storage, err := merkletree.NewLevelDbStorage(C.Storage.Path,true)
 	assert("Cannot open database", err)
 
 	mt, err := merkletree.New(storage, 140)

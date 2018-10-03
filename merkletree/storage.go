@@ -2,9 +2,11 @@ package merkletree
 
 import (
 	"bytes"
+	"encoding/json"
 
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 type Storage interface {
@@ -31,12 +33,40 @@ type LevelDbStorageTx struct {
 	cache map[Hash][]byte
 }
 
-func NewLevelDbStorage(path string) (*LevelDbStorage, error) {
-	ldb, err := leveldb.OpenFile(path, nil)
+func NewLevelDbStorage(path string, errorIfMissing bool) (*LevelDbStorage, error) {
+	o := &opt.Options{
+		ErrorIfMissing: errorIfMissing,
+	}
+	ldb, err := leveldb.OpenFile(path, o)
 	if err != nil {
 		return nil, err
 	}
+	if err = ldb.Put([]byte("init"), []byte{1}, nil); err != nil {
+		return nil, err
+	}
 	return &LevelDbStorage{ldb, []byte{}}, nil
+}
+
+type storageInfo struct {
+	KeyCount int
+}
+
+func (l *LevelDbStorage) Info() (string, error) {
+
+	keycount := 0
+	iter := l.ldb.NewIterator(nil, nil)
+	for iter.Next() {
+		keycount++
+	}
+	iter.Release()
+	if err := iter.Error(); err != nil {
+		return "", err
+	}
+	json, err := json.MarshalIndent(
+		storageInfo{keycount},
+		"", "  ",
+	)
+	return string(json), err
 }
 
 func (l *LevelDbStorage) WithPrefix(prefix []byte) Storage {
