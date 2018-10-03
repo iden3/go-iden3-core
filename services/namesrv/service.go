@@ -33,6 +33,6 @@ func VinculateID(cs claimsrv.Service, vinculateIDMsg VinculateIDMsg) (core.Assig
 	domainHash := merkletree.HashBytes([]byte(config.C.Domain))
 	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethID)
 
-	_, _, _, err = cs.AddAssignNameClaim(assignNameClaim)
+	err = cs.AddAssignNameClaim(assignNameClaim)
 	return assignNameClaim, err
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/gin-contrib/cors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -30,11 +32,12 @@ func init() {
 	gin.SetMode(gin.ReleaseMode)
 }
 
-func serveServiceApi() *http.Server{
+func serveServiceApi() *http.Server {
 	// start serviceapi
 	serviceapi := gin.Default()
-	serviceapi.Use(corsMiddleware())
-	
+	// serviceapi.Use(corsMiddleware())
+	serviceapi.Use(cors.Default())
+
 	serviceapi.GET("/root", handleGetRoot)
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
@@ -45,23 +48,23 @@ func serveServiceApi() *http.Server{
 		if err := serviceapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("listen: %s\n", err)
 		}
-	}()	
+	}()
 	return serviceapisrv
 }
 
-func serveAdminApi(stopch chan interface{}) *http.Server{
+func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
 	adminapi.Use(corsMiddleware())
 
 	adminapi.POST("/stop", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/stop
-		c.String(http.StatusOK,"got it, shutdowning server")
+		c.String(http.StatusOK, "got it, shutdowning server")
 		stopch <- nil
 	})
 
 	adminapi.POST("/info", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/info
-		c.String(http.StatusOK,"ping? pong!")
+		c.String(http.StatusOK, "ping? pong!")
 	})
 
 	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: adminapi}
@@ -73,7 +76,6 @@ func serveAdminApi(stopch chan interface{}) *http.Server{
 	}()
 	return adminapisrv
 }
-
 
 func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
@@ -95,8 +97,8 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
 	// start servers
 	rootservice.Start()
-	serviceapisrv:=serveServiceApi()
-	adminapisrv :=serveAdminApi(stopch)
+	serviceapisrv := serveServiceApi()
+	adminapisrv := serveAdminApi(stopch)
 
 	// wait until shutdown signal
 	<-stopch

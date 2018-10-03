@@ -17,10 +17,10 @@ import (
 )
 
 type Service interface {
-	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) (merkletree.Hash, []byte, []byte, error)
+	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
 	ResolvAssignNameClaim(nameid, namespace string) (core.AssignNameClaim, error)
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
-	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) ([]byte, []byte, error)
+	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
 	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
 	MT() *merkletree.MerkleTree
@@ -37,11 +37,11 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Serv
 }
 
 // AddAssignNameClaim adds AssignNameClaim into the merkletree, updates the root in the smart contract, and returns the merkle proof of the claim in the merkletree
-func (cs *ServiceImpl) AddAssignNameClaim(assignNameClaim core.AssignNameClaim) (merkletree.Hash, []byte, []byte, error) {
+func (cs *ServiceImpl) AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error {
 	// get next version of the claim
 	version, err := getNextVersion(cs.mt, assignNameClaim.Hi())
 	if err != nil {
-		return merkletree.Hash{}, nil, nil, err
+		return err
 	}
 	assignNameClaim.BaseIndex.Version = version
 
@@ -50,25 +50,13 @@ func (cs *ServiceImpl) AddAssignNameClaim(assignNameClaim core.AssignNameClaim) 
 	err = cs.mt.Add(assignNameClaim)
 	if err != nil {
 		log.Fatal(err)
-		return merkletree.Hash{}, nil, nil, err
+		return err
 	}
 
 	// update relay's root in smart contract
 	cs.rootsrv.SetRoot(cs.mt.Root())
 
-	// generate proofs mp
-	mp, err := cs.mt.GenerateProof(assignNameClaim.Hi())
-	if err != nil {
-		return merkletree.Hash{}, nil, nil, err
-	}
-	// TODO add proof of non revocated
-
-	// sign root
-	sig, err := cs.signer.SignHash(cs.mt.Root())
-	if err != nil {
-		return merkletree.Hash{}, nil, nil, err
-	}
-	return cs.mt.Root(), mp, sig, nil
+	return nil
 }
 
 // ResolvAssignNameClaim returns the AssignNameClaim from the merkletree, given a nameid and a namespace
@@ -155,17 +143,17 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 }
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
-func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) ([]byte, []byte, error) {
+func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
 	// verify signature
 	signature, err := common3.HexToBytes(claimValueMsg.Signature)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
 	signature[64] -= 27
 	if !utils.VerifySig(ethID, signature, msgHash[:]) {
-		return nil, nil, errors.New("signature can not be verified")
+		return errors.New("signature can not be verified")
 	}
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
@@ -174,13 +162,13 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 	// open the MerkleTree of the user
 	userMT, err := merkletree.New(stoUserID, 140)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// add claim in User ID Merkle Tree
 	err = userMT.Add(claimValueMsg.ClaimValue)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// setRootClaim of the user in the Relay Merkle Tree
@@ -188,30 +176,20 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
 	version, err := getNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	setRootClaim.BaseIndex.Version = version
 
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = cs.mt.Add(setRootClaim)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// update Relay Root in Smart Contract
 	cs.rootsrv.SetRoot(cs.mt.Root())
 
-	// return proof of SetRoot and original Claim
-	hiClaimValue := merkletree.HashBytes(claimValueMsg.ClaimValue.Bytes()[:claimValueMsg.ClaimValue.IndexLength()])
-	claimProof, err := userMT.GenerateProof(hiClaimValue)
-	if err != nil {
-		return nil, nil, err
-	}
-	idRootProof, err := cs.mt.GenerateProof(setRootClaim.Hi())
-	if err != nil {
-		return nil, nil, err
-	}
-	return claimProof, idRootProof, nil
+	return nil
 }
 
 // GetIDRoot returns the root of an ID tree, and the proof of that Root ID tree in the Relay Merkle Tree
@@ -302,11 +280,17 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 		return ProofOfClaim{}, err
 	}
 
+	// sign root
+	sig, err := cs.signer.SignHash(setRootClaimProof.Root)
+	if err != nil {
+		return ProofOfClaim{}, err
+	}
 	proofOfClaim := ProofOfClaim{
 		claimProof,
 		setRootClaimProof,
 		claimNonRevocationProof,
 		setRootClaimNonRevocationProof,
+		sig,
 	}
 	return proofOfClaim, nil
 }

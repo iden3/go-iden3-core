@@ -6,6 +6,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/ethereum/go-ethereum v1.8.16
 	github.com/fatih/color v1.7.0
+	github.com/gin-contrib/cors v0.0.0-20180926132136-4f98e8b8e930
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/go-stack/stack v1.8.0 // indirect

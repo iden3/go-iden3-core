@@ -54,7 +54,35 @@ func handlePostClaim(c *gin.Context) {
 
 	switch common3.BytesToHex(typeBytes) {
 	case common3.BytesToHex(core.DefaultTypeHash[:24]):
-		break
+		claimDefault, err := core.ParseClaimDefaultBytes(bytesValue)
+		if err != nil {
+			fail(c, "error on parsing ClaimDefault bytes", err)
+			return
+		}
+
+		type ClaimDefaultMsg struct {
+			ClaimDefault core.ClaimDefault
+			Signature    string
+		}
+		claimValueMsg := claimsrv.ClaimValueMsg{
+			claimDefault,
+			bytesSignedMsg.SignatureHex,
+		}
+		err = claimservice.AddUserIDClaim(config.C.Namespace, idaddr, claimValueMsg)
+		if err != nil {
+			fail(c, "error on AddUserIDClaim", err)
+			return
+		}
+		// return claim with proofs
+		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, claimDefault.Hi())
+		if err != nil {
+			fail(c, "error on GetClaimByHi", err)
+			return
+		}
+		c.JSON(200, gin.H{
+			"proofOfClaim": proofOfClaim.Hex(),
+		})
+		return
 
 	case common3.BytesToHex(core.AssignNameTypeHash[:24]):
 		assignNameClaim, err := core.ParseAssignNameClaimBytes(bytesValue)
@@ -63,16 +91,20 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 
-		_, mp, sig, err := claimservice.AddAssignNameClaim(assignNameClaim)
+		err = claimservice.AddAssignNameClaim(assignNameClaim)
 		if err != nil {
 			fail(c, "error on AddAssignNameClaim", err)
 			return
 		}
-		// return claim with proofs and signatures
+
+		// return claim with proofs
+		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, assignNameClaim.Hi())
+		if err != nil {
+			fail(c, "error on GetClaimByHi", err)
+			return
+		}
 		c.JSON(200, gin.H{
-			"sig":  sig,
-			"root": claimservice.MT().Root().Hex(),
-			"mp":   mp,
+			"proofOfClaim": proofOfClaim.Hex(),
 		})
 		return
 
@@ -92,7 +124,7 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaimMsg.AuthorizeKSignClaim.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaim.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return

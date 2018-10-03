@@ -23,7 +23,10 @@ func Auth(authMsg AuthMsg) error {
 	}
 
 	// check the authMsg.KSignProof
-	ksignProof := authMsg.KSignProof.Unhex()
+	ksignProof, err := authMsg.KSignProof.Unhex()
+	if err != nil {
+		return err
+	}
 	verified := merkletree.CheckProof(ksignProof.ClaimProof.Root, ksignProof.ClaimProof.Proof, ksignProof.ClaimProof.Hi, merkletree.HashBytes(ksignProof.ClaimProof.Leaf), 140)
 	if !verified {
 		return errors.New("ksignProof.ClaimProof failed")
