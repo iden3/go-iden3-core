@@ -3,12 +3,12 @@ package merkletree
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"testing"
 	"time"
 
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,7 +39,7 @@ func (c testClaim) Bytes() (b []byte) {
 	b = append(b, c.testBase.Length[:]...)
 	b = append(b, c.testBase.Namespace[:]...)
 	b = append(b, c.testBase.Type[:]...)
-	versionBytes, _ := common3.Uint32ToBytes(c.testBase.Version)
+	versionBytes := common3.Uint32ToBytes(c.testBase.Version)
 	b = append(b, versionBytes[:]...)
 	b = append(b, c.extraIndex.Data[:]...)
 	return b
@@ -66,17 +66,7 @@ type Fatalable interface {
 }
 
 func newTestingMerkle(f Fatalable, numLevels int) *MerkleTree {
-	dir, err := ioutil.TempDir("", "db")
-	if err != nil {
-		f.Fatal(err)
-		return nil
-	}
-	sto, err := NewLevelDbStorage(dir, false)
-	if err != nil {
-		f.Fatal(err)
-		return nil
-	}
-	mt, err := New(sto, numLevels)
+	mt, err := New(db.NewMemoryStorage(), numLevels)
 	if err != nil {
 		f.Fatal(err)
 		return nil

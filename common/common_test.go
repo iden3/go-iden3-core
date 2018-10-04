@@ -27,8 +27,7 @@ func TestHexToBytes(t *testing.T) {
 }
 
 func TestUint32ToBytes(t *testing.T) {
-	b, err := Uint32ToBytes(999)
-	assert.Nil(t, err)
+	b := Uint32ToBytes(999)
 	assert.Equal(t, []byte{0xe7, 0x3, 0x0, 0x0}, b)
 }
 func TestBytesToUint32(t *testing.T) {

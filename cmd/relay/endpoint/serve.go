@@ -81,7 +81,7 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
 	claimservice = cs
 	rootservice = rs
-
+ 
 	stopch := make(chan interface{})
 
 	// catch ^C to send the stop signal
@@ -104,14 +104,16 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 	<-stopch
 	log.Info("Shutdown Server ...")
 
-	rootservice.StopAndJoin()
-
 	if err := serviceapisrv.Shutdown(context.Background()); err != nil {
-		log.Error("ServiceAapi Shutdown:", err)
+		log.Error("ServiceApi Shutdown:", err)
+	} else {
+		log.Info("ServiceApi stopped")
 	}
 
 	if err := adminapisrv.Shutdown(context.Background()); err != nil {
 		log.Error("AdminApi Shutdown:", err)
+	} else {
+		log.Info("AdminApi stopped")
 	}
 
 }

@@ -34,10 +34,13 @@ func HexToBytes(h string) ([]byte, error) {
 }
 
 // Uint32ToBytes returns a byte array from a uint32
-func Uint32ToBytes(u uint32) ([]byte, error) {
+func Uint32ToBytes(u uint32) []byte {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.LittleEndian, u)
-	return buff.Bytes(), err
+	if err != nil {
+		panic(err)
+	}
+	return buff.Bytes()
 }
 
 // BytesToUint32 returns a uint32 from a byte array
