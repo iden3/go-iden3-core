@@ -2,3 +2,4 @@ leveldb
 config.yaml
 fmt
 private-configs
+db

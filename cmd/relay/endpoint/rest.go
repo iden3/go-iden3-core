@@ -60,13 +60,11 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 
-		type ClaimDefaultMsg struct {
-			ClaimDefault core.ClaimDefault
-			Signature    string
-		}
 		claimValueMsg := claimsrv.ClaimValueMsg{
 			claimDefault,
 			bytesSignedMsg.SignatureHex,
+			bytesSignedMsg.KSign,
+			bytesSignedMsg.ProofOfKSignHex,
 		}
 		err = claimservice.AddUserIDClaim(config.C.Namespace, idaddr, claimValueMsg)
 		if err != nil {
@@ -117,6 +115,7 @@ func handlePostClaim(c *gin.Context) {
 		authorizeKSignClaimMsg := claimsrv.AuthorizeKSignClaimMsg{
 			authorizeKSignClaim,
 			bytesSignedMsg.SignatureHex,
+			bytesSignedMsg.KSign,
 		}
 		err = claimservice.AddAuthorizeKSignClaim(idaddr, authorizeKSignClaimMsg)
 		if err != nil {
