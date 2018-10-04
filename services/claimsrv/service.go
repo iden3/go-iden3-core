@@ -102,7 +102,8 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	}
 	msgHash := utils.EthHash(authorizeKSignClaimMsg.AuthorizeKSignClaim.Bytes())
 	signature[64] -= 27
-	if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	// if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	if !utils.VerifySig(authorizeKSignClaimMsg.KSign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -186,7 +187,16 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
 func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
-	// verify signature
+	// verify proof of KSign
+	proofOfKSign, err := claimValueMsg.ProofOfKSignHex.Unhex()
+	if err != nil {
+		return err
+	}
+	if !CheckProofOfClaim(proofOfKSign, 140) {
+		return errors.New("ProofOfClaim can not be verified")
+	}
+
+	// verify signature with KSign
 	signature, err := common3.HexToBytes(claimValueMsg.Signature)
 	if err != nil {
 		return err
@@ -194,7 +204,9 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 
 	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
 	signature[64] -= 27
-	if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	ksign := claimValueMsg.KSign
+	// if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	if !utils.VerifySig(ksign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
