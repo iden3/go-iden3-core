@@ -19,7 +19,7 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 	fmt.Print(iLevel)
 	fmt.Print(" - ")
 	fmt.Print("'" + parent.Hex() + "' = ")
-	nodeType, _, nodeBytes, err := mt.storage.Get(parent)
+	nodeType, _, nodeBytes, err := mt.dbGet(parent)
 	if err != nil {
 		color.Red(err.Error())
 	}
@@ -34,7 +34,7 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 		// claim := core.ParseClaimDefaultBytes(nodeBytes)
 		fmt.Print("[FinalTree]:")
 		color.Cyan("final tree node: " + HashBytes(nodeBytes).Hex())
-		_, _, leafNodeBytes, err := mt.storage.Get(HashBytes(nodeBytes))
+		_, _, leafNodeBytes, err := mt.dbGet(HashBytes(nodeBytes))
 		if err != nil {
 			color.Red(err.Error())
 		}

@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/ipfsconsortium/go-ipfsc/config"
 	"github.com/stretchr/testify/assert"
@@ -49,7 +50,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}
-	sto, err := merkletree.NewLevelDbStorage(dir, false)
+	sto, err := db.NewLevelDbStorage(dir, false)
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}

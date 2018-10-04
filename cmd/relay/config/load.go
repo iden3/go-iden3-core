@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/iden3/go-iden3/eth"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
@@ -50,11 +51,15 @@ func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	return web3cli
 }
 
-func LoadMerkele() *merkletree.MerkleTree {
+func LoadStorage() db.Storage  {
 	// Open database
-	storage, err := merkletree.NewLevelDbStorage(C.Storage.Path,true)
-	assert("Cannot open database", err)
+	storage,err := db.NewLevelDbStorage(C.Storage.Path,false)
+	assert("Cannot open storage", err)
+	return storage
+}
 
+
+func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
 	mt, err := merkletree.New(storage, 140)
 	assert("Cannot open merkle tree", err)
 	log.WithField("path", C.Web3.Url).Info("Database opened")

@@ -42,8 +42,8 @@ func cmdStart(c *cli.Context) error {
 
 	ks, acc := cfg.LoadKeyStore()
 	client := cfg.LoadWeb3(ks, &acc)
-	mt := cfg.LoadMerkele()
-	defer mt.Storage().Close()
+	storage := cfg.LoadStorage()
+	mt := cfg.LoadMerkele(storage)
 
 	rootservice := cfg.LoadRootsService(client)
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
@@ -62,6 +62,10 @@ func cmdStart(c *cli.Context) error {
 	}
 
 	endpoint.Serve(rootservice, claimservice)
+
+	rootservice.StopAndJoin()
+	storage.Close()
+
 	return nil
 }
 

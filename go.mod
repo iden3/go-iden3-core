@@ -26,6 +26,7 @@ require (
 	github.com/syndtr/goleveldb v0.0.0-20180815032940-ae2bd5eed72d
 	github.com/ugorji/go/codec v0.0.0-20180927125128-99ea80c8b19a // indirect
 	github.com/urfave/cli v1.20.0
+	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
 	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 )

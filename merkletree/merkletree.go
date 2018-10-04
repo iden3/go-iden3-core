@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"sync"
+
+	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/db"
 )
 
 const (
@@ -38,25 +41,25 @@ type Value interface {
 //MerkleTree struct with the main elements of the Merkle Tree
 type MerkleTree struct {
 	sync.RWMutex
-	storage   Storage
+	storage   db.Storage
 	root      Hash
 	numLevels int // Height of the Merkle Tree, number of levels
 }
 
 // New generates a new Merkle Tree
-func New(storage Storage, numLevels int) (*MerkleTree, error) {
+func New(storage db.Storage, numLevels int) (*MerkleTree, error) {
 	var mt MerkleTree
 	mt.storage = storage
 	mt.numLevels = numLevels
 	var err error
-	_, _, rootHash, err := mt.storage.Get(rootNodeValue)
+	_, _, rootHash, err := mt.dbGet(rootNodeValue)
 	if err != nil {
 		mt.root = EmptyNodeValue
 		tx, err := mt.storage.NewTx()
 		if err != nil {
 			return nil, err
 		}
-		tx.Insert(rootNodeValue, rootNodeType, 0, mt.root[:])
+		mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 		if err = tx.Commit(); err != nil {
 			return nil, err
 		}
@@ -67,7 +70,7 @@ func New(storage Storage, numLevels int) (*MerkleTree, error) {
 }
 
 // Storage returns the merkletree.Storage
-func (mt *MerkleTree) Storage() Storage {
+func (mt *MerkleTree) Storage() db.Storage {
 	return mt.storage
 }
 
@@ -84,7 +87,7 @@ func (mt *MerkleTree) NumLevels() int {
 // Add adds the claim to the MT
 func (mt *MerkleTree) Add(v Value) error {
 	var err error
-	var tx StorageTx
+	var tx db.Tx
 
 	tx, err = mt.storage.NewTx()
 	if err != nil {
@@ -102,7 +105,7 @@ func (mt *MerkleTree) Add(v Value) error {
 	}()
 
 	// add the leaf that we are adding
-	tx.Insert(HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+	mt.dbInsert(tx, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
 
 	hi := HashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
@@ -110,7 +113,7 @@ func (mt *MerkleTree) Add(v Value) error {
 	nodeHash := mt.root
 	var siblings []Hash
 	for i := mt.numLevels - 2; i >= 0; i-- {
-		nodeType, indexLength, nodeBytes, err := tx.Get(nodeHash)
+		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
 		if err != nil {
 			return err
 		}
@@ -129,9 +132,9 @@ func (mt *MerkleTree) Add(v Value) error {
 				return ErrNodeAlreadyExists
 			}
 			finalNode1Hash := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
-			tx.Insert(finalNode1Hash, finalNodeType, indexLength, nodeBytes)
+			mt.dbInsert(tx, finalNode1Hash, finalNodeType, indexLength, nodeBytes)
 			finalNode2Hash := calcHashFromLeafAndLevel(posDiff, path, HashBytes(v.Bytes()))
-			tx.Insert(finalNode2Hash, finalNodeType, v.IndexLength(), v.Bytes())
+			mt.dbInsert(tx, finalNode2Hash, finalNodeType, v.IndexLength(), v.Bytes())
 			// now the parent
 			var parentNode treeNode
 			if path[posDiff] {
@@ -149,7 +152,7 @@ func (mt *MerkleTree) Add(v Value) error {
 			if mt.root, err = mt.replaceLeaf(tx, siblings, path[posDiff+1:], parentNode.Ht(), normalNodeType, 0, parentNode.Bytes()); err != nil {
 				return err
 			}
-			tx.Insert(rootNodeValue, rootNodeType, 0, mt.root[:])
+			mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 			return nil
 		}
 		node := parseNodeBytes(nodeBytes)
@@ -169,22 +172,22 @@ func (mt *MerkleTree) Add(v Value) error {
 				// if the pt node is the unique in the tree, just put it into the root node
 				// this means to be in i==mt.NumLevels-2 && nodeHash==EmptyNodeValue
 				finalNodeHash := calcHashFromLeafAndLevel(i+1, path, HashBytes(v.Bytes()))
-				tx.Insert(finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes())
+				mt.dbInsert(tx, finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes())
 				mt.root = finalNodeHash
-				tx.Insert(rootNodeValue, rootNodeType, 0, mt.root[:])
+				mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 				return nil
 			}
 			finalNodeHash := calcHashFromLeafAndLevel(i, path, HashBytes(v.Bytes()))
 			if mt.root, err = mt.replaceLeaf(tx, siblings, path[i:], finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes()); err != nil {
 				return err
 			}
-			tx.Insert(rootNodeValue, rootNodeType, 0, mt.root[:])
+			mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 			return nil
 		}
 	}
 
 	mt.root, err = mt.replaceLeaf(tx, siblings, path, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
-	tx.Insert(rootNodeValue, rootNodeType, 0, mt.root[:])
+	mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 	return nil
 }
 
@@ -200,7 +203,7 @@ func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
 	nodeHash := mt.root
 
 	for level := 0; level < mt.numLevels-1; level++ {
-		nodeType, indexLength, nodeBytes, err := mt.storage.Get(nodeHash)
+		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
 		if err != nil {
 			return nil, err
 		}
@@ -262,7 +265,7 @@ func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
 	path := getPath(mt.numLevels, hi)
 	nodeHash := mt.root
 	for i := mt.numLevels - 2; i >= 0; i-- {
-		nodeType, indexLength, nodeBytes, err := mt.storage.Get(nodeHash)
+		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
 		if err != nil {
 			return nodeBytes, err
 		}
@@ -285,11 +288,44 @@ func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
 			nodeHash = node.ChildR
 		}
 	}
-	_, _, valueBytes, err := mt.storage.Get(nodeHash)
+	_, _, valueBytes, err := mt.dbGet(nodeHash)
 	if err != nil {
 		return valueBytes, err
 	}
 	return valueBytes, nil
+}
+
+// Get retreives a value from a key in the mt.Lvl
+func (mt *MerkleTree) dbGet(key Hash) (byte, uint32, []byte, error) {
+
+	// if key is EMPTY node
+	if bytes.Equal(key[:], EmptyNodeValue[:]) {
+		return 0, 0, EmptyNodeValue[:], nil
+	}
+
+	value, err := mt.storage.Get(key[:])
+	if err != nil {
+		return 0, 0, EmptyNodeValue[:], err
+	}
+
+	// get nodetype of the first byte of the value
+	nodeType := value[0]
+	indexLength := common3.BytesToUint32(value[1:5])
+	nodeBytes := value[5:]
+	return nodeType, indexLength, nodeBytes, err
+}
+
+// Insert saves a key:value into the mt.Lvl
+func (mt *MerkleTree) dbInsert(tx db.Tx, stKey Hash, nodeType byte, indexLength uint32, nodeBytes []byte) {
+
+	// add nodetype at the first byte of the value
+	var stValue []byte
+	stValue = append(stValue, nodeType)
+	indexLengthBytes := common3.Uint32ToBytes(indexLength)
+	stValue = append(stValue, indexLengthBytes[:]...)
+	stValue = append(stValue, nodeBytes[:]...)
+
+	tx.Put(stKey[:], stValue[:])
 }
 
 func calcHashFromLeafAndLevel(untilLevel int, path []bool, leafHash Hash) Hash {
@@ -312,9 +348,9 @@ func calcHashFromLeafAndLevel(untilLevel int, path []bool, leafHash Hash) Hash {
 	return nodeCurrLevel
 }
 
-func (mt *MerkleTree) replaceLeaf(tx StorageTx, siblings []Hash, path []bool, newLeafHash Hash, nodetype byte, indexLength uint32, newLeafValue []byte) (Hash, error) {
+func (mt *MerkleTree) replaceLeaf(tx db.Tx, siblings []Hash, path []bool, newLeafHash Hash, nodetype byte, indexLength uint32, newLeafValue []byte) (Hash, error) {
 	// add the new claim
-	tx.Insert(newLeafHash, nodetype, indexLength, newLeafValue)
+	mt.dbInsert(tx, newLeafHash, nodetype, indexLength, newLeafValue)
 	currNode := newLeafHash
 	// here the path is only the path[posDiff+1]
 	for i := 0; i < len(siblings); i++ {
@@ -323,7 +359,7 @@ func (mt *MerkleTree) replaceLeaf(tx StorageTx, siblings []Hash, path []bool, ne
 				ChildL: currNode,
 				ChildR: siblings[len(siblings)-1-i],
 			}
-			tx.Insert(node.Ht(), normalNodeType, 0, node.Bytes())
+			mt.dbInsert(tx, node.Ht(), normalNodeType, 0, node.Bytes())
 			currNode = node.Ht()
 		} else {
 
@@ -331,7 +367,7 @@ func (mt *MerkleTree) replaceLeaf(tx StorageTx, siblings []Hash, path []bool, ne
 				ChildL: siblings[len(siblings)-1-i],
 				ChildR: currNode,
 			}
-			tx.Insert(node.Ht(), normalNodeType, 0, node.Bytes())
+			mt.dbInsert(tx, node.Ht(), normalNodeType, 0, node.Bytes())
 			currNode = node.Ht()
 		}
 	}

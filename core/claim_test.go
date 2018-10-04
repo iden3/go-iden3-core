@@ -3,11 +3,11 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
-	"io/ioutil"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/stretchr/testify/assert"
 )
@@ -102,16 +102,7 @@ func TestForwardingInterop(t *testing.T) {
 	// address 0xee602447b5a75cf4f25367f5d199b860844d10c4
 	// pvk     8A85AAA2A8CE0D24F66D3EAA7F9F501F34992BACA0FF942A8EDF7ECE6B91F713
 
-	dir, err := ioutil.TempDir("", "db")
-	assert.Nil(t, err)
-
-	stobase, err := merkletree.NewLevelDbStorage(dir, false)
-	assert.Nil(t, err)
-	defer stobase.Close()
-
-	sto := stobase.WithPrefix([]byte{1})
-
-	mt, err := merkletree.New(sto, 140)
+	mt, err := merkletree.New(db.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
 
 	// create ksignclaim ----------------------------------------------
@@ -147,9 +138,7 @@ func TestForwardingInterop(t *testing.T) {
 
 	// create setrootclaim ----------------------------------------------
 
-	sto = stobase.WithPrefix([]byte{2})
-
-	mt, err = merkletree.New(sto, 140)
+	mt, err = merkletree.New(db.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
 
 	setRootClaim := NewSetRootClaim(
