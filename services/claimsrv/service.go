@@ -20,6 +20,7 @@ type Service interface {
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
 	ResolvAssignNameClaim(nameid, namespace string) (core.AssignNameClaim, error)
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
+	AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error
 	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
 	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
@@ -141,6 +142,47 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 
 	return nil
 }
+
+// AddAuthorizeKSignClaim adds AuthorizeKSignClaim into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a SetRootClaim. Returns the merkle proof of both Claims
+func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error {
+
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.New(stoUserID, 140)
+	if err != nil {
+		return err
+	}
+
+	// add AuthorizeKSignClaim into the User's ID Merkle Tree
+	err = userMT.Add(authorizeKSignClaim)
+	if err != nil {
+		return err
+	}
+
+	// create new SetRootClaim
+	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
+
+	// get next version of the claim
+	version, err := getNextVersion(cs.mt, setRootClaim.Hi())
+	if err != nil {
+		return err
+	}
+	setRootClaim.BaseIndex.Version = version
+
+	// add User's ID Merkle Root into the Relay's Merkle Tree
+	err = cs.mt.Add(setRootClaim)
+	if err != nil {
+		return err
+	}
+
+	// update Relay's Root in the Smart Contract
+	cs.rootsrv.SetRoot(cs.mt.Root())
+
+	return nil
+}
+
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
 func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {

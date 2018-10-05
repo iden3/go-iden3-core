@@ -50,7 +50,6 @@ func testStorageInsertGet(t *testing.T, sto Storage) {
 }
 
 func testStorageWithPrefix(t *testing.T, sto Storage) {
-
 	k := []byte{9}
 
 	sto1 := sto.WithPrefix([]byte{1})
@@ -85,14 +84,79 @@ func testStorageWithPrefix(t *testing.T, sto Storage) {
 	assert.Equal(t, v2, []byte{8, 9})
 }
 
+func testConcatTx(t *testing.T, sto Storage) {
+	k := []byte{9}
+
+	sto1 := sto.WithPrefix([]byte{1})
+	sto2 := sto.WithPrefix([]byte{2})
+
+	// check within tx
+
+	sto1tx, err := sto1.NewTx()
+	sto1tx.Put(k, []byte{4, 5, 6})
+	sto2tx, err := sto2.NewTx()
+	sto2tx.Put(k, []byte{8, 9})
+
+	sto1tx.Add(sto2tx)
+	assert.Nil(t, sto1tx.Commit())
+
+	// check outside tx
+
+	v1, err := sto1.Get(k)
+	assert.Nil(t, err)
+	assert.Equal(t, v1, []byte{4, 5, 6})
+
+	v2, err := sto2.Get(k)
+	assert.Nil(t, err)
+	assert.Equal(t, v2, []byte{8, 9})
+}
+
+func testList(t *testing.T, sto Storage) {
+	sto1 := sto.WithPrefix([]byte{1})
+	r1, err := sto1.List(100)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(r1))
+
+	sto1tx, _ := sto1.NewTx()
+	sto1tx.Put([]byte{1}, []byte{4})
+	sto1tx.Put([]byte{2}, []byte{5})
+	sto1tx.Put([]byte{3}, []byte{6})
+	assert.Nil(t, sto1tx.Commit())
+
+	sto2 := sto.WithPrefix([]byte{2})
+	sto2tx, _ := sto2.NewTx()
+	sto2tx.Put([]byte{1}, []byte{7})
+	sto2tx.Put([]byte{2}, []byte{8})
+	sto2tx.Put([]byte{3}, []byte{9})
+	assert.Nil(t, sto2tx.Commit())
+
+	r, err := sto1.List(100)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(r))
+	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
+	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
+	assert.Equal(t, r[2], KV{[]byte{3}, []byte{6}})
+
+	r, err = sto1.List(2)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(r))
+	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
+	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
+
+}
+
 func TestLevelDb(t *testing.T) {
 	testReturnKnownErrIfNotExists(t, levelDbStorage(t))
 	testStorageInsertGet(t, levelDbStorage(t))
 	testStorageWithPrefix(t, levelDbStorage(t))
+	testConcatTx(t, levelDbStorage(t))
+	testList(t, levelDbStorage(t))
 }
 
 func TestMemory(t *testing.T) {
 	testReturnKnownErrIfNotExists(t, NewMemoryStorage())
 	testStorageInsertGet(t, NewMemoryStorage())
 	testStorageWithPrefix(t, NewMemoryStorage())
+	testConcatTx(t, NewMemoryStorage())
+	testList(t, NewMemoryStorage())
 }
