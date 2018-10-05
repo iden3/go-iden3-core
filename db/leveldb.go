@@ -7,6 +7,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 type LevelDbStorage struct {
@@ -25,9 +26,6 @@ func NewLevelDbStorage(path string, errorIfMissing bool) (*LevelDbStorage, error
 	}
 	ldb, err := leveldb.OpenFile(path, o)
 	if err != nil {
-		return nil, err
-	}
-	if err = ldb.Put([]byte("init"), []byte{1}, nil); err != nil {
 		return nil, err
 	}
 	return &LevelDbStorage{ldb, []byte{}}, nil
@@ -56,7 +54,7 @@ func (l *LevelDbStorage) Info() string {
 }
 
 func (l *LevelDbStorage) WithPrefix(prefix []byte) Storage {
-	return &LevelDbStorage{l.ldb, append(l.prefix, prefix...)}
+	return &LevelDbStorage{l.ldb, concat(l.prefix, prefix)}
 }
 
 func (l *LevelDbStorage) NewTx() (Tx, error) {
@@ -76,11 +74,13 @@ func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
 func (l *LevelDbStorageTx) Get(key []byte) ([]byte, error) {
 	var err error
 
-	if value, ok := l.cache.Get(key); ok {
+	fullkey := concat(l.prefix, key)
+
+	if value, ok := l.cache.Get(fullkey); ok {
 		return value, nil
 	}
 
-	value, err := l.ldb.Get(append(l.prefix, key[:]...), nil)
+	value, err := l.ldb.Get(fullkey, nil)
 	if err == errors.ErrNotFound {
 		return nil, ErrNotFound
 	}
@@ -89,15 +89,22 @@ func (l *LevelDbStorageTx) Get(key []byte) ([]byte, error) {
 }
 
 // Insert saves a key:value into the mt.Lvl
-func (l *LevelDbStorageTx) Put(k, v []byte) {
-	l.cache.Put(k, v)
+func (tx *LevelDbStorageTx) Put(k, v []byte) {
+	tx.cache.Put(concat(tx.prefix, k[:]), v)
+}
+
+func (tx *LevelDbStorageTx) Add(atx Tx) {
+	ldbtx := atx.(*LevelDbStorageTx)
+	for _, v := range ldbtx.cache {
+		tx.cache.Put(v.K, v.V)
+	}
 }
 
 func (l *LevelDbStorageTx) Commit() error {
 
 	var batch leveldb.Batch
 	for _, v := range l.cache {
-		batch.Put(append(l.prefix, v.k[:]...), v.v)
+		batch.Put(v.K, v.V)
 	}
 
 	l.cache = nil
@@ -113,4 +120,21 @@ func (l *LevelDbStorage) Close() {
 		panic(err)
 	}
 	log.Info("Database closed")
+}
+
+func (l *LevelDbStorage) LevelDB() *leveldb.DB {
+	return l.ldb
+}
+
+func (l *LevelDbStorage) List(limit int) ([]KV, error) {
+
+	iter := l.ldb.NewIterator(util.BytesPrefix(l.prefix), nil)
+	ret := []KV{}
+	for limit > 0 && iter.Next() {
+		localkey := iter.Key()[len(l.prefix):]
+		ret = append(ret, KV{concat(localkey), concat(iter.Value())})
+		limit--
+	}
+	iter.Release()
+	return ret, iter.Error()
 }

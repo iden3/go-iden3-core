@@ -19,6 +19,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	dbMerkletreePrefix = []byte{0}
+	dbIdentityPrefix = []byte{1}
+)
+
 func assert(msg string, err error) {
 	if err != nil {
 		log.Error(msg, " ", err.Error())
@@ -60,7 +65,8 @@ func LoadStorage() db.Storage  {
 
 
 func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
-	mt, err := merkletree.New(storage, 140)
+	mtstorage := storage.WithPrefix(dbMerkletreePrefix)
+	mt, err := merkletree.New(mtstorage, 140)
 	assert("Cannot open merkle tree", err)
 	log.WithField("path", C.Web3.Url).Info("Database opened")
 	log.WithField("hash", mt.Root().Hex()).Info("Current root")
@@ -81,7 +87,10 @@ func LoadContract(client eth.Client, jsonabifile string, address *string) *eth.C
 	return eth.NewContract(client, abi, code, addrPtr)
 }
 
-func LoadIdService(client *eth.Web3Client) identitysrv.Service {
+func LoadIdService(client *eth.Web3Client, claimservice claimsrv.Service, storage db.Storage) identitysrv.Service {
+
+	idstorage := storage.WithPrefix(dbIdentityPrefix)
+
 	deployerContract := LoadContract(
 		client,
 		C.Contracts.Iden3Deployer.JsonABI,
@@ -97,7 +106,7 @@ func LoadIdService(client *eth.Web3Client) identitysrv.Service {
 		C.Contracts.Iden3Proxy.JsonABI,
 		nil)
 
-	return identitysrv.New(deployerContract, implContract, proxyContract)
+	return identitysrv.New(deployerContract, implContract, proxyContract, claimservice, idstorage)
 }
 
 func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
