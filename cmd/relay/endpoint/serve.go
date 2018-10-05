@@ -19,15 +19,6 @@ import (
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
 
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Add("Origin", "*")
-		c.Writer.Header().Add("X-Requested-With", "*")
-		c.Next()
-	}
-}
-
 func init() {
 	gin.SetMode(gin.ReleaseMode)
 }
@@ -35,7 +26,6 @@ func init() {
 func serveServiceApi() *http.Server {
 	// start serviceapi
 	serviceapi := gin.Default()
-	// serviceapi.Use(corsMiddleware())
 	serviceapi.Use(cors.Default())
 
 	serviceapi.GET("/root", handleGetRoot)
@@ -54,7 +44,7 @@ func serveServiceApi() *http.Server {
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
-	adminapi.Use(corsMiddleware())
+	adminapi.Use(cors.Default())
 
 	adminapi.POST("/stop", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/stop
@@ -81,7 +71,7 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service) {
 
 	claimservice = cs
 	rootservice = rs
- 
+
 	stopch := make(chan interface{})
 
 	// catch ^C to send the stop signal

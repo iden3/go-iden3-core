@@ -192,7 +192,13 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 	if err != nil {
 		return err
 	}
-	if !CheckProofOfClaim(proofOfKSign, 140) {
+
+	addrBytes, err := common3.HexToBytes("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c") // TODO now it's hardcoded, will be getted from the sign service
+	if err != nil {
+		return err
+	}
+	relayAddr := common.BytesToAddress(addrBytes)
+	if !CheckProofOfClaim(relayAddr, proofOfKSign, 140) {
 		return errors.New("ProofOfClaim can not be verified")
 	}
 
@@ -339,6 +345,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
+
 	proofOfClaim := ProofOfClaim{
 		claimProof,
 		setRootClaimProof,
@@ -348,6 +355,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	}
 	return proofOfClaim, nil
 }
+
 func (cs *ServiceImpl) MT() *merkletree.MerkleTree {
 	return cs.mt
 }
