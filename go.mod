@@ -2,6 +2,7 @@ module github.com/iden3/go-iden3
 
 require (
 	github.com/aristanetworks/goarista v0.0.0-20180907105523-ff33da284e76 // indirect
+	github.com/cespare/cp v1.0.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/ethereum/go-ethereum v1.8.16
