@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -184,7 +185,6 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 	return nil
 }
 
-
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
 func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
 	// verify proof of KSign
@@ -305,7 +305,6 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 
 	claimProof := ProofOfTreeLeaf{
 		Leaf:  valueBytes,
-		Hi:    merkletree.HashBytes(value.Bytes()[:value.IndexLength()]),
 		Proof: idProof,
 		Root:  userMT.Root(),
 	}
@@ -325,7 +324,6 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	}
 	setRootClaimProof := ProofOfTreeLeaf{
 		Leaf:  setRootClaim.Bytes(),
-		Hi:    setRootClaim.Hi(),
 		Proof: relayProof,
 		Root:  cs.mt.Root(),
 	}
@@ -340,8 +338,15 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 		return ProofOfClaim{}, err
 	}
 
-	// sign root
-	sig, err := cs.signer.SignHash(setRootClaimProof.Root)
+	// sign root + date
+	dateBytes, err := core.Uint64ToEthBytes(uint64(time.Now().Unix()))
+	if err != nil {
+		return ProofOfClaim{}, err
+	}
+	rootdate := setRootClaimProof.Root[:]
+	rootdate = append(rootdate, dateBytes...)
+	rootdateHash := merkletree.HashBytes(rootdate)
+	sig, err := cs.signer.SignHash(rootdateHash)
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
@@ -351,6 +356,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 		setRootClaimProof,
 		claimNonRevocationProof,
 		setRootClaimNonRevocationProof,
+		uint64(time.Now().Unix()),
 		sig,
 	}
 	return proofOfClaim, nil
@@ -394,8 +400,7 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 		return ProofOfTreeLeaf{}, err
 	}
 	nonRevocationProof := ProofOfTreeLeaf{
-		Leaf:  merkletree.EmptyNodeValue[:],
-		Hi:    merkletree.HashBytes(value.Bytes()[:value.IndexLength()]),
+		Leaf:  b,
 		Proof: mp,
 		Root:  mt.Root(),
 	}
