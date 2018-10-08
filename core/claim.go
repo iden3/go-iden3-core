@@ -424,6 +424,13 @@ func NewSetRootClaim(namespaceStr string, ethID common.Address, root merkletree.
 	return c
 }
 
+// HiFromClaimBytes returns the Hi Hash of the given Claim bytes
+func HiFromClaimBytes(b []byte) merkletree.Hash {
+	indexLength := EthBytesToUint32(b[56:60])
+	hi := merkletree.HashBytes(b[:indexLength])
+	return hi
+}
+
 func Uint32ToEthBytes(u uint32) ([]byte, error) {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.BigEndian, u)
