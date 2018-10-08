@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 
 	log "github.com/sirupsen/logrus"
@@ -18,6 +19,7 @@ import (
 
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
+var nameservice namesrv.Service
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
@@ -32,6 +34,8 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
 	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
+	serviceapi.POST("/vinculateid", handleVinculateID)
+	serviceapi.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
@@ -67,10 +71,11 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service) {
 
 	claimservice = cs
 	rootservice = rs
+	nameservice = ns
 
 	stopch := make(chan interface{})
 

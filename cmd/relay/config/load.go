@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/db"
+	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
+	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 
@@ -21,7 +22,7 @@ import (
 
 var (
 	dbMerkletreePrefix = []byte{0}
-	dbIdentityPrefix = []byte{1}
+	dbIdentityPrefix   = []byte{1}
 )
 
 func assert(msg string, err error) {
@@ -56,13 +57,12 @@ func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	return web3cli
 }
 
-func LoadStorage() db.Storage  {
+func LoadStorage() db.Storage {
 	// Open database
-	storage,err := db.NewLevelDbStorage(C.Storage.Path,false)
+	storage, err := db.NewLevelDbStorage(C.Storage.Path, false)
 	assert("Cannot open storage", err)
 	return storage
 }
-
 
 func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
 	mtstorage := storage.WithPrefix(dbMerkletreePrefix)
@@ -119,4 +119,8 @@ func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
 	return claimsrv.New(mt, rootsrv, signsrv.New(ks, acc))
+}
+
+func LoadNameService(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account) namesrv.Service {
+	return namesrv.New(mt, rootsrv, claimsrv, signsrv.New(ks, acc))
 }

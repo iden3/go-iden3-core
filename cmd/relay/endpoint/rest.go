@@ -8,6 +8,7 @@ import (
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/namesrv"
 
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
@@ -177,4 +178,30 @@ func handleGetClaimByHi(c *gin.Context) {
 		"proofOfClaim": proofOfClaim.Hex(),
 	})
 	return
+}
+
+func handleVinculateID(c *gin.Context) {
+	var vinculateIDMsg namesrv.VinculateIDMsg
+	c.BindJSON(&vinculateIDMsg)
+	assignNameClaim, err := nameservice.VinculateID(vinculateIDMsg)
+	if err != nil {
+		fail(c, "error name.VinculateID", err)
+	}
+
+	// return claim with proofs and signatures
+	c.JSON(200, assignNameClaim)
+}
+func handleAssignNameClaimResolv(c *gin.Context) {
+	nameid := c.Param("nameid")
+
+	assignNameClaim, err := claimservice.ResolvAssignNameClaim(nameid, config.C.Namespace)
+	if err != nil {
+		fail(c, "nameid not found in merkletree", err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"success": "ok",
+		"claim":   assignNameClaim,
+		"ethID":   assignNameClaim.EthID,
+	})
 }
