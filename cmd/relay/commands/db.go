@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/db"
 	"github.com/urfave/cli"
 )
 
@@ -12,19 +14,24 @@ var DbCommands = []cli.Command{{
 	Usage: "operate with database",
 	Subcommands: []cli.Command{
 		{
-			Name:   "info",
-			Usage:  "show database information",
-			Action: cmdDbInfo,
+			Name:   "rawdump",
+			Usage:  "dump database raw key values",
+			Action: cmdDbRawDump,
 		},
 	},
 }}
 
-func cmdDbInfo(c *cli.Context) error {
+func cmdDbRawDump(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err
 	}
 	storage := cfg.LoadStorage()
-	fmt.Println(storage.Info())
+	ldb := (storage.(*db.LevelDbStorage)).LevelDB()
+	iter := ldb.NewIterator(nil, nil)
+	for iter.Next() {
+		fmt.Println(hex.EncodeToString(iter.Key()), " ", hex.EncodeToString(iter.Value()))
+	}
+	iter.Release()
 	return nil
 }

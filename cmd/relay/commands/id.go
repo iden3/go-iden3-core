@@ -11,6 +11,16 @@ import (
 	"github.com/urfave/cli"
 )
 
+func loadIdService() identitysrv.Service {
+	ks, acc := cfg.LoadKeyStore()
+	client := cfg.LoadWeb3(ks, &acc)
+	storage := cfg.LoadStorage()
+	mt := cfg.LoadMerkele(storage)
+	rootservice := cfg.LoadRootsService(client)
+	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
+	return cfg.LoadIdService(client, claimservice, storage)
+}
+
 var IdCommands = []cli.Command{{
 	Name:    "id",
 	Aliases: []string{},
@@ -22,6 +32,16 @@ var IdCommands = []cli.Command{{
 			Action: cmdIdInfo,
 		},
 		{
+			Name:   "list",
+			Usage:  "list identities",
+			Action: cmdIdList,
+		},
+		{
+			Name:   "add",
+			Usage:  "add new identity to db",
+			Action: cmdIdAdd,
+		},
+		{
 			Name:   "deploy",
 			Usage:  "deploy new identity",
 			Action: cmdIdDeploy,
@@ -29,14 +49,14 @@ var IdCommands = []cli.Command{{
 	},
 }}
 
-func cmdIdDeploy(c *cli.Context) error {
+func cmdIdAdd(c *cli.Context) error {
 
 	if err := cfg.MustRead(c); err != nil {
 		return err
 	}
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
-	idservice := cfg.LoadIdService(client)
+
+	idservice := loadIdService()
+
 	if len(c.Args()) != 3 {
 		return fmt.Errorf("usage: <0xoperational> <0xrecovery> <0xrevocation>")
 	}
@@ -48,7 +68,35 @@ func cmdIdDeploy(c *cli.Context) error {
 		Revokator:   common.HexToAddress(c.Args()[2]),
 		Impl:        *idservice.ImplAddr(),
 	}
+
 	idaddr, err := idservice.AddressOf(&id)
+	if err != nil {
+		return err
+	}
+
+	err = idservice.Add(&id)
+	if err != nil {
+		return err
+	}
+
+	log.Info("New identity stored: ", idaddr.Hex())
+
+	return nil
+}
+
+func cmdIdDeploy(c *cli.Context) error {
+
+	if err := cfg.MustRead(c); err != nil {
+		return err
+	}
+
+	idservice := loadIdService()
+
+	if len(c.Args()) != 1 {
+		return fmt.Errorf("usage: <0xidaddr>")
+	}
+	idaddr := common.HexToAddress(c.Args()[0])
+	id, err := idservice.Get(idaddr)
 	if err != nil {
 		return err
 	}
@@ -62,11 +110,17 @@ func cmdIdDeploy(c *cli.Context) error {
 		return nil
 	}
 
-	_, err = idservice.Deploy(&id)
+	_, err = idservice.Deploy(id)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+type idInfo struct {
+	IDAddr  common.Address
+	LocalDb *identitysrv.Identity
+	Onchain *identitysrv.Info
 }
 
 func cmdIdInfo(c *cli.Context) error {
@@ -74,23 +128,53 @@ func cmdIdInfo(c *cli.Context) error {
 	if err := cfg.MustRead(c); err != nil {
 		return err
 	}
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
-	idservice := cfg.LoadIdService(client)
+
 	if len(c.Args()) != 1 {
 		return fmt.Errorf("usage: <0xidaddr>")
 	}
 
-	idaddr := common.HexToAddress(c.Args()[0])
-	info, err := idservice.Info(idaddr)
+	idservice := loadIdService()
+
+	var idi idInfo
+
+	idi.IDAddr = common.HexToAddress(c.Args()[0])
+	info, err := idservice.Info(idi.IDAddr)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		idi.Onchain = info
+	}
+	id, err := idservice.Get(idi.IDAddr)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		idi.LocalDb = id
+	}
+	text, err := json.MarshalIndent(idi, "", "\t")
 	if err != nil {
 		return err
 	}
-	infojson, err := json.MarshalIndent(info, "", "\t")
+	fmt.Println(string(text))
+
+	return nil
+}
+func cmdIdList(c *cli.Context) error {
+
+	if err := cfg.MustRead(c); err != nil {
+		return err
+	}
+
+	idservice := loadIdService()
+	addrs, err := idservice.List(1024)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(infojson))
+	addrsjson, err := json.MarshalIndent(addrs, "", "\t")
+	if err != nil {
+		return err
+	} else {
+		fmt.Println(string(addrsjson))
+	}
 
 	return nil
 }

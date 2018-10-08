@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"math/big"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
+	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/services/claimsrv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -18,7 +22,10 @@ type Service interface {
 	Deploy(id *Identity) (common.Address, error)
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
-	Forward(id *Identity, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
+	Forward(idaddr common.Address, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
+	Add(id *Identity) error
+	List(limit int) ([]common.Address, error)
+	Get(idaddr common.Address) (*Identity, error)
 	DeployerAddr() *common.Address
 	ImplAddr() *common.Address
 }
@@ -27,6 +34,8 @@ type ServiceImpl struct {
 	deployer *eth.Contract
 	impl     *eth.Contract
 	proxy    *eth.Contract
+	cs       claimsrv.Service
+	sto      db.Storage
 }
 
 type Identity struct {
@@ -37,7 +46,37 @@ type Identity struct {
 	Impl        common.Address
 }
 
+func (i *Identity) Encode() []byte {
+	var b bytes.Buffer
+	b.Write(i.Operational[:])
+	b.Write(i.Relayer[:])
+	b.Write(i.Recoverer[:])
+	b.Write(i.Revokator[:])
+	b.Write(i.Impl[:])
+	return b.Bytes()
+}
+func (i *Identity) Decode(encoded []byte) error {
+	b := bytes.NewBuffer(encoded)
+	if _, err := b.Read(i.Operational[:]); err != nil {
+		return err
+	}
+	if _, err := b.Read(i.Relayer[:]); err != nil {
+		return err
+	}
+	if _, err := b.Read(i.Recoverer[:]); err != nil {
+		return err
+	}
+	if _, err := b.Read(i.Revokator[:]); err != nil {
+		return err
+	}
+	if _, err := b.Read(i.Impl[:]); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Info struct {
+	Codehash      common.Hash
 	Impl          common.Address
 	Recoverer     common.Address
 	RecovererProp common.Address
@@ -46,11 +85,13 @@ type Info struct {
 	LastNonce     *big.Int
 }
 
-func New(deployer, impl, proxy *eth.Contract) *ServiceImpl {
+func New(deployer, impl, proxy *eth.Contract, cs claimsrv.Service, sto db.Storage) *ServiceImpl {
 	return &ServiceImpl{
 		deployer: deployer,
 		proxy:    proxy,
 		impl:     impl,
+		cs:       cs,
+		sto:      sto,
 	}
 }
 
@@ -122,7 +163,7 @@ func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 }
 
 func (s *ServiceImpl) Forward(
-	id *Identity,
+	idaddr common.Address,
 	to common.Address,
 	data []byte,
 	value *big.Int,
@@ -131,12 +172,7 @@ func (s *ServiceImpl) Forward(
 	auth []byte,
 ) (common.Hash, error) {
 
-	addr, _, err := s.codeAndAddress(id)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	proxy := s.impl.At(&addr)
+	proxy := s.impl.At(&idaddr)
 	tx, _, err := proxy.SendTransactionSync(
 		big.NewInt(0), 0,
 		"forward",
@@ -144,6 +180,56 @@ func (s *ServiceImpl) Forward(
 	)
 
 	return tx.Hash(), err
+}
+
+func (s *ServiceImpl) Add(id *Identity) error {
+
+	var err error
+
+	idaddr, _, err := s.codeAndAddress(id)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.sto.NewTx()
+	if err != nil {
+		return err
+	}
+
+	// store identity
+	tx.Put(idaddr[:], id.Encode())
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	claim := core.NewOperationalKSignClaim("iden3.io", id.Operational, 0, math.MaxUint64)
+	return s.cs.AddAuthorizeKSignClaimFirst(idaddr,claim)
+}
+
+func (m *ServiceImpl) List(limit int) ([]common.Address, error) {
+
+	kvs,err := m.sto.List(limit)
+	if err != nil {
+		return nil, err
+	}
+	addrs := make([]common.Address,0,len(kvs))
+	for _,e := range kvs {
+		var addr common.Address
+		copy(addr[:],e.K)
+		addrs = append(addrs,addr)
+	}
+	return addrs, err
+}
+
+func (m *ServiceImpl) Get(idaddr common.Address) (*Identity, error) {
+
+	data, err := m.sto.Get(idaddr[:])
+	if err != nil {
+		return nil,err
+	}
+	var id Identity
+	err = id.Decode(data)
+	return &id,err
 }
 
 func (s *ServiceImpl) DeployerAddr() *common.Address {
