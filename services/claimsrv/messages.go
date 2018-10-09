@@ -81,6 +81,7 @@ func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 	return r
 }
 
+// ProofOfClaim is the proof of a claim in the Identity MerkleTree, and the SetRootClaim of that MerkleTree inside the Relay's MerkleTree. Also with the proofs of non revocation of both claims
 type ProofOfClaim struct {
 	ClaimProof                     ProofOfTreeLeaf
 	SetRootClaimProof              ProofOfTreeLeaf
@@ -119,6 +120,44 @@ func (pch *ProofOfClaimHex) Unhex() (ProofOfClaim, error) {
 		pch.SetRootClaimProof.Unhex(),
 		pch.ClaimNonRevocationProof.Unhex(),
 		pch.SetRootClaimNonRevocationProof.Unhex(),
+		pch.Date,
+		sigBytes,
+	}
+	return r, nil
+}
+
+// ProofOfRelayClaim is the proof of a claim in the Relay's MerkleTree, and the proof of non revocation of the claim
+type ProofOfRelayClaim struct {
+	ClaimProof              ProofOfTreeLeaf
+	ClaimNonRevocationProof ProofOfTreeLeaf
+	Date                    uint64
+	Signature               []byte // signature of the Root of the Relay
+}
+
+type ProofOfRelayClaimHex struct {
+	ClaimProof              ProofOfTreeLeafHex
+	ClaimNonRevocationProof ProofOfTreeLeafHex
+	Date                    uint64
+	Signature               string // signature of the Root of the Relay
+}
+
+func (pc *ProofOfRelayClaim) Hex() ProofOfRelayClaimHex {
+	r := ProofOfRelayClaimHex{
+		pc.ClaimProof.Hex(),
+		pc.ClaimNonRevocationProof.Hex(),
+		pc.Date,
+		common3.BytesToHex(pc.Signature),
+	}
+	return r
+}
+func (pch *ProofOfRelayClaimHex) Unhex() (ProofOfRelayClaim, error) {
+	sigBytes, err := common3.HexToBytes(pch.Signature)
+	if err != nil {
+		return ProofOfRelayClaim{}, err
+	}
+	r := ProofOfRelayClaim{
+		pch.ClaimProof.Unhex(),
+		pch.ClaimNonRevocationProof.Unhex(),
 		pch.Date,
 		sigBytes,
 	}

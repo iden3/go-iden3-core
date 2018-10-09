@@ -14,7 +14,6 @@ import (
 )
 
 func handlePostClaim(c *gin.Context) {
-	
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 	var bytesSignedMsg claimsrv.BytesSignedMsg

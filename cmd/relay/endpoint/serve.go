@@ -11,14 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
+	"github.com/iden3/go-iden3/services/namesrv"
+	"github.com/iden3/go-iden3/services/rootsrv"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
+
+var nameservice namesrv.Service
 var idservice identitysrv.Service
 
 func init() {
@@ -40,6 +43,9 @@ func serveServiceApi() *http.Server {
 	serviceapi.GET("/id/:idaddr", handleGetId)
 	serviceapi.POST("/id/:idaddr/deploy", handleDeployId)
 
+	serviceapi.POST("/vinculateid", handleVinculateID)
+	serviceapi.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
+
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
@@ -49,7 +55,6 @@ func serveServiceApi() *http.Server {
 	}()
 	return serviceapisrv
 }
-
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
@@ -76,11 +81,12 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, ns namesrv.Service) {
 
 	idservice = ids
 	claimservice = cs
 	rootservice = rs
+	nameservice = ns
 
 	stopch := make(chan interface{})
 
