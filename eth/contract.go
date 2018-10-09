@@ -102,24 +102,20 @@ func (c *Contract) VerifyBytecode() error {
 	return nil
 }
 
-// SendTransactionSync executes a contract method and wait it finalizes
-func (c *Contract) SendTransactionSync(value *big.Int, gasLimit uint64, funcname string, params ...interface{}) (*types.Transaction, *types.Receipt, error) {
+// SendTransaction executes a contract method and wait it finalizes
+func (c *Contract) SendTransaction(value *big.Int, gasLimit uint64, funcname string, params ...interface{}) (*types.Transaction, error) {
 
 	msg, err := c.abi.Pack(funcname, params...)
 	if err != nil {
 		log.Warn("Failed packing ", funcname)
-		return nil, nil, err
+		return nil, err
 	}
 	tx, err := c.client.SendTransaction(c.address, value, gasLimit, msg)
 	if err != nil {
 		log.Warn("Failed calling ", funcname)
 	}
-	receipt, err := c.client.WaitReceipt(tx.Hash())
-	if err != nil {
-		log.Warn("Failed wating receipt ", funcname)
-	}
 
-	return tx, receipt, err
+	return tx, err
 }
 
 // Deploy the contract
