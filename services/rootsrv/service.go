@@ -45,7 +45,10 @@ func (s *ServiceImpl) Start() {
 			case <-time.After(time.Second):
 				if lastRoot != s.lastRoot {
 					lastRoot = s.lastRoot
-					_, _, err := s.rootcommits.SendTransactionSync(nil, 0, "setRoot", lastRoot)
+					tx, err := s.rootcommits.SendTransaction(nil, 0, "setRoot", lastRoot)
+					if err != nil {
+						_, err = s.rootcommits.Client().WaitReceipt(tx.Hash())
+					}
 					if err != nil {
 						log.Error("Failed to add root", err)
 						lastRoot = merkletree.Hash{}

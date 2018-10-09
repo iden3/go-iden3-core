@@ -12,12 +12,18 @@ import (
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/identitysrv"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
+var idservice identitysrv.Service
+
+func init() {
+	gin.SetMode(gin.ReleaseMode)
+}
 
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -28,10 +34,6 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func init() {
-	gin.SetMode(gin.ReleaseMode)
-}
-
 func serveServiceApi() *http.Server {
 	// start serviceapi
 	serviceapi := gin.Default()
@@ -39,9 +41,15 @@ func serveServiceApi() *http.Server {
 	serviceapi.Use(cors.Default())
 
 	serviceapi.GET("/root", handleGetRoot)
+
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
 	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
+
+	serviceapi.POST("/id", handleCreateId)
+	serviceapi.GET("/id/:idaddr", handleGetId)
+	serviceapi.POST("/id/:idaddr/deploy", handleDeployId)
+
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
@@ -51,6 +59,7 @@ func serveServiceApi() *http.Server {
 	}()
 	return serviceapisrv
 }
+
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
@@ -77,8 +86,9 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service) {
 
+	idservice = ids
 	claimservice = cs
 	rootservice = rs
  

@@ -5,21 +5,20 @@ import (
 	"encoding/binary"
 	"math/big"
 	"math"
-
+	"crypto/sha256"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/claimsrv"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Service interface {
 	Initialized() bool
 	AddressOf(id *Identity) (common.Address, error)
-	Deploy(id *Identity) (common.Address, error)
+	Deploy(id *Identity) (common.Address, *types.Transaction, error)
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
 	Forward(idaddr common.Address, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
@@ -135,23 +134,33 @@ func (m *ServiceImpl) IsDeployed(idaddr common.Address) (bool, error) {
 	return true, nil
 }
 
-func (m *ServiceImpl) Deploy(id *Identity) (common.Address, error) {
+func (m *ServiceImpl) Deploy(id *Identity) (common.Address, *types.Transaction, error) {
 
 	addr, code, err := m.codeAndAddress(id)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
-	_, _, err = m.deployer.SendTransactionSync(nil, 0, "create", code)
+	tx, err := m.deployer.SendTransaction(nil, 0, "create", code)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, nil, err
 	}
-	log.Info("Deployed identity at ", addr.Hex())
-	return addr, nil
+	return addr, tx, nil
 }
 
 func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 
 	var info Info
+	
+	code, err := s.impl.Client().CodeAt(idaddr)
+	if err != nil {
+		return nil, err
+	}
+	if code == nil || len(code)==0 {
+		return nil, nil
+	}
+
+	info.Codehash = sha256.Sum256(code)
+
 	if err := s.impl.At(&idaddr).Call(&info, "info"); err != nil {
 		return nil, err
 	}
@@ -173,11 +182,14 @@ func (s *ServiceImpl) Forward(
 ) (common.Hash, error) {
 
 	proxy := s.impl.At(&idaddr)
-	tx, _, err := proxy.SendTransactionSync(
+	tx, err := proxy.SendTransaction(
 		big.NewInt(0), 0,
 		"forward",
 		to, data, value, gas, sig, auth,
 	)
+	if err == nil {
+		_, err = proxy.Client().WaitReceipt(tx.Hash())
+	}
 
 	return tx.Hash(), err
 }
