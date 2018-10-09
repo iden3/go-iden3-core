@@ -64,11 +64,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the relay address")
 	}
 
-<<<<<<< HEAD
-	endpoint.Serve(rootservice, claimservice, nameservice)
-=======
-	endpoint.Serve(rootservice, claimservice, idservice)
->>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb
+	endpoint.Serve(rootservice, claimservice, idservice, nameservice)
 
 	rootservice.StopAndJoin()
 	storage.Close()

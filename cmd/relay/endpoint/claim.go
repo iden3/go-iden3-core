@@ -8,14 +8,12 @@ import (
 	"github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/namesrv"
 
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 )
 
 func handlePostClaim(c *gin.Context) {
-	
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 	var bytesSignedMsg claimsrv.BytesSignedMsg
@@ -152,43 +150,4 @@ func handleGetClaimByHi(c *gin.Context) {
 		"proofOfClaim": proofOfClaim.Hex(),
 	})
 	return
-<<<<<<< HEAD:cmd/relay/endpoint/rest.go
 }
-
-func handleVinculateID(c *gin.Context) {
-	var vinculateIDMsg namesrv.VinculateIDMsg
-	c.BindJSON(&vinculateIDMsg)
-	assignNameClaim, err := nameservice.VinculateID(vinculateIDMsg)
-	if err != nil {
-		fail(c, "error name.VinculateID", err)
-	}
-
-	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(config.C.Namespace, assignNameClaim.Hi())
-	if err != nil {
-		fail(c, "error on GetClaimByHi", err)
-		return
-	}
-	c.JSON(200, gin.H{
-		"assignNameClaim":   common3.BytesToHex(assignNameClaim.Bytes()),
-		"name":              vinculateIDMsg.Name,
-		"ethID":             assignNameClaim.EthID,
-		"proofOfRelayClaim": proofOfRelayClaim.Hex(),
-	})
-}
-func handleAssignNameClaimResolv(c *gin.Context) {
-	nameid := c.Param("nameid")
-
-	assignNameClaim, err := nameservice.ResolvAssignNameClaim(nameid, config.C.Namespace)
-	if err != nil {
-		fail(c, "nameid not found in merkletree", err)
-		return
-	}
-	c.JSON(200, gin.H{
-		"claim": common3.BytesToHex(assignNameClaim.Bytes()),
-		"ethID": assignNameClaim.EthID,
-	})
-}
-=======
-}
->>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb:cmd/relay/endpoint/claim.go

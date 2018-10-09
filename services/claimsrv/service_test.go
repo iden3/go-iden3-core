@@ -86,30 +86,30 @@ func TestGetNextVersion(t *testing.T) {
 
 	claim := core.NewClaimDefault("c1", "default", []byte("c1"), []byte{})
 
-	version, err := getNextVersion(mt, claim.Hi())
+	version, err := GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(0), version)
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = getNextVersion(mt, claim.Hi())
+	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = getNextVersion(mt, claim.Hi())
+	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(2), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = getNextVersion(mt, claim.Hi())
+	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(3), version)
 
 	claim.BaseIndex.Version = version
 	mt.Add(claim)
-	version, err = getNextVersion(mt, claim.Hi())
+	version, err = GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(4), version)
 }
@@ -120,7 +120,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 
 	err := mt.Add(claim)
 	assert.Nil(t, err)
-	version, err := getNextVersion(mt, claim.Hi())
+	version, err := GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
 	assert.Equal(t, uint32(1), version)
 
