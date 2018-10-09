@@ -188,20 +188,29 @@ func handleVinculateID(c *gin.Context) {
 		fail(c, "error name.VinculateID", err)
 	}
 
-	// return claim with proofs and signatures
-	c.JSON(200, assignNameClaim)
+	// return claim with proofs
+	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(config.C.Namespace, assignNameClaim.Hi())
+	if err != nil {
+		fail(c, "error on GetClaimByHi", err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"assignNameClaim":   common3.BytesToHex(assignNameClaim.Bytes()),
+		"name":              vinculateIDMsg.Name,
+		"ethID":             assignNameClaim.EthID,
+		"proofOfRelayClaim": proofOfRelayClaim.Hex(),
+	})
 }
 func handleAssignNameClaimResolv(c *gin.Context) {
 	nameid := c.Param("nameid")
 
-	assignNameClaim, err := claimservice.ResolvAssignNameClaim(nameid, config.C.Namespace)
+	assignNameClaim, err := nameservice.ResolvAssignNameClaim(nameid, config.C.Namespace)
 	if err != nil {
 		fail(c, "nameid not found in merkletree", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"success": "ok",
-		"claim":   assignNameClaim,
-		"ethID":   assignNameClaim.EthID,
+		"claim": common3.BytesToHex(assignNameClaim.Bytes()),
+		"ethID": assignNameClaim.EthID,
 	})
 }

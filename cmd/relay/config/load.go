@@ -117,10 +117,10 @@ func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
 	))
 }
 
-func LoadClaimService(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
-	return claimsrv.New(mt, rootsrv, signsrv.New(ks, acc))
+func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
+	return claimsrv.New(mt, rootservice, signsrv.New(ks, acc))
 }
 
-func LoadNameService(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account) namesrv.Service {
-	return namesrv.New(mt, rootsrv, claimsrv, signsrv.New(ks, acc))
+func LoadNameService(rootservice rootsrv.Service, claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
+	return namesrv.New(rootservice, claimservice, signsrv.New(ks, acc), domain, namespace)
 }
