@@ -13,13 +13,18 @@ import (
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/identitysrv"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
+<<<<<<< HEAD
 var nameservice namesrv.Service
+=======
+var idservice identitysrv.Service
+>>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
@@ -31,11 +36,20 @@ func serveServiceApi() *http.Server {
 	serviceapi.Use(cors.Default())
 
 	serviceapi.GET("/root", handleGetRoot)
+
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
 	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
+<<<<<<< HEAD
 	serviceapi.POST("/vinculateid", handleVinculateID)
 	serviceapi.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
+=======
+
+	serviceapi.POST("/id", handleCreateId)
+	serviceapi.GET("/id/:idaddr", handleGetId)
+	serviceapi.POST("/id/:idaddr/deploy", handleDeployId)
+
+>>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
@@ -45,6 +59,7 @@ func serveServiceApi() *http.Server {
 	}()
 	return serviceapisrv
 }
+
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi := gin.Default()
@@ -71,8 +86,13 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
+<<<<<<< HEAD
 func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service) {
+=======
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service) {
+>>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb
 
+	idservice = ids
 	claimservice = cs
 	rootservice = rs
 	nameservice = ns

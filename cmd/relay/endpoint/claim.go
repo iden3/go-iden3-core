@@ -12,36 +12,10 @@ import (
 
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
-	log "github.com/sirupsen/logrus"
 )
 
-func fail(c *gin.Context, msg string, err error) {
-	if err != nil {
-		log.WithError(err).Error(msg)
-	} else {
-		log.Error(msg)
-	}
-	c.JSON(400, gin.H{
-		"error": msg,
-	})
-	return
-}
-
-func handleGetRoot(c *gin.Context) {
-	// get the contract data
-	contractAddress := common.HexToAddress(config.C.Contracts.RootCommits.Address)
-	root, err := rootservice.GetRoot(contractAddress)
-	if err != nil {
-		fail(c, "error contract.GetRoot(contractAddress)", err)
-		return
-	}
-	c.JSON(200, gin.H{
-		"root":         claimservice.MT().Root().Hex(),
-		"contractRoot": common3.BytesToHex(root[:]),
-	})
-}
-
 func handlePostClaim(c *gin.Context) {
+	
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 	var bytesSignedMsg claimsrv.BytesSignedMsg
@@ -178,6 +152,7 @@ func handleGetClaimByHi(c *gin.Context) {
 		"proofOfClaim": proofOfClaim.Hex(),
 	})
 	return
+<<<<<<< HEAD:cmd/relay/endpoint/rest.go
 }
 
 func handleVinculateID(c *gin.Context) {
@@ -214,3 +189,6 @@ func handleAssignNameClaimResolv(c *gin.Context) {
 		"ethID": assignNameClaim.EthID,
 	})
 }
+=======
+}
+>>>>>>> 6d4f8889df6559d75b32e4bfb19eb75ae8ee93eb:cmd/relay/endpoint/claim.go

@@ -6,19 +6,20 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-func loadIdService() identitysrv.Service {
+func loadIdService() (eth.Client, identitysrv.Service) {
 	ks, acc := cfg.LoadKeyStore()
 	client := cfg.LoadWeb3(ks, &acc)
 	storage := cfg.LoadStorage()
 	mt := cfg.LoadMerkele(storage)
 	rootservice := cfg.LoadRootsService(client)
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
-	return cfg.LoadIdService(client, claimservice, storage)
+	return client, cfg.LoadIdService(client, claimservice, storage)
 }
 
 var IdCommands = []cli.Command{{
@@ -55,7 +56,7 @@ func cmdIdAdd(c *cli.Context) error {
 		return err
 	}
 
-	idservice := loadIdService()
+	_, idservice := loadIdService()
 
 	if len(c.Args()) != 3 {
 		return fmt.Errorf("usage: <0xoperational> <0xrecovery> <0xrevocation>")
@@ -90,7 +91,7 @@ func cmdIdDeploy(c *cli.Context) error {
 		return err
 	}
 
-	idservice := loadIdService()
+	client, idservice := loadIdService()
 
 	if len(c.Args()) != 1 {
 		return fmt.Errorf("usage: <0xidaddr>")
@@ -110,10 +111,14 @@ func cmdIdDeploy(c *cli.Context) error {
 		return nil
 	}
 
-	_, err = idservice.Deploy(id)
+	addr, tx, err := idservice.Deploy(id)
 	if err != nil {
-		return err
+		_, err = client.WaitReceipt(tx.Hash())
 	}
+	if err != nil {
+		log.Error(err)
+	}
+	fmt.Println(addr)
 	return nil
 }
 
@@ -133,7 +138,7 @@ func cmdIdInfo(c *cli.Context) error {
 		return fmt.Errorf("usage: <0xidaddr>")
 	}
 
-	idservice := loadIdService()
+	_, idservice := loadIdService()
 
 	var idi idInfo
 
@@ -164,7 +169,7 @@ func cmdIdList(c *cli.Context) error {
 		return err
 	}
 
-	idservice := loadIdService()
+	_, idservice := loadIdService()
 	addrs, err := idservice.List(1024)
 	if err != nil {
 		return err

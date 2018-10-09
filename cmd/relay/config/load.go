@@ -61,6 +61,7 @@ func LoadStorage() db.Storage {
 	// Open database
 	storage, err := db.NewLevelDbStorage(C.Storage.Path, false)
 	assert("Cannot open storage", err)
+	log.WithField("path", C.Storage.Path).Info("Storage opened")
 	return storage
 }
 
@@ -68,7 +69,6 @@ func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
 	mtstorage := storage.WithPrefix(dbMerkletreePrefix)
 	mt, err := merkletree.New(mtstorage, 140)
 	assert("Cannot open merkle tree", err)
-	log.WithField("path", C.Web3.Url).Info("Database opened")
 	log.WithField("hash", mt.Root().Hex()).Info("Current root")
 
 	return mt
@@ -77,8 +77,10 @@ func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
 func LoadContract(client eth.Client, jsonabifile string, address *string) *eth.Contract {
 	abiFile, err := os.Open(jsonabifile)
 	assert("Cannot read contract "+jsonabifile, err)
+
 	abi, code, err := eth.UnmarshallSolcAbiJson(abiFile)
 	assert("Cannot parse contract "+jsonabifile, err)
+
 	var addrPtr *common.Address
 	if address != nil && len(strings.TrimSpace(*address)) > 0 {
 		addr := common.HexToAddress(strings.TrimSpace(*address))
