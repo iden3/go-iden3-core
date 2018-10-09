@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -102,7 +103,8 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	}
 	msgHash := utils.EthHash(authorizeKSignClaimMsg.AuthorizeKSignClaim.Bytes())
 	signature[64] -= 27
-	if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	// if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	if !utils.VerifySig(authorizeKSignClaimMsg.KSign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -183,10 +185,24 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 	return nil
 }
 
-
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
 func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
-	// verify signature
+	// verify proof of KSign
+	proofOfKSign, err := claimValueMsg.ProofOfKSignHex.Unhex()
+	if err != nil {
+		return err
+	}
+
+	addrBytes, err := common3.HexToBytes("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c") // TODO now it's hardcoded, will be getted from the sign service
+	if err != nil {
+		return err
+	}
+	relayAddr := common.BytesToAddress(addrBytes)
+	if !CheckProofOfClaim(relayAddr, proofOfKSign, 140) {
+		return errors.New("ProofOfClaim can not be verified")
+	}
+
+	// verify signature with KSign
 	signature, err := common3.HexToBytes(claimValueMsg.Signature)
 	if err != nil {
 		return err
@@ -194,7 +210,9 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 
 	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
 	signature[64] -= 27
-	if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	ksign := claimValueMsg.KSign
+	// if !utils.VerifySig(ethID, signature, msgHash[:]) {
+	if !utils.VerifySig(ksign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -287,7 +305,6 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 
 	claimProof := ProofOfTreeLeaf{
 		Leaf:  valueBytes,
-		Hi:    merkletree.HashBytes(value.Bytes()[:value.IndexLength()]),
 		Proof: idProof,
 		Root:  userMT.Root(),
 	}
@@ -307,7 +324,6 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	}
 	setRootClaimProof := ProofOfTreeLeaf{
 		Leaf:  setRootClaim.Bytes(),
-		Hi:    setRootClaim.Hi(),
 		Proof: relayProof,
 		Root:  cs.mt.Root(),
 	}
@@ -322,20 +338,30 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 		return ProofOfClaim{}, err
 	}
 
-	// sign root
-	sig, err := cs.signer.SignHash(setRootClaimProof.Root)
+	// sign root + date
+	dateBytes, err := core.Uint64ToEthBytes(uint64(time.Now().Unix()))
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
+	rootdate := setRootClaimProof.Root[:]
+	rootdate = append(rootdate, dateBytes...)
+	rootdateHash := merkletree.HashBytes(rootdate)
+	sig, err := cs.signer.SignHash(rootdateHash)
+	if err != nil {
+		return ProofOfClaim{}, err
+	}
+
 	proofOfClaim := ProofOfClaim{
 		claimProof,
 		setRootClaimProof,
 		claimNonRevocationProof,
 		setRootClaimNonRevocationProof,
+		uint64(time.Now().Unix()),
 		sig,
 	}
 	return proofOfClaim, nil
 }
+
 func (cs *ServiceImpl) MT() *merkletree.MerkleTree {
 	return cs.mt
 }
@@ -374,8 +400,7 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 		return ProofOfTreeLeaf{}, err
 	}
 	nonRevocationProof := ProofOfTreeLeaf{
-		Leaf:  merkletree.EmptyNodeValue[:],
-		Hi:    merkletree.HashBytes(value.Bytes()[:value.IndexLength()]),
+		Leaf:  b,
 		Proof: mp,
 		Root:  mt.Root(),
 	}

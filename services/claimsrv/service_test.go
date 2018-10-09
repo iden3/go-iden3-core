@@ -126,10 +126,9 @@ func TestGetNonRevocationProof(t *testing.T) {
 
 	claimProof, err := getNonRevocationProof(mt, claim.Hi())
 	assert.Nil(t, err)
-	assert.Equal(t, "0x7d219a3c0ec6d0a48d0bff8d1385b49839bafb4e2addea4efc7003b422a6bcde", claimProof.Hi.Hex())
 	assert.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000020012174493a3222e491377aae3a1ed614ab1277c8651a9c97954c199d1ce1cb4e4", common3.BytesToHex(claimProof.Proof))
 	assert.Equal(t, "0xbdecf4eaaaf0d632fa2a0eb291219b766d59959abfa3695ca202d60f294b14f4", claimProof.Root.Hex())
-	verified := merkletree.CheckProof(claimProof.Root, claimProof.Proof, claimProof.Hi, merkletree.EmptyNodeValue, mt.NumLevels())
+	verified := merkletree.CheckProof(claimProof.Root, claimProof.Proof, core.HiFromClaimBytes(claimProof.Leaf), merkletree.EmptyNodeValue, mt.NumLevels())
 	assert.True(t, verified)
 }
 
