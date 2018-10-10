@@ -11,7 +11,7 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
 )
@@ -22,26 +22,34 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	claimsrv  claimsrv.Service
-	signer    signsrv.Service
-	domain    string
-	namespace string
+	claimsrv    claimsrv.Service
+	identitysrv identitysrv.Service
+	signer      signsrv.Service
+	domain      string
+	namespace   string
 }
 
-func New(rootsrv rootsrv.Service, claimsrv claimsrv.Service, signer signsrv.Service, domain string, namespace string) *ServiceImpl {
-	return &ServiceImpl{claimsrv, signer, domain, namespace}
+func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer signsrv.Service, domain string, namespace string) *ServiceImpl {
+	return &ServiceImpl{claimsrv, identitysrv, signer, domain, namespace}
 }
 
 // VinculateID creates an adds a AssignNameClaim vinculating a name and an address, into the merkletree
 func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNameClaim, error) {
-	// verify vinculateIDMsg.Msg signature with EthID
+	// verify vinculateIDMsg.Msg signature with the Operational Key of the identity vinculateIDMsg.EthID
+	// get the operational key
+	identity, err := ns.identitysrv.Get(vinculateIDMsg.EthID)
+	if err != nil {
+		return core.AssignNameClaim{}, err
+	}
+	opkey := identity.Operational
+
 	sigBytes, err := common3.HexToBytes(vinculateIDMsg.Signature)
 	if err != nil {
 		return core.AssignNameClaim{}, err
 	}
 	msgHash := vinculateIDMsg.MsgHash()
 	sigBytes[64] -= 27
-	verified := utils.VerifySig(vinculateIDMsg.EthID, sigBytes, msgHash[:])
+	verified := utils.VerifySig(opkey, sigBytes, msgHash[:])
 	if !verified {
 		return core.AssignNameClaim{}, errors.New("signature can not be verified")
 	}

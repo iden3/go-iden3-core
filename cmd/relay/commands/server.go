@@ -47,9 +47,8 @@ func cmdStart(c *cli.Context) error {
 
 	rootservice := cfg.LoadRootsService(client)
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
-	nameservice := cfg.LoadNameService(rootservice, claimservice, ks, acc, cfg.C.Domain, cfg.C.Namespace)
-
 	idservice := cfg.LoadIdService(client, claimservice, storage)
+	nameservice := cfg.LoadNameService(idservice, claimservice, ks, acc, cfg.C.Domain, cfg.C.Namespace)
 
 	// Check for founds
 	balance, err := client.BalanceAt(acc.Address)
