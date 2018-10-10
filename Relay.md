@@ -105,8 +105,52 @@ Returns:
 
 
 
+### POST /id
+Input:
+```js
+{
+  operational: '0x970e8128ab834e8eac17ab8e3812f010678cf791',
+  recoverer: '0xe0fbce58cfaa72812103f003adce3f284fe5fc7c',
+  revokator: '0x46b57a3f315f99a6de39406310f5bd0db03326c1'
+}
+```
 
+Returns:
+```js
+{
+  idaddr : '0x46b57a3f315f99a6de39406310f5bd0db03326c1'
+}
+```
 
+### GET /id/:idaddr
+Returns:
+```js
+{
+  IDAddr: '0x46b57a3f315f99a6de39406310f5bd0db03326c1',
+  LocalDb: {
+    Operational: '0x970e8128ab834e8eac17ab8e3812f010678cf791',
+    Relayer: '0xe0fbce58cfaa72812103f003adce3f284fe5fc7c',
+    Recoverer: '0x970e8128ab834e8eac17ab8e3812f010678cf791',
+    Revokator: '0x970e8128ab834e8eac17ab8e3812f010678cf791',
+    Impl: '0x2623ed1533d47d56f912300ae40f83b9370cead6'
+  },
+  Onchain: null
+}
+```
+
+### POST /id/:idaddr/deploy
+Input:
+```js
+{}
+```
+
+Returns:
+```js
+{
+  idaddr: '0x8435ebb41634c05019be1710be0007fa0d92861f',
+  tx: '0x403859ccc701eb358d3a25c908c33de733cbb2d0ebc1c7738eed4908cc8cf5c4'
+}
+```
 
 ### POST /vinculateid
 Input:

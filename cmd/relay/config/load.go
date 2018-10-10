@@ -123,6 +123,6 @@ func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks
 	return claimsrv.New(mt, rootservice, signsrv.New(ks, acc))
 }
 
-func LoadNameService(rootservice rootsrv.Service, claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
-	return namesrv.New(rootservice, claimservice, signsrv.New(ks, acc), domain, namespace)
+func LoadNameService(identityservice identitysrv.Service, claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
+	return namesrv.New(claimservice, identityservice, signsrv.New(ks, acc), domain, namespace)
 }

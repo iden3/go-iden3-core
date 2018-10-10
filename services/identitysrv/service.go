@@ -2,16 +2,17 @@ package identitysrv
 
 import (
 	"bytes"
-	"encoding/binary"
-	"math/big"
-	"math"
 	"crypto/sha256"
+	"encoding/binary"
+	"math"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
-	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/claimsrv"
 )
 
@@ -150,12 +151,12 @@ func (m *ServiceImpl) Deploy(id *Identity) (common.Address, *types.Transaction, 
 func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 
 	var info Info
-	
+
 	code, err := s.impl.Client().CodeAt(idaddr)
 	if err != nil {
 		return nil, err
 	}
-	if code == nil || len(code)==0 {
+	if code == nil || len(code) == 0 {
 		return nil, nil
 	}
 
@@ -215,20 +216,20 @@ func (s *ServiceImpl) Add(id *Identity) error {
 	}
 
 	claim := core.NewOperationalKSignClaim("iden3.io", id.Operational, 0, math.MaxUint64)
-	return s.cs.AddAuthorizeKSignClaimFirst(idaddr,claim)
+	return s.cs.AddAuthorizeKSignClaimFirst(idaddr, claim)
 }
 
 func (m *ServiceImpl) List(limit int) ([]common.Address, error) {
 
-	kvs,err := m.sto.List(limit)
+	kvs, err := m.sto.List(limit)
 	if err != nil {
 		return nil, err
 	}
-	addrs := make([]common.Address,0,len(kvs))
-	for _,e := range kvs {
+	addrs := make([]common.Address, 0, len(kvs))
+	for _, e := range kvs {
 		var addr common.Address
-		copy(addr[:],e.K)
-		addrs = append(addrs,addr)
+		copy(addr[:], e.K)
+		addrs = append(addrs, addr)
 	}
 	return addrs, err
 }
@@ -237,11 +238,11 @@ func (m *ServiceImpl) Get(idaddr common.Address) (*Identity, error) {
 
 	data, err := m.sto.Get(idaddr[:])
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	var id Identity
 	err = id.Decode(data)
-	return &id,err
+	return &id, err
 }
 
 func (s *ServiceImpl) DeployerAddr() *common.Address {
