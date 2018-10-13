@@ -3,7 +3,6 @@ package claimsrv
 import (
 	"bytes"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,6 +12,8 @@ import (
 	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
+	log "github.com/sirupsen/logrus"
+
 )
 
 type Service interface {
@@ -312,6 +313,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	rootdate = append(rootdate, dateBytes...)
 	rootdateHash := merkletree.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
+	sig[64]+=27;
 	if err != nil {
 		return ProofOfClaim{}, err
 	}

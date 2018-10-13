@@ -1,8 +1,12 @@
 package endpoint
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
@@ -23,6 +27,19 @@ type handlePostIdRes struct {
 type handleDeployIdRes struct {
 	IDAddr common.Address `json:"idaddr"`
 	Tx     string         `json:"tx"`
+}
+
+type handleForwardIdReq struct {
+	KSignKey common.Address `json:"ksignkey"`
+	To       common.Address `json:"to"`
+	Data     string         `json:"data"`
+	Value    string         `json:"value"`
+	Gas      uint64         `json:"gas"` // gaslimit
+	Sig      string         `json:"sig"`
+}
+
+type handleForwardIdRes struct {
+	Tx common.Hash `json:"tx"`
 }
 
 func handleCreateId(c *gin.Context) {
@@ -106,4 +123,74 @@ func handleGetId(c *gin.Context) {
 		idi.LocalDb = id
 	}
 	c.JSON(http.StatusOK, idi)
+}
+
+func decodeBigIntParamOrFail(c *gin.Context, param, bivalue string) *big.Int {
+	value := new(big.Int)
+	value, ok := value.SetString(bivalue, 10)
+	if !ok {
+		fail(c, "bad "+param+" parameter", fmt.Errorf("bad"+param+" paremeter"))
+		return nil
+	}
+	return value
+}
+
+func decodeHexParamOrFail(c *gin.Context, param, hexvalue string) []byte {
+	if !strings.HasPrefix(hexvalue, "0x") {
+		fail(c, "bad "+param+" parameter", fmt.Errorf("bad "+param+" paremeter"))
+		return nil
+	}
+	if hexvalue == "0x0" {
+		return []byte{}
+	}
+	data, err := hex.DecodeString(hexvalue[2:])
+	if err != nil {
+		fail(c, "bad data parameter", err)
+		return nil
+	}
+	return data
+}
+
+func handleForwardId(c *gin.Context) {
+
+	if idservice.ImplAddr() == nil {
+		fail(c, "idservice.ImplAddr()==nil", fmt.Errorf("Implementation not set"))
+		return
+	}
+
+	var req handleForwardIdReq
+	if err := c.BindJSON(&req); err != nil {
+		fail(c, "cannot parse json body", err)
+		return
+	}
+
+	astxt, _ := json.MarshalIndent(req, "", "   ")
+	fmt.Println(string(astxt))
+
+	idaddr := common.HexToAddress(c.Param("idaddr"))
+
+	var data, sig []byte
+	var value *big.Int
+
+	if data = decodeHexParamOrFail(c, "data", req.Data); data == nil {
+		return
+	}
+	if sig = decodeHexParamOrFail(c, "sig", req.Sig); sig == nil {
+		return
+	}
+
+	if value = decodeBigIntParamOrFail(c, "value", req.Value); value == nil {
+		return
+	}
+
+	tx, err := idservice.Forward(idaddr,
+		req.KSignKey,
+		req.To, data, value, req.Gas, sig)
+
+	if err != nil {
+		fail(c, "failed to forward", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, handleForwardIdRes{tx})
 }

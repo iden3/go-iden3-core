@@ -14,6 +14,9 @@ import (
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/services/claimsrv"
+
+	log "github.com/sirupsen/logrus"
+
 )
 
 type Service interface {
@@ -22,7 +25,7 @@ type Service interface {
 	Deploy(id *Identity) (common.Address, *types.Transaction, error)
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
-	Forward(idaddr common.Address, to common.Address, data []byte, value *big.Int, gas *big.Int, sig []byte, auth []byte) (common.Hash, error)
+	Forward(idaddr common.Address, ksignkey common.Address, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
 	Add(id *Identity) error
 	List(limit int) ([]common.Address, error)
 	Get(idaddr common.Address) (*Identity, error)
@@ -174,25 +177,48 @@ func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 
 func (s *ServiceImpl) Forward(
 	idaddr common.Address,
+	ksignkey common.Address,
 	to common.Address,
 	data []byte,
 	value *big.Int,
-	gas *big.Int,
+	gas uint64,
 	sig []byte,
-	auth []byte,
 ) (common.Hash, error) {
 
+	ksignclaim := core.NewOperationalKSignClaim("iden3.io", ksignkey, 0, math.MaxUint64)
+	proof,err := s.cs.GetClaimByHi("iden3.io",idaddr,ksignclaim.Hi())
+	if err != nil {
+		log.Warn("Error retieving proof ",err)
+		return common.Hash{},err
+	}
+
+	auth := packAuth(
+		proof.ClaimProof.Leaf,
+		proof.ClaimProof.Root[:],
+		proof.ClaimProof.Proof,
+		proof.ClaimNonRevocationProof.Proof,
+		
+		proof.SetRootClaimProof.Leaf,
+		proof.SetRootClaimProof.Root[:],
+		proof.SetRootClaimProof.Proof,
+		proof.SetRootClaimNonRevocationProof.Proof,
+
+		proof.Date,proof.Signature,
+	)
 	proxy := s.impl.At(&idaddr)
+
 	tx, err := proxy.SendTransaction(
-		big.NewInt(0), 0,
+		big.NewInt(0), 4000000,
 		"forward",
-		to, data, value, gas, sig, auth,
+		to, data, value, big.NewInt(int64(gas)), sig, auth,
 	)
 	if err == nil {
 		_, err = proxy.Client().WaitReceipt(tx.Hash())
+		return tx.Hash(), err
 	}
 
-	return tx.Hash(), err
+	return common.Hash{}, err
+
 }
 
 func (s *ServiceImpl) Add(id *Identity) error {
@@ -253,29 +279,36 @@ func (s *ServiceImpl) ImplAddr() *common.Address {
 	return s.impl.Address()
 }
 
-func PackAuth(
+func packAuth(
 	kclaimBytes, kclaimRoot, kclaimExistenceProof, kclaimNonNextExistenceProof []byte,
 	rclaimBytes, rclaimRoot, rclaimExistenceProof, rclaimNonNextExistenceProof []byte,
 	rclaimSigDate uint64,
-	rclaimSigR, rclaimSigS []byte, rclaimSigV uint8) []byte {
+	rclaimSigRSV []byte) []byte {
 
 	var b bytes.Buffer
-	b.Write(kclaimBytes)
+	writeBytes := func(v []byte) {
+		var vlen [2]byte
+		binary.BigEndian.PutUint16(vlen[:], uint16(len(v)))
+		b.Write(vlen[:])
+		b.Write(v)
+	}
+	writeUint64 := func(v uint64) {
+		var val [8]byte
+		binary.BigEndian.PutUint64(val[:], v)
+		b.Write(val[:])
+	}
+
+	writeBytes(kclaimBytes)
 	b.Write(kclaimRoot)
-	b.Write(kclaimExistenceProof)
-	b.Write(kclaimNonNextExistenceProof)
-	b.Write(rclaimBytes)
+	writeBytes(kclaimExistenceProof)
+	writeBytes(kclaimNonNextExistenceProof)
+	writeBytes(rclaimBytes)
 	b.Write(rclaimRoot)
-	b.Write(rclaimExistenceProof)
-	b.Write(rclaimNonNextExistenceProof)
+	writeBytes(rclaimExistenceProof)
+	writeBytes(rclaimNonNextExistenceProof)
 
-	var v [4]byte
-	binary.LittleEndian.PutUint64(v[:], rclaimSigDate)
-	b.Write(v[:])
-
-	b.Write(rclaimSigR)
-	b.Write(rclaimSigS)
-	b.Write([]byte{rclaimSigV})
+	writeUint64(rclaimSigDate)
+	writeBytes(rclaimSigRSV)
 
 	return b.Bytes()
 }
