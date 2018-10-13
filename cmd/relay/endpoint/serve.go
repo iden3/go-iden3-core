@@ -42,7 +42,8 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/id", handleCreateId)
 	serviceapi.GET("/id/:idaddr", handleGetId)
 	serviceapi.POST("/id/:idaddr/deploy", handleDeployId)
-
+	serviceapi.POST("/id/:idaddr/forward", handleForwardId)
+	
 	serviceapi.POST("/vinculateid", handleVinculateID)
 	serviceapi.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
 
