@@ -9,10 +9,9 @@ import (
 
 // BytesSignedMsg contains the value and its signature in Hex representation
 type BytesSignedMsg struct {
-	ValueHex        string          `json:"valueHex"` // claim.Bytes() in a hex format
-	SignatureHex    string          `json:"signatureHex"`
-	KSign           common.Address  `json:"ksign"`
-	ProofOfKSignHex ProofOfClaimHex `json:"proofOfKSign"`
+	ValueHex     string         `json:"valueHex"` // claim.Bytes() in a hex format
+	SignatureHex string         `json:"signatureHex"`
+	KSign        common.Address `json:"ksign"`
 }
 
 // ClaimDefaultMsg contains a core.ClaimDefault with its signature in Hex
@@ -42,10 +41,9 @@ type SetRootClaimMsg struct {
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex
 type ClaimValueMsg struct {
-	ClaimValue      merkletree.Value
-	Signature       string
-	KSign           common.Address
-	ProofOfKSignHex ProofOfClaimHex
+	ClaimValue merkletree.Value
+	Signature  string
+	KSign      common.Address
 }
 
 // ProofOfTreeLeaf contains all the parameters needed to proof that a Leaf is in a merkletree with a given Root

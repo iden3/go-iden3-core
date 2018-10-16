@@ -13,8 +13,9 @@ import (
 	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
 	log "github.com/sirupsen/logrus"
-
 )
+
+var ErrNotFound = errors.New("value not found")
 
 type Service interface {
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
@@ -61,6 +62,21 @@ func (cs *ServiceImpl) AddAssignNameClaim(assignNameClaim core.AssignNameClaim) 
 
 // AddAuthorizeKSignClaim adds AuthorizeKSignClaim into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a SetRootClaim. Returns the merkle proof of both Claims
 func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error {
+
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.New(stoUserID, 140)
+	if err != nil {
+		return err
+	}
+
+	// verify that the KSign is authorized
+	if !CheckClaimInDB(userMT, ethID) {
+		return errors.New("can not verify the KSign")
+	}
+
 	// verify signature of the AuthorizeKSignClaim
 	signature, err := common3.HexToBytes(authorizeKSignClaimMsg.Signature)
 	if err != nil {
@@ -70,15 +86,6 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	signature[64] -= 27
 	if !utils.VerifySig(authorizeKSignClaimMsg.KSign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
-	}
-
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
-
-	// open the MerkleTree of the user
-	userMT, err := merkletree.New(stoUserID, 140)
-	if err != nil {
-		return err
 	}
 
 	// add AuthorizeKSignClaim into the User's ID Merkle Tree
@@ -151,19 +158,18 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
 func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
-	// verify proof of KSign
-	proofOfKSign, err := claimValueMsg.ProofOfKSignHex.Unhex()
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.New(stoUserID, 140)
 	if err != nil {
 		return err
 	}
 
-	addrBytes, err := common3.HexToBytes("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c") // TODO now it's hardcoded, will be getted from the sign service
-	if err != nil {
-		return err
-	}
-	relayAddr := common.BytesToAddress(addrBytes)
-	if !CheckProofOfClaim(relayAddr, proofOfKSign, 140) {
-		return errors.New("ProofOfClaim can not be verified")
+	// verify that the KSign is authorized
+	if !CheckClaimInDB(userMT, ethID) {
+		return errors.New("can not verify the KSign")
 	}
 
 	// verify signature with KSign
@@ -177,15 +183,6 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 	ksign := claimValueMsg.KSign
 	if !utils.VerifySig(ksign, signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
-	}
-
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
-
-	// open the MerkleTree of the user
-	userMT, err := merkletree.New(stoUserID, 140)
-	if err != nil {
-		return err
 	}
 
 	// add claim in User ID Merkle Tree
@@ -258,6 +255,9 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
+	if bytes.Equal(valueBytes, merkletree.EmptyNodeValue[:]) {
+		return ProofOfClaim{}, ErrNotFound
+	}
 	value, err := core.ParseValueFromBytes(valueBytes)
 	if err != nil {
 		return ProofOfClaim{}, err
@@ -313,7 +313,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	rootdate = append(rootdate, dateBytes...)
 	rootdateHash := merkletree.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
-	sig[64]+=27;
+	sig[64] += 27
 	if err != nil {
 		return ProofOfClaim{}, err
 	}

@@ -1,6 +1,9 @@
 package claimsrv
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
@@ -44,4 +47,32 @@ func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int)
 		return true
 	}
 	return false
+}
+
+// CheckClaimInDB checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
+func CheckClaimInDB(mt *merkletree.MerkleTree, ksign common.Address) bool {
+	// generate the AuthorizeKSignClaim
+	authorizeKSignClaim := core.NewOperationalKSignClaim("iden3.io", ksign)
+	fmt.Println(authorizeKSignClaim)
+	ht := authorizeKSignClaim.Ht()
+	value, err := mt.Storage().Get(ht[:])
+	if err != nil {
+		return false
+	}
+	if !bytes.Equal(authorizeKSignClaim.Bytes(), value) {
+		return false
+	}
+
+	// non revocation
+	authorizeKSignClaim.BaseIndex.Version++
+	ht = authorizeKSignClaim.Ht()
+	value, err = mt.Storage().Get(ht[:])
+	if err != nil {
+		return false
+	}
+	if !bytes.Equal(merkletree.EmptyNodeValue[:], value) {
+		return false
+	}
+
+	return true
 }

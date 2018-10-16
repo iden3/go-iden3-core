@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -398,7 +399,7 @@ func NewAuthorizeKSignClaim(namespaceStr string, keyToAuthorize common.Address, 
 	return c
 }
 
-func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address, validFrom, validUntil uint64) AuthorizeKSignClaim {
+func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address) AuthorizeKSignClaim {
 	var c AuthorizeKSignClaim
 	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
 	copy(c.BaseIndex.Type[:], AuthorizeksignTypeHash[:24])
@@ -407,8 +408,8 @@ func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address
 	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
 	c.Application = merkletree.Hash{}
 	c.ApplicationAuthz = merkletree.Hash{}
-	c.ValidFrom = validFrom
-	c.ValidUntil = validUntil
+	c.ValidFrom = 0
+	c.ValidUntil = math.MaxUint64
 	return c
 }
 

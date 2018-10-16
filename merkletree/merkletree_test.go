@@ -281,6 +281,12 @@ func TestGetClaimInPos(t *testing.T) {
 	claimInPosBytes, err := mt.GetValueInPos(claim.hi())
 	assert.Nil(t, err)
 	assert.Equal(t, claim1.Bytes(), claimInPosBytes)
+
+	// emtpy value in position
+	claim2 := newTestClaim("iden3.io_y", "typespec_y", []byte("cy"))
+	claimInPosBytes, err = mt.GetValueInPos(claim2.hi())
+	assert.Nil(t, err)
+	assert.Equal(t, EmptyNodeValue[:], claimInPosBytes)
 }
 
 type vt struct {

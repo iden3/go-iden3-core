@@ -37,7 +37,6 @@ func handlePostClaim(c *gin.Context) {
 			claimDefault,
 			bytesSignedMsg.SignatureHex,
 			bytesSignedMsg.KSign,
-			bytesSignedMsg.ProofOfKSignHex,
 		}
 		err = claimservice.AddUserIDClaim(config.C.Namespace, idaddr, claimValueMsg)
 		if err != nil {
