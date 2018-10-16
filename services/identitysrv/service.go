@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
-	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,7 +15,6 @@ import (
 	"github.com/iden3/go-iden3/services/claimsrv"
 
 	log "github.com/sirupsen/logrus"
-
 )
 
 type Service interface {
@@ -185,11 +183,11 @@ func (s *ServiceImpl) Forward(
 	sig []byte,
 ) (common.Hash, error) {
 
-	ksignclaim := core.NewOperationalKSignClaim("iden3.io", ksignkey, 0, math.MaxUint64)
-	proof,err := s.cs.GetClaimByHi("iden3.io",idaddr,ksignclaim.Hi())
+	ksignclaim := core.NewOperationalKSignClaim("iden3.io", ksignkey)
+	proof, err := s.cs.GetClaimByHi("iden3.io", idaddr, ksignclaim.Hi())
 	if err != nil {
-		log.Warn("Error retieving proof ",err)
-		return common.Hash{},err
+		log.Warn("Error retieving proof ", err)
+		return common.Hash{}, err
 	}
 
 	auth := packAuth(
@@ -197,13 +195,13 @@ func (s *ServiceImpl) Forward(
 		proof.ClaimProof.Root[:],
 		proof.ClaimProof.Proof,
 		proof.ClaimNonRevocationProof.Proof,
-		
+
 		proof.SetRootClaimProof.Leaf,
 		proof.SetRootClaimProof.Root[:],
 		proof.SetRootClaimProof.Proof,
 		proof.SetRootClaimNonRevocationProof.Proof,
 
-		proof.Date,proof.Signature,
+		proof.Date, proof.Signature,
 	)
 	proxy := s.impl.At(&idaddr)
 
@@ -241,7 +239,7 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
-	claim := core.NewOperationalKSignClaim("iden3.io", id.Operational, 0, math.MaxUint64)
+	claim := core.NewOperationalKSignClaim("iden3.io", id.Operational)
 	return s.cs.AddAuthorizeKSignClaimFirst(idaddr, claim)
 }
 

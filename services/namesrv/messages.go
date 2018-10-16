@@ -21,6 +21,7 @@ type VinculateIDMsg struct {
 	EthID     common.Address `json:"ethID"` // temp, will be calculated directly from RawIdentityTx
 	Name      string         `json:"name"`
 	Signature string         `json:"signature"` // hex format
+	KSign     common.Address `json:"ksign"`
 }
 
 // MsgHash returns the Hash(VinculateIDMsg)
