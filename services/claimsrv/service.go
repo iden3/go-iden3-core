@@ -73,7 +73,7 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	}
 
 	// verify that the KSign is authorized
-	if !CheckClaimInDB(userMT, ethID) {
+	if !CheckKSignInIDdb(userMT, authorizeKSignClaimMsg.KSign) {
 		return errors.New("can not verify the KSign")
 	}
 
@@ -168,7 +168,7 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 	}
 
 	// verify that the KSign is authorized
-	if !CheckClaimInDB(userMT, ethID) {
+	if !CheckKSignInIDdb(userMT, claimValueMsg.KSign) {
 		return errors.New("can not verify the KSign")
 	}
 
@@ -305,7 +305,8 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	}
 
 	// sign root + date
-	dateBytes, err := core.Uint64ToEthBytes(uint64(time.Now().Unix()))
+	dateUint64 := uint64(time.Now().Unix())
+	dateBytes, err := core.Uint64ToEthBytes(dateUint64)
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
@@ -313,7 +314,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	rootdate = append(rootdate, dateBytes...)
 	rootdateHash := merkletree.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
-	sig[64] += 27
+	// sig[64] += 27
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
@@ -323,7 +324,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 		setRootClaimProof,
 		claimNonRevocationProof,
 		setRootClaimNonRevocationProof,
-		uint64(time.Now().Unix()),
+		dateUint64,
 		sig,
 	}
 	return proofOfClaim, nil
@@ -354,7 +355,8 @@ func (cs *ServiceImpl) GetRelayClaimByHi(namespace string, hi merkletree.Hash) (
 	}
 
 	// sign root + date
-	dateBytes, err := core.Uint64ToEthBytes(uint64(time.Now().Unix()))
+	dateUint64 := uint64(time.Now().Unix())
+	dateBytes, err := core.Uint64ToEthBytes(dateUint64)
 	if err != nil {
 		return ProofOfRelayClaim{}, err
 	}
@@ -369,7 +371,7 @@ func (cs *ServiceImpl) GetRelayClaimByHi(namespace string, hi merkletree.Hash) (
 	proofOfRelayClaim := ProofOfRelayClaim{
 		claimProof,
 		claimNonRevocationProof,
-		uint64(time.Now().Unix()),
+		dateUint64,
 		sig,
 	}
 	return proofOfRelayClaim, nil
