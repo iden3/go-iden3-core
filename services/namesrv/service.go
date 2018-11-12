@@ -18,7 +18,7 @@ import (
 
 type Service interface {
 	VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNameClaim, error)
-	ResolvAssignNameClaim(nameid, namespace string) (core.AssignNameClaim, error)
+	ResolvAssignNameClaim(nameid string) (core.AssignNameClaim, error)
 }
 
 type ServiceImpl struct {
@@ -26,11 +26,10 @@ type ServiceImpl struct {
 	identitysrv identitysrv.Service
 	signer      signsrv.Service
 	domain      string
-	namespace   string
 }
 
-func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer signsrv.Service, domain string, namespace string) *ServiceImpl {
-	return &ServiceImpl{claimsrv, identitysrv, signer, domain, namespace}
+func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer signsrv.Service, domain string) *ServiceImpl {
+	return &ServiceImpl{claimsrv, identitysrv, signer, domain}
 }
 
 // VinculateID creates an adds a AssignNameClaim vinculating a name and an address, into the merkletree
@@ -57,7 +56,7 @@ func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNa
 	// add AssignNameClaim to merkle tree
 	nameHash := merkletree.HashBytes([]byte(vinculateIDMsg.Name))
 	domainHash := merkletree.HashBytes([]byte(ns.domain))
-	assignNameClaim := core.NewAssignNameClaim(ns.namespace, nameHash, domainHash, vinculateIDMsg.EthID)
+	assignNameClaim := core.NewAssignNameClaim(nameHash, domainHash, vinculateIDMsg.EthID)
 	err = ns.claimsrv.AddAssignNameClaim(assignNameClaim)
 	if err != nil {
 		return core.AssignNameClaim{}, err
@@ -67,7 +66,7 @@ func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNa
 }
 
 // ResolvAssignNameClaim returns the AssignNameClaim from the merkletree, given a nameid and a namespace
-func (ns *ServiceImpl) ResolvAssignNameClaim(nameid, namespace string) (core.AssignNameClaim, error) {
+func (ns *ServiceImpl) ResolvAssignNameClaim(nameid string) (core.AssignNameClaim, error) {
 	// get name and domain
 	s := strings.Split(nameid, "@")
 	if len(s) != 2 {
@@ -79,7 +78,7 @@ func (ns *ServiceImpl) ResolvAssignNameClaim(nameid, namespace string) (core.Ass
 	// build the AssignNameClaim Partial with the given data of the Index
 	nameHash := merkletree.HashBytes([]byte(name))
 	domainHash := merkletree.HashBytes([]byte(domain))
-	claimPartial := core.NewAssignNameClaim(ns.namespace, nameHash, domainHash, common.Address{})
+	claimPartial := core.NewAssignNameClaim(nameHash, domainHash, common.Address{})
 
 	version, err := claimsrv.GetNextVersion(ns.claimsrv.MT(), claimPartial.Hi())
 	if err != nil {

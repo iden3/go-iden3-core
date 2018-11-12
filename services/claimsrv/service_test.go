@@ -84,7 +84,7 @@ func initializeEnvironment(t *testing.T) {
 func TestGetNextVersion(t *testing.T) {
 	initializeEnvironment(t)
 
-	claim := core.NewClaimDefault("c1", "default", []byte("c1"), []byte{})
+	claim := core.NewGenericClaim("c1", "default", []byte("c1"), []byte{})
 
 	version, err := GetNextVersion(mt, claim.Hi())
 	assert.Nil(t, err)
@@ -116,7 +116,7 @@ func TestGetNextVersion(t *testing.T) {
 
 func TestGetNonRevocationProof(t *testing.T) {
 	initializeEnvironment(t)
-	claim := core.NewClaimDefault("c1", "default", []byte("c1"), []byte{})
+	claim := core.NewGenericClaim("c1", "default", []byte("c1"), []byte{})
 
 	err := mt.Add(claim)
 	assert.Nil(t, err)
@@ -138,7 +138,7 @@ func TestGetClaimByHi(t *testing.T) {
 
 	ethID := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 	namespace := "iden3.io"
-	claim := core.NewClaimDefault(namespace, "default", []byte("dataasdf"), []byte{})
+	claim := core.NewGenericClaim(namespace, "default", []byte("dataasdf"), []byte{})
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := mt.Storage().WithPrefix(ethID.Hash().Bytes())
 	// open the MerkleTree of the user
@@ -191,9 +191,9 @@ func TestAssignNameClaim(t *testing.T) {
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
 	assert.Nil(t, err)
 
-	mt.Add(core.NewClaimDefault("c1", "c1", []byte("c1")))
-	mt.Add(core.NewClaimDefault("c2", "c2", []byte("c2")))
-	mt.Add(core.NewClaimDefault("c3", "c3", []byte("c3")))
+	mt.Add(core.NewGenericClaim("c1", "c1", []byte("c1")))
+	mt.Add(core.NewGenericClaim("c2", "c2", []byte("c2")))
+	mt.Add(core.NewGenericClaim("c3", "c3", []byte("c3")))
 
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
 	domainHash := merkletree.HashBytes([]byte(c.Domain))
@@ -346,7 +346,7 @@ func TestNewUserIDClaim(t *testing.T) {
 	assert.Nil(t, err)
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 
-	claim := core.NewClaimDefault("iden3.io_3", "default", []byte("data2"))
+	claim := core.NewGenericClaim("iden3.io_3", "default", []byte("data2"))
 	signature, err := utils.Sign(claim.Ht(), testPrivK)
 	assert.Nil(t, err)
 	signatureHex := common3.BytesToHex(signature)
@@ -410,7 +410,7 @@ func TestAddClaimAndGetClaimByHi(t *testing.T) {
 	assert.Nil(t, err)
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 
-	claim := core.NewClaimDefault("namespace.io", "default", []byte("dataasdf"))
+	claim := core.NewGenericClaim("namespace.io", "default", []byte("dataasdf"))
 	signature, err := utils.Sign(claim.Ht(), testPrivK)
 	assert.Nil(t, err)
 	signatureHex := common3.BytesToHex(signature)

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
 
@@ -26,10 +25,10 @@ func handlePostClaim(c *gin.Context) {
 	typeBytes := bytesValue[32:56]
 
 	switch common3.BytesToHex(typeBytes) {
-	case common3.BytesToHex(core.DefaultTypeHash[:24]):
-		claimDefault, err := core.ParseClaimDefaultBytes(bytesValue)
+	case common3.BytesToHex(core.DefaultType):
+		claimDefault, err := core.ParseGenericClaimBytes(bytesValue)
 		if err != nil {
-			fail(c, "error on parsing ClaimDefault bytes", err)
+			fail(c, "error on parsing GenericClaim bytes", err)
 			return
 		}
 
@@ -38,13 +37,13 @@ func handlePostClaim(c *gin.Context) {
 			bytesSignedMsg.SignatureHex,
 			bytesSignedMsg.KSign,
 		}
-		err = claimservice.AddUserIDClaim(config.C.Namespace, idaddr, claimValueMsg)
+		err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
 		if err != nil {
 			fail(c, "error on AddUserIDClaim", err)
 			return
 		}
 		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, claimDefault.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, claimDefault.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return
@@ -54,7 +53,7 @@ func handlePostClaim(c *gin.Context) {
 		})
 		return
 
-	case common3.BytesToHex(core.AssignNameTypeHash[:24]):
+	case common3.BytesToHex(core.AssignNameType):
 		assignNameClaim, err := core.ParseAssignNameClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AssignNameClaim bytes", err)
@@ -68,7 +67,7 @@ func handlePostClaim(c *gin.Context) {
 		}
 
 		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, assignNameClaim.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, assignNameClaim.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return
@@ -78,7 +77,7 @@ func handlePostClaim(c *gin.Context) {
 		})
 		return
 
-	case common3.BytesToHex(core.AuthorizeksignTypeHash[:24]):
+	case common3.BytesToHex(core.AuthorizeksignType):
 		authorizeKSignClaim, err := core.ParseAuthorizeKSignClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing AuthorizeKSignClaim bytes", err)
@@ -95,7 +94,7 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, authorizeKSignClaim.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, authorizeKSignClaim.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return
@@ -105,7 +104,7 @@ func handlePostClaim(c *gin.Context) {
 		})
 		return
 
-	case common3.BytesToHex(core.SetRootTypeHash[:24]):
+	case common3.BytesToHex(core.SetRootType):
 		break
 
 	default:
@@ -140,7 +139,7 @@ func handleGetClaimByHi(c *gin.Context) {
 	var hi merkletree.Hash
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
-	proofOfClaim, err := claimservice.GetClaimByHi(config.C.Namespace, idaddr, hi)
+	proofOfClaim, err := claimservice.GetClaimByHi(idaddr, hi)
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return

@@ -21,10 +21,10 @@ type Service interface {
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error
-	AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error
+	AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
-	GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
-	GetRelayClaimByHi(namespace string, hi merkletree.Hash) (ProofOfRelayClaim, error)
+	GetClaimByHi(ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
+	GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim, error)
 	MT() *merkletree.MerkleTree
 }
 
@@ -95,7 +95,7 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaim(ethID common.Address, authorizeKSi
 	}
 
 	// create new SetRootClaim
-	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(ethID, userMT.Root())
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
@@ -135,7 +135,7 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 	}
 
 	// create new SetRootClaim
-	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(ethID, userMT.Root())
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
@@ -157,7 +157,7 @@ func (cs *ServiceImpl) AddAuthorizeKSignClaimFirst(ethID common.Address, authori
 }
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new SetRootClaim and adds it to the Relay's merkletree
-func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, claimValueMsg ClaimValueMsg) error {
+func (cs *ServiceImpl) AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
 
@@ -193,7 +193,7 @@ func (cs *ServiceImpl) AddUserIDClaim(namespace string, ethID common.Address, cl
 
 	// setRootClaim of the user in the Relay Merkle Tree
 	// create new SetRootClaim
-	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(ethID, userMT.Root())
 	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
 		return err
@@ -224,7 +224,7 @@ func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte,
 	}
 
 	// build SetRootClaim of the user id
-	setRootClaim := core.NewSetRootClaim("iden3.io", ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(ethID, userMT.Root())
 	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
@@ -240,7 +240,7 @@ func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte,
 }
 
 // GetClaimByHi given a Hash(index) (Hi) and an ID, returns the Claim in that Hi position inside the ID's merkletree, and the SetRootClaim with the ID's root in the Relay's merkletree
-func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error) {
+func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
 
@@ -276,7 +276,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 	}
 
 	// build SetRootClaim
-	setRootClaim := core.NewSetRootClaim(namespace, ethID, userMT.Root())
+	setRootClaim := core.NewSetRootClaim(ethID, userMT.Root())
 	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
 	if err != nil {
 		return ProofOfClaim{}, err
@@ -331,7 +331,7 @@ func (cs *ServiceImpl) GetClaimByHi(namespace string, ethID common.Address, hi m
 }
 
 // GetRelayClaimByHi given a Hash(index) (Hi), returns the Claim in that Hi position inside the Relay merkletree, and it's proof of non revocated
-func (cs *ServiceImpl) GetRelayClaimByHi(namespace string, hi merkletree.Hash) (ProofOfRelayClaim, error) {
+func (cs *ServiceImpl) GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim, error) {
 	// get the value in the hi position
 	valueBytes, err := cs.mt.GetValueInPos(hi)
 	if err != nil {

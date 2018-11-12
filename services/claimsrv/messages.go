@@ -14,9 +14,9 @@ type BytesSignedMsg struct {
 	KSign        common.Address `json:"ksign"`
 }
 
-// ClaimDefaultMsg contains a core.ClaimDefault with its signature in Hex
-type ClaimDefaultMsg struct {
-	ClaimDefault core.ClaimDefault
+// GenericClaimMsg contains a core.GenericClaim with its signature in Hex
+type GenericClaimMsg struct {
+	GenericClaim core.GenericClaim
 	Signature    string
 }
 

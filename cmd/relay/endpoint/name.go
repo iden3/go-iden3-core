@@ -2,7 +2,6 @@ package endpoint
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/id/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/namesrv"
 )
@@ -16,7 +15,7 @@ func handleVinculateID(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(config.C.Namespace, assignNameClaim.Hi())
+	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(assignNameClaim.Hi())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
@@ -31,7 +30,7 @@ func handleVinculateID(c *gin.Context) {
 func handleAssignNameClaimResolv(c *gin.Context) {
 	nameid := c.Param("nameid")
 
-	assignNameClaim, err := nameservice.ResolvAssignNameClaim(nameid, config.C.Namespace)
+	assignNameClaim, err := nameservice.ResolvAssignNameClaim(nameid)
 	if err != nil {
 		fail(c, "nameid not found in merkletree", err)
 		return

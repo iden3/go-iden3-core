@@ -183,8 +183,8 @@ func (s *ServiceImpl) Forward(
 	sig []byte,
 ) (common.Hash, error) {
 
-	ksignclaim := core.NewOperationalKSignClaim("iden3.io", ksignkey)
-	proof, err := s.cs.GetClaimByHi("iden3.io", idaddr, ksignclaim.Hi())
+	ksignclaim := core.NewOperationalKSignClaim(ksignkey)
+	proof, err := s.cs.GetClaimByHi(idaddr, ksignclaim.Hi())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
 		return common.Hash{}, err
@@ -239,7 +239,7 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
-	claim := core.NewOperationalKSignClaim("iden3.io", id.Operational)
+	claim := core.NewOperationalKSignClaim(id.Operational)
 	return s.cs.AddAuthorizeKSignClaimFirst(idaddr, claim)
 }
 

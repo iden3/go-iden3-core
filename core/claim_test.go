@@ -46,13 +46,13 @@ func TestParseTypeClaimBytes(t *testing.T) {
 	assert.Equal(t, "setroot", claimType)
 }
 func TestClaimGenerationAndParse(t *testing.T) {
-	claim := NewClaimDefault("iden3.io", "default", []byte("c1"), []byte{})
+	claim := NewGenericClaim("iden3.io", "default", []byte("c1"), []byte{})
 	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000042000000006331", common3.BytesToHex(claim.Bytes()))
 
 	claimHt := claim.Ht()
 	assert.Equal(t, "0x0fce11cbd33e15d137a3a1953cda71aa81898ee8b917c21615073b59cd4dca8c", common3.BytesToHex(claimHt[:]))
 
-	claimParsed, err := ParseClaimDefaultBytes(claim.Bytes())
+	claimParsed, err := ParseGenericClaimBytes(claim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(claim.Bytes(), claimParsed.Bytes()) {
 		t.Errorf("claim and claimParsed not equal")
@@ -60,7 +60,7 @@ func TestClaimGenerationAndParse(t *testing.T) {
 }
 
 func TestAssignNameClaim(t *testing.T) {
-	assignNameClaim := NewAssignNameClaim("iden3.io", merkletree.HashBytes([]byte("john")), merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
+	assignNameClaim := NewAssignNameClaim(merkletree.HashBytes([]byte("john")), merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
 	assignNameClaimParsed, err := ParseAssignNameClaimBytes(assignNameClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(assignNameClaimParsed.Bytes(), assignNameClaim.Bytes()) {
@@ -73,7 +73,7 @@ func TestAssignNameClaim(t *testing.T) {
 }
 
 func TestAuthorizeKSign(t *testing.T) {
-	authorizeKSignClaim := NewAuthorizeKSignClaim("iden3.io", common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), "appToAuthName", "authz", 1535208350, 1535208350)
+	authorizeKSignClaim := NewAuthorizeKSignClaim(common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), "appToAuthName", "authz", 1535208350, 1535208350)
 	authorizeKSignClaimParsed, err := ParseAuthorizeKSignClaimBytes(authorizeKSignClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(authorizeKSignClaimParsed.Bytes(), authorizeKSignClaim.Bytes()) {
@@ -85,7 +85,7 @@ func TestAuthorizeKSign(t *testing.T) {
 
 }
 func TestSetRootClaim(t *testing.T) {
-	setRootClaim := NewSetRootClaim("iden3.io", common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), merkletree.HashBytes([]byte("root of the MT")))
+	setRootClaim := NewSetRootClaim(common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"), merkletree.HashBytes([]byte("root of the MT")))
 	setRootClaimParsed, err := ParseSetRootClaimBytes(setRootClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(setRootClaimParsed.Bytes(), setRootClaim.Bytes()) {
@@ -107,10 +107,7 @@ func TestForwardingInterop(t *testing.T) {
 
 	// create ksignclaim ----------------------------------------------
 
-	ksignClaim := NewOperationalKSignClaim(
-		"iden3.io",
-		common.HexToAddress("0xee602447b5a75cf4f25367f5d199b860844d10c4"),
-	)
+	ksignClaim := NewOperationalKSignClaim(common.HexToAddress("0xee602447b5a75cf4f25367f5d199b860844d10c4"))
 
 	assert.Nil(t, mt.Add(ksignClaim))
 
@@ -140,7 +137,6 @@ func TestForwardingInterop(t *testing.T) {
 	assert.Nil(t, err)
 
 	setRootClaim := NewSetRootClaim(
-		"iden3.io",
 		common.HexToAddress("0xd79ae0a65e7dd29db1eac700368e693de09610b8"),
 		kroot,
 	)

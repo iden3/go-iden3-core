@@ -12,10 +12,17 @@ import (
 )
 
 var (
-	DefaultTypeHash        = merkletree.HashBytes([]byte("default"))
-	AssignNameTypeHash     = merkletree.HashBytes([]byte("assignname"))
-	AuthorizeksignTypeHash = merkletree.HashBytes([]byte("authorizeksign"))
-	SetRootTypeHash        = merkletree.HashBytes([]byte("setroot"))
+	defaultTypeHash        = merkletree.HashBytes([]byte("default"))
+	assignNameTypeHash     = merkletree.HashBytes([]byte("assignname"))
+	authorizeksignTypeHash = merkletree.HashBytes([]byte("authorizeksign"))
+	setRootTypeHash        = merkletree.HashBytes([]byte("setroot"))
+
+	DefaultType        = defaultTypeHash[:24]
+	AssignNameType     = assignNameTypeHash[:24]
+	AuthorizeksignType = authorizeksignTypeHash[:24]
+	SetRootType        = setRootTypeHash[:24]
+
+	NamespaceHash = merkletree.HashBytes([]byte("iden3.io"))
 )
 
 // BaseIndex is the by default parameters of the index of every Claim
@@ -26,8 +33,8 @@ type BaseIndex struct {
 	Version     uint32          // [4] byte
 }
 
-// ClaimDefault is a default data structure of a claim
-type ClaimDefault struct {
+// GenericClaim is a default data structure of a claim
+type GenericClaim struct {
 	BaseIndex
 	ExtraIndex struct {
 		Data []byte
@@ -66,12 +73,12 @@ type SetRootClaim struct {
 	Root merkletree.Hash
 }
 
-// ParseClaimDefaultBytes returns a ClaimDefault struct from an array of bytes
-func ParseClaimDefaultBytes(b []byte) (ClaimDefault, error) {
+// ParseGenericClaimBytes returns a GenericClaim struct from an array of bytes
+func ParseGenericClaimBytes(b []byte) (GenericClaim, error) {
 	if len(b) < 64 {
-		return ClaimDefault{}, errors.New("[]byte too small")
+		return GenericClaim{}, errors.New("[]byte too small")
 	}
-	var c ClaimDefault
+	var c GenericClaim
 	copy(c.BaseIndex.Namespace[:], b[0:32])
 	copy(c.BaseIndex.Type[:], b[32:56])
 	c.BaseIndex.IndexLength = EthBytesToUint32(b[56:60])
@@ -81,8 +88,8 @@ func ParseClaimDefaultBytes(b []byte) (ClaimDefault, error) {
 	return c, nil
 }
 
-// Bytes returns an array of bytes with the ClaimDefault data
-func (c ClaimDefault) Bytes() (b []byte) {
+// Bytes returns an array of bytes with the GenericClaim data
+func (c GenericClaim) Bytes() (b []byte) {
 	b = append(b, c.BaseIndex.Namespace[:]...)
 	b = append(b, c.BaseIndex.Type[:]...)
 	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
@@ -94,21 +101,21 @@ func (c ClaimDefault) Bytes() (b []byte) {
 	return b
 }
 
-// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the ClaimDefault
-func (c ClaimDefault) IndexLength() uint32 {
+// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the GenericClaim
+func (c GenericClaim) IndexLength() uint32 {
 	// return uint32(len(c.Bytes()))
 	return c.BaseIndex.IndexLength
 }
 
 // Hi returns the hash of the index of the claim
-func (c ClaimDefault) Hi() merkletree.Hash {
+func (c GenericClaim) Hi() merkletree.Hash {
 	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
 	// h := merkletree.HashBytes(c.Bytes())
 	return h
 }
 
 // Ht returns the hash of the full claim
-func (c ClaimDefault) Ht() merkletree.Hash {
+func (c GenericClaim) Ht() merkletree.Hash {
 	h := merkletree.HashBytes(c.Bytes())
 	return h
 }
@@ -317,13 +324,13 @@ func ParseTypeClaimBytes(b []byte) (string, error) {
 		return "", errors.New("claim.BaseIndex.IndexLength can not be bigger than claim bytes length")
 	}
 	typeBytes := b[32:56]
-	if bytes.Equal(DefaultTypeHash[:24], typeBytes) {
+	if bytes.Equal(DefaultType, typeBytes) {
 		return "default", nil
-	} else if bytes.Equal(AssignNameTypeHash[:24], typeBytes) {
+	} else if bytes.Equal(AssignNameType, typeBytes) {
 		return "assignname", nil
-	} else if bytes.Equal(AuthorizeksignTypeHash[:24], typeBytes) {
+	} else if bytes.Equal(AuthorizeksignType, typeBytes) {
 		return "authorizeksign", nil
-	} else if bytes.Equal(SetRootTypeHash[:24], typeBytes) {
+	} else if bytes.Equal(SetRootType, typeBytes) {
 		return "setroot", nil
 	}
 	return "", errors.New("type unrecognized")
@@ -332,35 +339,35 @@ func ParseTypeClaimBytes(b []byte) (string, error) {
 // ParseValueFromBytes returns a merkletree.Value from a given byte array
 func ParseValueFromBytes(b []byte) (merkletree.Value, error) {
 	if len(b) < 64 { // 64, as is the minimum length of the BaseIndex
-		return ClaimDefault{}, errors.New("[]byte too small")
+		return GenericClaim{}, errors.New("[]byte too small")
 	}
 	typeBytes := common3.BytesToHex(b[32:56])
 	var value merkletree.Value
 	var err error
 	switch typeBytes {
-	case common3.BytesToHex(DefaultTypeHash[:24]):
-		value, err = ParseClaimDefaultBytes(b)
+	case common3.BytesToHex(DefaultType):
+		value, err = ParseGenericClaimBytes(b)
 		break
-	case common3.BytesToHex(AssignNameTypeHash[:24]):
+	case common3.BytesToHex(AssignNameType):
 		value, err = ParseAssignNameClaimBytes(b)
 		break
-	case common3.BytesToHex(AuthorizeksignTypeHash[:24]):
+	case common3.BytesToHex(AuthorizeksignType):
 		value, err = ParseAuthorizeKSignClaimBytes(b)
 		break
-	case common3.BytesToHex(SetRootTypeHash[:24]):
+	case common3.BytesToHex(SetRootType):
 		value, err = ParseSetRootClaimBytes(b)
 		break
 	default:
-		value = ClaimDefault{}
+		value = GenericClaim{}
 		err = errors.New("claim type unrecognized")
 		break
 	}
 	return value, err
 }
 
-// NewClaimDefault returns a ClaimDefault object with the given parameters
-func NewClaimDefault(namespaceStr, typeStr string, extraIndexData []byte, data []byte) ClaimDefault {
-	var c ClaimDefault
+// NewGenericClaim returns a GenericClaim object with the given parameters
+func NewGenericClaim(namespaceStr, typeStr string, extraIndexData []byte, data []byte) GenericClaim {
+	var c GenericClaim
 	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
 	typeHash := merkletree.HashBytes([]byte(typeStr))
 	copy(c.BaseIndex.Type[:], typeHash[:24])
@@ -372,10 +379,10 @@ func NewClaimDefault(namespaceStr, typeStr string, extraIndexData []byte, data [
 }
 
 // NewAssignNameClaim returns a AssignNameClaim object with the given parameters
-func NewAssignNameClaim(namespaceStr string, name, domain merkletree.Hash, ethID common.Address) AssignNameClaim {
+func NewAssignNameClaim(name, domain merkletree.Hash, ethID common.Address) AssignNameClaim {
 	var c AssignNameClaim
-	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
-	copy(c.BaseIndex.Type[:], AssignNameTypeHash[:24])
+	c.BaseIndex.Namespace = NamespaceHash
+	copy(c.BaseIndex.Type[:], AssignNameType)
 	c.BaseIndex.IndexLength = 128
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.Name = name
@@ -385,10 +392,10 @@ func NewAssignNameClaim(namespaceStr string, name, domain merkletree.Hash, ethID
 }
 
 // NewKSignClaim returns a KSignClaim object with the given parameters
-func NewAuthorizeKSignClaim(namespaceStr string, keyToAuthorize common.Address, applicationName, applicationAuthz string, validFrom, validUntil uint64) AuthorizeKSignClaim {
+func NewAuthorizeKSignClaim(keyToAuthorize common.Address, applicationName, applicationAuthz string, validFrom, validUntil uint64) AuthorizeKSignClaim {
 	var c AuthorizeKSignClaim
-	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
-	copy(c.BaseIndex.Type[:], AuthorizeksignTypeHash[:24])
+	c.BaseIndex.Namespace = NamespaceHash
+	copy(c.BaseIndex.Type[:], AuthorizeksignType)
 	c.BaseIndex.IndexLength = 84
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
@@ -399,10 +406,10 @@ func NewAuthorizeKSignClaim(namespaceStr string, keyToAuthorize common.Address, 
 	return c
 }
 
-func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address) AuthorizeKSignClaim {
+func NewOperationalKSignClaim(keyToAuthorize common.Address) AuthorizeKSignClaim {
 	var c AuthorizeKSignClaim
-	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
-	copy(c.BaseIndex.Type[:], AuthorizeksignTypeHash[:24])
+	c.BaseIndex.Namespace = NamespaceHash
+	copy(c.BaseIndex.Type[:], AuthorizeksignType)
 	c.BaseIndex.IndexLength = 84
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
@@ -414,10 +421,10 @@ func NewOperationalKSignClaim(namespaceStr string, keyToAuthorize common.Address
 }
 
 // NewSetRootClaim returns a SetRootClaim object with the given parameters
-func NewSetRootClaim(namespaceStr string, ethID common.Address, root merkletree.Hash) SetRootClaim {
+func NewSetRootClaim(ethID common.Address, root merkletree.Hash) SetRootClaim {
 	var c SetRootClaim
-	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
-	copy(c.BaseIndex.Type[:], SetRootTypeHash[:24])
+	c.BaseIndex.Namespace = NamespaceHash
+	copy(c.BaseIndex.Type[:], SetRootType)
 	c.BaseIndex.IndexLength = 84
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.EthID = ethID
