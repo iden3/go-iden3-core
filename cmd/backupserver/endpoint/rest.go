@@ -3,6 +3,7 @@ package endpoint
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	"github.com/iden3/go-iden3/services/backupsrv"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -22,14 +23,17 @@ func handleSave(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 
-	err := backupservice.SaveBackup(idaddr) // + proofs for authentication
+	var saveBackupMsg backupsrv.SaveBackupMsg
+	c.BindJSON(&saveBackupMsg)
+
+	err := backupservice.SaveBackup(idaddr, saveBackupMsg)
 	if err != nil {
 		fail(c, "error on SaveBackup", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"backup": "dev",
+		"status": "stored correctly",
 	})
 }
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/services/backupsrv"
+	"github.com/iden3/go-iden3/services/mongosrv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,7 +24,14 @@ func LoadStorage() db.Storage {
 	log.WithField("path", C.Storage.Path).Info("Storage opened")
 	return storage
 }
+func LoadMongoService() mongosrv.Service {
+	collectionsArray := []string{"data"}
+	mongoservice, err := mongosrv.New(C.Mongodb.Url, C.Mongodb.Database, collectionsArray)
+	assert("Cannot open mongodb storage", err)
+	log.WithField("path", C.Mongodb.Url).Info("Mongodb storage opened")
+	return mongoservice
+}
 
-func LoadBackupService(sto db.Storage) backupsrv.Service {
+func LoadBackupService(sto mongosrv.Service) backupsrv.Service {
 	return backupsrv.New(sto)
 }

@@ -12,6 +12,10 @@ type Config struct {
 	Storage struct {
 		Path string
 	}
+	Mongodb struct {
+		Database string
+		Url      string
+	}
 }
 
 var C Config

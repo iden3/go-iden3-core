@@ -14,8 +14,10 @@ func Start(c *cli.Context) error {
 	if err := cfg.MustRead(c); err != nil {
 		return err
 	}
-	storage := cfg.LoadStorage()
-	backupservice := cfg.LoadBackupService(storage)
+
+	// storage := cfg.LoadStorage()
+	mongoservice := cfg.LoadMongoService()
+	backupservice := cfg.LoadBackupService(mongoservice)
 
 	ossig := make(chan os.Signal, 1)
 	signal.Notify(ossig, os.Interrupt)
@@ -28,7 +30,7 @@ func Start(c *cli.Context) error {
 	}()
 
 	endpoint.Serve(backupservice)
-	storage.Close()
+	// storage.Close()
 
 	return nil
 }
