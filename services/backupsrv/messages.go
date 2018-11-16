@@ -6,10 +6,11 @@ import (
 )
 
 type SaveBackupMsg struct {
-	Data          string
-	DataSignature string
-	KSign         common.Address
-	ProofOfKSign  claimsrv.ProofOfClaim
-	RelayAddr     common.Address
-	Timestamp     uint64
+	IdAddrHex       string
+	Data            string
+	DataSignature   string
+	KSign           common.Address
+	ProofOfKSignHex claimsrv.ProofOfClaimHex
+	RelayAddr       common.Address
+	Timestamp       uint64
 }

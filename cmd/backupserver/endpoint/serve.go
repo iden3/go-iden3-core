@@ -20,6 +20,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.Use(cors.Default())
 	serviceapi.POST("/:idaddr/save", handleSave)
 	serviceapi.POST("/:idaddr/recover", handleRecover)
+	serviceapi.POST("/:idaddr/recover/timestamp/:timestamp", handleRecoverByTimestamp)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {

@@ -1,6 +1,8 @@
 package endpoint
 
 import (
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/services/backupsrv"
@@ -26,14 +28,15 @@ func handleSave(c *gin.Context) {
 	var saveBackupMsg backupsrv.SaveBackupMsg
 	c.BindJSON(&saveBackupMsg)
 
-	err := backupservice.SaveBackup(idaddr, saveBackupMsg)
+	timestamp, err := backupservice.Save(idaddr, saveBackupMsg)
 	if err != nil {
 		fail(c, "error on SaveBackup", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"status": "stored correctly",
+		"status":    "stored correctly",
+		"timestamp": timestamp,
 	})
 }
 
@@ -41,13 +44,33 @@ func handleRecover(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 
-	err := backupservice.RecoverBackup(idaddr) // + proofs for authentication
+	data, err := backupservice.RecoverAll(idaddr) // + proofs for authentication
+	if err != nil {
+		fail(c, "error on SaveBackup", err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"backups": data,
+	})
+}
+
+func handleRecoverByTimestamp(c *gin.Context) {
+	idaddrhex := c.Param("idaddr")
+	idaddr := common.HexToAddress(idaddrhex)
+	timestampstr := c.Param("timestamp")
+	timestamp, err := strconv.ParseUint(timestampstr, 10, 64)
+	if err != nil {
+		fail(c, "error on parsing timestamp from url", err)
+		return
+	}
+
+	data, err := backupservice.RecoverByTimestamp(idaddr, timestamp) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on SaveBackup", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"backup": "dev",
+		"backups": data,
 	})
 }

@@ -3,6 +3,7 @@ package mongosrv
 import mgo "gopkg.in/mgo.v2"
 
 type Service interface {
+	GetCollections() map[string]*mgo.Collection
 }
 
 type ServiceImpl struct {
@@ -29,4 +30,8 @@ func New(url string, databaseName string, collectionsArray []string) (*ServiceIm
 		collections[collection] = session.DB(databaseName).C(collection)
 	}
 	return &ServiceImpl{collections}, nil
+}
+
+func (mongosrv *ServiceImpl) GetCollections() map[string]*mgo.Collection {
+	return mongosrv.collections
 }
