@@ -15,9 +15,10 @@ import (
 )
 
 type Service interface {
-	Save(idaddr common.Address, saveBackupMsg SaveBackupMsg) (uint64, error)
-	RecoverAll(idaddr common.Address) ([]SaveBackupMsg, error)
-	RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]SaveBackupMsg, error)
+	Save(idaddr common.Address, saveBackupMsg BackupData) (uint64, error)
+	RecoverAll(idaddr common.Address) ([]BackupData, error)
+	RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]BackupData, error)
+	RecoverByType(idaddr common.Address, dataType string) ([]BackupData, error)
 }
 type ServiceImpl struct {
 	mongodb mongosrv.Service
@@ -27,7 +28,7 @@ func New(mongoservice mongosrv.Service) *ServiceImpl {
 	return &ServiceImpl{mongoservice}
 }
 
-func (bs *ServiceImpl) Save(idaddr common.Address, m SaveBackupMsg) (uint64, error) {
+func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error) {
 	// check ksignClaim proof (in user identity tree and in the relay tree)
 	proofOfKSign, err := m.ProofOfKSignHex.Unhex()
 	if err != nil {
@@ -72,14 +73,14 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m SaveBackupMsg) (uint64, err
 	return m.Timestamp, nil
 }
 
-func (bs *ServiceImpl) RecoverAll(idaddr common.Address) ([]SaveBackupMsg, error) {
+func (bs *ServiceImpl) RecoverAll(idaddr common.Address) ([]BackupData, error) {
 
 	// check ksignClaim proof (in user identity tree and in the relay tree)
 
 	// check data signature
 
-	// store in database
-	var dataBackups []SaveBackupMsg
+	// get from database
+	var dataBackups []BackupData
 	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex())}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
@@ -87,14 +88,27 @@ func (bs *ServiceImpl) RecoverAll(idaddr common.Address) ([]SaveBackupMsg, error
 	return dataBackups, nil
 }
 
-func (bs *ServiceImpl) RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]SaveBackupMsg, error) {
+func (bs *ServiceImpl) RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]BackupData, error) {
 
 	// [...] verifications
 
-	// store in database
-	var dataBackups []SaveBackupMsg
+	// get from database
+	var dataBackups []BackupData
 	// get data with timestamp greather or equal to 'timestamp'
 	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "timestamp": bson.M{"$gte": timestamp}}).Limit(100).All(&dataBackups)
+	if err != nil {
+		return dataBackups, err
+	}
+	return dataBackups, nil
+}
+func (bs *ServiceImpl) RecoverByType(idaddr common.Address, dataType string) ([]BackupData, error) {
+
+	// [...] verifications
+
+	// get from database
+	var dataBackups []BackupData
+	// get data with timestamp greather or equal to 'timestamp'
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "type": dataType}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}

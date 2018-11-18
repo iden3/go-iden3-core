@@ -25,7 +25,7 @@ func handleSave(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 
-	var saveBackupMsg backupsrv.SaveBackupMsg
+	var saveBackupMsg backupsrv.BackupData
 	c.BindJSON(&saveBackupMsg)
 
 	timestamp, err := backupservice.Save(idaddr, saveBackupMsg)
@@ -46,7 +46,7 @@ func handleRecover(c *gin.Context) {
 
 	data, err := backupservice.RecoverAll(idaddr) // + proofs for authentication
 	if err != nil {
-		fail(c, "error on SaveBackup", err)
+		fail(c, "error on RecoverAll", err)
 		return
 	}
 	c.JSON(200, gin.H{
@@ -66,7 +66,23 @@ func handleRecoverByTimestamp(c *gin.Context) {
 
 	data, err := backupservice.RecoverByTimestamp(idaddr, timestamp) // + proofs for authentication
 	if err != nil {
-		fail(c, "error on SaveBackup", err)
+		fail(c, "error on RecoverByTimestamp", err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"backups": data,
+	})
+}
+
+func handleRecoverByType(c *gin.Context) {
+	idaddrhex := c.Param("idaddr")
+	idaddr := common.HexToAddress(idaddrhex)
+	dataType := c.Param("type")
+
+	data, err := backupservice.RecoverByType(idaddr, dataType) // + proofs for authentication
+	if err != nil {
+		fail(c, "error on RecoverByType", err)
 		return
 	}
 
