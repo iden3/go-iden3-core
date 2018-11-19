@@ -2,12 +2,14 @@ package backupsrv
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/mongosrv"
 	"github.com/iden3/go-iden3/utils"
@@ -31,6 +33,16 @@ func New(mongoservice mongosrv.Service) *ServiceImpl {
 
 // Save verifies the proofs for auth, and stores the data packet in the database
 func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error) {
+	// check PoW
+	b, err := json.Marshal(m)
+	if err != nil {
+		return 0, err
+	}
+	hash := merkletree.HashBytes(b)
+	if !utils.CheckPoW(hash, 2) {
+		return 0, errors.New("PoW not passed")
+	}
+
 	// check ksignClaim proof (in user identity tree and in the relay tree)
 	proofOfKSign, err := m.ProofOfKSignHex.Unhex()
 	if err != nil {
