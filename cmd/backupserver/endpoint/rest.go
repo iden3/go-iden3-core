@@ -90,3 +90,25 @@ func handleRecoverByType(c *gin.Context) {
 		"backups": data,
 	})
 }
+
+func handleRecoverByTimestampAndType(c *gin.Context) {
+	idaddrhex := c.Param("idaddr")
+	idaddr := common.HexToAddress(idaddrhex)
+	timestampstr := c.Param("timestamp")
+	timestamp, err := strconv.ParseUint(timestampstr, 10, 64)
+	if err != nil {
+		fail(c, "error on parsing timestamp from url", err)
+		return
+	}
+	dataType := c.Param("type")
+
+	data, err := backupservice.RecoverByTimestampAndType(idaddr, timestamp, dataType) // + proofs for authentication
+	if err != nil {
+		fail(c, "error on RecoverByTimestampAndType", err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"backups": data,
+	})
+}

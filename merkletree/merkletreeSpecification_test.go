@@ -3,9 +3,11 @@ package merkletree
 /*
 This is just an example of basic tests for the iden3-merkletree-specification.
 The methods and variables names can be different.
+Complete specification in https://github.com/iden3/iden3-merkletree-specification
 */
 
 import (
+	"strconv"
 	"testing"
 
 	common3 "github.com/iden3/go-iden3/common"
@@ -26,6 +28,12 @@ func (c testBytesClaim) IndexLength() uint32 {
 func (c testBytesClaim) Hi() Hash {
 	h := HashBytes(c.Bytes()[:c.IndexLength()])
 	return h
+}
+func newTestBytesClaim(data string, indexLength uint32) testBytesClaim {
+	return testBytesClaim{
+		data:        []byte(data),
+		indexLength: indexLength,
+	}
 }
 
 // Test to check the iden3-merkletree-specification
@@ -121,4 +129,35 @@ func TestIden3MerkletreeSpecification(t *testing.T) {
 	verified = CheckProof(mt.Root(), proof3, claim3.Hi(), EmptyNodeValue, 140)
 	assert.True(t, verified)
 
+	// add claims in different orders
+	mt1 := newTestingMerkle(t, 140)
+	defer mt1.Storage().Close()
+
+	mt1.Add(newTestBytesClaim("0 this is a test claim", 15))
+	mt1.Add(newTestBytesClaim("1 this is a test claim", 15))
+	mt1.Add(newTestBytesClaim("2 this is a test claim", 15))
+	mt1.Add(newTestBytesClaim("3 this is a test claim", 15))
+	mt1.Add(newTestBytesClaim("4 this is a test claim", 15))
+
+	mt2 := newTestingMerkle(t, 140)
+	defer mt2.Storage().Close()
+
+	mt2.Add(newTestBytesClaim("2 this is a test claim", 15))
+	mt2.Add(newTestBytesClaim("1 this is a test claim", 15))
+	mt2.Add(newTestBytesClaim("0 this is a test claim", 15))
+	mt2.Add(newTestBytesClaim("3 this is a test claim", 15))
+	mt2.Add(newTestBytesClaim("4 this is a test claim", 15))
+
+	assert.Equal(t, mt1.Root().Hex(), mt2.Root().Hex())
+
+	// adding 1000 claims
+	mt1000 := newTestingMerkle(t, 140)
+	defer mt1000.Storage().Close()
+
+	numToAdd := 1000
+	for i := 0; i < numToAdd; i++ {
+		claim := newTestBytesClaim(strconv.Itoa(i)+" this is a test claim", 15)
+		mt1000.Add(claim)
+	}
+	assert.Equal(t, "0xf1f6e6380d311dd7742be1aaecc35e9d7218bf11218d9f5bf8f7497b00a830c9", mt1000.Root().Hex())
 }

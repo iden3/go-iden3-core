@@ -22,6 +22,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/:idaddr/recover", handleRecover)
 	serviceapi.POST("/:idaddr/recover/timestamp/:timestamp", handleRecoverByTimestamp)
 	serviceapi.POST("/:idaddr/recover/type/:type", handleRecoverByType)
+	serviceapi.POST("/:idaddr/recover/timestamp/:timestamp/type/:type", handleRecoverByTimestampAndType)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {

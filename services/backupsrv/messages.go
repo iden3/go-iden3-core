@@ -1,7 +1,6 @@
 package backupsrv
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
 )
 
@@ -10,8 +9,8 @@ type BackupData struct {
 	Data            string
 	DataSignature   string
 	Type            string
-	KSign           common.Address
+	KSign           string
 	ProofOfKSignHex claimsrv.ProofOfClaimHex
-	RelayAddr       common.Address
+	RelayAddr       string
 	Timestamp       uint64
 }
