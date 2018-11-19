@@ -28,6 +28,8 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.9.36 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/mgutz/logxi v0.0.0-20161027140823-aebf8a7d67ab
 	github.com/minio/blake2b-simd v0.0.0-20160723061019-3f5f724cb5b1 // indirect
 	github.com/minio/sha256-simd v0.0.0-20181005183134-51976451ce19 // indirect
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
@@ -51,4 +53,5 @@ require (
 	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
 	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
+	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )
