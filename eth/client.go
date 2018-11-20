@@ -18,12 +18,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 
-
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	// ErrReceiptStatusFailed when recieving a failed transaction
+	// ErrReceiptStatusFailed when receiving a failed transaction
 	errReceiptStatusFailed = errors.New("receipt status is failed")
 	// ErrReceiptNotRecieved when unable to retrieve a transaction
 	errReceiptNotRecieved = errors.New("receipt not available")
@@ -31,17 +30,17 @@ var (
 
 type Client interface {
 	WaitReceipt(txid common.Hash) (*types.Receipt, error)
-	SendTransaction(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction,error)
+	SendTransaction(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction, error)
 	Call(to *common.Address, value *big.Int, calldata []byte) ([]byte, error)
 	Sign(data ...[]byte) ([3][32]byte, error)
-	NetworkID() (*big.Int,error)
+	NetworkID() (*big.Int, error)
 	CodeAt(addr common.Address) ([]byte, error)
 	BalanceAt(addr common.Address) (*big.Int, error)
 }
 
 // Web3Client defines a connection to a client via websockets
 type Web3Client struct {
-	mutex    	   *sync.Mutex
+	mutex          *sync.Mutex
 	rpcclient      *rpc.Client
 	ethclient      *ethclient.Client
 	account        *accounts.Account
@@ -59,7 +58,7 @@ func NewWeb3Client(rpcURL string, ks *keystore.KeyStore, account *accounts.Accou
 	}
 
 	return &Web3Client{
-		mutex : 		&sync.Mutex{},
+		mutex:          &sync.Mutex{},
 		rpcclient:      rpcClient,
 		ethclient:      ethclient.NewClient(rpcClient),
 		ks:             ks,
@@ -69,14 +68,13 @@ func NewWeb3Client(rpcURL string, ks *keystore.KeyStore, account *accounts.Accou
 	}, nil
 }
 
-// Retieves information about the default account
+// BalanceAt retieves information about the default account
 func (c *Web3Client) BalanceAt(addr common.Address) (*big.Int, error) {
-	return c.ethclient.BalanceAt(context.TODO(),addr,nil)
+	return c.ethclient.BalanceAt(context.TODO(), addr, nil)
 }
 
-
-// SendTransactionSync executes a contract method and wait it finalizes
-func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction,  error) {
+// SendTransaction executes a contract method and wait it finalizes
+func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimit uint64, calldata []byte) (*types.Transaction, error) {
 
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -100,7 +98,7 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 		return nil, err
 	}
 
-	if c.MaxGasPrice >0 && gasPrice.Uint64() > c.MaxGasPrice {
+	if c.MaxGasPrice > 0 && gasPrice.Uint64() > c.MaxGasPrice {
 		return nil, fmt.Errorf("Max gas price reached %v > %v", gasPrice, c.MaxGasPrice)
 	}
 
@@ -115,7 +113,7 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 		gasLimit, err = c.ethclient.EstimateGas(ctx, callmsg)
 		if err != nil {
 			sendto := "nil"
-			if  callmsg.To != nil {
+			if callmsg.To != nil {
 				sendto = callmsg.To.Hex()
 			}
 			log.Errorf("WEB3 Failed EstimateGas from=%v to=%v value=%v data=%v",
@@ -128,7 +126,7 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 
 	nonce, err := c.ethclient.NonceAt(ctx, c.account.Address, nil)
 	if err != nil {
-		return nil,  err
+		return nil, err
 	}
 
 	if to == nil {
@@ -164,6 +162,7 @@ func (c *Web3Client) SendTransaction(to *common.Address, value *big.Int, gasLimi
 
 	return tx, err
 }
+
 func (c *Web3Client) WaitReceipt(txid common.Hash) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
@@ -189,10 +188,10 @@ func (c *Web3Client) WaitReceipt(txid common.Hash) (*types.Receipt, error) {
 	}
 	log.WithField("tx", txid.Hex()).Debug("WEB3 Success transaction")
 
-return receipt, err
+	return receipt, err
 }
 
-// Call an constant method
+// Call a constant method
 func (c *Web3Client) Call(to *common.Address, value *big.Int, calldata []byte) ([]byte, error) {
 
 	ctx := context.TODO()
@@ -207,7 +206,7 @@ func (c *Web3Client) Call(to *common.Address, value *big.Int, calldata []byte) (
 	return c.ethclient.CallContract(ctx, msg, nil)
 }
 
-// Do a web3 signature
+// Sign does a web3 signature
 func (c *Web3Client) Sign(data ...[]byte) ([3][32]byte, error) {
 	web3SignaturePrefix := []byte("\x19Ethereum Signed Message:\n32")
 
@@ -229,20 +228,18 @@ func (c *Web3Client) Sign(data ...[]byte) ([3][32]byte, error) {
 	return ret, nil
 }
 
-func (c *Web3Client) NetworkID() (*big.Int,error) {
+func (c *Web3Client) NetworkID() (*big.Int, error) {
 	return c.ethclient.NetworkID(context.TODO())
 }
 
 func (c *Web3Client) CodeAt(addr common.Address) ([]byte, error) {
-	return c.ethclient.CodeAt(context.TODO(),addr,nil)
+	return c.ethclient.CodeAt(context.TODO(), addr, nil)
 }
 
-func (c *Web3Client) Account() (*accounts.Account) {
+func (c *Web3Client) Account() *accounts.Account {
 	return c.account
 }
 
-func (c *Web3Client) KeyStore() (*keystore.KeyStore) {
+func (c *Web3Client) KeyStore() *keystore.KeyStore {
 	return c.ks
 }
-
-

@@ -1,20 +1,20 @@
 package backupsrv
 
 import (
-	"github.com/iden3/go-iden3/utils"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/utils"
 )
 
 type BackupData struct {
-	IdAddrHex       string	`json:"idaddrhex"`
-	Data            string	`json:"data"`
-	DataSignature   string	`json:"datasignature"`
-	Type            string	`json:"type"`
-	KSign           string	`json:"ksign"`
-	ProofOfKSignHex claimsrv.ProofOfClaimHex	`json:"proofofksignhex"`
-	RelayAddr       string	`json:"relayaddr"`
-	Timestamp       uint64	`json:"timestamp"`
-	Nonce           int	`json:"nonce"`
+	IdAddrHex       string                   `json:"idaddrhex"`
+	Data            string                   `json:"data"`
+	DataSignature   string                   `json:"datasignature"`
+	Type            string                   `json:"type"`
+	KSign           string                   `json:"ksign"`
+	ProofOfKSignHex claimsrv.ProofOfClaimHex `json:"proofofksignhex"`
+	RelayAddr       string                   `json:"relayaddr"`
+	Timestamp       uint64                   `json:"timestamp"`
+	Nonce           int                      `json:"nonce"`
 }
 
 // IncrementNonce implements the method for the PoWData interface

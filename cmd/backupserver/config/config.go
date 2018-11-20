@@ -16,6 +16,9 @@ type Config struct {
 		Database string
 		Url      string
 	}
+	PoW struct {
+		Difficulty int
+	}
 }
 
 var C Config

@@ -32,6 +32,7 @@ func New(url string, databaseName string, collectionsArray []string) (*ServiceIm
 	return &ServiceImpl{collections}, nil
 }
 
+// GetCollections returns the current mongodb collections of the mongosrv
 func (mongosrv *ServiceImpl) GetCollections() map[string]*mgo.Collection {
 	return mongosrv.collections
 }

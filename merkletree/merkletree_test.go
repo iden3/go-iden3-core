@@ -282,7 +282,7 @@ func TestGetClaimInPos(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, claim1.Bytes(), claimInPosBytes)
 
-	// emtpy value in position
+	// empty value in position
 	claim2 := newTestClaim("iden3.io_y", "typespec_y", []byte("cy"))
 	claimInPosBytes, err = mt.GetValueInPos(claim2.hi())
 	assert.Nil(t, err)

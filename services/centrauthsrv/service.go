@@ -9,6 +9,7 @@ import (
 	"github.com/iden3/go-iden3/utils"
 )
 
+// Auth validates that the given AuthMsg data matches the requirments
 func Auth(authMsg AuthMsg) error {
 	err := VerifyTimestamp(authMsg.Challenge)
 	if err != nil {

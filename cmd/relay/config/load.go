@@ -44,7 +44,7 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 	assert("Cannot find keystore account", err)
 
 	assert("Cannot unlock account", ks.Unlock(acc, string(passwd)))
-	log.WithField("acc", acc.Address.Hex()).Info("Keystore and account unlocked sucessfully")
+	log.WithField("acc", acc.Address.Hex()).Info("Keystore and account unlocked successfully")
 
 	return ks, acc
 }

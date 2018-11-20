@@ -18,6 +18,7 @@ var backupservice backupsrv.Service
 func serveServiceApi() *http.Server {
 	serviceapi := gin.Default()
 	serviceapi.Use(cors.Default())
+	serviceapi.GET("/", handleInfo)
 	serviceapi.POST("/:idaddr/save", handleSave)
 	serviceapi.POST("/:idaddr/recover", handleRecover)
 	serviceapi.POST("/:idaddr/recover/timestamp/:timestamp", handleRecoverByTimestamp)

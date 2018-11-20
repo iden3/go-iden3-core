@@ -21,6 +21,13 @@ func fail(c *gin.Context, msg string, err error) {
 	return
 }
 
+func handleInfo(c *gin.Context) {
+	c.JSON(200, gin.H{
+		"status":        "ok",
+		"powdifficulty": backupservice.GetPoWDifficulty(),
+	})
+}
+
 func handleSave(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)

@@ -17,18 +17,26 @@ import (
 )
 
 type Service interface {
+	GetPoWDifficulty() int
 	Save(idaddr common.Address, saveBackupMsg BackupData) (uint64, error)
 	RecoverAll(idaddr common.Address) ([]BackupData, error)
 	RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]BackupData, error)
 	RecoverByType(idaddr common.Address, dataType string) ([]BackupData, error)
 	RecoverByTimestampAndType(idaddr common.Address, timestamp uint64, dataType string) ([]BackupData, error)
 }
+
 type ServiceImpl struct {
-	mongodb mongosrv.Service
+	mongodb       mongosrv.Service
+	powDifficulty int
 }
 
-func New(mongoservice mongosrv.Service) *ServiceImpl {
-	return &ServiceImpl{mongoservice}
+func New(mongoservice mongosrv.Service, powDiff int) *ServiceImpl {
+	return &ServiceImpl{mongoservice, powDiff}
+}
+
+// GetPoWDifficulty returns the configured Proof-of-Work difficulty, setted in the config file of the backupserver
+func (bs *ServiceImpl) GetPoWDifficulty() int {
+	return bs.powDifficulty
 }
 
 // Save verifies the proofs for auth, and stores the data packet in the database
@@ -39,7 +47,7 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 		return 0, err
 	}
 	hash := merkletree.HashBytes(b)
-	if !utils.CheckPoW(hash, 2) {
+	if !utils.CheckPoW(hash, bs.GetPoWDifficulty()) {
 		return 0, errors.New("PoW not passed")
 	}
 

@@ -33,5 +33,5 @@ func LoadMongoService() mongosrv.Service {
 }
 
 func LoadBackupService(sto mongosrv.Service) backupsrv.Service {
-	return backupsrv.New(sto)
+	return backupsrv.New(sto, C.PoW.Difficulty)
 }
