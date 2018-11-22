@@ -13,8 +13,8 @@ type BackupData struct {
 	KSign           string                   `json:"ksign"`
 	ProofOfKSignHex claimsrv.ProofOfClaimHex `json:"proofofksignhex"`
 	RelayAddr       string                   `json:"relayaddr"`
-	Timestamp       uint64                   `json:"timestamp"`
-	Nonce           int                      `json:"nonce"`
+	Version         uint64                   `json:"version"`
+	Nonce           uint                     `json:"nonce"`
 }
 
 // IncrementNonce implements the method for the PoWData interface

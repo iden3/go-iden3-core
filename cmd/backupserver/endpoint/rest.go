@@ -35,15 +35,15 @@ func handleSave(c *gin.Context) {
 	var saveBackupMsg backupsrv.BackupData
 	c.BindJSON(&saveBackupMsg)
 
-	timestamp, err := backupservice.Save(idaddr, saveBackupMsg)
+	version, err := backupservice.Save(idaddr, saveBackupMsg)
 	if err != nil {
 		fail(c, "error on SaveBackup", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"status":    "stored correctly",
-		"timestamp": timestamp,
+		"status":  "stored correctly",
+		"version": version,
 	})
 }
 
@@ -61,19 +61,19 @@ func handleRecover(c *gin.Context) {
 	})
 }
 
-func handleRecoverByTimestamp(c *gin.Context) {
+func handleRecoverSinceVersion(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
-	timestampstr := c.Param("timestamp")
-	timestamp, err := strconv.ParseUint(timestampstr, 10, 64)
+	versionstr := c.Param("version")
+	version, err := strconv.ParseUint(versionstr, 10, 64)
 	if err != nil {
-		fail(c, "error on parsing timestamp from url", err)
+		fail(c, "error on parsing version from url", err)
 		return
 	}
 
-	data, err := backupservice.RecoverByTimestamp(idaddr, timestamp) // + proofs for authentication
+	data, err := backupservice.RecoverSinceVersion(idaddr, version) // + proofs for authentication
 	if err != nil {
-		fail(c, "error on RecoverByTimestamp", err)
+		fail(c, "error on RecoverSinceVersion", err)
 		return
 	}
 
@@ -98,20 +98,20 @@ func handleRecoverByType(c *gin.Context) {
 	})
 }
 
-func handleRecoverByTimestampAndType(c *gin.Context) {
+func handleRecoverSinceVersionByType(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
-	timestampstr := c.Param("timestamp")
-	timestamp, err := strconv.ParseUint(timestampstr, 10, 64)
+	versionstr := c.Param("version")
+	version, err := strconv.ParseUint(versionstr, 10, 64)
 	if err != nil {
-		fail(c, "error on parsing timestamp from url", err)
+		fail(c, "error on parsing version from url", err)
 		return
 	}
 	dataType := c.Param("type")
 
-	data, err := backupservice.RecoverByTimestampAndType(idaddr, timestamp, dataType) // + proofs for authentication
+	data, err := backupservice.RecoverSinceVersionByType(idaddr, version, dataType) // + proofs for authentication
 	if err != nil {
-		fail(c, "error on RecoverByTimestampAndType", err)
+		fail(c, "error on RecoverSinceVersionByType", err)
 		return
 	}
 

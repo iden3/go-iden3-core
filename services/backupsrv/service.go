@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/fatih/color"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -18,11 +19,12 @@ import (
 
 type Service interface {
 	GetPoWDifficulty() int
+	GetLastVersion(idaddr common.Address) (uint64, error)
 	Save(idaddr common.Address, saveBackupMsg BackupData) (uint64, error)
 	RecoverAll(idaddr common.Address) ([]BackupData, error)
-	RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]BackupData, error)
+	RecoverSinceVersion(idaddr common.Address, version uint64) ([]BackupData, error)
 	RecoverByType(idaddr common.Address, dataType string) ([]BackupData, error)
-	RecoverByTimestampAndType(idaddr common.Address, timestamp uint64, dataType string) ([]BackupData, error)
+	RecoverSinceVersionByType(idaddr common.Address, version uint64, dataType string) ([]BackupData, error)
 }
 
 type ServiceImpl struct {
@@ -37,6 +39,12 @@ func New(mongoservice mongosrv.Service, powDiff int) *ServiceImpl {
 // GetPoWDifficulty returns the configured Proof-of-Work difficulty, setted in the config file of the backupserver
 func (bs *ServiceImpl) GetPoWDifficulty() int {
 	return bs.powDifficulty
+}
+
+func (bs *ServiceImpl) GetLastVersion(idaddr common.Address) (uint64, error) {
+	var currVer BackupData
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "ksign": "currentversion"}).One(&currVer)
+	return currVer.Version, err
 }
 
 // Save verifies the proofs for auth, and stores the data packet in the database
@@ -85,8 +93,13 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 		return 0, errors.New("signature of the data can not be verified")
 	}
 
-	// add timestamp in unixtime
-	m.Timestamp = uint64(time.Now().Unix())
+	// check version (check that the current version is == lastversion+1)
+	var aux BackupData
+	err = bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "version": m.Version}).One(&aux)
+	if err == nil {
+		// if data exists, the given version is not valid
+		return m.Version, errors.New("given version not valid")
+	}
 
 	// store in database
 	err = bs.mongodb.GetCollections()["data"].Insert(m)
@@ -94,7 +107,21 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 		return 0, err
 	}
 
-	return m.Timestamp, nil
+	// TODO store in leveldb instead of mongodb. key: idaddr+version, value: type+dataencrypted
+	// the currentVersion will be stored as key: idaddr+"currver", value: currver
+	currVer := BackupData{
+		IdAddrHex:       idaddr.Hex(),
+		Data:            "",
+		DataSignature:   "",
+		Type:            "",
+		KSign:           "currentversion",
+		ProofOfKSignHex: claimsrv.ProofOfClaimHex{},
+		RelayAddr:       "",
+		Version:         m.Version,
+		Nonce:           0,
+	}
+	err = bs.mongodb.GetCollections()["data"].Update(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "ksign": "currentversion"}, currVer)
+	return m.Version, nil
 }
 
 // RecoverAll returns all the data packets stored by an idaddr
@@ -112,15 +139,17 @@ func (bs *ServiceImpl) RecoverAll(idaddr common.Address) ([]BackupData, error) {
 	return dataBackups, nil
 }
 
-// RecoverByTimestamp returns all the data packets stored by an idaddr since after the timestamp specified in the parameter
-func (bs *ServiceImpl) RecoverByTimestamp(idaddr common.Address, timestamp uint64) ([]BackupData, error) {
+// RecoverSinceVersion returns all the data packets stored by an idaddr since after the version specified in the parameter
+func (bs *ServiceImpl) RecoverSinceVersion(idaddr common.Address, version uint64) ([]BackupData, error) {
+	color.Blue("version")
+	fmt.Println(version)
 
 	// TODO auth verifications
 
 	// get from database
 	var dataBackups []BackupData
-	// get data with timestamp greather or equal to 'timestamp'
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "timestamp": bson.M{"$gte": timestamp}}).Limit(100).All(&dataBackups)
+	// get data with version greather or equal to 'version'
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "version": bson.M{"$gt": version}}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}
@@ -142,15 +171,15 @@ func (bs *ServiceImpl) RecoverByType(idaddr common.Address, dataType string) ([]
 	return dataBackups, nil
 }
 
-// RecoverByTimestampAndType returns all the data packets stored by an idaddr with the requested type since after the timestamp specified in the parameter
-func (bs *ServiceImpl) RecoverByTimestampAndType(idaddr common.Address, timestamp uint64, dataType string) ([]BackupData, error) {
+// RecoverSinceVersionByType returns all the data packets stored by an idaddr with the requested type since after the version specified in the parameter
+func (bs *ServiceImpl) RecoverSinceVersionByType(idaddr common.Address, version uint64, dataType string) ([]BackupData, error) {
 
 	// TODO auth verifications
 
 	// get from database
 	var dataBackups []BackupData
 	// get data by type
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "timestamp": bson.M{"$gte": timestamp}, "type": dataType}).Limit(100).All(&dataBackups)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "version": bson.M{"$gt": version}, "type": dataType}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}
