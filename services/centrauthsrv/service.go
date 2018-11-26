@@ -11,7 +11,7 @@ import (
 
 // Auth validates that the given AuthMsg data matches the requirments
 func Auth(authMsg AuthMsg) error {
-	err := VerifyTimestamp(authMsg.Challenge)
+	err := VerifyChallengeTimestamp(authMsg.Challenge)
 	if err != nil {
 		return err
 	}

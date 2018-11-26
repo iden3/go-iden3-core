@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
+	"time"
 
 	"github.com/iden3/go-iden3/merkletree"
 )
@@ -38,4 +39,13 @@ func PoW(data PoWData, difficulty int) (PoWData, error) {
 		hash = merkletree.HashBytes(b)
 	}
 	return data, nil
+}
+
+func VerifyTimestamp(timestamp uint64, timelimit int) bool {
+	t := time.Unix(int64(timestamp), 10)
+	elapsed := time.Since(t)
+	if int(elapsed.Seconds()) > timelimit {
+		return false
+	}
+	return true
 }
