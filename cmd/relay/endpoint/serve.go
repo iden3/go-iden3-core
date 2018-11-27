@@ -35,6 +35,7 @@ func serveServiceApi() *http.Server {
 
 	serviceapi.GET("/root", handleGetRoot)
 
+	serviceapi.POST("/root/:idaddr", handleCommitNewIDRoot)
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
 	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)

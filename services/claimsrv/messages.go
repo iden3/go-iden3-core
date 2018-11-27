@@ -33,10 +33,13 @@ type AuthorizeKSignClaimMsg struct {
 	KSign               common.Address
 }
 
-// SetRootClaimMsg contains a core.SetRootClaim with its signature in Hex
-type SetRootClaimMsg struct {
-	SetRootClaim core.SetRootClaim
-	Signature    string
+// SetRootMsg contains the data to set the SetRootClaim with its signature in Hex
+type SetRootMsg struct {
+	Root      string
+	IdAddr    string
+	KSign     string
+	Timestamp uint64
+	Signature string
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex

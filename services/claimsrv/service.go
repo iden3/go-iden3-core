@@ -18,6 +18,7 @@ import (
 var ErrNotFound = errors.New("value not found")
 
 type Service interface {
+	CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error)
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error
@@ -36,6 +37,66 @@ type ServiceImpl struct {
 
 func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Service) *ServiceImpl {
 	return &ServiceImpl{mt, rootsrv, signer}
+}
+
+// SetNewIDRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emmiting ID
+func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error) {
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.New(stoUserID, 140)
+	if err != nil {
+		return core.SetRootClaim{}, err
+	}
+
+	// verify that the KSign is authorized
+	if !CheckKSignInIDdb(userMT, kSign) {
+		return core.SetRootClaim{}, errors.New("can not verify the KSign")
+	}
+	// in the future the user merkletree will be in the client side, and this step will be a check of the ProofOfKSign
+
+	// check data timestamp
+	verified := utils.VerifyTimestamp(timestamp, 30000) //needs to be from last 30 seconds
+	if !verified {
+		return core.SetRootClaim{}, errors.New("timestamp too old")
+	}
+	// check signature with idaddr
+	// whee data signed is idaddr+root+timestamp
+	timestampBytes, err := core.Uint64ToEthBytes(timestamp)
+	if err != nil {
+		return core.SetRootClaim{}, err
+	}
+	// signature of idaddr+root+timestamp, only valid if is from last X seconds
+	var msg []byte
+	msg = append(msg, idaddr.Bytes()...)
+	msg = append(msg, root.Bytes()...)
+	msg = append(msg, timestampBytes...)
+	msgHash := utils.EthHash(msg)
+	signature[64] -= 27
+	if !utils.VerifySig(kSign, signature, msgHash[:]) {
+		return core.SetRootClaim{}, errors.New("signature can not be verified")
+	}
+
+	// setRootClaim of the user in the Relay Merkle Tree
+	// create new SetRootClaim
+	setRootClaim := core.NewSetRootClaim(idaddr, root)
+	version, err := GetNextVersion(cs.mt, setRootClaim.Hi())
+	if err != nil {
+		return core.SetRootClaim{}, err
+	}
+	setRootClaim.BaseIndex.Version = version
+
+	// add User's ID Merkle Root into the Relay's Merkle Tree
+	err = cs.mt.Add(setRootClaim)
+	if err != nil {
+		return core.SetRootClaim{}, err
+	}
+
+	// update Relay Root in Smart Contract
+	cs.rootsrv.SetRoot(cs.mt.Root())
+
+	return setRootClaim, nil
 }
 
 // AddAssignNameClaim adds AssignNameClaim into the merkletree, updates the root in the smart contract, and returns the merkle proof of the claim in the merkletree
