@@ -13,7 +13,7 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 )
 
-func handlePostNewIDRoot(c *gin.Context) {
+func handleCommitNewIDRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 
@@ -22,6 +22,7 @@ func handlePostNewIDRoot(c *gin.Context) {
 
 	idaddrMsg := common.HexToAddress(setRootMsg.IdAddr)
 	kSign := common.HexToAddress(setRootMsg.KSign)
+
 	// make sure that the given idaddr from the post url matches with the idaddr from the post data
 	if !bytes.Equal(idaddr.Bytes(), idaddrMsg.Bytes()) {
 		fail(c, "error on PostNewRoot, idaddr not match", errors.New("PostNewRoot idaddr not match"))
@@ -41,23 +42,24 @@ func handlePostNewIDRoot(c *gin.Context) {
 	var root merkletree.Hash
 	copy(root[:], rootBytes[:32])
 
-	// signature of idaddr+root+timestamp, only valid if is from last X seconds
-	setRootClaim, err := claimservice.SetNewIDRoot(idaddr, kSign, root, setRootMsg.Timestamp, signature)
+	// add the root throught claimservice
+	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, kSign, root, setRootMsg.Timestamp, signature)
 	if err != nil {
 		fail(c, "error on AddAuthorizeKSignClaim", err)
 		return
 	}
 
 	// return claim with proofs
-	proofOfClaim, err := claimservice.GetClaimByHi(idaddr, setRootClaim.Hi())
+	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(setRootClaim.Hi())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim.Hex(),
+		"proofOfClaim": proofOfRelayClaim.Hex(),
 	})
 }
+
 func handlePostClaim(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)

@@ -18,7 +18,7 @@ import (
 var ErrNotFound = errors.New("value not found")
 
 type Service interface {
-	SetNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error)
+	CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error)
 	AddAssignNameClaim(assignNameClaim core.AssignNameClaim) error
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error
@@ -39,7 +39,8 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Serv
 	return &ServiceImpl{mt, rootsrv, signer}
 }
 
-func (cs *ServiceImpl) SetNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error) {
+// SetNewIDRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emmiting ID
+func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (core.SetRootClaim, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
@@ -56,7 +57,7 @@ func (cs *ServiceImpl) SetNewIDRoot(idaddr common.Address, kSign common.Address,
 	// in the future the user merkletree will be in the client side, and this step will be a check of the ProofOfKSign
 
 	// check data timestamp
-	verified := utils.VerifyTimestamp(timestamp, 30000)
+	verified := utils.VerifyTimestamp(timestamp, 30000) //needs to be from last 30 seconds
 	if !verified {
 		return core.SetRootClaim{}, errors.New("timestamp too old")
 	}
@@ -66,11 +67,11 @@ func (cs *ServiceImpl) SetNewIDRoot(idaddr common.Address, kSign common.Address,
 	if err != nil {
 		return core.SetRootClaim{}, err
 	}
+	// signature of idaddr+root+timestamp, only valid if is from last X seconds
 	var msg []byte
 	msg = append(msg, idaddr.Bytes()...)
 	msg = append(msg, root.Bytes()...)
 	msg = append(msg, timestampBytes...)
-
 	msgHash := utils.EthHash(msg)
 	signature[64] -= 27
 	if !utils.VerifySig(kSign, signature, msgHash[:]) {
