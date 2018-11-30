@@ -34,8 +34,8 @@ type Hash [32]byte
 
 // Value is the interface of a generic claim, a key value object stored in the leveldb
 type Value interface {
-	IndexLength() uint32
-	Bytes() []byte
+	IndexLength() uint32 // returns the index length value
+	Bytes() []byte // returns the value in byte array representation
 }
 
 //MerkleTree struct with the main elements of the Merkle Tree
