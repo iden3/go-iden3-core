@@ -16,6 +16,24 @@ $ go get github.com/iden3/go-iden3
 - Backup Server [doc not yet]
 - MerkleTree Documentation: https://github.com/iden3/go-iden3/blob/master/merkletreeDoc/merkletree.md
 
+## Documentation
+
+Go Modules documentation:
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/common?status.svg)](https://godoc.org/github.com/iden3/go-iden3/common) common
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/core?status.svg)](https://godoc.org/github.com/iden3/go-iden3/core) core
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/db?status.svg)](https://godoc.org/github.com/iden3/go-iden3/db) db
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/eth?status.svg)](https://godoc.org/github.com/iden3/go-iden3/eth) eth
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/merkletree?status.svg)](https://godoc.org/github.com/iden3/go-iden3/merkletree) merkletree
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/utils?status.svg)](https://godoc.org/github.com/iden3/go-iden3/utils) utils
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/backupsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/backupsrv) services/backupsrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/centrauthsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/centrauthsrv) services/centrauthsrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/claimsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/claimsrv) services/claimsrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/identitysrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/identitysrv) services/identitysrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/mongosrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/mongosrv) services/mongosrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/namesrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/namesrv) services/namesrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/rootsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/rootsrv) services/rootsrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/signsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/signsrv) services/signsrv
+
 ## Testing
 `go test ./...`
 
