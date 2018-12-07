@@ -23,6 +23,7 @@ func main() {
 	app.Commands = append(app.Commands, commands.IdCommands...)
 	app.Commands = append(app.Commands, commands.ContractCommands...)
 	app.Commands = append(app.Commands, commands.DbCommands...)
+	app.Commands = append(app.Commands, commands.ClaimCommands...)
 
 	err := app.Run(os.Args)
 	if err != nil {

@@ -17,7 +17,7 @@ var (
 	authorizeksignTypeHash = merkletree.HashBytes([]byte("authorizeksign"))
 	setRootTypeHash        = merkletree.HashBytes([]byte("setroot"))
 
-	DefaultType        = defaultTypeHash[:24]
+	GenericType        = defaultTypeHash[:24]
 	AssignNameType     = assignNameTypeHash[:24]
 	AuthorizeksignType = authorizeksignTypeHash[:24]
 	SetRootType        = setRootTypeHash[:24]
@@ -324,7 +324,7 @@ func ParseTypeClaimBytes(b []byte) (string, error) {
 		return "", errors.New("claim.BaseIndex.IndexLength can not be bigger than claim bytes length")
 	}
 	typeBytes := b[32:56]
-	if bytes.Equal(DefaultType, typeBytes) {
+	if bytes.Equal(GenericType, typeBytes) {
 		return "default", nil
 	} else if bytes.Equal(AssignNameType, typeBytes) {
 		return "assignname", nil
@@ -345,7 +345,7 @@ func ParseValueFromBytes(b []byte) (merkletree.Value, error) {
 	var value merkletree.Value
 	var err error
 	switch typeBytes {
-	case common3.BytesToHex(DefaultType):
+	case common3.BytesToHex(GenericType):
 		value, err = ParseGenericClaimBytes(b)
 		break
 	case common3.BytesToHex(AssignNameType):
