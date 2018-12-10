@@ -23,6 +23,7 @@ type Service interface {
 	AddAuthorizeKSignClaim(ethID common.Address, authorizeKSignClaimMsg AuthorizeKSignClaimMsg) error
 	AddAuthorizeKSignClaimFirst(ethID common.Address, authorizeKSignClaim core.AuthorizeKSignClaim) error
 	AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error
+	AddDirectClaim(claim core.GenericClaim) error
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
 	GetClaimByHi(ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
 	GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim, error)
@@ -270,6 +271,16 @@ func (cs *ServiceImpl) AddUserIDClaim(ethID common.Address, claimValueMsg ClaimV
 	// update Relay Root in Smart Contract
 	cs.rootsrv.SetRoot(cs.mt.Root())
 
+	return nil
+}
+
+// AddDirectClaim adds a claim directly to the Relay merkletree
+func (cs *ServiceImpl) AddDirectClaim(claim core.GenericClaim) error {
+	err := cs.mt.Add(claim)
+	if err != nil {
+		return err
+	}
+	cs.rootsrv.SetRoot(cs.mt.Root())
 	return nil
 }
 

@@ -73,15 +73,15 @@ func handlePostClaim(c *gin.Context) {
 	typeBytes := bytesValue[32:56]
 
 	switch common3.BytesToHex(typeBytes) {
-	case common3.BytesToHex(core.DefaultType):
-		claimDefault, err := core.ParseGenericClaimBytes(bytesValue)
+	case common3.BytesToHex(core.GenericType):
+		claimGeneric, err := core.ParseGenericClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing GenericClaim bytes", err)
 			return
 		}
 
 		claimValueMsg := claimsrv.ClaimValueMsg{
-			claimDefault,
+			claimGeneric,
 			bytesSignedMsg.SignatureHex,
 			bytesSignedMsg.KSign,
 		}
@@ -91,7 +91,7 @@ func handlePostClaim(c *gin.Context) {
 			return
 		}
 		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, claimDefault.Hi())
+		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, claimGeneric.Hi())
 		if err != nil {
 			fail(c, "error on GetClaimByHi", err)
 			return
