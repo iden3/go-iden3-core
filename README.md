@@ -23,6 +23,7 @@ Go Modules documentation:
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/core?status.svg)](https://godoc.org/github.com/iden3/go-iden3/core) core
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/db?status.svg)](https://godoc.org/github.com/iden3/go-iden3/db) db
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/eth?status.svg)](https://godoc.org/github.com/iden3/go-iden3/eth) eth
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/crypto?status.svg)](https://godoc.org/github.com/iden3/go-iden3/crypto) crypto
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/merkletree?status.svg)](https://godoc.org/github.com/iden3/go-iden3/merkletree) merkletree
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/utils?status.svg)](https://godoc.org/github.com/iden3/go-iden3/utils) utils
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3/services/backupsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3/services/backupsrv) services/backupsrv
