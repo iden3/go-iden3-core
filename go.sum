@@ -2,6 +2,9 @@ github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 h1:w1UutsfOrms1J05zt7I
 github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412/go.mod h1:WPjqKcmVOxf0XSf3YxCJs6N6AOSrOx3obionmG7T0y0=
 github.com/aristanetworks/goarista v0.0.0-20180907105523-ff33da284e76 h1:64W/KrGykPTfDI9xTkZtnjZRYA5p2+c/IuGgjzeWCpI=
 github.com/aristanetworks/goarista v0.0.0-20180907105523-ff33da284e76/go.mod h1:D/tb0zPVXnP7fmsLZjtdUhSsumbK/ij54UXjjVgMGxQ=
+github.com/arnaucube/cryptofun v0.0.0-20181124004321-9b11ae8280bd/go.mod h1:PZE8kKpHPD1UMrS3mTfAMmEEinGtijSwjxLRqRcD64A=
+github.com/arnaucube/go-snark v0.0.0-20181212130559-7aafcfd5f3f4 h1:ppcyngN+eBmESbCWyL9jL+cVSgexCbjyUMPERBhL0r8=
+github.com/arnaucube/go-snark v0.0.0-20181212130559-7aafcfd5f3f4/go.mod h1:gLycS/B43DufBaH0jH8kqiE4A7w5FdOM8I9S416xh2Y=
 github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac h1:/zx+Hglw2JN/pwVam1Z8cTCTl4pWyrbvOn2oooqCQSs=
 github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac/go.mod h1:Dmm/EzmjnCiweXmzRIAiUWCInVmPgjkzgv5k4tVyXiQ=
 github.com/cespare/cp v1.0.0 h1:47QuPGrUwHTJLdv2MeejqLT29EfhvKzfH+OMBvayz80=

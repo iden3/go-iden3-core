@@ -3,6 +3,7 @@ module github.com/iden3/go-iden3
 require (
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20180907105523-ff33da284e76 // indirect
+	github.com/arnaucube/go-snark v0.0.0-20181212130559-7aafcfd5f3f4
 	github.com/btcsuite/btcd v0.0.0-20181013004428-67e573d211ac // indirect
 	github.com/cespare/cp v1.0.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
