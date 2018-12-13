@@ -2,23 +2,33 @@ package merkletree
 
 import (
 	"encoding/hex"
+	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/crypto/mimc7"
 )
 
-// Hex returns a hex string from the Hash type
-func (hash Hash) Hex() string {
-	r := "0x"
-	h := hex.EncodeToString(hash[:])
-	r = r + h
-	return r
+// Hash is the type used to represent a hash used in the MT.
+type Hash ElemBytes
+
+// String returns the last 4 bytes of Hash in hex.
+func (h *Hash) String() string {
+	//return hex.EncodeToString(h[ElemBytesLen-4:])
+	return (*ElemBytes)(h).String()
 }
 
-// Bytes returns a byte array from a Hash
-func (hash Hash) Bytes() []byte {
-	return hash[:]
+// Hex returns a hex string from the Hash type.
+func (h Hash) Hex() string {
+	return fmt.Sprintf("0x%s", hex.EncodeToString(h[:]))
 }
 
+// Bytes returns a byte array from a Hash.
+func (h Hash) Bytes() []byte {
+	return h[:]
+}
+
+// TODO: Remove
 // HashBytes is a placeholder temorary function for the transition to the new Merklee Tree
 func HashBytes(b []byte) (hash Hash) {
 	h := crypto.Keccak256(b)
@@ -26,43 +36,67 @@ func HashBytes(b []byte) (hash Hash) {
 	return hash
 }
 
-// hashBytes performs a Keccak256 hash over the bytes
-func hashBytes(b []byte) (hash Hash) {
-	h := crypto.Keccak256(b)
-	copy(hash[:], h)
-	return hash
+// ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
+// mimc7.RElem.  This function assumes that ElemBytes are properly constructed,
+// and will panic if they are not.
+func ElemsBytesToRElemsPanic(elems ...ElemBytes) []mimc7.RElem {
+	relems, err := ElemsBytesToRElems(elems...)
+	if err != nil {
+		panic(err)
+	}
+	return relems
 }
 
-// getPath returns the binary path, from the leaf to the root
-func getPath(numLevels int, hi Hash) []bool {
+// ElemsBytesToRElems converts an array of ElemBytes to an array of mimc7.RElem.
+// This function returns an error if any ElemBytes are invalid (they are bigger
+// than the RElement field).
+func ElemsBytesToRElems(elems ...ElemBytes) ([]mimc7.RElem, error) {
+	ints := make([]*big.Int, len(elems))
+	for i, elem := range elems {
+		ints[i] = big.NewInt(0).SetBytes(elem[:])
+	}
+	return mimc7.BigIntsToRElems(ints)
+}
 
-	path := []bool{}
-	for bitno := numLevels - 2; bitno >= 0; bitno-- {
-		path = append(path, testbitmap(hi[:], uint(bitno)))
+// RElemToHash converts a mimc7.RElem to a Hash.
+func RElemToHash(relem mimc7.RElem) (h Hash) {
+	bs := (*big.Int)(relem).Bytes()
+	copy(h[ElemBytesLen-len(bs):], bs)
+	return h
+}
+
+// HashElems performs a mimc7 hash over the array of ElemBytes.
+func HashElems(elems ...ElemBytes) *Hash {
+	relems := ElemsBytesToRElemsPanic(elems...)
+	h := RElemToHash(mimc7.Hash(relems))
+	return &h
+}
+
+// getPath returns the binary path, from the root to the leaf.
+func getPath(numLevels int, hIndex *Hash) []bool {
+	path := make([]bool, numLevels)
+	for n := 0; n < numLevels; n++ {
+		path[n] = testBitBigEndian(hIndex[:], uint(n))
 	}
 	return path
 }
 
-func comparePaths(b1 []bool, b2 []bool) int {
-	for i := len(b1) - 1; i >= 0; i-- {
-		if b1[i] != b2[i] {
-			return i
-		}
-	}
-	return -1
+// setBit sets the bit n in the bitmap to 1.
+func setBit(bitmap []byte, n uint) {
+	bitmap[n/8] |= 1 << (n % 8)
 }
 
-func getEmptiesBetweenIAndPosHash(mt *MerkleTree, iPos int, posHash int) []Hash {
-	var sibl []Hash
-	for i := iPos; i >= posHash; i-- {
-		sibl = append(sibl, EmptyNodeValue)
-	}
-	return sibl
+// setBitBigEndian sets the bit n in the bitmap to 1, in Big Endian.
+func setBitBigEndian(bitmap []byte, n uint) {
+	bitmap[uint(len(bitmap))-n/8-1] |= 1 << (n % 8)
 }
 
-func setbitmap(bitmap []byte, bitno uint) {
-	bitmap[uint(len(bitmap))-bitno/8-1] |= 1 << (bitno % 8)
+// testBit tests whether the bit n in bitmap is 1.
+func testBit(bitmap []byte, n uint) bool {
+	return bitmap[n/8]&(1<<(n%8)) != 0
 }
-func testbitmap(bitmap []byte, bitno uint) bool {
-	return bitmap[uint(len(bitmap))-bitno/8-1]&(1<<(bitno%8)) > 0
+
+// testBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
+func testBitBigEndian(bitmap []byte, n uint) bool {
+	return bitmap[uint(len(bitmap))-n/8-1]&(1<<(n%8)) != 0
 }

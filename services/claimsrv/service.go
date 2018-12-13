@@ -46,7 +46,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Addre
 	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
 	// open the MerkleTree of the user
-	userMT, err := merkletree.New(stoUserID, 140)
+	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
 	if err != nil {
 		return core.SetRootClaim{}, err
 	}
