@@ -9,6 +9,7 @@ import (
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/namesrv"
@@ -125,4 +126,8 @@ func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks
 
 func LoadNameService(identityservice identitysrv.Service, claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
 	return namesrv.New(claimservice, identityservice, signsrv.New(ks, acc), domain)
+}
+
+func LoadAdminService(mt *merkletree.MerkleTree) adminsrv.Service {
+	return adminsrv.New(mt)
 }

@@ -70,6 +70,16 @@ func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
 	return v, err
 }
 
+func (l *LevelDbStorage) Iterate(f func([]byte, []byte)) error {
+	iter := l.ldb.NewIterator(nil, nil)
+	for iter.Next() {
+		f(iter.Key(), iter.Value())
+	}
+	iter.Release()
+	err := iter.Error()
+	return err
+}
+
 // Get retreives a value from a key in the mt.Lvl
 func (l *LevelDbStorageTx) Get(key []byte) ([]byte, error) {
 	var err error

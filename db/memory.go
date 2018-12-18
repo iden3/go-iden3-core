@@ -40,6 +40,10 @@ func (l *MemoryStorage) Get(key []byte) ([]byte, error) {
 	}
 	return nil, ErrNotFound
 }
+func (l *MemoryStorage) Iterate(f func([]byte, []byte)) error {
+
+	return nil
+}
 
 func (tx *MemoryStorageTx) Get(key []byte) ([]byte, error) {
 

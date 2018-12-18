@@ -1,6 +1,8 @@
 package db
 
-import "errors"
+import (
+	"errors"
+)
 
 var ErrNotFound = errors.New("key not found")
 
@@ -16,6 +18,7 @@ type Storage interface {
 	List(int) ([]KV, error)
 	Close()
 	Info() string
+	Iterate(func([]byte, []byte)) error
 }
 
 type Tx interface {

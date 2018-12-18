@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/namesrv"
@@ -23,6 +24,8 @@ var rootservice rootsrv.Service
 
 var nameservice namesrv.Service
 var idservice identitysrv.Service
+
+var adminservice adminsrv.Service
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
@@ -72,6 +75,8 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 		// yeah, use curl -X POST http://<adminserver>/info
 		c.String(http.StatusOK, "ping? pong!")
 	})
+	adminapi.GET("/rawdump", handleRawDump)
+	adminapi.GET("/claimsdump", handleClaimsDump)
 
 	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: adminapi}
 	go func() {
@@ -83,12 +88,13 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, ns namesrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, ns namesrv.Service, as adminsrv.Service) {
 
 	idservice = ids
 	claimservice = cs
 	rootservice = rs
 	nameservice = ns
+	adminservice = as
 
 	stopch := make(chan interface{})
 

@@ -49,6 +49,7 @@ func cmdStart(c *cli.Context) error {
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
 	idservice := cfg.LoadIdService(client, claimservice, storage)
 	nameservice := cfg.LoadNameService(idservice, claimservice, ks, acc, cfg.C.Domain, cfg.C.Namespace)
+	adminservice := cfg.LoadAdminService(mt)
 
 	// Check for founds
 	balance, err := client.BalanceAt(acc.Address)
@@ -63,7 +64,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the relay address")
 	}
 
-	endpoint.Serve(rootservice, claimservice, idservice, nameservice)
+	endpoint.Serve(rootservice, claimservice, idservice, nameservice, adminservice)
 
 	rootservice.StopAndJoin()
 	storage.Close()
