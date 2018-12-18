@@ -1,19 +1,23 @@
 package endpoint
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
-func handleRawDump(c *gin.Context) {
-	out := adminservice.RawDump()
+func handleInfo(c *gin.Context) {
+	r := adminservice.Info()
 	c.JSON(200, gin.H{
-		"dump": out,
+		"info": r,
 	})
+}
+func handleRawDump(c *gin.Context) {
+	r := adminservice.RawDump()
+	c.String(http.StatusOK, r)
 }
 
 func handleClaimsDump(c *gin.Context) {
-	out := adminservice.ClaimsDump()
-	c.JSON(200, gin.H{
-		"claimsdump": out,
-	})
+	r := adminservice.ClaimsDump()
+	c.String(http.StatusOK, r)
 }

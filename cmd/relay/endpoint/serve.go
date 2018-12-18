@@ -71,10 +71,7 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 		stopch <- nil
 	})
 
-	adminapi.POST("/info", func(c *gin.Context) {
-		// yeah, use curl -X POST http://<adminserver>/info
-		c.String(http.StatusOK, "ping? pong!")
-	})
+	adminapi.GET("/info", handleInfo)
 	adminapi.GET("/rawdump", handleRawDump)
 	adminapi.GET("/claimsdump", handleClaimsDump)
 

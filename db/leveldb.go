@@ -32,14 +32,24 @@ func NewLevelDbStorage(path string, errorIfMissing bool) (*LevelDbStorage, error
 }
 
 type storageInfo struct {
-	KeyCount int
+	KeyCount   int
+	ClaimCount int
 }
 
 func (l *LevelDbStorage) Info() string {
+	snapshot, err := l.ldb.GetSnapshot()
+	if err != nil {
+		return err.Error()
+	}
 
 	keycount := 0
-	iter := l.ldb.NewIterator(nil, nil)
+	claimcount := 0
+	iter := snapshot.NewIterator(nil, nil)
 	for iter.Next() {
+		if iter.Value()[0] == byte(1) { // TODO when the new merkletree version is ready, instead of byte(1) use the type indicator
+			claimcount++
+		}
+
 		keycount++
 	}
 	iter.Release()
@@ -47,7 +57,10 @@ func (l *LevelDbStorage) Info() string {
 		return err.Error()
 	}
 	json, _ := json.MarshalIndent(
-		storageInfo{keycount},
+		storageInfo{
+			KeyCount:   keycount,
+			ClaimCount: claimcount,
+		},
 		"", "  ",
 	)
 	return string(json)
@@ -71,12 +84,16 @@ func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
 }
 
 func (l *LevelDbStorage) Iterate(f func([]byte, []byte)) error {
-	iter := l.ldb.NewIterator(nil, nil)
+	snapshot, err := l.ldb.GetSnapshot()
+	if err != nil {
+		return err
+	}
+	iter := snapshot.NewIterator(nil, nil)
 	for iter.Next() {
 		f(iter.Key(), iter.Value())
 	}
 	iter.Release()
-	err := iter.Error()
+	err = iter.Error()
 	return err
 }
 
