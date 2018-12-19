@@ -1,7 +1,6 @@
 package mimc7
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,8 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// MaxFieldVal is the maximum value that a element of a field can have, fitting inside an R Finite Field. This value is equal to 2**253 - 1
-const MaxFieldValHex = "0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 const SEED = "iden3_mimc"
 
 // RElem is a big.Int of maximum 253 bits
@@ -30,17 +27,15 @@ type constantsData struct {
 
 func generateConstantsData() constantsData {
 	var constants constantsData
-	maxFieldBytes, err := hex.DecodeString(MaxFieldValHex[2:])
-	if err != nil {
-		panic(err)
-	}
-	constants.maxFieldVal = new(big.Int).SetBytes(maxFieldBytes)
+
 	constants.seedHash = new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
 	fqR, err := bn128.NewFqR()
 	if err != nil {
 		panic(err)
 	}
 	constants.fqR = fqR
+	// maxFieldVal is the R value of the Finite Field
+	constants.maxFieldVal = constants.fqR.Q
 	constants.nRounds = 91
 	cts, err := getConstants(constants.fqR, SEED, constants.nRounds)
 	if err != nil {
