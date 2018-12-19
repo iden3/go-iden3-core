@@ -74,6 +74,8 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi.GET("/info", handleInfo)
 	adminapi.GET("/rawdump", handleRawDump)
 	adminapi.GET("/claimsdump", handleClaimsDump)
+	adminapi.POST("/mimc7", handleMimc7)
+	adminapi.POST("/genericClaim", handleAddGenericClaim)
 
 	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: adminapi}
 	go func() {

@@ -128,6 +128,6 @@ func LoadNameService(identityservice identitysrv.Service, claimservice claimsrv.
 	return namesrv.New(claimservice, identityservice, signsrv.New(ks, acc), domain)
 }
 
-func LoadAdminService(mt *merkletree.MerkleTree) adminsrv.Service {
-	return adminsrv.New(mt)
+func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {
+	return adminsrv.New(mt, rootservice, claimservice)
 }

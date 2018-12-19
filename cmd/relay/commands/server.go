@@ -49,7 +49,7 @@ func cmdStart(c *cli.Context) error {
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
 	idservice := cfg.LoadIdService(client, claimservice, storage)
 	nameservice := cfg.LoadNameService(idservice, claimservice, ks, acc, cfg.C.Domain, cfg.C.Namespace)
-	adminservice := cfg.LoadAdminService(mt)
+	adminservice := cfg.LoadAdminService(mt, rootservice, claimservice)
 
 	// Check for founds
 	balance, err := client.BalanceAt(acc.Address)
