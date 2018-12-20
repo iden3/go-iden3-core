@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/mongosrv"
 	"github.com/iden3/go-iden3/utils"
@@ -54,7 +53,7 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 	if err != nil {
 		return 0, err
 	}
-	hash := merkletree.HashBytes(b)
+	hash := utils.HashBytes(b)
 	if !utils.CheckPoW(hash, bs.GetPoWDifficulty()) {
 		return 0, errors.New("PoW not passed")
 	}

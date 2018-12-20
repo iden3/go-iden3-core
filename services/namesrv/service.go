@@ -54,8 +54,8 @@ func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNa
 	}
 
 	// add AssignNameClaim to merkle tree
-	nameHash := merkletree.HashBytes([]byte(vinculateIDMsg.Name))
-	domainHash := merkletree.HashBytes([]byte(ns.domain))
+	nameHash := utils.HashBytes([]byte(vinculateIDMsg.Name))
+	domainHash := utils.HashBytes([]byte(ns.domain))
 	assignNameClaim := core.NewAssignNameClaim(nameHash, domainHash, vinculateIDMsg.EthID)
 	err = ns.claimsrv.AddAssignNameClaim(assignNameClaim)
 	if err != nil {
@@ -76,8 +76,8 @@ func (ns *ServiceImpl) ResolvAssignNameClaim(nameid string) (core.AssignNameClai
 	domain := s[1]
 
 	// build the AssignNameClaim Partial with the given data of the Index
-	nameHash := merkletree.HashBytes([]byte(name))
-	domainHash := merkletree.HashBytes([]byte(domain))
+	nameHash := utils.HashBytes([]byte(name))
+	domainHash := utils.HashBytes([]byte(domain))
 	claimPartial := core.NewAssignNameClaim(nameHash, domainHash, common.Address{})
 
 	version, err := claimsrv.GetNextVersion(ns.claimsrv.MT(), claimPartial.Hi())

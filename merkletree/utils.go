@@ -19,8 +19,15 @@ func (hash Hash) Bytes() []byte {
 	return hash[:]
 }
 
-// HashBytes performs a Keccak256 hash over the bytes
+// HashBytes is a placeholder temorary function for the transition to the new Merklee Tree
 func HashBytes(b []byte) (hash Hash) {
+	h := crypto.Keccak256(b)
+	copy(hash[:], h)
+	return hash
+}
+
+// hashBytes performs a Keccak256 hash over the bytes
+func hashBytes(b []byte) (hash Hash) {
 	h := crypto.Keccak256(b)
 	copy(hash[:], h)
 	return hash

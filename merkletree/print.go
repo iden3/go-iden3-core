@@ -33,8 +33,8 @@ func (mt *MerkleTree) printLevel(parent Hash, iLevel int, maxLevel int) {
 	} else if nodeType == byte(finalNodeType) { //typ==FINAL_NODE
 		// claim := core.ParseClaimDefaultBytes(nodeBytes)
 		fmt.Print("[FinalTree]:")
-		color.Cyan("final tree node: " + HashBytes(nodeBytes).Hex())
-		_, _, leafNodeBytes, err := mt.dbGet(HashBytes(nodeBytes))
+		color.Cyan("final tree node: " + hashBytes(nodeBytes).Hex())
+		_, _, leafNodeBytes, err := mt.dbGet(hashBytes(nodeBytes))
 		if err != nil {
 			color.Red(err.Error())
 		}

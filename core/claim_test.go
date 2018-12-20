@@ -9,6 +9,7 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -60,7 +61,7 @@ func TestClaimGenerationAndParse(t *testing.T) {
 }
 
 func TestAssignNameClaim(t *testing.T) {
-	assignNameClaim := NewAssignNameClaim(merkletree.HashBytes([]byte("john")), merkletree.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
+	assignNameClaim := NewAssignNameClaim(utils.HashBytes([]byte("john")), utils.HashBytes([]byte("iden3.io")), common.HexToAddress("0x101d2fa51f8259df207115af9eaa73f3f4e52e60"))
 	assignNameClaimParsed, err := ParseAssignNameClaimBytes(assignNameClaim.Bytes())
 	assert.Nil(t, err)
 	if !bytes.Equal(assignNameClaimParsed.Bytes(), assignNameClaim.Bytes()) {

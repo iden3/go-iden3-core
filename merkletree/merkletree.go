@@ -25,7 +25,7 @@ const (
 // EmptyNodeValue is a [32]byte EmptyNodeValue array, all to zero
 var (
 	ErrNodeAlreadyExists = errors.New("node already exists")
-	rootNodeValue        = HashBytes([]byte("root"))
+	rootNodeValue        = hashBytes([]byte("root"))
 	EmptyNodeValue       = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 )
 
@@ -35,7 +35,7 @@ type Hash [32]byte
 // Value is the interface of a generic claim, a key value object stored in the leveldb
 type Value interface {
 	IndexLength() uint32 // returns the index length value
-	Bytes() []byte // returns the value in byte array representation
+	Bytes() []byte       // returns the value in byte array representation
 }
 
 //MerkleTree struct with the main elements of the Merkle Tree
@@ -105,9 +105,9 @@ func (mt *MerkleTree) Add(v Value) error {
 	}()
 
 	// add the leaf that we are adding
-	mt.dbInsert(tx, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+	mt.dbInsert(tx, hashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
+	hi := hashBytes(v.Bytes()[:v.IndexLength()])
 	path := getPath(mt.numLevels, hi)
 
 	nodeHash := mt.root
@@ -125,15 +125,15 @@ func (mt *MerkleTree) Add(v Value) error {
 						- one for the already existing leaf (from the old Final Tree)
 						- another for the new claim added
 			*/
-			hiChild := HashBytes(nodeBytes[:indexLength])
+			hiChild := hashBytes(nodeBytes[:indexLength])
 			pathChild := getPath(mt.numLevels, hiChild)
 			posDiff := comparePaths(pathChild, path)
 			if posDiff == -1 {
 				return ErrNodeAlreadyExists
 			}
-			finalNode1Hash := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
+			finalNode1Hash := calcHashFromLeafAndLevel(posDiff, pathChild, hashBytes(nodeBytes))
 			mt.dbInsert(tx, finalNode1Hash, finalNodeType, indexLength, nodeBytes)
-			finalNode2Hash := calcHashFromLeafAndLevel(posDiff, path, HashBytes(v.Bytes()))
+			finalNode2Hash := calcHashFromLeafAndLevel(posDiff, path, hashBytes(v.Bytes()))
 			mt.dbInsert(tx, finalNode2Hash, finalNodeType, v.IndexLength(), v.Bytes())
 			// now the parent
 			var parentNode treeNode
@@ -171,13 +171,13 @@ func (mt *MerkleTree) Add(v Value) error {
 			if i == mt.numLevels-2 && bytes.Equal(siblings[len(siblings)-1][:], EmptyNodeValue[:]) {
 				// if the pt node is the unique in the tree, just put it into the root node
 				// this means to be in i==mt.NumLevels-2 && nodeHash==EmptyNodeValue
-				finalNodeHash := calcHashFromLeafAndLevel(i+1, path, HashBytes(v.Bytes()))
+				finalNodeHash := calcHashFromLeafAndLevel(i+1, path, hashBytes(v.Bytes()))
 				mt.dbInsert(tx, finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes())
 				mt.root = finalNodeHash
 				mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 				return nil
 			}
-			finalNodeHash := calcHashFromLeafAndLevel(i, path, HashBytes(v.Bytes()))
+			finalNodeHash := calcHashFromLeafAndLevel(i, path, hashBytes(v.Bytes()))
 			if mt.root, err = mt.replaceLeaf(tx, siblings, path[i:], finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes()); err != nil {
 				return err
 			}
@@ -186,7 +186,7 @@ func (mt *MerkleTree) Add(v Value) error {
 		}
 	}
 
-	mt.root, err = mt.replaceLeaf(tx, siblings, path, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+	mt.root, err = mt.replaceLeaf(tx, siblings, path, hashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
 	mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
 	return nil
 }
@@ -215,7 +215,7 @@ func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
 			// TODO valid for all levels where this condition happens
 			if bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
 				// go until the path is different, then get the nodes between this FinalNode and the node in the diffPath, they will be the siblings of the merkle proof
-				leafHi := HashBytes(nodeBytes[:indexLength]) // hi of element that was in the end of the branch (the finalNode)
+				leafHi := hashBytes(nodeBytes[:indexLength]) // hi of element that was in the end of the branch (the finalNode)
 				pathChild := getPath(mt.numLevels, leafHi)
 
 				// get the position where the path is different
@@ -225,7 +225,7 @@ func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
 				}
 
 				if posDiff != mt.NumLevels()-1-level {
-					sibling := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
+					sibling := calcHashFromLeafAndLevel(posDiff, pathChild, hashBytes(nodeBytes))
 					setbitmap(empties[:], uint(mt.NumLevels()-2-posDiff))
 					siblings = append([]Hash{sibling}, siblings...)
 				}
@@ -272,7 +272,7 @@ func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
 		if nodeType == byte(finalNodeType) {
 			// check if nodeBytes path is different of hi
 			index := nodeBytes[:indexLength]
-			hi := HashBytes(index)
+			hi := hashBytes(index)
 			nodePath := getPath(mt.numLevels, hi)
 			posDiff := comparePaths(path, nodePath)
 			// if is different, return an EmptyNodeValue, else return the nodeBytes

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,7 +32,7 @@ func TestVerifySig(t *testing.T) {
 	assert.Nil(t, err)
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
 	assert.Nil(t, err)
-	msgHash := merkletree.HashBytes([]byte("to sign"))
+	msgHash := HashBytes([]byte("to sign"))
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 	assert.True(t, VerifySig(testAddr, signature, msgHash[:]))
 }
