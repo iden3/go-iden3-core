@@ -9,28 +9,29 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/utils"
 )
 
 var (
-	defaultTypeHash        = merkletree.HashBytes([]byte("default"))
-	assignNameTypeHash     = merkletree.HashBytes([]byte("assignname"))
-	authorizeksignTypeHash = merkletree.HashBytes([]byte("authorizeksign"))
-	setRootTypeHash        = merkletree.HashBytes([]byte("setroot"))
+	defaultTypeHash        = utils.HashBytes([]byte("default"))
+	assignNameTypeHash     = utils.HashBytes([]byte("assignname"))
+	authorizeksignTypeHash = utils.HashBytes([]byte("authorizeksign"))
+	setRootTypeHash        = utils.HashBytes([]byte("setroot"))
 
 	GenericType        = defaultTypeHash[:24]
 	AssignNameType     = assignNameTypeHash[:24]
 	AuthorizeksignType = authorizeksignTypeHash[:24]
 	SetRootType        = setRootTypeHash[:24]
 
-	NamespaceHash = merkletree.HashBytes([]byte("iden3.io"))
+	NamespaceHash = utils.HashBytes([]byte("iden3.io"))
 )
 
 // BaseIndex is the by default parameters of the index of every Claim
 type BaseIndex struct {
-	Namespace   merkletree.Hash // keccak("iden3.io")
-	Type        [24]byte        // claim type, keccak("<spec>") [32:56]
-	IndexLength uint32          // [4]byte
-	Version     uint32          // [4] byte
+	Namespace   utils.Hash // keccak("iden3.io")
+	Type        [24]byte   // claim type, keccak("<spec>") [32:56]
+	IndexLength uint32     // [4]byte
+	Version     uint32     // [4] byte
 }
 
 // GenericClaim is a default data structure of a claim
@@ -46,8 +47,8 @@ type GenericClaim struct {
 type AssignNameClaim struct {
 	BaseIndex
 	ExtraIndex struct {
-		Name   merkletree.Hash // keccak("bob")
-		Domain merkletree.Hash // ens_namehash("barcelona.eth")
+		Name   utils.Hash // keccak("bob")
+		Domain utils.Hash // ens_namehash("barcelona.eth")
 	}
 	EthID common.Address // EthID address of identity
 }
@@ -58,8 +59,8 @@ type AuthorizeKSignClaim struct {
 	ExtraIndex struct {
 		KeyToAuthorize common.Address
 	}
-	Application      merkletree.Hash
-	ApplicationAuthz merkletree.Hash
+	Application      utils.Hash
+	ApplicationAuthz utils.Hash
 	ValidFrom        uint64
 	ValidUntil       uint64
 }
@@ -110,7 +111,7 @@ func (c GenericClaim) IndexLength() uint32 {
 // Hi returns the hash of the index of the claim
 func (c GenericClaim) Hi() merkletree.Hash {
 	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
-	// h := merkletree.HashBytes(c.Bytes())
+	// h := utils.HashBytes(c.Bytes())
 	return h
 }
 
@@ -176,7 +177,7 @@ func (c AssignNameClaim) Hi() merkletree.Hash {
 	// bytesIndex = append(bytesIndex, versionBytes[:]...)
 	// bytesIndex = append(bytesIndex, c.ExtraIndex.Name[:]...)
 	// bytesIndex = append(bytesIndex, c.ExtraIndex.Domain[:]...)
-	// h := merkletree.HashBytes(bytesIndex)
+	// h := utils.HashBytes(bytesIndex)
 	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
 	return h
 }
@@ -242,7 +243,7 @@ func (c AuthorizeKSignClaim) IndexLength() uint32 {
 
 // Hi returns the hash of the index of the claim
 func (c AuthorizeKSignClaim) Hi() merkletree.Hash {
-	// return merkletree.HashBytes(c.indexBytes())
+	// return utils.HashBytes(c.indexBytes())
 	return merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
 }
 
@@ -304,7 +305,7 @@ func (c SetRootClaim) Hi() merkletree.Hash {
 	// versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
 	// bytesIndex = append(bytesIndex, versionBytes[:]...)
 	// bytesIndex = append(bytesIndex, c.ExtraIndex.EthID[:]...)
-	// h := merkletree.HashBytes(bytesIndex)
+	// h := utils.HashBytes(bytesIndex)
 	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
 	return h
 }
@@ -368,8 +369,8 @@ func ParseValueFromBytes(b []byte) (merkletree.Value, error) {
 // NewGenericClaim returns a GenericClaim object with the given parameters
 func NewGenericClaim(namespaceStr, typeStr string, extraIndexData []byte, data []byte) GenericClaim {
 	var c GenericClaim
-	c.BaseIndex.Namespace = merkletree.HashBytes([]byte(namespaceStr))
-	typeHash := merkletree.HashBytes([]byte(typeStr))
+	c.BaseIndex.Namespace = utils.HashBytes([]byte(namespaceStr))
+	typeHash := utils.HashBytes([]byte(typeStr))
 	copy(c.BaseIndex.Type[:], typeHash[:24])
 	c.BaseIndex.IndexLength = 64 + uint32(len(extraIndexData))
 	c.BaseIndex.Version = 0
@@ -379,7 +380,7 @@ func NewGenericClaim(namespaceStr, typeStr string, extraIndexData []byte, data [
 }
 
 // NewAssignNameClaim returns a AssignNameClaim object with the given parameters
-func NewAssignNameClaim(name, domain merkletree.Hash, ethID common.Address) AssignNameClaim {
+func NewAssignNameClaim(name, domain utils.Hash, ethID common.Address) AssignNameClaim {
 	var c AssignNameClaim
 	c.BaseIndex.Namespace = NamespaceHash
 	copy(c.BaseIndex.Type[:], AssignNameType)
@@ -399,8 +400,8 @@ func NewAuthorizeKSignClaim(keyToAuthorize common.Address, applicationName, appl
 	c.BaseIndex.IndexLength = 84
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
-	c.Application = merkletree.HashBytes([]byte(applicationName))
-	c.ApplicationAuthz = merkletree.HashBytes([]byte(applicationAuthz))
+	c.Application = utils.HashBytes([]byte(applicationName))
+	c.ApplicationAuthz = utils.HashBytes([]byte(applicationAuthz))
 	c.ValidFrom = validFrom
 	c.ValidUntil = validUntil
 	return c
@@ -413,8 +414,8 @@ func NewOperationalKSignClaim(keyToAuthorize common.Address) AuthorizeKSignClaim
 	c.BaseIndex.IndexLength = 84
 	c.BaseIndex.Version = 0
 	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
-	c.Application = merkletree.Hash{}
-	c.ApplicationAuthz = merkletree.Hash{}
+	c.Application = utils.Hash{}
+	c.ApplicationAuthz = utils.Hash{}
 	c.ValidFrom = 0
 	c.ValidUntil = math.MaxUint64
 	return c

@@ -2,7 +2,6 @@ package namesrv
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
 
@@ -25,7 +24,7 @@ type VinculateIDMsg struct {
 }
 
 // MsgHash returns the Hash(VinculateIDMsg)
-func (m *VinculateIDMsg) MsgHash() merkletree.Hash {
+func (m *VinculateIDMsg) MsgHash() utils.Hash {
 	var b []byte
 	b = append(b, m.EthID.Bytes()...)
 	b = append(b, []byte(m.Name)...)

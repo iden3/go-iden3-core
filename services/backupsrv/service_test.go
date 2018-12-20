@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -54,6 +53,6 @@ func TestPoWBackupData(t *testing.T) {
 	assert.Nil(t, err)
 	b, err := json.Marshal(data)
 	assert.Nil(t, err)
-	hash := merkletree.HashBytes(b)
+	hash := utils.HashBytes(b)
 	assert.True(t, utils.CheckPoW(hash, 2))
 }

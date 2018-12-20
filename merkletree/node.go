@@ -17,7 +17,7 @@ func (n *treeNode) Bytes() (b []byte) {
 
 // Ht returns the hash of the full node
 func (n *treeNode) Ht() Hash {
-	h := HashBytes(n.Bytes())
+	h := hashBytes(n.Bytes())
 	return h
 }
 

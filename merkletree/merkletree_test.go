@@ -48,14 +48,14 @@ func (c testClaim) IndexLength() uint32 {
 	return uint32(len(c.Bytes()))
 }
 func (c testClaim) hi() Hash {
-	h := HashBytes(c.Bytes())
+	h := hashBytes(c.Bytes())
 	return h
 }
 func newTestClaim(namespaceStr, typeStr string, data []byte) testClaim {
 	var c testClaim
 	c.testBase.Length = [4]byte{0x00, 0x00, 0x00, 0x48}
-	c.testBase.Namespace = HashBytes([]byte(namespaceStr))
-	c.testBase.Type = HashBytes([]byte(typeStr))
+	c.testBase.Namespace = hashBytes([]byte(namespaceStr))
+	c.testBase.Type = hashBytes([]byte(typeStr))
 	c.testBase.Version = 0
 	c.extraIndex.Data = data
 	return c
@@ -204,7 +204,7 @@ func TestCheckProof(t *testing.T) {
 
 	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()).hi())
 	assert.Nil(t, err)
-	verified := CheckProof(mt.Root(), mp, claim1.hi(), HashBytes(claim1.Bytes()), mt.NumLevels())
+	verified := CheckProof(mt.Root(), mp, claim1.hi(), hashBytes(claim1.Bytes()), mt.NumLevels())
 	assert.True(t, verified)
 
 }
@@ -310,8 +310,8 @@ func TestVector4(t *testing.T) {
 	assert.Nil(t, mt.Add(vt{zeros, uint32(1)}))
 	v := vt{zeros, uint32(2)}
 	assert.Nil(t, mt.Add(v))
-	proof, _ := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
-	assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
+	proof, _ := mt.GenerateProof(hashBytes(v.Bytes()[:v.IndexLength()]))
+	assert.True(t, CheckProof(mt.Root(), proof, hashBytes(v.Bytes()[:v.IndexLength()]), hashBytes(v.Bytes()), mt.NumLevels()))
 	assert.Equal(t, 4, mt.NumLevels())
 	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001", hex.EncodeToString(v.Bytes()))
 	assert.Equal(t, "0xc1b95ffbb999a6dd7a472a610a98891ffae95cc973d1d1e21acfdd68db830b51", mt.Root().Hex())
@@ -327,9 +327,9 @@ func TestVector140(t *testing.T) {
 	for i := 1; i < len(zeros)-1; i++ {
 		v := vt{zeros, uint32(i)}
 		assert.Nil(t, mt.Add(v))
-		proof, err := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
+		proof, err := mt.GenerateProof(hashBytes(v.Bytes()[:v.IndexLength()]))
 		assert.Nil(t, err)
-		assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
+		assert.True(t, CheckProof(mt.Root(), proof, hashBytes(v.Bytes()[:v.IndexLength()]), hashBytes(v.Bytes()), mt.NumLevels()))
 		if i == len(zeros)-2 {
 			assert.Equal(t, 140, mt.NumLevels())
 			assert.Equal(t, uint32(30), v.IndexLength())

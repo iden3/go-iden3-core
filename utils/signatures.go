@@ -9,17 +9,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/merkletree"
 )
 
 // Sign performs the signature over a Hash
-func Sign(h merkletree.Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
+func Sign(h Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
 	return ks.SignHash(acc, h[:])
 }
 
-func EthHash(b []byte) merkletree.Hash {
+func EthHash(b []byte) Hash {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(b), b)
-	return merkletree.HashBytes([]byte(msg))
+	return HashBytes([]byte(msg))
 }
 
 // VerifySig verifies a given signature and the msgHash with the expected address

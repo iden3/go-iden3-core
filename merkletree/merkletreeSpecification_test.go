@@ -26,7 +26,7 @@ func (c testBytesClaim) IndexLength() uint32 {
 	return c.indexLength
 }
 func (c testBytesClaim) Hi() Hash {
-	h := HashBytes(c.Bytes()[:c.IndexLength()])
+	h := hashBytes(c.Bytes()[:c.IndexLength()])
 	return h
 }
 func newTestBytesClaim(data string, indexLength uint32) testBytesClaim {
@@ -38,10 +38,10 @@ func newTestBytesClaim(data string, indexLength uint32) testBytesClaim {
 
 // Test to check the iden3-merkletree-specification
 func TestIden3MerkletreeSpecification(t *testing.T) {
-	h := HashBytes([]byte("test")).Hex()
+	h := hashBytes([]byte("test")).Hex()
 	assert.Equal(t, "0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658", h)
 
-	h = HashBytes([]byte("authorizeksign")).Hex()
+	h = hashBytes([]byte("authorizeksign")).Hex()
 	assert.Equal(t, "0x353f867ef725411de05e3d4b0a01c37cf7ad24bcc213141a05ed7726d7932a1f", h)
 
 	mt := newTestingMerkle(t, 140)
@@ -123,7 +123,7 @@ func TestIden3MerkletreeSpecification(t *testing.T) {
 	assert.True(t, verified)
 
 	// check the proof generated in the previous steps
-	verified = CheckProof(mt.Root(), proof2, claim2.Hi(), HashBytes(claim2.Bytes()), 140)
+	verified = CheckProof(mt.Root(), proof2, claim2.Hi(), hashBytes(claim2.Bytes()), 140)
 	assert.True(t, verified)
 	// check proof of no existence (emptyLeaf), as we are prooving an empty leaf, the Ht is an empty value (0x000...0)
 	verified = CheckProof(mt.Root(), proof3, claim3.Hi(), EmptyNodeValue, 140)
