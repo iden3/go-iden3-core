@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"time"
 )
@@ -46,4 +47,22 @@ func VerifyTimestamp(timestamp uint64, timelimit int) bool {
 		return false
 	}
 	return true
+}
+
+func Uint32ToEthBytes(u uint32) ([]byte, error) {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, u)
+	return buff.Bytes(), err
+}
+func Uint64ToEthBytes(u uint64) ([]byte, error) {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, u)
+	return buff.Bytes(), err
+}
+
+func EthBytesToUint32(b []byte) uint32 {
+	return binary.BigEndian.Uint32(b)
+}
+func EthBytesToUint64(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
 }

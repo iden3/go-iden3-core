@@ -31,7 +31,7 @@ func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int)
 
 	// check signature of the ProofOfClaim.SetRootClaimProof.Root with the identity of the Relay
 	// checking this Root and the four Merkle Proofs, we check the full ProofOfClaim
-	dateBytes, err := core.Uint64ToEthBytes(pc.Date)
+	dateBytes, err := utils.Uint64ToEthBytes(pc.Date)
 	if err != nil {
 		return false
 	}
