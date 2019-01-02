@@ -14,7 +14,8 @@ import (
 
 type Service interface {
 	Info() map[string]string
-	RawDump() string
+	RawDump() map[string]string
+	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() string
 	Mimc7(data []*big.Int) (*big.Int, error)
 	AddGenericClaim(indexData, data []byte) (claimsrv.ProofOfRelayClaim, error)
@@ -39,13 +40,48 @@ func (as *ServiceImpl) Info() map[string]string {
 }
 
 // RawDump returns all the key and values from the database
-func (as *ServiceImpl) RawDump() string {
-	var out string
+func (as *ServiceImpl) RawDump() map[string]string {
+	// var out string
+	data := make(map[string]string)
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
-		out = out + "key: " + common3.BytesToHex(key) + ", value: " + common3.BytesToHex(value) + "\n"
+		// out = out + "key: " + common3.BytesToHex(key) + ", value: " + common3.BytesToHex(value) + "\n"
+		data[common3.BytesToHex(key)] = common3.BytesToHex(value)
 	})
-	return out
+	return data
+}
+
+// RawImport imports the key and values from the RawDump() to the database
+func (as *ServiceImpl) RawImport(raw map[string]string) (int, error) {
+	fmt.Println("raw", raw)
+	count := 0
+
+	tx, err := as.mt.Storage().NewTx()
+	if err != nil {
+		return count, err
+	}
+
+	defer func() {
+		if err == nil {
+			tx.Commit()
+		} else {
+			tx.Close()
+		}
+	}()
+
+	for k, v := range raw {
+		kBytes, err := common3.HexToBytes(k)
+		if err != nil {
+			return count, err
+		}
+		vBytes, err := common3.HexToBytes(v)
+		if err != nil {
+			return count, err
+		}
+		tx.Put(kBytes, vBytes)
+		count++
+	}
+	return count, nil
 }
 
 // ClaimsDump returns all the claims key and values from the database
