@@ -1,72 +1,25 @@
 package merkletree
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strconv"
+	//"strconv"
 	"testing"
-	"time"
+	//"time"
+	"math/big"
 
-	common3 "github.com/iden3/go-iden3/common"
+	//common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/stretchr/testify/assert"
 )
-
-type testBase struct {
-	Length    [4]byte
-	Namespace Hash
-	Type      Hash
-	Version   uint32
-}
-type testClaim struct {
-	testBase
-	extraIndex struct {
-		Data []byte
-	}
-}
-
-func parseTestClaimBytes(b []byte) testClaim {
-	var c testClaim
-	copy(c.testBase.Length[:], b[0:4])
-	copy(c.testBase.Namespace[:], b[4:36])
-	copy(c.testBase.Type[:], b[36:68])
-	versionBytes := b[68:72]
-	c.testBase.Version = common3.BytesToUint32(versionBytes)
-	c.extraIndex.Data = b[72:]
-	return c
-}
-func (c testClaim) Bytes() (b []byte) {
-	b = append(b, c.testBase.Length[:]...)
-	b = append(b, c.testBase.Namespace[:]...)
-	b = append(b, c.testBase.Type[:]...)
-	versionBytes := common3.Uint32ToBytes(c.testBase.Version)
-	b = append(b, versionBytes[:]...)
-	b = append(b, c.extraIndex.Data[:]...)
-	return b
-}
-func (c testClaim) IndexLength() uint32 {
-	return uint32(len(c.Bytes()))
-}
-func (c testClaim) hi() Hash {
-	h := HashBytes(c.Bytes())
-	return h
-}
-func newTestClaim(namespaceStr, typeStr string, data []byte) testClaim {
-	var c testClaim
-	c.testBase.Length = [4]byte{0x00, 0x00, 0x00, 0x48}
-	c.testBase.Namespace = HashBytes([]byte(namespaceStr))
-	c.testBase.Type = HashBytes([]byte(typeStr))
-	c.testBase.Version = 0
-	c.extraIndex.Data = data
-	return c
-}
 
 type Fatalable interface {
 	Fatal(args ...interface{})
 }
 
 func newTestingMerkle(f Fatalable, numLevels int) *MerkleTree {
-	mt, err := New(db.NewMemoryStorage(), numLevels)
+	mt, err := NewMerkleTree(db.NewMemoryStorage(), numLevels)
 	if err != nil {
 		f.Fatal(err)
 		return nil
@@ -75,267 +28,365 @@ func newTestingMerkle(f Fatalable, numLevels int) *MerkleTree {
 }
 
 func TestNewMT(t *testing.T) {
-
 	//create a new MT
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", mt.Root().Hex())
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", mt.RootKey().Hex())
 }
 
-func TestAddClaim(t *testing.T) {
+func NewEntryFromInts(a, b, c, d int64) (e Entry) {
+	e.Data = IntsToData(a, b, c, d)
+	return e
+}
 
+func IntsToData(_a, _b, _c, _d int64) Data {
+	a, b, c, d := big.NewInt(_a), big.NewInt(_b), big.NewInt(_c), big.NewInt(_d)
+	return BigIntsToData(a, b, c, d)
+}
+
+func BigIntsToData(a, b, c, d *big.Int) (data Data) {
+	di := []*big.Int{a, b, c, d}
+	for i, v := range di {
+		copy(data[i][(ElemBytesLen-len(v.Bytes())):], v.Bytes())
+	}
+	return
+}
+
+func TestEntry(t *testing.T) {
+	e := NewEntryFromInts(12, 45, 78, 41)
+	assert.Equal(t, "114438e8321f62c4a1708f443a5a66f9c8fcb0958e7b7008332b71442610b7a0", hex.EncodeToString(e.HIndex()[:]))
+}
+
+func TestAddEntry1(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
-	claim := newTestClaim("iden3.io", "typespec", []byte("c1"))
-	assert.Equal(t, "0x939862c94ca9772fc9e2621df47128b1d4041b514e19edc969a92d8f0dae558f", claim.hi().Hex())
-
-	assert.Nil(t, mt.Add(claim))
-	assert.Equal(t, "0x9d3c407ff02c813cd474c0a6366b4f7c58bf417a38268f7a0d73a8bca2490b9b", mt.Root().Hex())
+	e := NewEntryFromInts(12, 45, 78, 41)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "0x2d49fc39bb8f19f26ad47f63b45f77eb4ca50e6548244140a63a105d7c4535d2", mt.RootKey().Hex())
 }
 
-func TestAddClaims(t *testing.T) {
-
+func TestAddEntry2(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
-	claim := newTestClaim("iden3.io", "typespec", []byte("c1"))
-	assert.Equal(t, "0x939862c94ca9772fc9e2621df47128b1d4041b514e19edc969a92d8f0dae558f", claim.hi().Hex())
-	assert.Nil(t, mt.Add(claim))
-
-	assert.Nil(t, mt.Add(newTestClaim("iden3.io2", "typespec2", []byte("c2"))))
-	assert.Equal(t, "0xebae8fb483b48ba6c337136535198eb8bcf891daba40ac81e28958c09b9b229b", mt.Root().Hex())
-
-	mt.Add(newTestClaim("iden3.io3", "typespec3", []byte("c3")))
-	mt.Add(newTestClaim("iden3.io4", "typespec4", []byte("c4")))
-	assert.Equal(t, "0xb4b51aa0c77a8e5ed0a099d7c11c7d2a9219ef241da84f0689da1f40a5f6ac31", mt.Root().Hex())
+	e := NewEntryFromInts(12, 45, 78, 41)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
+	}
+	e = NewEntryFromInts(33, 44, 55, 66)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "0x24dcdcb8b10bed49ed2c7795972f2bea478750fc9940eeb64f42440fe0db7cbe", mt.RootKey().Hex())
 }
 
-func TestAddClaimsCollision(t *testing.T) {
-
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	claim := newTestClaim("iden3.io", "typespec", []byte("c1"))
-	assert.Nil(t, mt.Add(claim))
-
-	root1 := mt.Root()
-	assert.EqualError(t, mt.Add(claim), ErrNodeAlreadyExists.Error())
-
-	assert.Equal(t, root1.Hex(), mt.Root().Hex())
-}
-
-func TestAddClaimsDifferentOrders(t *testing.T) {
-
+func TestAddEntry16(t *testing.T) {
 	mt1 := newTestingMerkle(t, 140)
 	defer mt1.Storage().Close()
-
-	mt1.Add(newTestClaim("iden3.io", "typespec", []byte("c1")))
-	mt1.Add(newTestClaim("iden3.io2", "typespec2", []byte("c2")))
-	mt1.Add(newTestClaim("iden3.io3", "typespec3", []byte("c3")))
-	mt1.Add(newTestClaim("iden3.io4", "typespec4", []byte("c4")))
-	mt1.Add(newTestClaim("iden3.io5", "typespec5", []byte("c5")))
+	for i := 0; i < 16; i++ {
+		e := NewEntryFromInts(0, int64(i), 0, int64(i))
+		if err := mt1.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
 
 	mt2 := newTestingMerkle(t, 140)
 	defer mt2.Storage().Close()
+	for i := 16 - 1; i >= 0; i-- {
+		e := NewEntryFromInts(0, int64(i), 0, int64(i))
+		if err := mt2.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	mt2.Add(newTestClaim("iden3.io3", "typespec3", []byte("c3")))
-	mt2.Add(newTestClaim("iden3.io2", "typespec2", []byte("c2")))
-	mt2.Add(newTestClaim("iden3.io", "typespec", []byte("c1")))
-	mt2.Add(newTestClaim("iden3.io4", "typespec4", []byte("c4")))
-	mt2.Add(newTestClaim("iden3.io5", "typespec5", []byte("c5")))
-
-	assert.Equal(t, mt1.Root().Hex(), mt2.Root().Hex())
+	assert.Equal(t, mt1.RootKey().Hex(), mt2.RootKey().Hex())
+	assert.Equal(t, "0x0bd26ed069568d6db1032f2761b56167d8b618204c5c1b0dd54bb4a4010fe36e", mt1.RootKey().Hex())
 }
-func TestBenchmarkAddingClaims(t *testing.T) {
 
+func TestEntriesIndex(t *testing.T) {
+	// Two entries with different Index generate different hash index
+	a := NewEntryFromInts(0, 0, 0, 1)
+	b := NewEntryFromInts(0, 0, 0, 2)
+	assert.NotEqual(t, a.HIndex(), b.HIndex())
+
+	// Two entries with same Index generate the same hash index
+	c := NewEntryFromInts(0, 1, 0, 3)
+	d := NewEntryFromInts(0, 2, 0, 3)
+	assert.Equal(t, c.HIndex(), d.HIndex())
+}
+
+func TestGetEntry2(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
-	start := time.Now()
-	numToAdd := 1000
-	for i := 0; i < numToAdd; i++ {
-		claim := newTestClaim("iden3.io"+strconv.Itoa(i), "typespec"+strconv.Itoa(i), []byte("c"+strconv.Itoa(i)))
-		mt.Add(claim)
+	e := NewEntryFromInts(12, 45, 78, 41)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
 	}
-	fmt.Print("time elapsed adding " + strconv.Itoa(numToAdd) + " claims: ")
-	fmt.Println(time.Since(start))
-}
-func BenchmarkAddingClaims(b *testing.B) {
+	e = NewEntryFromInts(33, 44, 55, 66)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
+	}
 
+	data, err := mt.GetDataByIndex(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(NewNodeLeaf(&e).Value()[:], NewNodeLeaf(&Entry{Data: *data}).Value()[:]) {
+		t.Fatal(err)
+	}
+}
+
+func TestGenerateProof1(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	e := NewEntryFromInts(0, int64(42), 0, 0)
+	if err := mt.Add(&e); err != nil {
+		t.Fatal(err)
+	}
+
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000000", hex.EncodeToString(proof.Bytes()))
+}
+
+func TestGenerateProof4(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 4; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := NewEntryFromInts(0, 0, 0, int64(2))
+
+	data, err := mt.GetDataByIndex(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(NewNodeLeaf(&e).Value()[:], NewNodeLeaf(&Entry{Data: *data}).Value()[:]) {
+		t.Fatal(err)
+	}
+
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(proof)
+	assert.Equal(t,
+		"000400000000000000000000000000000000000000000000000000000000000b293a5e97fccfafe457fa22796168cfce0ff8928fbbd7da9d2cf983287ec52f3317f0c4fe7ebb238a42891bce3d7d2cdf288f1a0237f97530611a591c6deae08e17f267633bb0021e42eac5a0662921709310747225d4fcae6b6c63187b0e7a62",
+		hex.EncodeToString(proof.Bytes()))
+}
+
+func TestGenerateProof64(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 64; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := NewEntryFromInts(0, 0, 0, int64(4))
+
+	data, err := mt.GetDataByIndex(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(NewNodeLeaf(&e).Value()[:], NewNodeLeaf(&Entry{Data: *data}).Value()[:]) {
+		t.Fatal(err)
+	}
+
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(proof)
+	assert.Equal(t,
+		"000400000000000000000000000000000000000000000000000000000000000f29b583ac7aa28489977b8383d310b47282010a30d3ef76d31a462845cec334a304574e4a467d11f2c53c3653548ea4c6b4884194c1efb32d96d0f6ef5d70c420301af026598b737db5fad61d12769c1c350e9b395dffc1c42b46ebf888c31bd61b6514b48b7da109066e8a0952ae47f4d7b031a2f690bdcde9e2e84746bc036c",
+		hex.EncodeToString(proof.Bytes()))
+}
+
+func TestVerifyProof1(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 64; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := NewEntryFromInts(0, 0, 0, int64(4))
+
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println()
+	fmt.Println(proof)
+	fmt.Println()
+
+	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal())
+	assert.True(t, verify)
+	assert.Equal(t,
+		"000400000000000000000000000000000000000000000000000000000000000f29b583ac7aa28489977b8383d310b47282010a30d3ef76d31a462845cec334a304574e4a467d11f2c53c3653548ea4c6b4884194c1efb32d96d0f6ef5d70c420301af026598b737db5fad61d12769c1c350e9b395dffc1c42b46ebf888c31bd61b6514b48b7da109066e8a0952ae47f4d7b031a2f690bdcde9e2e84746bc036c",
+		hex.EncodeToString(proof.Bytes()))
+}
+
+func TestVerifyProofEmpty(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 8; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := NewEntryFromInts(0, 0, 0, int64(42))
+
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println()
+	fmt.Println(proof)
+	fmt.Println()
+
+	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal())
+	assert.True(t, verify)
+	assert.Equal(t,
+		"03020000000000000000000000000000000000000000000000000000000000032457c8e7eabebeeef71726e920f7c8b63da2f6b3cd97743ea8fb49eae76e46641ba6d011509e611076162c1f94e6e099a0e9fc0f992282f881324213dd4e3e40198571b3d34d0989950c7dfd52209ceb5d85400d08137d90cbd96d6223f3a18b2d957252161c7a359052be895ef1bf56228e3a2977ad906d1d4b25dfb8aadb1c",
+		hex.EncodeToString(proof.Bytes()))
+}
+
+func TestVerifyProofCases(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 8; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Existence proof
+	e := NewEntryFromInts(0, 0, 0, int64(4))
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, proof.existence, true)
+	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal()))
+	assert.Equal(t,
+		"000400000000000000000000000000000000000000000000000000000000000f2b724aa8a314c8da446586a0636329c4815794b913e4dfa4a15bdf58ef34b507209978f585bd0ac41e12c9089441a52a68baf5b08959f9c68a89d72eb630c48b2d36441b75d605e210812607b31c35be8210e011fb7faf830cf74cd13cb3686f17f0c4fe7ebb238a42891bce3d7d2cdf288f1a0237f97530611a591c6deae08e",
+		hex.EncodeToString(proof.Bytes()))
+
+	// Non-existence proof, empty aux
+	e = NewEntryFromInts(0, 0, 0, int64(12))
+	proof, err = mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, proof.existence, false)
+	assert.True(t, proof.nodeAux == nil)
+	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal()))
+	assert.Equal(t,
+		"010400000000000000000000000000000000000000000000000000000000000b2457c8e7eabebeeef71726e920f7c8b63da2f6b3cd97743ea8fb49eae76e4664293a5e97fccfafe457fa22796168cfce0ff8928fbbd7da9d2cf983287ec52f332fe2cda15e178196dc20854bbe646533657523f56a92930aaed3eb2dc88369ff",
+		hex.EncodeToString(proof.Bytes()))
+
+	// Non-existence proof, diff. node aux
+	e = NewEntryFromInts(0, 0, 0, int64(10))
+	proof, err = mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, proof.existence, false)
+	assert.True(t, proof.nodeAux != nil)
+	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal()))
+	assert.Equal(t,
+		"03020000000000000000000000000000000000000000000000000000000000032457c8e7eabebeeef71726e920f7c8b63da2f6b3cd97743ea8fb49eae76e46641ba6d011509e611076162c1f94e6e099a0e9fc0f992282f881324213dd4e3e40198571b3d34d0989950c7dfd52209ceb5d85400d08137d90cbd96d6223f3a18b2d957252161c7a359052be895ef1bf56228e3a2977ad906d1d4b25dfb8aadb1c",
+		hex.EncodeToString(proof.Bytes()))
+}
+
+func TestVerifyProofFalse(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 8; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Invalid existence proof (node used for verification doesn't
+	// correspond to node in the proof)
+	e := NewEntryFromInts(0, 0, 0, int64(4))
+	proof, err := mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, proof.existence, true)
+	e1 := NewEntryFromInts(0, int64(5), 0, int64(5))
+	assert.True(t, !VerifyProof(mt.RootKey(), proof, e1.HIndex(), e1.HTotal()))
+
+	// Invalid non-existence proof (Non-existence proof, diff. node aux)
+	e = NewEntryFromInts(0, 0, 0, int64(4))
+	proof, err = mt.GenerateProof(e.HIndex())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, proof.existence, true)
+	// Now we change the proof from existence to non-existence, and add e's
+	// data as auxiliary node.
+	proof.existence = false
+	proof.nodeAux = &nodeAux{hIndex: e.HIndex(), hTotal: e.HTotal()}
+	assert.True(t, !VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HTotal()))
+}
+
+func TestMTGraphViz(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 16; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	s := bytes.NewBufferString("")
+	mt.GraphViz(s)
+	fmt.Println(s)
+}
+
+func BenchmarkAddEntry(b *testing.B) {
 	mt := newTestingMerkle(b, 140)
 	defer mt.Storage().Close()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		claim := newTestClaim("iden3.io"+strconv.Itoa(i), "typespec"+strconv.Itoa(i), []byte("c"+strconv.Itoa(i)))
-		if err := mt.Add(claim); err != nil {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
 			b.Fatal(err)
-		}
-	}
-}
-
-func TestGenerateProof(t *testing.T) {
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	mt.Add(newTestClaim("iden3.io_3", "typespec_3", []byte("c3")))
-	mt.Add(newTestClaim("iden3.io_2", "typespec_2", []byte("c2")))
-
-	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
-	assert.Nil(t, mt.Add(claim1))
-
-	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()).hi())
-	assert.Nil(t, err)
-
-	mpHexExpected := "0000000000000000000000000000000000000000000000000000000000000002beb0fd6dcf18d37fe51cf34beacd4c524d9c039ef9da2a27ccd3e7edf662c39c"
-	assert.Equal(t, mpHexExpected, hex.EncodeToString(mp))
-}
-
-func TestCheckProof(t *testing.T) {
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
-	assert.Nil(t, mt.Add(claim1))
-
-	claim3 := newTestClaim("iden3.io_3", "typespec_3", []byte("c3"))
-	assert.Nil(t, mt.Add(claim3))
-
-	mp, err := mt.GenerateProof(parseTestClaimBytes(claim1.Bytes()).hi())
-	assert.Nil(t, err)
-	verified := CheckProof(mt.Root(), mp, claim1.hi(), HashBytes(claim1.Bytes()), mt.NumLevels())
-	assert.True(t, verified)
-
-}
-
-func TestProofOfEmpty(t *testing.T) { // proof of a non revocated leaf, prove that is empty the hi position of the leaf.version+1
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
-	// proof when there is nothing in the tree
-	mp, err := mt.GenerateProof(claim1.hi())
-	assert.Nil(t, err)
-	verified := CheckProof(mt.Root(), mp, claim1.hi(), EmptyNodeValue, mt.NumLevels())
-	assert.True(t, verified)
-
-	// add the first claim
-	assert.Nil(t, mt.Add(claim1))
-
-	// proof when there is only one leaf in the tree
-	claim2 := newTestClaim("iden3.io_2", "typespec_2", []byte("c2"))
-	mp, err = mt.GenerateProof(claim2.hi())
-	assert.Nil(t, err)
-	verified = CheckProof(mt.Root(), mp, claim2.hi(), EmptyNodeValue, mt.NumLevels())
-	assert.True(t, verified)
-
-	// check that the value in Hi is Empty
-	valueInPos, err := mt.GetValueInPos(claim2.hi())
-	assert.Nil(t, err)
-	assert.Equal(t, EmptyNodeValue.Bytes(), valueInPos)
-}
-
-func DifferentNonExistenceProofs(t *testing.T) {
-	mt1 := newTestingMerkle(t, 140)
-	defer mt1.Storage().Close()
-
-	mt2 := newTestingMerkle(t, 140)
-	defer mt2.Storage().Close()
-
-	claim1 := newTestClaim("iden3.io_1", "typespec_1", []byte("c1"))
-	claim2 := newTestClaim("iden3.io_1", "typespec_1", []byte("c2"))
-
-	assert.Nil(t, mt1.Add(claim1))
-	assert.Nil(t, mt2.Add(claim2))
-
-	claim1.Version++
-	claim2.Version++
-
-	np1, err := mt1.GenerateProof(claim1.hi())
-	assert.Nil(t, err)
-	np2, err := mt2.GenerateProof(claim2.hi())
-	assert.Nil(t, err)
-
-	assert.True(t, CheckProof(mt1.Root(), np1, claim1.hi(), EmptyNodeValue, mt1.NumLevels()))
-	assert.True(t, CheckProof(mt2.Root(), np2, claim2.hi(), EmptyNodeValue, mt2.NumLevels()))
-
-	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000010a40617c8c3390736831d00b2003e2133353190f5d3b3a586cf829f0f2009aacc", hex.EncodeToString(np1))
-	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001b274a34a3bd95915fe982a0163e3e0a2f79a371b8307661341f8914e22b313e1", hex.EncodeToString(np2))
-
-}
-
-func TestGetClaimInPos(t *testing.T) {
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	for i := 0; i < 50; i++ {
-		claim := newTestClaim("iden3.io"+strconv.Itoa(i), "typespec"+strconv.Itoa(i), []byte("c"+strconv.Itoa(i)))
-		mt.Add(claim)
-
-	}
-	claim1 := newTestClaim("iden3.io_x", "typespec_x", []byte("cx"))
-	assert.Nil(t, mt.Add(claim1))
-
-	claim := parseTestClaimBytes(claim1.Bytes())
-	claimInPosBytes, err := mt.GetValueInPos(claim.hi())
-	assert.Nil(t, err)
-	assert.Equal(t, claim1.Bytes(), claimInPosBytes)
-
-	// empty value in position
-	claim2 := newTestClaim("iden3.io_y", "typespec_y", []byte("cy"))
-	claimInPosBytes, err = mt.GetValueInPos(claim2.hi())
-	assert.Nil(t, err)
-	assert.Equal(t, EmptyNodeValue[:], claimInPosBytes)
-}
-
-type vt struct {
-	v      []byte
-	idxlen uint32
-}
-
-func (v vt) IndexLength() uint32 {
-	return v.idxlen
-}
-func (v vt) Bytes() []byte {
-	return v.v
-}
-
-func TestVector4(t *testing.T) {
-	mt := newTestingMerkle(t, 4)
-	defer mt.Storage().Close()
-
-	zeros := make([]byte, 32, 32)
-	zeros[31] = 1 // to avoid adding Empty element
-	assert.Nil(t, mt.Add(vt{zeros, uint32(1)}))
-	v := vt{zeros, uint32(2)}
-	assert.Nil(t, mt.Add(v))
-	proof, _ := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
-	assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
-	assert.Equal(t, 4, mt.NumLevels())
-	assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001", hex.EncodeToString(v.Bytes()))
-	assert.Equal(t, "0xc1b95ffbb999a6dd7a472a610a98891ffae95cc973d1d1e21acfdd68db830b51", mt.Root().Hex())
-	assert.Equal(t, "00000000000000000000000000000000000000000000000000000000000000023cf025e4b4fc3ebe57374bf0e0c78ceb0009bdc4466a45174d80e8f508d1a4e3", hex.EncodeToString(proof))
-}
-
-func TestVector140(t *testing.T) {
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	zeros := make([]byte, 32, 32)
-	zeros[31] = 1 // to avoid adding Empty element
-	for i := 1; i < len(zeros)-1; i++ {
-		v := vt{zeros, uint32(i)}
-		assert.Nil(t, mt.Add(v))
-		proof, err := mt.GenerateProof(HashBytes(v.Bytes()[:v.IndexLength()]))
-		assert.Nil(t, err)
-		assert.True(t, CheckProof(mt.Root(), proof, HashBytes(v.Bytes()[:v.IndexLength()]), HashBytes(v.Bytes()), mt.NumLevels()))
-		if i == len(zeros)-2 {
-			assert.Equal(t, 140, mt.NumLevels())
-			assert.Equal(t, uint32(30), v.IndexLength())
-			assert.Equal(t, "0000000000000000000000000000000000000000000000000000000000000001", hex.EncodeToString(v.Bytes()))
-			assert.Equal(t, "0x35f83288adf03bfb61d8d57fab9ed092da79833b58bbdbe9579b636753494ebd", mt.Root().Hex())
-			assert.Equal(t, "000000000000000000000000000000000000000000000000000000000000001f0d1f363115f3333197a009b6674f46bba791308af220ad71515567702b3b44a2b540c1abad0ff81386a78b77e8907a56b7268d24513928ae83497adf4ad93a55e380267ead8305202da0640c1518e144dee87717c732b738fa182c6ef458defd6baf50022b01e3222715d4fca4c198e94536101f6ac314b3d261d3aaa0684395c1db60626e01c39fe4f69418055c2ebd70e0c07b6d9db5c4aed0a11ed2b6a773", hex.EncodeToString(proof))
 		}
 	}
 }

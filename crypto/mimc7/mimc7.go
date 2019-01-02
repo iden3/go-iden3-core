@@ -1,7 +1,6 @@
 package mimc7
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,8 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// MaxFieldVal is the maximum value that a element of a field can have, fitting inside an R Finite Field. This value is equal to 2**253 - 1
-const MaxFieldValHex = "0x1fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 const SEED = "iden3_mimc"
 
 // RElem is a big.Int of maximum 253 bits
@@ -30,17 +27,15 @@ type constantsData struct {
 
 func generateConstantsData() constantsData {
 	var constants constantsData
-	maxFieldBytes, err := hex.DecodeString(MaxFieldValHex[2:])
-	if err != nil {
-		panic(err)
-	}
-	constants.maxFieldVal = new(big.Int).SetBytes(maxFieldBytes)
+
 	constants.seedHash = new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
 	fqR, err := bn128.NewFqR()
 	if err != nil {
 		panic(err)
 	}
 	constants.fqR = fqR
+	// maxFieldVal is the R value of the Finite Field
+	constants.maxFieldVal = constants.fqR.Q
 	constants.nRounds = 91
 	cts, err := getConstants(constants.fqR, SEED, constants.nRounds)
 	if err != nil {
@@ -60,35 +55,35 @@ func BigIntToRElem(a *big.Int) (RElem, error) {
 
 //BigIntsToRElems converts from array of *big.Int to array of RElem
 func BigIntsToRElems(arr []*big.Int) ([]RElem, error) {
-	var o []RElem
+	o := make([]RElem, len(arr))
 	for i, a := range arr {
 		e, err := BigIntToRElem(a)
 		if err != nil {
 			return o, fmt.Errorf("element in position %v don't fits in Finite Field over R", i)
 		}
-		o = append(o, e)
+		o[i] = e
 	}
 	return o, nil
 }
 
 // RElemsToBigInts converts from array of RElem to array of *big.Int
 func RElemsToBigInts(arr []RElem) []*big.Int {
-	var o []*big.Int
-	for _, a := range arr {
-		o = append(o, a)
+	o := make([]*big.Int, len(arr))
+	for i, a := range arr {
+		o[i] = a
 	}
 	return o
 }
 
 func getConstants(fqR fields.Fq, seed string, nRounds int) ([]*big.Int, error) {
-	var cts []*big.Int
-	cts = append(cts, big.NewInt(int64(0)))
+	cts := make([]*big.Int, nRounds)
+	cts[0] = big.NewInt(int64(0))
 	c := new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
 	for i := 1; i < nRounds; i++ {
 		c = new(big.Int).SetBytes(crypto.Keccak256(c.Bytes()))
 
 		n := fqR.Affine(c)
-		cts = append(cts, n)
+		cts[i] = n
 	}
 	return cts, nil
 }

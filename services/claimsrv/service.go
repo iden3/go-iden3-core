@@ -46,7 +46,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Addre
 	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
 	// open the MerkleTree of the user
-	userMT, err := merkletree.New(stoUserID, 140)
+	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
 	if err != nil {
 		return core.SetRootClaim{}, err
 	}
@@ -64,7 +64,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Addre
 	}
 	// check signature with idaddr
 	// whee data signed is idaddr+root+timestamp
-	timestampBytes, err := core.Uint64ToEthBytes(timestamp)
+	timestampBytes, err := utils.Uint64ToEthBytes(timestamp)
 	if err != nil {
 		return core.SetRootClaim{}, err
 	}
@@ -378,7 +378,7 @@ func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (P
 
 	// sign root + date
 	dateUint64 := uint64(time.Now().Unix())
-	dateBytes, err := core.Uint64ToEthBytes(dateUint64)
+	dateBytes, err := utils.Uint64ToEthBytes(dateUint64)
 	if err != nil {
 		return ProofOfClaim{}, err
 	}
@@ -428,7 +428,7 @@ func (cs *ServiceImpl) GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim,
 
 	// sign root + date
 	dateUint64 := uint64(time.Now().Unix())
-	dateBytes, err := core.Uint64ToEthBytes(dateUint64)
+	dateBytes, err := utils.Uint64ToEthBytes(dateUint64)
 	if err != nil {
 		return ProofOfRelayClaim{}, err
 	}
@@ -472,7 +472,7 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 	}
 
 	// get claim with version+1 from the merkletree
-	nextVersionBytes, err := core.Uint32ToEthBytes(nextVersion)
+	nextVersionBytes, err := utils.Uint32ToEthBytes(nextVersion)
 	if err != nil {
 		return ProofOfTreeLeaf{}, err
 	}
@@ -510,11 +510,11 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi merkletree.Hash) (uint32, erro
 		}
 		// get version bytes
 		versionBytes := b[60:64]
-		version = core.EthBytesToUint32(versionBytes)
+		version = utils.EthBytesToUint32(versionBytes)
 		version++
 
 		// get claim with version+1 from the merkletree
-		versionBytes, err = core.Uint32ToEthBytes(version)
+		versionBytes, err = utils.Uint32ToEthBytes(version)
 		if err != nil {
 			return 0, err
 		}

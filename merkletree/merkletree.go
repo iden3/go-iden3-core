@@ -2,98 +2,264 @@ package merkletree
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"io"
 	"sync"
 
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/db"
 )
 
-const (
-	// emptyNodeType indicates the type of an EmptyNodeValue Node
-	EmptyNodeType = 00
-	// normalNodeType indicates the type of a middle Node
-	normalNodeType = 01
-	// finalNodeType indicates the type of middle Node that is in an optimized branch, then in the value contains the value of the final leaf node of that branch
-	finalNodeType = 02
-	// valueNodeType indicates the type of a value Node
-	valueNodeType = 03
-	// rootNodeType indicates the type of a root Node
-	rootNodeType = 04
-)
-
-// EmptyNodeValue is a [32]byte EmptyNodeValue array, all to zero
-var (
-	ErrNodeAlreadyExists = errors.New("node already exists")
-	rootNodeValue        = HashBytes([]byte("root"))
-	EmptyNodeValue       = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-)
-
-// Hash used in this tree, is the [32]byte keccak()
-type Hash [32]byte
-
-// Value is the interface of a generic claim, a key value object stored in the leveldb
+// TODO: Remove
+// Value is a placeholder interface of a generic claim, a key value object
+// stored in the leveldb, for the transition to the new Merklee Tree.
 type Value interface {
 	IndexLength() uint32 // returns the index length value
-	Bytes() []byte // returns the value in byte array representation
+	Bytes() []byte       // returns the value in byte array representation
 }
 
-//MerkleTree struct with the main elements of the Merkle Tree
+// ElemBytes is the basic type used to store data in the MT.  ElemBytes
+// corresponds to the serialization of an element from mimc7.
+type ElemBytes [ElemBytesLen]byte
+
+// String returns the last 4 bytes of ElemBytes in hex.
+func (e *ElemBytes) String() string {
+	return hex.EncodeToString(e[ElemBytesLen-4:])
+}
+
+// ElemsBytesToBytes serializes an array of ElemBytes to []byte.
+func ElemsBytesToBytes(es []ElemBytes) []byte {
+	bs := make([]byte, len(es)*ElemBytesLen)
+	for i := 0; i < len(es); i++ {
+		copy(bs[i*ElemBytesLen:(i+1)*ElemBytesLen], es[i][:])
+	}
+	return bs
+}
+
+// Index is the type used to represent the index of an entry in the MT,
+// used to find the path from the root to the leaf that contains such entry.
+type Index [IndexLen]ElemBytes
+
+// Data is the type used to represent the data stored in an entry of the MT.
+// It consists of 4 elements: e1, e2, e3, e4;
+// where v = [e1,e2], index = [e3,e4].
+type Data [DataLen]ElemBytes
+
+const (
+	// ElemBytesLen is the length in bytes of each element used for storing
+	// data and hashing.
+	ElemBytesLen = 32
+	// IndexLen indicates how many elements are used for the index.
+	IndexLen = 2
+	// DataLen indicates how many elements are used for the data.
+	DataLen = 4
+)
+
+var (
+	// ErrNodeAlreadyExists is used when a node already exists.
+	ErrNodeAlreadyExists = errors.New("node already exists")
+	// ErrEntryIndexNotFound is used when no entry is found for an index.
+	ErrEntryIndexNotFound = errors.New("node index not found in the DB")
+	// ErrNodeDataBadSize is used when the data of a node has an incorrect
+	// size and can't be parsed.
+	ErrNodeDataBadSize = errors.New("node data has incorrect size in the DB")
+	// ErrReachedMaxLevel is used when a traversal of the MT reaches the
+	// maximum level.
+	ErrReachedMaxLevel = errors.New("reached maximum level of the merkle tree")
+	// ErrInvalidNodeFound is used when an invalid node is found and can't
+	// be parsed.
+	ErrInvalidNodeFound = errors.New("found an invalid node in the DB")
+	// ErrInvalidProofBytes is used when a serialized proof is invalid.
+	ErrInvalidProofBytes = errors.New("the serialized proof is invalid")
+	// HashZero is a hash value of zeros, and is the key of an empty node.
+	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
+	ElemBytesOne = ElemBytes{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+)
+
+// Entry is the generic type that is stored in the MT.
+type Entry struct {
+	Data   Data
+	hIndex *Hash
+	hTotal *Hash
+}
+
+// HIndex calculates the hash of the Index of the entry, used to find the path
+// from the root to the leaf in the MT.
+func (e *Entry) HIndex() *Hash {
+	if e.hIndex == nil { // Cache the hIndex.
+		//e.hIndex = HashElems(e.Index()[:]...)
+		e.hIndex = HashElems(e.Data[2:]...)
+	}
+	return e.hIndex
+}
+
+func (e *Entry) HTotal() *Hash {
+	if e.hTotal == nil { // Cache the hIndex.
+		hv := HashElems(e.Data[:2]...)
+		e.hTotal = HashElems(ElemBytes(*hv), ElemBytes(*e.HIndex()))
+	}
+	return e.hTotal
+}
+
+//MerkleTree is the struct with the main elements of the Merkle Tree
 type MerkleTree struct {
 	sync.RWMutex
-	storage   db.Storage
-	root      Hash
-	numLevels int // Height of the Merkle Tree, number of levels
+	// storage is the backend database.
+	storage db.Storage
+	// rootKey is the key of the root node.
+	rootKey *Hash
+	// maxLevels is the maximum number of levels of the Merkle Tree.
+	maxLevels int
 }
 
-// New generates a new Merkle Tree
-func New(storage db.Storage, numLevels int) (*MerkleTree, error) {
-	var mt MerkleTree
-	mt.storage = storage
-	mt.numLevels = numLevels
-	var err error
-	_, _, rootHash, err := mt.dbGet(rootNodeValue)
-	if err != nil {
-		mt.root = EmptyNodeValue
-		tx, err := mt.storage.NewTx()
-		if err != nil {
-			return nil, err
-		}
-		mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
-		if err = tx.Commit(); err != nil {
-			return nil, err
-		}
-		// return &mt
-	}
-	copy(mt.root[:], rootHash)
+// NewMerkleTree generates a new Merkle Tree
+func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
+	mt := MerkleTree{storage: storage, maxLevels: maxLevels}
+	nodeRoot := NewNodeEmpty()
+	k, _ := nodeRoot.Key(), nodeRoot.Value()
+	mt.rootKey = k
 	return &mt, nil
 }
 
-// Storage returns the merkletree.Storage
+// Storage returns the MT storage
 func (mt *MerkleTree) Storage() db.Storage {
 	return mt.storage
 }
 
-// Root returns the merkletree.Root
-func (mt *MerkleTree) Root() Hash {
-	return mt.root
+// RootKey returns the MT root node key
+func (mt *MerkleTree) RootKey() *Hash {
+	return mt.rootKey
 }
 
-// NumLevels returns the merkletree.NumLevels
-func (mt *MerkleTree) NumLevels() int {
-	return mt.numLevels
+// MaxLevels returns the MT maximum level
+func (mt *MerkleTree) MaxLevels() int {
+	return mt.maxLevels
 }
 
-// Add adds the claim to the MT
-func (mt *MerkleTree) Add(v Value) error {
+// GetDataByIndex returns the data from the MT in the position of the hash of
+// the index (hIndex)
+func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
+	path := getPath(mt.maxLevels, hIndex)
+	nextKey := mt.rootKey
+	for lvl := 0; lvl < mt.maxLevels; lvl++ {
+		n, err := mt.GetNode(nextKey)
+		if err != nil {
+			return nil, err
+		}
+		switch n.Type {
+		case NodeTypeEmpty:
+			return nil, ErrEntryIndexNotFound
+		case NodeTypeLeaf:
+			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+				return &n.Entry.Data, nil
+			} else {
+				return nil, ErrEntryIndexNotFound
+			}
+		case NodeTypeMiddle:
+			if path[lvl] {
+				nextKey = n.ChildR
+			} else {
+				nextKey = n.ChildL
+			}
+		default:
+			return nil, ErrInvalidNodeFound
+		}
+	}
+	return nil, ErrEntryIndexNotFound
+}
+
+// pushLeaf recursively pushes an existing oldLeaf down until its path diverges
+// from newLeaf, at which point both leafs are stored, all while updating the
+// path.
+func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
+	lvl int, pathNewLeaf []bool, pathOldLeaf []bool) (*Hash, error) {
+	if lvl > mt.maxLevels-2 {
+		return nil, ErrReachedMaxLevel
+	}
+	var newNodeMiddle *Node
+	if pathNewLeaf[lvl] == pathOldLeaf[lvl] { // We need to go deeper!
+		nextKey, err := mt.pushLeaf(tx, newLeaf, oldLeaf, lvl+1, pathNewLeaf, pathOldLeaf)
+		if err != nil {
+			return nil, err
+		}
+		if pathNewLeaf[lvl] {
+			newNodeMiddle = NewNodeMiddle(&HashZero, nextKey) // go right
+		} else {
+			newNodeMiddle = NewNodeMiddle(nextKey, &HashZero) // go left
+		}
+		return mt.AddNode(tx, newNodeMiddle)
+	} else {
+		if pathNewLeaf[lvl] {
+			newNodeMiddle = NewNodeMiddle(oldLeaf.Key(), newLeaf.Key())
+		} else {
+			newNodeMiddle = NewNodeMiddle(newLeaf.Key(), oldLeaf.Key())
+		}
+		// We can add newLeaf now.  We don't need to add oldLeaf because it's already in the tree.
+		_, err := mt.AddNode(tx, newLeaf)
+		if err != nil {
+			return nil, err
+		}
+		return mt.AddNode(tx, newNodeMiddle)
+	}
+}
+
+// addLeaf recursively adds a newLeaf in the MT while updating the path.
+func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
+	lvl int, path []bool) (*Hash, error) {
 	var err error
-	var tx db.Tx
+	var nextKey *Hash
+	if lvl > mt.maxLevels-1 {
+		return nil, ErrReachedMaxLevel
+	}
+	n, err := mt.GetNode(key)
+	if err != nil {
+		return nil, err
+	}
+	switch n.Type {
+	case NodeTypeEmpty:
+		// We can add newLeaf now
+		return mt.AddNode(tx, newLeaf)
+	case NodeTypeLeaf:
+		// TODO: delete old node n???  Make this optional???
+		hIndex := n.Entry.HIndex()
+		pathOldLeaf := getPath(mt.maxLevels, hIndex)
+		// We need to push newLeaf down until its path diverges from n's path
+		return mt.pushLeaf(tx, newLeaf, n, lvl, path, pathOldLeaf)
+	case NodeTypeMiddle:
+		// We need to go deeper, continue traversing the tree, left or right depending on path
+		var newNodeMiddle *Node
+		if path[lvl] {
+			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildR, lvl+1, path) // go right
+			newNodeMiddle = NewNodeMiddle(n.ChildL, nextKey)
+		} else {
+			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildL, lvl+1, path) // go left
+			newNodeMiddle = NewNodeMiddle(nextKey, n.ChildR)
+		}
+		if err != nil {
+			return nil, err
+		}
+		// TODO: delete old node n???  Make this optional???
+		// Update the node to reflect the modified child
+		return mt.AddNode(tx, newNodeMiddle)
+	default:
+		return nil, ErrInvalidNodeFound
+	}
+}
 
-	tx, err = mt.storage.NewTx()
+// Add adds the Entry to the MerkleTree
+func (mt *MerkleTree) Add(e *Entry) error {
+	// First of all, verfy that the ElemBytes are valid and fit inside the
+	// mimc7 field.
+	_, err := ElemsBytesToRElems(e.Data[:]...)
 	if err != nil {
 		return err
 	}
-
+	tx, err := mt.storage.NewTx()
+	if err != nil {
+		return err
+	}
 	mt.Lock()
 	defer func() {
 		if err == nil {
@@ -104,321 +270,277 @@ func (mt *MerkleTree) Add(v Value) error {
 		mt.Unlock()
 	}()
 
-	// add the leaf that we are adding
-	mt.dbInsert(tx, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
+	newNodeLeaf := NewNodeLeaf(e)
+	hIndex := e.HIndex()
+	path := getPath(mt.maxLevels, hIndex)
 
-	hi := HashBytes(v.Bytes()[:v.IndexLength()])
-	path := getPath(mt.numLevels, hi)
-
-	nodeHash := mt.root
-	var siblings []Hash
-	for i := mt.numLevels - 2; i >= 0; i-- {
-		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
-		if err != nil {
-			return err
-		}
-		if nodeType == byte(finalNodeType) {
-			/*
-				if node is Final Tree, let's:
-					- search until where the path of each leafHash is shared --> posDiff
-					- in that layer, make two childs, one for each Final Tree
-						- one for the already existing leaf (from the old Final Tree)
-						- another for the new claim added
-			*/
-			hiChild := HashBytes(nodeBytes[:indexLength])
-			pathChild := getPath(mt.numLevels, hiChild)
-			posDiff := comparePaths(pathChild, path)
-			if posDiff == -1 {
-				return ErrNodeAlreadyExists
-			}
-			finalNode1Hash := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
-			mt.dbInsert(tx, finalNode1Hash, finalNodeType, indexLength, nodeBytes)
-			finalNode2Hash := calcHashFromLeafAndLevel(posDiff, path, HashBytes(v.Bytes()))
-			mt.dbInsert(tx, finalNode2Hash, finalNodeType, v.IndexLength(), v.Bytes())
-			// now the parent
-			var parentNode treeNode
-			if path[posDiff] {
-				parentNode = treeNode{
-					ChildL: finalNode1Hash,
-					ChildR: finalNode2Hash,
-				}
-			} else {
-				parentNode = treeNode{
-					ChildL: finalNode2Hash,
-					ChildR: finalNode1Hash,
-				}
-			}
-			siblings = append(siblings, getEmptiesBetweenIAndPosHash(mt, i, posDiff+1)...)
-			if mt.root, err = mt.replaceLeaf(tx, siblings, path[posDiff+1:], parentNode.Ht(), normalNodeType, 0, parentNode.Bytes()); err != nil {
-				return err
-			}
-			mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
-			return nil
-		}
-		node := parseNodeBytes(nodeBytes)
-		var sibling Hash
-		if !path[i] {
-			nodeHash = node.ChildL
-			sibling = node.ChildR
-		} else {
-			nodeHash = node.ChildR
-			sibling = node.ChildL
-		}
-		siblings = append(siblings, sibling)
-
-		if bytes.Equal(nodeHash[:], EmptyNodeValue[:]) {
-			// if the node is EmptyNodeValue, the claim will go directly at that height, as a Final Node
-			if i == mt.numLevels-2 && bytes.Equal(siblings[len(siblings)-1][:], EmptyNodeValue[:]) {
-				// if the pt node is the unique in the tree, just put it into the root node
-				// this means to be in i==mt.NumLevels-2 && nodeHash==EmptyNodeValue
-				finalNodeHash := calcHashFromLeafAndLevel(i+1, path, HashBytes(v.Bytes()))
-				mt.dbInsert(tx, finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes())
-				mt.root = finalNodeHash
-				mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
-				return nil
-			}
-			finalNodeHash := calcHashFromLeafAndLevel(i, path, HashBytes(v.Bytes()))
-			if mt.root, err = mt.replaceLeaf(tx, siblings, path[i:], finalNodeHash, finalNodeType, v.IndexLength(), v.Bytes()); err != nil {
-				return err
-			}
-			mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
-			return nil
-		}
+	newRootKey, err := mt.addLeaf(tx, newNodeLeaf, mt.rootKey, 0, path)
+	if err != nil {
+		return err
 	}
-
-	mt.root, err = mt.replaceLeaf(tx, siblings, path, HashBytes(v.Bytes()), valueNodeType, v.IndexLength(), v.Bytes())
-	mt.dbInsert(tx, rootNodeValue, rootNodeType, 0, mt.root[:])
+	mt.rootKey = newRootKey
 	return nil
 }
 
-// GenerateProof generates the Merkle Proof from a given claimHash for the current root
-func (mt *MerkleTree) GenerateProof(hi Hash) ([]byte, error) {
-	mt.RLock()
-	defer mt.RUnlock()
+// graphViz is a helper recursive function to output the tree in GraphViz syntax.
+func (mt *MerkleTree) graphViz(w io.Writer, key *Hash, cnt *int) error {
+	n, err := mt.GetNode(key)
+	if err != nil {
+		return err
+	}
+	switch n.Type {
+	case NodeTypeEmpty:
+	case NodeTypeLeaf:
+		fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
+	case NodeTypeMiddle:
+		lr := [2]string{n.ChildL.String(), n.ChildR.String()}
+		for i, _ := range lr {
+			if lr[i] == "00000000" {
+				lr[i] = fmt.Sprintf("empty%v", *cnt)
+				fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
+				(*cnt)++
+			}
+		}
+		fmt.Fprintf(w, "\"%v\" -> {\"%v\" \"%v\"}\n", n.Key(), lr[0], lr[1])
+		mt.graphViz(w, n.ChildL, cnt)
+		mt.graphViz(w, n.ChildR, cnt)
+	default:
+		return ErrInvalidNodeFound
+	}
+	return nil
+}
 
-	var empties [32]byte
+// GraphViz generates a string GraphViz representation of the tree and writes
+// it to w.
+func (mt *MerkleTree) GraphViz(w io.Writer) error {
+	fmt.Fprintf(w, `digraph hierarchy {
+node [fontname=Monospace,fontsize=10,shape=box]
+`)
+	cnt := 0
+	err := mt.graphViz(w, mt.RootKey(), &cnt)
+	fmt.Fprintf(w, "}")
+	return err
+}
 
-	path := getPath(mt.numLevels, hi)
-	var siblings []Hash
-	nodeHash := mt.root
+// nodeAux contains the auxiliary node used in a non-existence proof.
+type nodeAux struct {
+	//key    *Hash
+	hIndex *Hash
+	hTotal *Hash
+}
 
-	for level := 0; level < mt.numLevels-1; level++ {
-		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
+// proofFlagsLen is the byte length of the flags in the proof header (first 32
+// bytes).
+const proofFlagsLen = 2
+
+// Proof defines the required elements for a MT proof of existence or non-existence.
+type Proof struct {
+	// existence indicates wether this is a proof of existence or non-existence.
+	existence bool
+	// depth indicates how deep in the tree the proof goes.
+	depth uint
+	// notempties is a bitmap of non-empty siblings found in siblings.
+	notempties [ElemBytesLen - proofFlagsLen]byte
+	// siblings is a list of non-empty sibling keys.
+	siblings []*Hash
+	nodeAux  *nodeAux
+}
+
+// NewProofFromBytes parses a byte array into a Proof.
+func NewProofFromBytes(bs []byte) (*Proof, error) {
+	if len(bs) < ElemBytesLen {
+		return nil, ErrInvalidProofBytes
+	}
+	p := &Proof{}
+	if (bs[0] & 0x01) == 0 {
+		p.existence = true
+	}
+	p.depth = uint(bs[1])
+	copy(p.notempties[:], bs[proofFlagsLen:ElemBytesLen])
+	siblingBytes := bs[ElemBytesLen:]
+	sibIdx := 0
+	for i := uint(0); i < p.depth; i++ {
+		if testBitBigEndian(p.notempties[:], i) {
+			if len(siblingBytes) < (sibIdx+1)*ElemBytesLen {
+				return nil, ErrInvalidProofBytes
+			}
+			var sib Hash
+			copy(sib[:], siblingBytes[sibIdx*ElemBytesLen:(sibIdx+1)*ElemBytesLen])
+			p.siblings = append(p.siblings, &sib)
+			sibIdx++
+		}
+	}
+
+	if p.existence && ((bs[0] & 0x02) != 0) {
+		p.nodeAux = &nodeAux{hIndex: &Hash{}, hTotal: &Hash{}}
+		nodeAuxBytes := siblingBytes[len(p.siblings)*ElemBytesLen:]
+		if len(nodeAuxBytes) != 2*ElemBytesLen {
+			return nil, ErrInvalidProofBytes
+		}
+		copy(p.nodeAux.hIndex[:], nodeAuxBytes[:ElemBytesLen])
+		copy(p.nodeAux.hTotal[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
+	}
+	return p, nil
+}
+
+// Bytes serializes a Proof into a byte array.
+func (p *Proof) Bytes() []byte {
+	bsLen := proofFlagsLen + len(p.notempties) + ElemBytesLen*len(p.siblings)
+	if p.nodeAux != nil {
+		bsLen += 2 * ElemBytesLen
+	}
+	bs := make([]byte, bsLen)
+
+	if !p.existence {
+		bs[0] |= 0x01
+	}
+	bs[1] = byte(p.depth)
+	copy(bs[proofFlagsLen:len(p.notempties)+proofFlagsLen], p.notempties[:])
+	siblingsBytes := bs[len(p.notempties)+proofFlagsLen:]
+	for i, k := range p.siblings {
+		copy(siblingsBytes[i*ElemBytesLen:(i+1)*ElemBytesLen], k[:])
+	}
+	if p.nodeAux != nil {
+		bs[0] |= 0x02
+		copy(bs[len(bs)-2*ElemBytesLen:], p.nodeAux.hIndex[:])
+		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hTotal[:])
+	}
+	return bs
+}
+
+// String outputs a multiline string representation of the Proof.
+func (p *Proof) String() string {
+	buf := bytes.NewBufferString("Proof:")
+	fmt.Fprintf(buf, "\texistence: %v\n", p.existence)
+	fmt.Fprintf(buf, "\tdepth: %v\n", p.depth)
+	fmt.Fprintf(buf, "\tnotempties: ")
+	for i := uint(0); i < p.depth; i++ {
+		if testBitBigEndian(p.notempties[:], i) {
+			fmt.Fprintf(buf, "1")
+		} else {
+			fmt.Fprintf(buf, "0")
+		}
+	}
+	fmt.Fprintf(buf, "\n")
+	fmt.Fprintf(buf, "\tsiblings: ")
+	sibIdx := 0
+	for i := uint(0); i < p.depth; i++ {
+		if testBitBigEndian(p.notempties[:], i) {
+			fmt.Fprintf(buf, "%v ", p.siblings[sibIdx])
+			sibIdx++
+		} else {
+			fmt.Fprintf(buf, "0 ")
+		}
+	}
+	fmt.Fprintf(buf, "\n")
+	if p.nodeAux != nil {
+		fmt.Fprintf(buf, "\tnode aux: hi: %v, ht: %v\n", p.nodeAux.hIndex, p.nodeAux.hTotal)
+	}
+	return buf.String()
+}
+
+// GenerateProof generates the proof of existence (or non-existence) of an
+// Entry's hash Index for a Merkle Tree given the root.
+func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
+	p := &Proof{}
+	var siblingKey *Hash
+
+	path := getPath(mt.maxLevels, hIndex)
+	nextKey := mt.rootKey
+	for p.depth = 0; p.depth < uint(mt.maxLevels); p.depth++ {
+		n, err := mt.GetNode(nextKey)
 		if err != nil {
 			return nil, err
 		}
-		if nodeType == byte(finalNodeType) {
-			realValueInPos, err := mt.GetValueInPos(hi)
-			if err != nil {
-				return nil, err
+		switch n.Type {
+		case NodeTypeEmpty:
+			return p, nil
+		case NodeTypeLeaf:
+			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+				p.existence = true
+				return p, nil
+			} else {
+				// We found a leaf whose entry didn't match hIndex
+				p.nodeAux = &nodeAux{hIndex: n.Entry.HIndex(), hTotal: n.Entry.HTotal()}
+				return p, nil
 			}
-			// TODO valid for all levels where this condition happens
-			if bytes.Equal(realValueInPos[:], EmptyNodeValue[:]) {
-				// go until the path is different, then get the nodes between this FinalNode and the node in the diffPath, they will be the siblings of the merkle proof
-				leafHi := HashBytes(nodeBytes[:indexLength]) // hi of element that was in the end of the branch (the finalNode)
-				pathChild := getPath(mt.numLevels, leafHi)
-
-				// get the position where the path is different
-				posDiff := comparePaths(pathChild, path)
-				if posDiff == -1 {
-					return nil, ErrNodeAlreadyExists
-				}
-
-				if posDiff != mt.NumLevels()-1-level {
-					sibling := calcHashFromLeafAndLevel(posDiff, pathChild, HashBytes(nodeBytes))
-					setbitmap(empties[:], uint(mt.NumLevels()-2-posDiff))
-					siblings = append([]Hash{sibling}, siblings...)
-				}
-
+		case NodeTypeMiddle:
+			if path[p.depth] {
+				nextKey = n.ChildR
+				siblingKey = n.ChildL
+			} else {
+				nextKey = n.ChildL
+				siblingKey = n.ChildR
 			}
-			break
+		default:
+			return nil, ErrInvalidNodeFound
 		}
-		node := parseNodeBytes(nodeBytes)
-
-		var sibling Hash
-		if !path[mt.numLevels-level-2] {
-			nodeHash = node.ChildL
-			sibling = node.ChildR
-		} else {
-			nodeHash = node.ChildR
-			sibling = node.ChildL
-		}
-		if !bytes.Equal(sibling[:], EmptyNodeValue[:]) {
-			setbitmap(empties[:], uint(level))
-			siblings = append([]Hash{sibling}, siblings...)
+		if !bytes.Equal(siblingKey[:], HashZero[:]) {
+			setBitBigEndian(p.notempties[:], uint(p.depth))
+			p.siblings = append(p.siblings, siblingKey)
 		}
 	}
-	// merge empties and siblings
-	var mp []byte
-	mp = append(mp, empties[:]...)
-	for k := range siblings {
-		mp = append(mp, siblings[k][:]...)
-	}
-	return mp, nil
+	return nil, ErrEntryIndexNotFound
 }
 
-// GetValueInPos returns the merkletree value in the position of the Hash of the Index (Hi)
-func (mt *MerkleTree) GetValueInPos(hi Hash) ([]byte, error) {
-	mt.RLock()
-	defer mt.RUnlock()
-
-	path := getPath(mt.numLevels, hi)
-	nodeHash := mt.root
-	for i := mt.numLevels - 2; i >= 0; i-- {
-		nodeType, indexLength, nodeBytes, err := mt.dbGet(nodeHash)
-		if err != nil {
-			return nodeBytes, err
-		}
-		if nodeType == byte(finalNodeType) {
-			// check if nodeBytes path is different of hi
-			index := nodeBytes[:indexLength]
-			hi := HashBytes(index)
-			nodePath := getPath(mt.numLevels, hi)
-			posDiff := comparePaths(path, nodePath)
-			// if is different, return an EmptyNodeValue, else return the nodeBytes
-			if posDiff != -1 {
-				return EmptyNodeValue[:], nil
-			}
-			return nodeBytes, nil
-		}
-		node := parseNodeBytes(nodeBytes)
-		if !path[i] {
-			nodeHash = node.ChildL
+// VerifyProof verifies the Merkle Proof for the entry and root.
+func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hTotal *Hash) bool {
+	sibIdx := len(proof.siblings) - 1
+	var midKey *Hash
+	if proof.existence {
+		midKey = LeafKey(hIndex, hTotal)
+	} else {
+		if proof.nodeAux == nil {
+			midKey = &HashZero
 		} else {
-			nodeHash = node.ChildR
+			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
+				return false
+			}
+			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hTotal)
 		}
 	}
-	_, _, valueBytes, err := mt.dbGet(nodeHash)
+	path := getPath(int(proof.depth), hIndex)
+	var siblingKey *Hash
+	for lvl := int(proof.depth) - 1; lvl >= 0; lvl-- {
+		if testBitBigEndian(proof.notempties[:], uint(lvl)) {
+			siblingKey = proof.siblings[sibIdx]
+			sibIdx--
+		} else {
+			siblingKey = &HashZero
+		}
+		if path[lvl] {
+			midKey = NewNodeMiddle(siblingKey, midKey).Key()
+		} else {
+			midKey = NewNodeMiddle(midKey, siblingKey).Key()
+		}
+	}
+	return bytes.Equal(rootKey[:], midKey[:])
+}
+
+// GetNode gets a node by key from the MT.  Empty nodes are not stored in the
+// tree; they are all the same and assumed to always exist.
+func (mt *MerkleTree) GetNode(key *Hash) (*Node, error) {
+	if bytes.Equal(key[:], HashZero[:]) {
+		return NewNodeEmpty(), nil
+	}
+	nBytes, err := mt.storage.Get(key[:])
 	if err != nil {
-		return valueBytes, err
+		return nil, err
 	}
-	return valueBytes, nil
+	return NewNodeFromBytes(nBytes)
 }
 
-// Get retreives a value from a key in the mt.Lvl
-func (mt *MerkleTree) dbGet(key Hash) (byte, uint32, []byte, error) {
-
-	// if key is EMPTY node
-	if bytes.Equal(key[:], EmptyNodeValue[:]) {
-		return 0, 0, EmptyNodeValue[:], nil
+// AddNode adds a node into the MT.  Empty nodes are not stored in the tree;
+// they are all the same and assumed to always exist.
+func (mt *MerkleTree) AddNode(tx db.Tx, n *Node) (*Hash, error) {
+	if n.Type == NodeTypeEmpty {
+		return n.Key(), nil
 	}
-
-	value, err := mt.storage.Get(key[:])
-	if err != nil {
-		return 0, 0, EmptyNodeValue[:], err
+	k, v := n.Key(), n.Value()
+	// Check that the node key doesn't already exist
+	if _, err := tx.Get(k[:]); err == nil {
+		return nil, ErrNodeAlreadyExists
 	}
-
-	// get nodetype of the first byte of the value
-	nodeType := value[0]
-	indexLength := common3.BytesToUint32(value[1:5])
-	nodeBytes := value[5:]
-	return nodeType, indexLength, nodeBytes, err
-}
-
-// Insert saves a key:value into the mt.Lvl
-func (mt *MerkleTree) dbInsert(tx db.Tx, stKey Hash, nodeType byte, indexLength uint32, nodeBytes []byte) {
-
-	// add nodetype at the first byte of the value
-	var stValue []byte
-	stValue = append(stValue, nodeType)
-	indexLengthBytes := common3.Uint32ToBytes(indexLength)
-	stValue = append(stValue, indexLengthBytes[:]...)
-	stValue = append(stValue, nodeBytes[:]...)
-
-	tx.Put(stKey[:], stValue[:])
-}
-
-func calcHashFromLeafAndLevel(untilLevel int, path []bool, leafHash Hash) Hash {
-	nodeCurrLevel := leafHash
-	for i := 0; i < untilLevel; i++ {
-		if path[i] {
-			node := treeNode{
-				ChildL: EmptyNodeValue,
-				ChildR: nodeCurrLevel,
-			}
-			nodeCurrLevel = node.Ht()
-		} else {
-			node := treeNode{
-				ChildL: nodeCurrLevel,
-				ChildR: EmptyNodeValue,
-			}
-			nodeCurrLevel = node.Ht()
-		}
-	}
-	return nodeCurrLevel
-}
-
-func (mt *MerkleTree) replaceLeaf(tx db.Tx, siblings []Hash, path []bool, newLeafHash Hash, nodetype byte, indexLength uint32, newLeafValue []byte) (Hash, error) {
-	// add the new claim
-	mt.dbInsert(tx, newLeafHash, nodetype, indexLength, newLeafValue)
-	currNode := newLeafHash
-	// here the path is only the path[posDiff+1]
-	for i := 0; i < len(siblings); i++ {
-		if !path[i] {
-			node := treeNode{
-				ChildL: currNode,
-				ChildR: siblings[len(siblings)-1-i],
-			}
-			mt.dbInsert(tx, node.Ht(), normalNodeType, 0, node.Bytes())
-			currNode = node.Ht()
-		} else {
-
-			node := treeNode{
-				ChildL: siblings[len(siblings)-1-i],
-				ChildR: currNode,
-			}
-			mt.dbInsert(tx, node.Ht(), normalNodeType, 0, node.Bytes())
-			currNode = node.Ht()
-		}
-	}
-
-	return currNode, nil // currNode = root
-}
-
-// CheckProof validates the Merkle Proof for the claimHash and root
-func CheckProof(root Hash, proof []byte, hi Hash, ht Hash, numLevels int) bool {
-	var empties [32]byte
-	copy(empties[:], proof[:len(empties)])
-	hashLen := len(EmptyNodeValue)
-
-	var siblings []Hash
-	for i := len(empties); i < len(proof); i += hashLen {
-		var siblingHash Hash
-		copy(siblingHash[:], proof[i:i+hashLen])
-		siblings = append(siblings, siblingHash)
-	}
-
-	path := getPath(numLevels, hi)
-	nodeHash := ht
-	siblingUsedPos := 0
-
-	for level := numLevels - 2; level >= 0; level-- {
-		var sibling Hash
-		if testbitmap(empties[:], uint(level)) {
-			sibling = siblings[siblingUsedPos]
-			siblingUsedPos++
-		} else {
-			sibling = EmptyNodeValue
-		}
-		// calculate the nodeHash with the current nodeHash and the sibling
-		var node treeNode
-		if path[numLevels-level-2] {
-			node = treeNode{
-				ChildL: sibling,
-				ChildR: nodeHash,
-			}
-		} else {
-			node = treeNode{
-				ChildL: nodeHash,
-				ChildR: sibling,
-			}
-		}
-		// if both childs are EmptyNodeValue, the parent will be EmptyNodeValue
-		if bytes.Equal(nodeHash[:], EmptyNodeValue[:]) && bytes.Equal(sibling[:], EmptyNodeValue[:]) {
-			nodeHash = EmptyNodeValue
-		} else {
-			nodeHash = node.Ht()
-		}
-	}
-	return bytes.Equal(nodeHash[:], root[:])
+	tx.Put(k[:], v)
+	return k, nil
 }

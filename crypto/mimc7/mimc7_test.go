@@ -26,8 +26,8 @@ func TestUtils(t *testing.T) {
 	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
 	assert.True(t, ok)
 
-	// greater or equal than 2**253 -1 number will give error when passing bigInts to RElems, to fit in the R Finite Field
-	overR, ok := new(big.Int).SetString("14474011154664524427946373126085988481658748083205070504932198000989141204991", 10)
+	// greater or equal than R will give error when passing bigInts to RElems, to fit in the R Finite Field
+	overR, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495618", 10)
 	assert.True(t, ok)
 	_, err = BigIntsToRElems([]*big.Int{b1, overR, b2})
 	assert.True(t, err != nil)
@@ -35,8 +35,8 @@ func TestUtils(t *testing.T) {
 	_, err = BigIntsToRElems([]*big.Int{b1, r, b2})
 	assert.True(t, err != nil)
 
-	// smaller than 2**253 -1 number will not give error when passing bigInts to RElems, to fit in the R Finite Field
-	underR, ok := new(big.Int).SetString("14474011154664524427946373126085988481658748083205070504932198000989141204990", 10)
+	// smaller than R will not give error when passing bigInts to RElems, to fit in the R Finite Field
+	underR, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495616", 10)
 	assert.True(t, ok)
 	_, err = BigIntsToRElems([]*big.Int{b1, underR, b2})
 	assert.Nil(t, err)
