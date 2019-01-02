@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"math"
 
@@ -82,8 +81,8 @@ func ParseGenericClaimBytes(b []byte) (GenericClaim, error) {
 	var c GenericClaim
 	copy(c.BaseIndex.Namespace[:], b[0:32])
 	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = EthBytesToUint32(b[60:64])
+	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
+	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
 	c.ExtraIndex.Data = b[64:c.BaseIndex.IndexLength]
 	c.Data = b[c.BaseIndex.IndexLength:]
 	return c, nil
@@ -93,9 +92,9 @@ func ParseGenericClaimBytes(b []byte) (GenericClaim, error) {
 func (c GenericClaim) Bytes() (b []byte) {
 	b = append(b, c.BaseIndex.Namespace[:]...)
 	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
+	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
 	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
+	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
 	b = append(b, versionBytes[:]...)
 	b = append(b, c.ExtraIndex.Data[:]...)
 	b = append(b, c.Data[:]...)
@@ -129,8 +128,8 @@ func ParseAssignNameClaimBytes(b []byte) (AssignNameClaim, error) {
 	var c AssignNameClaim
 	copy(c.BaseIndex.Namespace[:], b[0:32])
 	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = EthBytesToUint32(b[60:64])
+	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
+	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
 	copy(c.ExtraIndex.Name[:], b[64:96])
 	copy(c.ExtraIndex.Domain[:], b[96:128])
 	copy(c.EthID[:], b[128:148])
@@ -141,9 +140,9 @@ func ParseAssignNameClaimBytes(b []byte) (AssignNameClaim, error) {
 func (c AssignNameClaim) Bytes() (b []byte) {
 	b = append(b, c.BaseIndex.Namespace[:]...)
 	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
+	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
 	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
+	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
 	b = append(b, versionBytes[:]...)
 	b = append(b, c.ExtraIndex.Name[:]...)
 	b = append(b, c.ExtraIndex.Domain[:]...)
@@ -196,13 +195,13 @@ func ParseAuthorizeKSignClaimBytes(b []byte) (AuthorizeKSignClaim, error) {
 	var c AuthorizeKSignClaim
 	copy(c.BaseIndex.Namespace[:], b[0:32])
 	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = EthBytesToUint32(b[60:64])
+	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
+	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
 	copy(c.ExtraIndex.KeyToAuthorize[:], b[64:84])
 	copy(c.Application[:], b[84:116])
 	copy(c.ApplicationAuthz[:], b[116:148])
-	c.ValidFrom = EthBytesToUint64(b[148:156])
-	c.ValidUntil = EthBytesToUint64(b[156:164])
+	c.ValidFrom = utils.EthBytesToUint64(b[148:156])
+	c.ValidUntil = utils.EthBytesToUint64(b[156:164])
 	return c, nil
 }
 
@@ -210,15 +209,15 @@ func ParseAuthorizeKSignClaimBytes(b []byte) (AuthorizeKSignClaim, error) {
 func (c AuthorizeKSignClaim) Bytes() (b []byte) {
 	b = append(b, c.BaseIndex.Namespace[:]...)
 	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
+	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
 	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
+	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
 	b = append(b, versionBytes[:]...)
 	b = append(b, c.ExtraIndex.KeyToAuthorize[:]...)
 	b = append(b, c.Application[:]...)
 	b = append(b, c.ApplicationAuthz[:]...)
-	validFromBytes, _ := Uint64ToEthBytes(c.ValidFrom)
-	validUntilBytes, _ := Uint64ToEthBytes(c.ValidUntil)
+	validFromBytes, _ := utils.Uint64ToEthBytes(c.ValidFrom)
+	validUntilBytes, _ := utils.Uint64ToEthBytes(c.ValidUntil)
 	b = append(b, validFromBytes...)
 	b = append(b, validUntilBytes...)
 	return b
@@ -261,8 +260,8 @@ func ParseSetRootClaimBytes(b []byte) (SetRootClaim, error) {
 	var c SetRootClaim
 	copy(c.BaseIndex.Namespace[:], b[0:32])
 	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = EthBytesToUint32(b[60:64])
+	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
+	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
 	copy(c.ExtraIndex.EthID[:], b[64:84])
 	copy(c.Root[:], b[84:116])
 	return c, nil
@@ -272,9 +271,9 @@ func ParseSetRootClaimBytes(b []byte) (SetRootClaim, error) {
 func (c SetRootClaim) Bytes() (b []byte) {
 	b = append(b, c.BaseIndex.Namespace[:]...)
 	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
+	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
 	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
+	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
 	b = append(b, versionBytes[:]...)
 	b = append(b, c.ExtraIndex.EthID[:]...)
 	b = append(b, c.Root[:]...)
@@ -321,7 +320,7 @@ func ParseTypeClaimBytes(b []byte) (string, error) {
 	if len(b) < 64 { // 64, as is the minimum length of the BaseIndex
 		return "", errors.New("[]byte too small")
 	}
-	if int(EthBytesToUint32(b[56:60])) > len(b) {
+	if int(utils.EthBytesToUint32(b[56:60])) > len(b) {
 		return "", errors.New("claim.BaseIndex.IndexLength can not be bigger than claim bytes length")
 	}
 	typeBytes := b[32:56]
@@ -435,25 +434,7 @@ func NewSetRootClaim(ethID common.Address, root merkletree.Hash) SetRootClaim {
 
 // HiFromClaimBytes returns the Hi Hash of the given Claim bytes
 func HiFromClaimBytes(b []byte) merkletree.Hash {
-	indexLength := EthBytesToUint32(b[56:60])
+	indexLength := utils.EthBytesToUint32(b[56:60])
 	hi := merkletree.HashBytes(b[:indexLength])
 	return hi
-}
-
-func Uint32ToEthBytes(u uint32) ([]byte, error) {
-	buff := new(bytes.Buffer)
-	err := binary.Write(buff, binary.BigEndian, u)
-	return buff.Bytes(), err
-}
-func Uint64ToEthBytes(u uint64) ([]byte, error) {
-	buff := new(bytes.Buffer)
-	err := binary.Write(buff, binary.BigEndian, u)
-	return buff.Bytes(), err
-}
-
-func EthBytesToUint32(b []byte) uint32 {
-	return binary.BigEndian.Uint32(b)
-}
-func EthBytesToUint64(b []byte) uint64 {
-	return binary.BigEndian.Uint64(b)
 }
