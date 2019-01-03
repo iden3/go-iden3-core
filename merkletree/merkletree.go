@@ -87,7 +87,7 @@ var (
 type Entry struct {
 	Data   Data
 	hIndex *Hash
-	hTotal *Hash
+	hValue *Hash
 }
 
 type Entrier interface {
@@ -104,12 +104,11 @@ func (e *Entry) HIndex() *Hash {
 	return e.hIndex
 }
 
-func (e *Entry) HTotal() *Hash {
-	if e.hTotal == nil { // Cache the hIndex.
-		hv := HashElems(e.Data[:2]...)
-		e.hTotal = HashElems(ElemBytes(*hv), ElemBytes(*e.HIndex()))
+func (e *Entry) HValue() *Hash {
+	if e.hValue == nil { // Cache the hIndex.
+		e.hValue = HashElems(e.Data[:2]...)
 	}
-	return e.hTotal
+	return e.hValue
 }
 
 //MerkleTree is the struct with the main elements of the Merkle Tree
@@ -335,7 +334,7 @@ node [fontname=Monospace,fontsize=10,shape=box]
 type nodeAux struct {
 	//key    *Hash
 	hIndex *Hash
-	hTotal *Hash
+	hValue *Hash
 }
 
 // proofFlagsLen is the byte length of the flags in the proof header (first 32
@@ -381,13 +380,13 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 	}
 
 	if p.existence && ((bs[0] & 0x02) != 0) {
-		p.nodeAux = &nodeAux{hIndex: &Hash{}, hTotal: &Hash{}}
+		p.nodeAux = &nodeAux{hIndex: &Hash{}, hValue: &Hash{}}
 		nodeAuxBytes := siblingBytes[len(p.siblings)*ElemBytesLen:]
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
 			return nil, ErrInvalidProofBytes
 		}
 		copy(p.nodeAux.hIndex[:], nodeAuxBytes[:ElemBytesLen])
-		copy(p.nodeAux.hTotal[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
+		copy(p.nodeAux.hValue[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
 	}
 	return p, nil
 }
@@ -412,7 +411,7 @@ func (p *Proof) Bytes() []byte {
 	if p.nodeAux != nil {
 		bs[0] |= 0x02
 		copy(bs[len(bs)-2*ElemBytesLen:], p.nodeAux.hIndex[:])
-		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hTotal[:])
+		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hValue[:])
 	}
 	return bs
 }
@@ -443,7 +442,7 @@ func (p *Proof) String() string {
 	}
 	fmt.Fprintf(buf, "\n")
 	if p.nodeAux != nil {
-		fmt.Fprintf(buf, "\tnode aux: hi: %v, ht: %v\n", p.nodeAux.hIndex, p.nodeAux.hTotal)
+		fmt.Fprintf(buf, "\tnode aux: hi: %v, ht: %v\n", p.nodeAux.hIndex, p.nodeAux.hValue)
 	}
 	return buf.String()
 }
@@ -470,7 +469,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
 				return p, nil
 			} else {
 				// We found a leaf whose entry didn't match hIndex
-				p.nodeAux = &nodeAux{hIndex: n.Entry.HIndex(), hTotal: n.Entry.HTotal()}
+				p.nodeAux = &nodeAux{hIndex: n.Entry.HIndex(), hValue: n.Entry.HValue()}
 				return p, nil
 			}
 		case NodeTypeMiddle:
@@ -493,11 +492,11 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
 }
 
 // VerifyProof verifies the Merkle Proof for the entry and root.
-func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hTotal *Hash) bool {
+func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 	sibIdx := len(proof.siblings) - 1
 	var midKey *Hash
 	if proof.existence {
-		midKey = LeafKey(hIndex, hTotal)
+		midKey = LeafKey(hIndex, hValue)
 	} else {
 		if proof.nodeAux == nil {
 			midKey = &HashZero
@@ -505,7 +504,7 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hTotal *Hash) bool {
 			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
 				return false
 			}
-			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hTotal)
+			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
 		}
 	}
 	path := getPath(int(proof.depth), hIndex)
