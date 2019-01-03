@@ -32,7 +32,7 @@ func handleRawImport(c *gin.Context) {
 
 func handleClaimsDump(c *gin.Context) {
 	r := adminservice.ClaimsDump()
-	c.String(http.StatusOK, r)
+	c.JSON(http.StatusOK, r)
 }
 
 func handleMimc7(c *gin.Context) {
