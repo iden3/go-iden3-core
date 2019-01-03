@@ -21,6 +21,7 @@ require (
 	github.com/ipfs/go-ipfs-api v1.3.5
 	github.com/ipfs/go-ipfs-cmdkit v1.1.3 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20180821102820-2014c66a1b4a
+	github.com/koron/iferr v0.0.0-20180615142939-bb332a3b1d91 // indirect
 	github.com/libp2p/go-flow-metrics v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-crypto v2.0.1+incompatible // indirect
 	github.com/libp2p/go-libp2p-metrics v2.1.7+incompatible // indirect
@@ -45,6 +46,7 @@ require (
 	github.com/sirupsen/logrus v1.1.0
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/spf13/viper v1.2.1
+	github.com/stamblerre/gocode v0.0.0-20181212030458-2f9d39d8f31d // indirect
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/syndtr/goleveldb v0.0.0-20180815032940-ae2bd5eed72d
@@ -53,6 +55,7 @@ require (
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
 	golang.org/x/crypto v0.0.0-20180904163835-0709b304e793
 	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
+	golang.org/x/tools v0.0.0-20181221235234-d00ac6d27372 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )

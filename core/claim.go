@@ -1,440 +1,285 @@
 package core
 
 import (
-	"bytes"
+	"encoding/binary"
 	"errors"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
 
+// ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
+var ErrInvalidClaimType = errors.New("invalid claim type")
+
+// copyToElemBytes copies the src slice backwards to e, starting at -start of
+// e.  This function will panic if src doesn't fit into len(e)-start.
+func copyToElemBytes(e *merkletree.ElemBytes, start int, src []byte) {
+	for i := 0; i < len(src); i++ {
+		e[merkletree.ElemBytesLen-1-start-i] = src[i]
+	}
+}
+
+// copyFromElemBytes copies from e to dst, starting at -start of e and going
+// backwards.  This function will panic if len(e)-start is smaller than
+// len(dst).
+func copyFromElemBytes(dst []byte, start int, e *merkletree.ElemBytes) {
+	for i := 0; i < len(dst); i++ {
+		dst[i] = e[merkletree.ElemBytesLen-1-start-i]
+	}
+
+}
+
+// setClaimTypeVersion is a helper function to set the type and version of a
+// claim.
+func setClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint32) {
+	copyToElemBytes(&e.Data[3], 0, claimType[:])
+	binary.BigEndian.PutUint32(e.Data[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
+}
+
+// getClaimTypeVersion is a helper function to get the type and version from a
+// claim.
+func getClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
+	copyFromElemBytes(c[:], 0, &e.Data[3])
+	v = binary.BigEndian.Uint32(e.Data[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:])
+	return c, v
+}
+
+// ClaimTypeLen is the length in bytes of the type in a claim.
+const ClaimTypeLen = 64 / 8
+
+// ClaimType is the type used to store a claim type.
+type ClaimType [ClaimTypeLen]byte
+
+// NewClaimType creates a ClaimType from a type name.
+func NewClaimType(name string) (t ClaimType) {
+	h := utils.HashBytes([]byte(name))
+	copy(t[:], h[:])
+	return t
+}
+
 var (
-	defaultTypeHash        = utils.HashBytes([]byte("default"))
-	assignNameTypeHash     = utils.HashBytes([]byte("assignname"))
-	authorizeksignTypeHash = utils.HashBytes([]byte("authorizeksign"))
-	setRootTypeHash        = utils.HashBytes([]byte("setroot"))
-
-	GenericType        = defaultTypeHash[:24]
-	AssignNameType     = assignNameTypeHash[:24]
-	AuthorizeksignType = authorizeksignTypeHash[:24]
-	SetRootType        = setRootTypeHash[:24]
-
-	NamespaceHash = utils.HashBytes([]byte("iden3.io"))
+	// ClaimTypeBasic is a simple claim type that can be used for anything.
+	ClaimTypeBasic = NewClaimType("iden3.claim.basic")
+	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
+	ClaimTypeAssignName = NewClaimType("iden3.claim.assign_name")
+	// ClaimTypeAuthorizeKSign is a claim type to autorize a public key for signing.
+	ClaimTypeAuthorizeKSign = NewClaimType("iden3.claim.authorize_k_sign")
+	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
+	ClaimTypeSetRootKey = NewClaimType("iden3.claim.set_root_key")
 )
 
-// BaseIndex is the by default parameters of the index of every Claim
-type BaseIndex struct {
-	Namespace   utils.Hash // keccak("iden3.io")
-	Type        [24]byte   // claim type, keccak("<spec>") [32:56]
-	IndexLength uint32     // [4]byte
-	Version     uint32     // [4] byte
+// ClaimVersionLen is the length in bytes of the version in a claim.
+const ClaimVersionLen = 32 / 8
+
+// ClaimTypeVersionLen is the length in bytes of the version and length in a claim.
+const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
+
+// ClaimBasic is a simple claim that can be used for anything.
+type ClaimBasic struct {
+	// Version is the claim version.
+	Version uint32
+	// IndexSlot is data that goes into the remaining space used for the index.
+	IndexSlot [400 / 8]byte
+	// DataSlot is the data that goes into the remaining space not used for the index.
+	DataSlot [496 / 8]byte
 }
 
-// GenericClaim is a default data structure of a claim
-type GenericClaim struct {
-	BaseIndex
-	ExtraIndex struct {
-		Data []byte
+// NewClaimBasic returns a ClaimBasic with the provided data.
+func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) ClaimBasic {
+	return ClaimBasic{
+		Version:   0,
+		IndexSlot: indexSlot,
+		DataSlot:  dataSlot,
 	}
-	Data []byte
 }
 
-// AssignNameClaim is the claim to assign a name to an identity
-type AssignNameClaim struct {
-	BaseIndex
-	ExtraIndex struct {
-		Name   utils.Hash // keccak("bob")
-		Domain utils.Hash // ens_namehash("barcelona.eth")
-	}
-	EthID common.Address // EthID address of identity
-}
-
-// AuthorizeKSignClaim is the claim to authorize a KSign key
-type AuthorizeKSignClaim struct {
-	BaseIndex
-	ExtraIndex struct {
-		KeyToAuthorize common.Address
-	}
-	Application      utils.Hash
-	ApplicationAuthz utils.Hash
-	ValidFrom        uint64
-	ValidUntil       uint64
-}
-
-// SetRootClaim is the Claim that goes inside the Relay's merkletree, that sets the ID merkle root
-type SetRootClaim struct {
-	BaseIndex
-	ExtraIndex struct {
-		EthID common.Address
-	}
-	Root merkletree.Hash
-}
-
-// ParseGenericClaimBytes returns a GenericClaim struct from an array of bytes
-func ParseGenericClaimBytes(b []byte) (GenericClaim, error) {
-	if len(b) < 64 {
-		return GenericClaim{}, errors.New("[]byte too small")
-	}
-	var c GenericClaim
-	copy(c.BaseIndex.Namespace[:], b[0:32])
-	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
-	c.ExtraIndex.Data = b[64:c.BaseIndex.IndexLength]
-	c.Data = b[c.BaseIndex.IndexLength:]
-	return c, nil
-}
-
-// Bytes returns an array of bytes with the GenericClaim data
-func (c GenericClaim) Bytes() (b []byte) {
-	b = append(b, c.BaseIndex.Namespace[:]...)
-	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
-	b = append(b, versionBytes[:]...)
-	b = append(b, c.ExtraIndex.Data[:]...)
-	b = append(b, c.Data[:]...)
-	return b
-}
-
-// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the GenericClaim
-func (c GenericClaim) IndexLength() uint32 {
-	// return uint32(len(c.Bytes()))
-	return c.BaseIndex.IndexLength
-}
-
-// Hi returns the hash of the index of the claim
-func (c GenericClaim) Hi() merkletree.Hash {
-	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
-	// h := utils.HashBytes(c.Bytes())
-	return h
-}
-
-// Ht returns the hash of the full claim
-func (c GenericClaim) Ht() merkletree.Hash {
-	h := merkletree.HashBytes(c.Bytes())
-	return h
-}
-
-// ParseAssignNameClaimBytes returns an AssignNameClaim struct from an array of bytes
-func ParseAssignNameClaimBytes(b []byte) (AssignNameClaim, error) {
-	if len(b) < 148 {
-		return AssignNameClaim{}, errors.New("[]byte too small")
-	}
-	var c AssignNameClaim
-	copy(c.BaseIndex.Namespace[:], b[0:32])
-	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
-	copy(c.ExtraIndex.Name[:], b[64:96])
-	copy(c.ExtraIndex.Domain[:], b[96:128])
-	copy(c.EthID[:], b[128:148])
-	return c, nil
-}
-
-// Bytes returns an array of bytes with the AssignNameClaim data
-func (c AssignNameClaim) Bytes() (b []byte) {
-	b = append(b, c.BaseIndex.Namespace[:]...)
-	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
-	b = append(b, versionBytes[:]...)
-	b = append(b, c.ExtraIndex.Name[:]...)
-	b = append(b, c.ExtraIndex.Domain[:]...)
-	b = append(b, c.EthID[:]...)
-	return b
-}
-
-// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the AssignNameClaim
-func (c AssignNameClaim) IndexLength() uint32 {
-	// var bytesIndex []byte
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Namespace[:]...)
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Type[:]...)
-	// indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	// bytesIndex = append(bytesIndex, indexLengthBytes[:]...)
-	// versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
-	// bytesIndex = append(bytesIndex, versionBytes[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.Name[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.Domain[:]...)
-	// return uint32(len(bytesIndex))
-	return c.BaseIndex.IndexLength
-}
-
-// Hi returns the hash of the index of the claim
-func (c AssignNameClaim) Hi() merkletree.Hash {
-	// var bytesIndex []byte
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Namespace[:]...)
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Type[:]...)
-	// indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	// bytesIndex = append(bytesIndex, indexLengthBytes[:]...)
-	// versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
-	// bytesIndex = append(bytesIndex, versionBytes[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.Name[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.Domain[:]...)
-	// h := utils.HashBytes(bytesIndex)
-	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
-	return h
-}
-
-// Ht returns the hash of the full claim
-func (c AssignNameClaim) Ht() merkletree.Hash {
-	h := merkletree.HashBytes(c.Bytes())
-	return h
-}
-
-// ParseAuthorizeKSignClaimBytes returns an KSignClaim struct from an array of bytes
-func ParseAuthorizeKSignClaimBytes(b []byte) (AuthorizeKSignClaim, error) {
-	if len(b) < 164 {
-		return AuthorizeKSignClaim{}, errors.New("[]byte too small")
-	}
-	var c AuthorizeKSignClaim
-	copy(c.BaseIndex.Namespace[:], b[0:32])
-	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
-	copy(c.ExtraIndex.KeyToAuthorize[:], b[64:84])
-	copy(c.Application[:], b[84:116])
-	copy(c.ApplicationAuthz[:], b[116:148])
-	c.ValidFrom = utils.EthBytesToUint64(b[148:156])
-	c.ValidUntil = utils.EthBytesToUint64(b[156:164])
-	return c, nil
-}
-
-// Bytes returns an array of bytes with the KSignClaim data
-func (c AuthorizeKSignClaim) Bytes() (b []byte) {
-	b = append(b, c.BaseIndex.Namespace[:]...)
-	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
-	b = append(b, versionBytes[:]...)
-	b = append(b, c.ExtraIndex.KeyToAuthorize[:]...)
-	b = append(b, c.Application[:]...)
-	b = append(b, c.ApplicationAuthz[:]...)
-	validFromBytes, _ := utils.Uint64ToEthBytes(c.ValidFrom)
-	validUntilBytes, _ := utils.Uint64ToEthBytes(c.ValidUntil)
-	b = append(b, validFromBytes...)
-	b = append(b, validUntilBytes...)
-	return b
-}
-
-// func (c AuthorizeKSignClaim) indexBytes() (b []byte) {
-// 	b = append(b, c.BaseIndex.Namespace[:]...)
-// 	b = append(b, c.BaseIndex.Type[:]...)
-// 	indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
-// 	b = append(b, indexLengthBytes[:]...)
-// 	versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
-// 	b = append(b, versionBytes[:]...)
-// 	b = append(b, c.ExtraIndex.KeyToAuthorize[:]...)
-// 	return b
-// }
-
-// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the AuthorizeKSignClaim
-func (c AuthorizeKSignClaim) IndexLength() uint32 {
-	// return uint32(len(c.indexBytes()))
-	return c.BaseIndex.IndexLength
-}
-
-// Hi returns the hash of the index of the claim
-func (c AuthorizeKSignClaim) Hi() merkletree.Hash {
-	// return utils.HashBytes(c.indexBytes())
-	return merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
-}
-
-// Ht returns the hash of the full claim
-func (c AuthorizeKSignClaim) Ht() merkletree.Hash {
-	h := merkletree.HashBytes(c.Bytes())
-	return h
-}
-
-// ParseSetRootClaimBytes returns a SetRootClaim struct from an array of bytes
-func ParseSetRootClaimBytes(b []byte) (SetRootClaim, error) {
-	if len(b) < 116 {
-		return SetRootClaim{}, errors.New("[]byte too small")
-	}
-	var c SetRootClaim
-	copy(c.BaseIndex.Namespace[:], b[0:32])
-	copy(c.BaseIndex.Type[:], b[32:56])
-	c.BaseIndex.IndexLength = utils.EthBytesToUint32(b[56:60])
-	c.BaseIndex.Version = utils.EthBytesToUint32(b[60:64])
-	copy(c.ExtraIndex.EthID[:], b[64:84])
-	copy(c.Root[:], b[84:116])
-	return c, nil
-}
-
-// Bytes returns an array of bytes with the SetRootClaim data
-func (c SetRootClaim) Bytes() (b []byte) {
-	b = append(b, c.BaseIndex.Namespace[:]...)
-	b = append(b, c.BaseIndex.Type[:]...)
-	indexLengthBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	b = append(b, indexLengthBytes[:]...)
-	versionBytes, _ := utils.Uint32ToEthBytes(c.BaseIndex.Version)
-	b = append(b, versionBytes[:]...)
-	b = append(b, c.ExtraIndex.EthID[:]...)
-	b = append(b, c.Root[:]...)
-	return b
-}
-
-// IndexLength returns the length of the Index (BaseIndex + ExtraIndex) of the SetRootClaim
-func (c SetRootClaim) IndexLength() uint32 {
-	// var bytesIndex []byte
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Namespace[:]...)
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Type[:]...)
-	// indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	// bytesIndex = append(bytesIndex, indexLengthBytes[:]...)
-	// versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
-	// bytesIndex = append(bytesIndex, versionBytes[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.EthID[:]...)
-	// return uint32(len(bytesIndex))
-	return c.BaseIndex.IndexLength
-}
-
-// Hi returns the hash of the index of the claim
-func (c SetRootClaim) Hi() merkletree.Hash {
-	// var bytesIndex []byte
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Namespace[:]...)
-	// bytesIndex = append(bytesIndex, c.BaseIndex.Type[:]...)
-	// indexLengthBytes, _ := Uint32ToEthBytes(c.BaseIndex.IndexLength)
-	// bytesIndex = append(bytesIndex, indexLengthBytes[:]...)
-	// versionBytes, _ := Uint32ToEthBytes(c.BaseIndex.Version)
-	// bytesIndex = append(bytesIndex, versionBytes[:]...)
-	// bytesIndex = append(bytesIndex, c.ExtraIndex.EthID[:]...)
-	// h := utils.HashBytes(bytesIndex)
-	h := merkletree.HashBytes(c.Bytes()[:c.BaseIndex.IndexLength])
-	return h
-}
-
-// Ht returns the hash of the full claim
-func (c SetRootClaim) Ht() merkletree.Hash {
-	h := merkletree.HashBytes(c.Bytes())
-	return h
-}
-
-// ParseTypeClaimBytes returns the type of the claim from an array of bytes
-func ParseTypeClaimBytes(b []byte) (string, error) {
-	if len(b) < 64 { // 64, as is the minimum length of the BaseIndex
-		return "", errors.New("[]byte too small")
-	}
-	if int(utils.EthBytesToUint32(b[56:60])) > len(b) {
-		return "", errors.New("claim.BaseIndex.IndexLength can not be bigger than claim bytes length")
-	}
-	typeBytes := b[32:56]
-	if bytes.Equal(GenericType, typeBytes) {
-		return "default", nil
-	} else if bytes.Equal(AssignNameType, typeBytes) {
-		return "assignname", nil
-	} else if bytes.Equal(AuthorizeksignType, typeBytes) {
-		return "authorizeksign", nil
-	} else if bytes.Equal(SetRootType, typeBytes) {
-		return "setroot", nil
-	}
-	return "", errors.New("type unrecognized")
-}
-
-// ParseValueFromBytes returns a merkletree.Value from a given byte array
-func ParseValueFromBytes(b []byte) (merkletree.Value, error) {
-	if len(b) < 64 { // 64, as is the minimum length of the BaseIndex
-		return GenericClaim{}, errors.New("[]byte too small")
-	}
-	typeBytes := common3.BytesToHex(b[32:56])
-	var value merkletree.Value
-	var err error
-	switch typeBytes {
-	case common3.BytesToHex(GenericType):
-		value, err = ParseGenericClaimBytes(b)
-		break
-	case common3.BytesToHex(AssignNameType):
-		value, err = ParseAssignNameClaimBytes(b)
-		break
-	case common3.BytesToHex(AuthorizeksignType):
-		value, err = ParseAuthorizeKSignClaimBytes(b)
-		break
-	case common3.BytesToHex(SetRootType):
-		value, err = ParseSetRootClaimBytes(b)
-		break
-	default:
-		value = GenericClaim{}
-		err = errors.New("claim type unrecognized")
-		break
-	}
-	return value, err
-}
-
-// NewGenericClaim returns a GenericClaim object with the given parameters
-func NewGenericClaim(namespaceStr, typeStr string, extraIndexData []byte, data []byte) GenericClaim {
-	var c GenericClaim
-	c.BaseIndex.Namespace = utils.HashBytes([]byte(namespaceStr))
-	typeHash := utils.HashBytes([]byte(typeStr))
-	copy(c.BaseIndex.Type[:], typeHash[:24])
-	c.BaseIndex.IndexLength = 64 + uint32(len(extraIndexData))
-	c.BaseIndex.Version = 0
-	c.ExtraIndex.Data = extraIndexData
-	c.Data = data
+// NewClaimBasicFromEntry deserializes a ClaimBasic from an Entry.
+func NewClaimBasicFromEntry(e *merkletree.Entry) (c ClaimBasic) {
+	_, c.Version = getClaimTypeVersion(e)
+	copyFromElemBytes(c.IndexSlot[:152/8], ClaimTypeVersionLen, &e.Data[3])
+	copyFromElemBytes(c.IndexSlot[152/8:], 0, &e.Data[2])
+	copyFromElemBytes(c.DataSlot[:248/8], 0, &e.Data[1])
+	copyFromElemBytes(c.DataSlot[248/8:], 0, &e.Data[0])
 	return c
 }
 
-// NewAssignNameClaim returns a AssignNameClaim object with the given parameters
-func NewAssignNameClaim(name, domain utils.Hash, ethID common.Address) AssignNameClaim {
-	var c AssignNameClaim
-	c.BaseIndex.Namespace = NamespaceHash
-	copy(c.BaseIndex.Type[:], AssignNameType)
-	c.BaseIndex.IndexLength = 128
-	c.BaseIndex.Version = 0
-	c.ExtraIndex.Name = name
-	c.ExtraIndex.Domain = domain
+// ToEntry serializes the claim into an Entry.
+func (c *ClaimBasic) ToEntry() (e merkletree.Entry) {
+	setClaimTypeVersion(&e, c.Type(), c.Version)
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.IndexSlot[:152/8])
+	copyToElemBytes(&e.Data[2], 0, c.IndexSlot[152/8:])
+	copyToElemBytes(&e.Data[1], 0, c.DataSlot[:248/8])
+	copyToElemBytes(&e.Data[0], 0, c.DataSlot[248/8:])
+	return e
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimBasic) Type() ClaimType {
+	return ClaimTypeBasic
+}
+
+// ClaimAssignName is a claim to assign a name to an Eth address.
+type ClaimAssignName struct {
+	// Version is the claim version.
+	Version uint32
+	// NameHash is the hash of the name.
+	NameHash [248 / 8]byte
+	// EthID is the assigned Ethereum ID.
+	EthID common.Address
+}
+
+// NewClaimAssignName returns a ClaimAssignName with the name and Eth address.
+func NewClaimAssignName(name string, ethID common.Address) (c ClaimAssignName) {
+	c.Version = 0
+	hash := utils.HashBytes([]byte(name))
+	copy(c.NameHash[:], hash[:248/8])
 	c.EthID = ethID
 	return c
 }
 
-// NewKSignClaim returns a KSignClaim object with the given parameters
-func NewAuthorizeKSignClaim(keyToAuthorize common.Address, applicationName, applicationAuthz string, validFrom, validUntil uint64) AuthorizeKSignClaim {
-	var c AuthorizeKSignClaim
-	c.BaseIndex.Namespace = NamespaceHash
-	copy(c.BaseIndex.Type[:], AuthorizeksignType)
-	c.BaseIndex.IndexLength = 84
-	c.BaseIndex.Version = 0
-	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
-	c.Application = utils.HashBytes([]byte(applicationName))
-	c.ApplicationAuthz = utils.HashBytes([]byte(applicationAuthz))
-	c.ValidFrom = validFrom
-	c.ValidUntil = validUntil
+// NewClaimAssignNameFromEntry deserializes a ClaimAssignName from an Entry.
+func NewClaimAssignNameFromEntry(e *merkletree.Entry) (c ClaimAssignName) {
+	_, c.Version = getClaimTypeVersion(e)
+	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
+	copyFromElemBytes(c.EthID[:], 0, &e.Data[1])
 	return c
 }
 
-func NewOperationalKSignClaim(keyToAuthorize common.Address) AuthorizeKSignClaim {
-	var c AuthorizeKSignClaim
-	c.BaseIndex.Namespace = NamespaceHash
-	copy(c.BaseIndex.Type[:], AuthorizeksignType)
-	c.BaseIndex.IndexLength = 84
-	c.BaseIndex.Version = 0
-	c.ExtraIndex.KeyToAuthorize = keyToAuthorize
-	c.Application = utils.Hash{}
-	c.ApplicationAuthz = utils.Hash{}
-	c.ValidFrom = 0
-	c.ValidUntil = math.MaxUint64
+// ToEntry serializes the claim into an Entry.
+func (c *ClaimAssignName) ToEntry() (e merkletree.Entry) {
+	setClaimTypeVersion(&e, c.Type(), c.Version)
+	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
+	copyToElemBytes(&e.Data[1], 0, c.EthID[:])
+	return e
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimAssignName) Type() ClaimType {
+	return ClaimTypeAssignName
+}
+
+// ClaimAuthorizeKSign is a claim to autorize a public key for signing.
+type ClaimAuthorizeKSign struct {
+	// Version is the claim version.
+	Version uint32
+	// Sign means positive if false, negative if true.
+	Sign bool
+	// Ax is the x coordinate of the elliptic curve public key.
+	Ax [128 / 8]byte
+	// Ay is the x coordinate of the elliptic curve public key.
+	Ay [128 / 8]byte
+}
+
+// NewClaimAuthorizeKSign returns a ClaimAuthorizeKSign with the given elliptic
+// public key parameters.
+func NewClaimAuthorizeKSign(sign bool, ax, ay [128 / 8]byte) ClaimAuthorizeKSign {
+	return ClaimAuthorizeKSign{
+		Version: 0,
+		Sign:    sign,
+		Ax:      ax,
+		Ay:      ay,
+	}
+}
+
+// NewClaimAuthorizeKSign deserializes a ClaimAuthorizeKSign from an Entry.
+func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) (c ClaimAuthorizeKSign) {
+	_, c.Version = getClaimTypeVersion(e)
+	sign := []byte{0}
+	copyFromElemBytes(sign, ClaimTypeVersionLen, &e.Data[3])
+	if sign[0] == 1 {
+		c.Sign = true
+	}
+	copyFromElemBytes(c.Ax[:], ClaimTypeVersionLen+1, &e.Data[3])
+	copyFromElemBytes(c.Ay[:], 0, &e.Data[2])
 	return c
 }
 
-// NewSetRootClaim returns a SetRootClaim object with the given parameters
-func NewSetRootClaim(ethID common.Address, root merkletree.Hash) SetRootClaim {
-	var c SetRootClaim
-	c.BaseIndex.Namespace = NamespaceHash
-	copy(c.BaseIndex.Type[:], SetRootType)
-	c.BaseIndex.IndexLength = 84
-	c.BaseIndex.Version = 0
-	c.ExtraIndex.EthID = ethID
-	c.Root = root
+// ToEntry serializes the claim into an Entry.
+func (c *ClaimAuthorizeKSign) ToEntry() (e merkletree.Entry) {
+	setClaimTypeVersion(&e, c.Type(), c.Version)
+	sign := []byte{0}
+	if c.Sign {
+		sign = []byte{1}
+	}
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, sign)
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen+1, c.Ax[:])
+	copyToElemBytes(&e.Data[2], 0, c.Ay[:])
+	return e
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimAuthorizeKSign) Type() ClaimType {
+	return ClaimTypeAuthorizeKSign
+}
+
+// ClaimSetRootKey is a claim of the root key of a merkle tree that goes into the relay.
+type ClaimSetRootKey struct {
+	// Version is the claim version.
+	Version uint32
+	// Era is used for labeling epochs.
+	Era uint32
+	// EthID is the Ethereum ID related to the root key.
+	EthID common.Address
+	// RootKey is the root of the mekrlee tree.
+	RootKey merkletree.Hash
+}
+
+// NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
+// merklee tree root key.
+func NewClaimSetRootKey(ethID common.Address, rootKey merkletree.Hash) ClaimSetRootKey {
+	return ClaimSetRootKey{
+		Version: 0,
+		Era:     0,
+		EthID:   ethID,
+		RootKey: rootKey,
+	}
+}
+
+// NewClaimSetRootKey deserializes a ClaimSetRootKey from an Entry.
+func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) (c ClaimSetRootKey) {
+	_, c.Version = getClaimTypeVersion(e)
+	var era [32 / 8]byte
+	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
+	c.Era = binary.BigEndian.Uint32(era[:])
+	copyFromElemBytes(c.EthID[:], 0, &e.Data[2])
+	copyFromElemBytes(c.RootKey[:], 0, &e.Data[1])
 	return c
 }
 
-// HiFromClaimBytes returns the Hi Hash of the given Claim bytes
-func HiFromClaimBytes(b []byte) merkletree.Hash {
-	indexLength := utils.EthBytesToUint32(b[56:60])
-	hi := merkletree.HashBytes(b[:indexLength])
-	return hi
+// ToEntry serializes the claim into an Entry.
+func (c *ClaimSetRootKey) ToEntry() (e merkletree.Entry) {
+	setClaimTypeVersion(&e, c.Type(), c.Version)
+	var era [32 / 8]byte
+	binary.BigEndian.PutUint32(era[:], c.Era)
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
+	copyToElemBytes(&e.Data[2], 0, c.EthID[:])
+	copyToElemBytes(&e.Data[1], 0, c.RootKey[:])
+	return e
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimSetRootKey) Type() ClaimType {
+	return ClaimTypeSetRootKey
+}
+
+// NewClaimFromEntry deserializes a valid claim type into a Claim.
+func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
+	claimType, _ := getClaimTypeVersion(e)
+	switch claimType {
+	case ClaimTypeBasic:
+		c := NewClaimBasicFromEntry(e)
+		return &c, nil
+	case ClaimTypeAssignName:
+		c := NewClaimAssignNameFromEntry(e)
+		return &c, nil
+	case ClaimTypeAuthorizeKSign:
+		c := NewClaimAuthorizeKSignFromEntry(e)
+		return &c, nil
+	case ClaimTypeSetRootKey:
+		c := NewClaimSetRootKeyFromEntry(e)
+		return &c, nil
+	default:
+		return nil, ErrInvalidClaimType
+	}
 }
