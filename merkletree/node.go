@@ -72,10 +72,10 @@ func NewNodeFromBytes(b []byte) (*Node, error) {
 	return &n, nil
 }
 
-// LeafKey computes the key of a leaf node given the hIndex and hTotal of the
+// LeafKey computes the key of a leaf node given the hIndex and hValue of the
 // entry of the leaf.
-func LeafKey(hIndex, hTotal *Hash) *Hash {
-	return HashElems(ElemBytesOne, ElemBytes(*hIndex), ElemBytes(*hTotal))
+func LeafKey(hIndex, hValue *Hash) *Hash {
+	return HashElems(ElemBytesOne, ElemBytes(*hIndex), ElemBytes(*hValue))
 }
 
 // Key computes the key of the node by hashing the content in a specific way
@@ -88,7 +88,7 @@ func (n *Node) Key() *Hash {
 		case NodeTypeMiddle: // H(ChildL || ChildR)
 			n.key = HashElems(ElemBytes(*n.ChildL), ElemBytes(*n.ChildR))
 		case NodeTypeLeaf: // H(Data...)
-			n.key = LeafKey(n.Entry.HIndex(), n.Entry.HTotal())
+			n.key = LeafKey(n.Entry.HIndex(), n.Entry.HValue())
 		case NodeTypeEmpty: // Zero
 			n.key = &HashZero
 		default:
