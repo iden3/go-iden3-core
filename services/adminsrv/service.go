@@ -1,6 +1,7 @@
 package adminsrv
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
@@ -16,7 +17,7 @@ type Service interface {
 	Info() map[string]string
 	RawDump() map[string]string
 	RawImport(raw map[string]string) (int, error)
-	ClaimsDump() string
+	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
 	AddGenericClaim(indexData, data []byte) (claimsrv.ProofOfRelayClaim, error)
 }
@@ -85,15 +86,15 @@ func (as *ServiceImpl) RawImport(raw map[string]string) (int, error) {
 }
 
 // ClaimsDump returns all the claims key and values from the database
-func (as *ServiceImpl) ClaimsDump() string {
-	var out string
+func (as *ServiceImpl) ClaimsDump() map[string]string {
+	data := make(map[string]string)
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
-		if value[0] == byte(1) { // TODO when the new merkletree version is ready, instead of byte(1) use the type indicator
-			out = out + "key: " + common3.BytesToHex(key) + ", value: " + common3.BytesToHex(value) + "\n"
+		if value[0] == merkletree.NodeTypeLeaf {
+			data[common3.BytesToHex(key)] = common3.BytesToHex(value)
 		}
 	})
-	return out
+	return data
 }
 
 // Mimc7 performs the MIMC7 hash over a given data
