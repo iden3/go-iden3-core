@@ -42,9 +42,14 @@ func ElemsBytesToBytes(es []ElemBytes) []byte {
 type Index [IndexLen]ElemBytes
 
 // Data is the type used to represent the data stored in an entry of the MT.
-// It consists of 4 elements: e1, e2, e3, e4;
-// where v = [e1,e2], index = [e3,e4].
+// It consists of 4 elements: e0, e1, e2, e3;
+// where v = [e0,e1], index = [e2,e3].
 type Data [DataLen]ElemBytes
+
+func (d *Data) String() string {
+	return fmt.Sprintf("%s%s%s%s", hex.EncodeToString(d[0][:]), hex.EncodeToString(d[1][:]),
+		hex.EncodeToString(d[2][:]), hex.EncodeToString(d[3][:]))
+}
 
 const (
 	// ElemBytesLen is the length in bytes of each element used for storing
@@ -83,6 +88,10 @@ type Entry struct {
 	Data   Data
 	hIndex *Hash
 	hTotal *Hash
+}
+
+type Entrier interface {
+	ToEntry() Entry
 }
 
 // HIndex calculates the hash of the Index of the entry, used to find the path
