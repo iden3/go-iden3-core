@@ -14,21 +14,21 @@ type BytesSignedMsg struct {
 	KSign        common.Address `json:"ksign"`
 }
 
-// GenericClaimMsg contains a core.GenericClaim with its signature in Hex
-type GenericClaimMsg struct {
-	GenericClaim core.GenericClaim
-	Signature    string
+// ClaimBasicMsg contains a core.ClaimBasic with its signature in Hex
+type ClaimBasicMsg struct {
+	ClaimBasic core.ClaimBasic
+	Signature  string
 }
 
-// AssignNameClaimMsg contains a core.AssignNameClaim with its signature in Hex
-type AssignNameClaimMsg struct {
-	AssignNameClaim core.AssignNameClaim
+// ClaimAssignNameMsg contains a core.ClaimAssignName with its signature in Hex
+type ClaimAssignNameMsg struct {
+	ClaimAssignName core.ClaimAssignName
 	Signature       string
 }
 
-// AuthorizeKSignClaimMsg contains a core.AuthorizeKSignClaim with its signature in Hex
-type AuthorizeKSignClaimMsg struct {
-	AuthorizeKSignClaim core.AuthorizeKSignClaim
+// ClaimAuthorizeKSignMsg contains a core.AuthorizeKSignClaim with its signature in Hex
+type ClaimAuthorizeKSignMsg struct {
+	ClaimAuthorizeKSign core.ClaimAuthorizeKSign
 	Signature           string
 	KSign               common.Address
 }
@@ -44,7 +44,7 @@ type SetRootMsg struct {
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex
 type ClaimValueMsg struct {
-	ClaimValue merkletree.Value
+	ClaimValue merkletree.Entry
 	Signature  string
 	KSign      common.Address
 }

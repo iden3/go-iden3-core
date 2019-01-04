@@ -46,17 +46,30 @@ func handleMimc7(c *gin.Context) {
 	c.String(http.StatusOK, r.String())
 }
 
-type addGenericClaimMsg struct {
+type addClaimBasicMsg struct {
 	Namespace string
 	IndexData string
 	Data      string
 }
 
-func handleAddGenericClaim(c *gin.Context) {
-	var m addGenericClaimMsg
+func handleAddClaimBasic(c *gin.Context) {
+	var m addClaimBasicMsg
 	c.BindJSON(&m)
 
-	proofOfClaim, err := adminservice.AddGenericClaim([]byte(m.IndexData), []byte(m.Data))
+	if len(m.IndexData) != 400/8 {
+		c.String(http.StatusBadRequest, "indexData smaller than 400/8")
+		return
+	}
+	if len(m.Data) != 496/8 {
+		c.String(http.StatusBadRequest, "data smaller than 496/8")
+		return
+	}
+
+	var indexSlot [400 / 8]byte
+	var dataSlot [496 / 8]byte
+	copy(indexSlot[:], m.IndexData[:400/8])
+	copy(dataSlot[:], m.Data[:496/8])
+	proofOfClaim, err := adminservice.AddClaimBasic(indexSlot, dataSlot)
 	if err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}

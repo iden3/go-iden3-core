@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	//common3 "github.com/iden3/go-iden3/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,6 +60,12 @@ func TestEntry(t *testing.T) {
 	assert.Equal(t,
 		"114438e8321f62c4a1708f443a5a66f9c8fcb0958e7b7008332b71442610b7a0",
 		hex.EncodeToString(e.HIndex()[:]))
+}
+
+func TestData(t *testing.T) {
+	data := IntsToData(12, 45, 78, 41)
+	dataParsed := BytesToData(data.Bytes())
+	assert.Equal(t, data, *dataParsed)
 }
 
 func TestAddEntry1(t *testing.T) {
@@ -191,7 +198,6 @@ func TestGenerateProof4(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(proof)
 	assert.Equal(t, ""+
 		"000400000000000000000000000000000000000000000000000000000000000b"+
 		"1741ceec35cfc2795e17e4c9ce80992370610dfb25dd01286b33ee5d1a972499"+
@@ -225,7 +231,6 @@ func TestGenerateProof64(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(proof)
 	assert.Equal(t, ""+
 		"000400000000000000000000000000000000000000000000000000000000000f"+
 		"28df49923aa56a1f3320633c097d56c6f062b5d490698bcca2a84df0c5a7fe87"+
@@ -252,10 +257,6 @@ func TestVerifyProof1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Println()
-	fmt.Println(proof)
-	fmt.Println()
 
 	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue())
 	assert.True(t, verify)
@@ -285,10 +286,6 @@ func TestVerifyProofEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Println()
-	fmt.Println(proof)
-	fmt.Println()
 
 	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue())
 	assert.True(t, verify)
@@ -428,11 +425,8 @@ func TestProofFromBytesSmall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("proof0: ", proof0)
-	fmt.Println("proof0 bytes: ", hex.EncodeToString(proof0.Bytes()))
 	proof0Parsed, err := NewProofFromBytes(proof0.Bytes())
 	assert.Nil(t, err)
-	fmt.Println("proof0Parsed: ", hex.EncodeToString(proof0Parsed.Bytes()))
 	assert.Equal(t, proof0, proof0Parsed)
 
 	// Proof of non-existence with aux node, single claim MT
@@ -441,11 +435,8 @@ func TestProofFromBytesSmall(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("proof2: ", proof2)
-	fmt.Println("proof2 bytes: ", hex.EncodeToString(proof2.Bytes()))
 	proof2Parsed, err := NewProofFromBytes(proof2.Bytes())
 	assert.Nil(t, err)
-	fmt.Println("proof2Parsed: ", hex.EncodeToString(proof2Parsed.Bytes()))
 	assert.Equal(t, proof2, proof2Parsed)
 }
 
@@ -466,11 +457,8 @@ func TestProofFromBytesBig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("proof0: ", proof0)
-	fmt.Println("proof0 bytes: ", hex.EncodeToString(proof0.Bytes()))
 	proof0Parsed, err := NewProofFromBytes(proof0.Bytes())
 	assert.Nil(t, err)
-	fmt.Println("proof0Parsed: ", hex.EncodeToString(proof0Parsed.Bytes()))
 	assert.Equal(t, proof0, proof0Parsed)
 
 	// Proof of non-existence with empty node, single claim MT
@@ -479,11 +467,8 @@ func TestProofFromBytesBig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("proof1: ", proof1)
-	fmt.Println("proof1 bytes: ", hex.EncodeToString(proof1.Bytes()))
 	proof1Parsed, err := NewProofFromBytes(proof1.Bytes())
 	assert.Nil(t, err)
-	fmt.Println("proof1Parsed: ", hex.EncodeToString(proof1Parsed.Bytes()))
 	assert.Equal(t, proof1, proof1Parsed)
 
 	// Proof of non-existence with aux node, single claim MT
@@ -492,11 +477,8 @@ func TestProofFromBytesBig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println("proof2: ", proof2)
-	fmt.Println("proof2 bytes: ", hex.EncodeToString(proof2.Bytes()))
 	proof2Parsed, err := NewProofFromBytes(proof2.Bytes())
 	assert.Nil(t, err)
-	fmt.Println("proof2Parsed: ", hex.EncodeToString(proof2Parsed.Bytes()))
 	assert.Equal(t, proof2, proof2Parsed)
 }
 
@@ -511,4 +493,54 @@ func BenchmarkAddEntry(b *testing.B) {
 			b.Fatal(err)
 		}
 	}
+}
+
+func TestDbInsertGet(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	tx, err := mt.storage.NewTx()
+	assert.Nil(t, err)
+	mt.Lock()
+	defer func() {
+		if err == nil {
+			tx.Commit()
+		} else {
+			tx.Close()
+		}
+		mt.Unlock()
+	}()
+
+	key := []byte("key")
+	mt.dbInsert(tx, key, 9, []byte("value"))
+	tx.Commit()
+
+	nodeType, data, err := mt.dbGet(key)
+	assert.Nil(t, err)
+	assert.Equal(t, byte(9), nodeType)
+	assert.Equal(t, []byte("value"), data)
+
+}
+
+func TestMerkleTreeRootStored(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	ethID := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
+
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := mt.Storage().WithPrefix(ethID.Bytes())
+	// open the MerkleTree of the user
+	userMT, err := NewMerkleTree(stoUserID, 140)
+	assert.Nil(t, err)
+
+	e := NewEntryFromInts(12, 45, 78, 41)
+	err = userMT.Add(&e)
+	assert.Nil(t, err)
+
+	// reopen the MerkleTree of the user
+	userMTreopened, err := NewMerkleTree(stoUserID, 140)
+	assert.Nil(t, err)
+
+	assert.Equal(t, userMT.RootKey(), userMTreopened.RootKey())
 }

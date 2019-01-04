@@ -51,6 +51,21 @@ func (d *Data) String() string {
 		hex.EncodeToString(d[2][:]), hex.EncodeToString(d[3][:]))
 }
 
+func (d *Data) Bytes() (b [ElemBytesLen * DataLen]byte) {
+	for i := 0; i < DataLen; i++ {
+		copy(b[i*ElemBytesLen:(i+1)*ElemBytesLen], d[i][:])
+	}
+	return b
+}
+
+func BytesToData(b [ElemBytesLen * DataLen]byte) *Data {
+	d := &Data{}
+	for i := 0; i < DataLen; i++ {
+		copy(d[i][:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
+	}
+	return d
+}
+
 const (
 	// ElemBytesLen is the length in bytes of each element used for storing
 	// data and hashing.
@@ -81,6 +96,8 @@ var (
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
 	ElemBytesOne = ElemBytes{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	// rootNodeVValue is the Key used to store the current Root in the database
+	rootNodeValue = []byte("currentroot")
 )
 
 // Entry is the generic type that is stored in the MT.
@@ -93,7 +110,7 @@ type Entry struct {
 }
 
 type Entrier interface {
-	ToEntry() Entry
+	Entry() *Entry
 }
 
 // HIndex calculates the hash of the Index of the entry, used to find the path
@@ -112,6 +129,13 @@ func (e *Entry) HValue() *Hash {
 	}
 	return e.hValue
 }
+func (e *Entry) Bytes() []byte {
+	var b [ElemBytesLen * DataLen]byte
+	for i := 0; i < DataLen; i++ {
+		copy(b[ElemBytesLen*i:], e.Data[i][:])
+	}
+	return b[:]
+}
 
 //MerkleTree is the struct with the main elements of the Merkle Tree
 type MerkleTree struct {
@@ -127,9 +151,44 @@ type MerkleTree struct {
 // NewMerkleTree generates a new Merkle Tree
 func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 	mt := MerkleTree{storage: storage, maxLevels: maxLevels}
-	nodeRoot := NewNodeEmpty()
-	k, _ := nodeRoot.Key(), nodeRoot.Value()
-	mt.rootKey = k
+
+	_, gettedRoot, err := mt.dbGet(rootNodeValue)
+	if err != nil {
+		/*
+			tx, err := mt.storage.NewTx()
+			if err != nil {
+				return &mt, err
+			}
+			mt.Lock()
+			defer func() {
+				if err == nil {
+					tx.Commit()
+				} else {
+					tx.Close()
+				}
+				mt.Unlock()
+			}()
+
+			nodeRoot := NewNodeEmpty()
+			k, _ := nodeRoot.Key(), nodeRoot.Value()
+			mt.rootKey = k
+			mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+		*/
+		tx, err := mt.storage.NewTx()
+		if err != nil {
+			return nil, err
+		}
+		nodeRoot := NewNodeEmpty()
+		k, _ := nodeRoot.Key(), nodeRoot.Value()
+		mt.rootKey = k
+		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return &mt, nil
+	}
+	mt.rootKey = &Hash{}
+	copy(mt.rootKey[:], gettedRoot)
 	return &mt, nil
 }
 
@@ -289,6 +348,7 @@ func (mt *MerkleTree) Add(e *Entry) error {
 		return err
 	}
 	mt.rootKey = newRootKey
+	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
 	return nil
 }
 
@@ -553,4 +613,27 @@ func (mt *MerkleTree) AddNode(tx db.Tx, n *Node) (*Hash, error) {
 	}
 	tx.Put(k[:], v)
 	return k, nil
+}
+
+func (mt *MerkleTree) dbGet(k []byte) (byte, []byte, error) {
+	if bytes.Equal(k, HashZero[:]) {
+		return 0, HashZero[:], nil
+	}
+
+	value, err := mt.storage.Get(k)
+	if err != nil {
+		return 0, HashZero[:], err
+	}
+
+	nodeType := value[0]
+	nodeBytes := value[1:]
+
+	return nodeType, nodeBytes, nil
+}
+
+func (mt *MerkleTree) dbInsert(tx db.Tx, k []byte, t NodeType, data []byte) {
+	var v []byte
+	v = append(v, byte(t))
+	v = append(v, data...)
+	tx.Put(k, v)
 }

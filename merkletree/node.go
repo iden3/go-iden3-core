@@ -14,6 +14,9 @@ const (
 	NodeTypeLeaf NodeType = 1
 	// NodeTypeEmpty indicates the type of an empty Node.
 	NodeTypeEmpty NodeType = 2
+
+	// DBEntryTypeRoot indicates the type of a DB entry that indicates the current Root of a MerkleTree
+	DBEntryTypeRoot NodeType = 3
 )
 
 // Node is the struct that represents a node in the MT.

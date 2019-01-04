@@ -28,15 +28,24 @@ func copyFromElemBytes(dst []byte, start int, e *merkletree.ElemBytes) {
 // setClaimTypeVersion is a helper function to set the type and version of a
 // claim.
 func setClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint32) {
-	copyToElemBytes(&e.Data[3], 0, claimType[:])
-	binary.BigEndian.PutUint32(e.Data[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
+	SetClaimTypeVersionInData(&e.Data, claimType, version)
+}
+
+func SetClaimTypeVersionInData(d *merkletree.Data, claimType ClaimType, version uint32) {
+	copyToElemBytes(&d[3], 0, claimType[:])
+	binary.BigEndian.PutUint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
 }
 
 // getClaimTypeVersion is a helper function to get the type and version from a
 // claim.
 func getClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
-	copyFromElemBytes(c[:], 0, &e.Data[3])
-	v = binary.BigEndian.Uint32(e.Data[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:])
+	return GetClaimTypeVersionFromData(&e.Data)
+}
+
+// GetClaimTypeVersionFromData(
+func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
+	copyFromElemBytes(c[:], 0, &d[3])
+	v = binary.BigEndian.Uint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:])
 	return c, v
 }
 
@@ -47,7 +56,8 @@ const ClaimTypeLen = 64 / 8
 type ClaimType [ClaimTypeLen]byte
 
 // NewClaimType creates a ClaimType from a type name.
-func NewClaimType(name string) (t ClaimType) {
+func NewClaimType(name string) *ClaimType {
+	t := &ClaimType{}
 	h := utils.HashBytes([]byte(name))
 	copy(t[:ClaimTypeLen], h[len(h)-ClaimTypeLen:])
 	return t
@@ -81,8 +91,8 @@ type ClaimBasic struct {
 }
 
 // NewClaimBasic returns a ClaimBasic with the provided data.
-func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) ClaimBasic {
-	return ClaimBasic{
+func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) *ClaimBasic {
+	return &ClaimBasic{
 		Version:   0,
 		IndexSlot: indexSlot,
 		DataSlot:  dataSlot,
@@ -90,7 +100,8 @@ func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) ClaimBasic {
 }
 
 // NewClaimBasicFromEntry deserializes a ClaimBasic from an Entry.
-func NewClaimBasicFromEntry(e *merkletree.Entry) (c ClaimBasic) {
+func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
+	c := &ClaimBasic{}
 	_, c.Version = getClaimTypeVersion(e)
 	copyFromElemBytes(c.IndexSlot[len(c.IndexSlot)-152/8:], ClaimTypeVersionLen, &e.Data[3])
 	copyFromElemBytes(c.IndexSlot[:248/8], 0, &e.Data[2])
@@ -100,8 +111,9 @@ func NewClaimBasicFromEntry(e *merkletree.Entry) (c ClaimBasic) {
 }
 
 // ToEntry serializes the claim into an Entry.
-func (c *ClaimBasic) ToEntry() (e merkletree.Entry) {
-	setClaimTypeVersion(&e, c.Type(), c.Version)
+func (c *ClaimBasic) Entry() *merkletree.Entry {
+	e := &merkletree.Entry{}
+	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.IndexSlot[len(c.IndexSlot)-152/8:])
 	copyToElemBytes(&e.Data[2], 0, c.IndexSlot[:248/8])
 	copyToElemBytes(&e.Data[1], 0, c.DataSlot[248/8:])
@@ -111,7 +123,7 @@ func (c *ClaimBasic) ToEntry() (e merkletree.Entry) {
 
 // Type returns the ClaimType of the claim.
 func (c *ClaimBasic) Type() ClaimType {
-	return ClaimTypeBasic
+	return *ClaimTypeBasic
 }
 
 // ClaimAssignName is a claim to assign a name to an Eth address.
@@ -125,7 +137,8 @@ type ClaimAssignName struct {
 }
 
 // NewClaimAssignName returns a ClaimAssignName with the name and Eth address.
-func NewClaimAssignName(name string, ethID common.Address) (c ClaimAssignName) {
+func NewClaimAssignName(name string, ethID common.Address) *ClaimAssignName {
+	c := &ClaimAssignName{}
 	c.Version = 0
 	hash := utils.HashBytes([]byte(name))
 	copy(c.NameHash[:], hash[len(hash)-248/8:])
@@ -134,7 +147,8 @@ func NewClaimAssignName(name string, ethID common.Address) (c ClaimAssignName) {
 }
 
 // NewClaimAssignNameFromEntry deserializes a ClaimAssignName from an Entry.
-func NewClaimAssignNameFromEntry(e *merkletree.Entry) (c ClaimAssignName) {
+func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
+	c := &ClaimAssignName{}
 	_, c.Version = getClaimTypeVersion(e)
 	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
 	copyFromElemBytes(c.EthID[:], 0, &e.Data[1])
@@ -142,8 +156,9 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) (c ClaimAssignName) {
 }
 
 // ToEntry serializes the claim into an Entry.
-func (c *ClaimAssignName) ToEntry() (e merkletree.Entry) {
-	setClaimTypeVersion(&e, c.Type(), c.Version)
+func (c *ClaimAssignName) Entry() *merkletree.Entry {
+	e := &merkletree.Entry{}
+	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
 	copyToElemBytes(&e.Data[1], 0, c.EthID[:])
 	return e
@@ -151,7 +166,7 @@ func (c *ClaimAssignName) ToEntry() (e merkletree.Entry) {
 
 // Type returns the ClaimType of the claim.
 func (c *ClaimAssignName) Type() ClaimType {
-	return ClaimTypeAssignName
+	return *ClaimTypeAssignName
 }
 
 // ClaimAuthorizeKSign is a claim to autorize a public key for signing.
@@ -168,8 +183,8 @@ type ClaimAuthorizeKSign struct {
 
 // NewClaimAuthorizeKSign returns a ClaimAuthorizeKSign with the given elliptic
 // public key parameters.
-func NewClaimAuthorizeKSign(sign bool, ax, ay [128 / 8]byte) ClaimAuthorizeKSign {
-	return ClaimAuthorizeKSign{
+func NewClaimAuthorizeKSign(sign bool, ax, ay [128 / 8]byte) *ClaimAuthorizeKSign {
+	return &ClaimAuthorizeKSign{
 		Version: 0,
 		Sign:    sign,
 		Ax:      ax,
@@ -178,7 +193,8 @@ func NewClaimAuthorizeKSign(sign bool, ax, ay [128 / 8]byte) ClaimAuthorizeKSign
 }
 
 // NewClaimAuthorizeKSign deserializes a ClaimAuthorizeKSign from an Entry.
-func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) (c ClaimAuthorizeKSign) {
+func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSign {
+	c := &ClaimAuthorizeKSign{}
 	_, c.Version = getClaimTypeVersion(e)
 	sign := []byte{0}
 	copyFromElemBytes(sign, ClaimTypeVersionLen, &e.Data[3])
@@ -191,8 +207,9 @@ func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) (c ClaimAuthorizeKSign
 }
 
 // ToEntry serializes the claim into an Entry.
-func (c *ClaimAuthorizeKSign) ToEntry() (e merkletree.Entry) {
-	setClaimTypeVersion(&e, c.Type(), c.Version)
+func (c *ClaimAuthorizeKSign) Entry() *merkletree.Entry {
+	e := &merkletree.Entry{}
+	setClaimTypeVersion(e, c.Type(), c.Version)
 	sign := []byte{0}
 	if c.Sign {
 		sign = []byte{1}
@@ -205,7 +222,7 @@ func (c *ClaimAuthorizeKSign) ToEntry() (e merkletree.Entry) {
 
 // Type returns the ClaimType of the claim.
 func (c *ClaimAuthorizeKSign) Type() ClaimType {
-	return ClaimTypeAuthorizeKSign
+	return *ClaimTypeAuthorizeKSign
 }
 
 // ClaimSetRootKey is a claim of the root key of a merkle tree that goes into the relay.
@@ -222,8 +239,8 @@ type ClaimSetRootKey struct {
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(ethID common.Address, rootKey merkletree.Hash) ClaimSetRootKey {
-	return ClaimSetRootKey{
+func NewClaimSetRootKey(ethID common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
+	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
 		EthID:   ethID,
@@ -232,7 +249,8 @@ func NewClaimSetRootKey(ethID common.Address, rootKey merkletree.Hash) ClaimSetR
 }
 
 // NewClaimSetRootKey deserializes a ClaimSetRootKey from an Entry.
-func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) (c ClaimSetRootKey) {
+func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
+	c := &ClaimSetRootKey{}
 	_, c.Version = getClaimTypeVersion(e)
 	var era [32 / 8]byte
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
@@ -243,8 +261,9 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) (c ClaimSetRootKey) {
 }
 
 // ToEntry serializes the claim into an Entry.
-func (c *ClaimSetRootKey) ToEntry() (e merkletree.Entry) {
-	setClaimTypeVersion(&e, c.Type(), c.Version)
+func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
+	e := &merkletree.Entry{}
+	setClaimTypeVersion(e, c.Type(), c.Version)
 	var era [32 / 8]byte
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
@@ -255,25 +274,25 @@ func (c *ClaimSetRootKey) ToEntry() (e merkletree.Entry) {
 
 // Type returns the ClaimType of the claim.
 func (c *ClaimSetRootKey) Type() ClaimType {
-	return ClaimTypeSetRootKey
+	return *ClaimTypeSetRootKey
 }
 
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	claimType, _ := getClaimTypeVersion(e)
 	switch claimType {
-	case ClaimTypeBasic:
+	case *ClaimTypeBasic:
 		c := NewClaimBasicFromEntry(e)
-		return &c, nil
-	case ClaimTypeAssignName:
+		return c, nil
+	case *ClaimTypeAssignName:
 		c := NewClaimAssignNameFromEntry(e)
-		return &c, nil
-	case ClaimTypeAuthorizeKSign:
+		return c, nil
+	case *ClaimTypeAuthorizeKSign:
 		c := NewClaimAuthorizeKSignFromEntry(e)
-		return &c, nil
-	case ClaimTypeSetRootKey:
+		return c, nil
+	case *ClaimTypeSetRootKey:
 		c := NewClaimSetRootKeyFromEntry(e)
-		return &c, nil
+		return c, nil
 	default:
 		return nil, ErrInvalidClaimType
 	}

@@ -1,7 +1,6 @@
 package adminsrv
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 
@@ -19,7 +18,7 @@ type Service interface {
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
-	AddGenericClaim(indexData, data []byte) (claimsrv.ProofOfRelayClaim, error)
+	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (claimsrv.ProofOfRelayClaim, error)
 }
 
 type ServiceImpl struct {
@@ -36,7 +35,7 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.S
 func (as *ServiceImpl) Info() map[string]string {
 	o := make(map[string]string)
 	o["db"] = as.mt.Storage().Info()
-	o["root"] = as.mt.Root().Hex()
+	o["root"] = as.mt.RootKey().Hex()
 	return o
 }
 
@@ -90,7 +89,7 @@ func (as *ServiceImpl) ClaimsDump() map[string]string {
 	data := make(map[string]string)
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
-		if value[0] == merkletree.NodeTypeLeaf {
+		if value[0] == byte(merkletree.NodeTypeLeaf) {
 			data[common3.BytesToHex(key)] = common3.BytesToHex(value)
 		}
 	})
@@ -108,19 +107,23 @@ func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
 
 }
 
-func (as *ServiceImpl) AddGenericClaim(indexData, data []byte) (claimsrv.ProofOfRelayClaim, error) {
-	claim := core.NewGenericClaim("iden3.io", "default", indexData, data)
+func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (claimsrv.ProofOfRelayClaim, error) {
+	// TODO check if indexSlot and dataSlot fit inside R element
+	// var indexSlot [400 / 8]byte
+	// var dataSlot [496 / 8]byte
+	// copy(indexSlot[:], indexData[:400/8])
+	// copy(dataSlot[:], data[:496/8])
+	claim := core.NewClaimBasic(indexSlot, dataSlot)
 
-	err := as.mt.Add(claim)
+	err := as.mt.Add(claim.Entry())
 	if err != nil {
-		fmt.Println("a")
 		return claimsrv.ProofOfRelayClaim{}, err
 	}
 
 	// update Relay Root in Smart Contract
-	as.rootsrv.SetRoot(as.mt.Root())
+	as.rootsrv.SetRoot(*as.mt.RootKey())
 
-	proofOfClaim, err := as.claimsrv.GetRelayClaimByHi(claim.Hi())
+	proofOfClaim, err := as.claimsrv.GetRelayClaimByHi(*claim.Entry().HIndex())
 	if err != nil {
 		fmt.Println("err", err.Error())
 		return claimsrv.ProofOfRelayClaim{}, err
