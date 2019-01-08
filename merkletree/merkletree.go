@@ -381,7 +381,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 		}
 	}
 
-	if p.existence && ((bs[0] & 0x02) != 0) {
+	if !p.existence && ((bs[0] & 0x02) != 0) {
 		p.nodeAux = &nodeAux{hIndex: &Hash{}, hValue: &Hash{}}
 		nodeAuxBytes := siblingBytes[len(p.siblings)*ElemBytesLen:]
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
