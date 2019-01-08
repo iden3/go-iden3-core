@@ -12,22 +12,17 @@ import (
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
 var ErrInvalidClaimType = errors.New("invalid claim type")
 
-// copyToElemBytes copies the src slice backwards to e, starting at -start of
+// copyToElemBytes copies the src slice forwards to e, ending at -start of
 // e.  This function will panic if src doesn't fit into len(e)-start.
 func copyToElemBytes(e *merkletree.ElemBytes, start int, src []byte) {
-	for i := 0; i < len(src); i++ {
-		e[merkletree.ElemBytesLen-1-start-i] = src[i]
-	}
+	copy(e[merkletree.ElemBytesLen-start-len(src):], src)
 }
 
-// copyFromElemBytes copies from e to dst, starting at -start of e and going
-// backwards.  This function will panic if len(e)-start is smaller than
+// copyFromElemBytes copies from e to dst, ending at -start of e and going
+// forwards.  This function will panic if len(e)-start is smaller than
 // len(dst).
 func copyFromElemBytes(dst []byte, start int, e *merkletree.ElemBytes) {
-	for i := 0; i < len(dst); i++ {
-		dst[i] = e[merkletree.ElemBytesLen-1-start-i]
-	}
-
+	copy(dst, e[merkletree.ElemBytesLen-start-len(dst):])
 }
 
 // setClaimTypeVersion is a helper function to set the type and version of a
@@ -54,7 +49,7 @@ type ClaimType [ClaimTypeLen]byte
 // NewClaimType creates a ClaimType from a type name.
 func NewClaimType(name string) (t ClaimType) {
 	h := utils.HashBytes([]byte(name))
-	copy(t[:], h[:])
+	copy(t[:ClaimTypeLen], h[len(h)-ClaimTypeLen:])
 	return t
 }
 
@@ -97,20 +92,20 @@ func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) ClaimBasic {
 // NewClaimBasicFromEntry deserializes a ClaimBasic from an Entry.
 func NewClaimBasicFromEntry(e *merkletree.Entry) (c ClaimBasic) {
 	_, c.Version = getClaimTypeVersion(e)
-	copyFromElemBytes(c.IndexSlot[:152/8], ClaimTypeVersionLen, &e.Data[3])
-	copyFromElemBytes(c.IndexSlot[152/8:], 0, &e.Data[2])
-	copyFromElemBytes(c.DataSlot[:248/8], 0, &e.Data[1])
-	copyFromElemBytes(c.DataSlot[248/8:], 0, &e.Data[0])
+	copyFromElemBytes(c.IndexSlot[len(c.IndexSlot)-152/8:], ClaimTypeVersionLen, &e.Data[3])
+	copyFromElemBytes(c.IndexSlot[:248/8], 0, &e.Data[2])
+	copyFromElemBytes(c.DataSlot[248/8:], 0, &e.Data[1])
+	copyFromElemBytes(c.DataSlot[:248/8], 0, &e.Data[0])
 	return c
 }
 
 // ToEntry serializes the claim into an Entry.
 func (c *ClaimBasic) ToEntry() (e merkletree.Entry) {
 	setClaimTypeVersion(&e, c.Type(), c.Version)
-	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.IndexSlot[:152/8])
-	copyToElemBytes(&e.Data[2], 0, c.IndexSlot[152/8:])
-	copyToElemBytes(&e.Data[1], 0, c.DataSlot[:248/8])
-	copyToElemBytes(&e.Data[0], 0, c.DataSlot[248/8:])
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.IndexSlot[len(c.IndexSlot)-152/8:])
+	copyToElemBytes(&e.Data[2], 0, c.IndexSlot[:248/8])
+	copyToElemBytes(&e.Data[1], 0, c.DataSlot[248/8:])
+	copyToElemBytes(&e.Data[0], 0, c.DataSlot[:248/8])
 	return e
 }
 
@@ -133,7 +128,7 @@ type ClaimAssignName struct {
 func NewClaimAssignName(name string, ethID common.Address) (c ClaimAssignName) {
 	c.Version = 0
 	hash := utils.HashBytes([]byte(name))
-	copy(c.NameHash[:], hash[:248/8])
+	copy(c.NameHash[:], hash[len(hash)-248/8:])
 	c.EthID = ethID
 	return c
 }

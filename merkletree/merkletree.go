@@ -85,8 +85,10 @@ var (
 
 // Entry is the generic type that is stored in the MT.
 type Entry struct {
-	Data   Data
+	Data Data
+	// hIndex is a cache used to avoid recalculating hIndex
 	hIndex *Hash
+	// hValue is a cache used to avoid recalculating hValue
 	hValue *Hash
 }
 
@@ -105,7 +107,7 @@ func (e *Entry) HIndex() *Hash {
 }
 
 func (e *Entry) HValue() *Hash {
-	if e.hValue == nil { // Cache the hIndex.
+	if e.hValue == nil { // Cache the hValue.
 		e.hValue = HashElems(e.Data[:2]...)
 	}
 	return e.hValue

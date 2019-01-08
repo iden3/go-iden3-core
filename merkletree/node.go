@@ -18,12 +18,16 @@ const (
 
 // Node is the struct that represents a node in the MT.
 type Node struct {
-	Type   NodeType
+	// Type is the type of node in the tree.
+	Type NodeType
+	// ChildL is the left child of a middle node.
 	ChildL *Hash
+	// ChildR is the right child of a middle node.
 	ChildR *Hash
-	//Data   *Data
+	// Entry is the data stored in a leaf node.
 	Entry *Entry
-	key   *Hash
+	// key is a cache used to avoid recalculating key
+	key *Hash
 }
 
 // NewNodeLeaf creates a new leaf node.
