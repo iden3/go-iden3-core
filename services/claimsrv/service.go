@@ -541,6 +541,4 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi *merkletree.Hash) (uint32, err
 		hi = entry.HIndex()
 		// hi = merkletree.HashBytes(value.Bytes()[:value.IndexLength()])
 	}
-	// return version
-	return version, nil
 }

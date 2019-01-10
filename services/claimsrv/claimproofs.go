@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
@@ -101,7 +102,7 @@ func CheckKSignInIDdb(mt *merkletree.MerkleTree, ksign common.Address) bool {
 	entry = claimAuthorizeKSign.Entry()
 	node = merkletree.NewNodeLeaf(entry)
 	_, err = mt.GetNode(node.Key())
-	if err.Error() != "key not found" {
+	if err != db.ErrNotFound {
 		return false
 	}
 

@@ -517,7 +517,7 @@ func TestDbInsertGet(t *testing.T) {
 
 	nodeType, data, err := mt.dbGet(key)
 	assert.Nil(t, err)
-	assert.Equal(t, byte(9), nodeType)
+	assert.Equal(t, NodeType(9), nodeType)
 	assert.Equal(t, []byte("value"), data)
 
 }

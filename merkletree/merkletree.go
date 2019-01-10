@@ -92,6 +92,10 @@ var (
 	ErrInvalidNodeFound = errors.New("found an invalid node in the DB")
 	// ErrInvalidProofBytes is used when a serialized proof is invalid.
 	ErrInvalidProofBytes = errors.New("the serialized proof is invalid")
+	// ErrInvalidDBValue is used when a value in the key value DB is
+	// invalid (for example, it doen't contain a byte header and a []byte
+	// body of at least len=1.
+	ErrInvalidDBValue = errors.New("the value in the DB is invalid")
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
@@ -151,7 +155,6 @@ type MerkleTree struct {
 // NewMerkleTree generates a new Merkle Tree
 func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 	mt := MerkleTree{storage: storage, maxLevels: maxLevels}
-
 	_, gettedRoot, err := mt.dbGet(rootNodeValue)
 	if err != nil {
 		/*
@@ -178,11 +181,14 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 		if err != nil {
 			return nil, err
 		}
+		mt.Lock()
+		defer mt.Unlock()
 		nodeRoot := NewNodeEmpty()
 		k, _ := nodeRoot.Key(), nodeRoot.Value()
 		mt.rootKey = k
 		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
 		if err = tx.Commit(); err != nil {
+			tx.Close()
 			return nil, err
 		}
 		return &mt, nil
@@ -615,25 +621,26 @@ func (mt *MerkleTree) AddNode(tx db.Tx, n *Node) (*Hash, error) {
 	return k, nil
 }
 
-func (mt *MerkleTree) dbGet(k []byte) (byte, []byte, error) {
+func (mt *MerkleTree) dbGet(k []byte) (NodeType, []byte, error) {
 	if bytes.Equal(k, HashZero[:]) {
-		return 0, HashZero[:], nil
+		return 0, nil, nil
 	}
 
 	value, err := mt.storage.Get(k)
 	if err != nil {
-		return 0, HashZero[:], err
+		return 0, nil, err
 	}
 
+	if len(value) < 2 {
+		return 0, nil, ErrInvalidDBValue
+	}
 	nodeType := value[0]
 	nodeBytes := value[1:]
 
-	return nodeType, nodeBytes, nil
+	return NodeType(nodeType), nodeBytes, nil
 }
 
 func (mt *MerkleTree) dbInsert(tx db.Tx, k []byte, t NodeType, data []byte) {
-	var v []byte
-	v = append(v, byte(t))
-	v = append(v, data...)
+	v := append([]byte{byte(t)}, data...)
 	tx.Put(k, v)
 }

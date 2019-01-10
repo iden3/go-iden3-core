@@ -53,8 +53,13 @@ func cmdAddClaim(c *cli.Context) error {
 
 	var indexSlot [400 / 8]byte
 	var dataSlot [496 / 8]byte
-	copy(indexSlot[:], indexData[:400/8])
-	copy(dataSlot[:], outData[:496/8])
+	if len(indexData) != len(indexSlot) || len(outData) != len(dataSlot) {
+		return fmt.Errorf(
+			"Length of indexSlot and dataSlot must be %v and %v respectively",
+			len(indexSlot), len(dataSlot))
+	}
+	copy(indexSlot[:], indexData)
+	copy(dataSlot[:], outData)
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 	fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
 
@@ -104,8 +109,13 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 
 		var indexSlot [400 / 8]byte
 		var dataSlot [496 / 8]byte
-		copy(indexSlot[:], line[0][:400/8])
-		copy(dataSlot[:], line[1][:496/8])
+		if len(line[0]) != len(indexSlot) || len(line[1]) != len(dataSlot) {
+			return fmt.Errorf(
+				"Length of indexSlot and dataSlot must be %v and %v respectively",
+				len(indexSlot), len(dataSlot))
+		}
+		copy(indexSlot[:], line[0])
+		copy(dataSlot[:], line[1])
 		claim := core.NewClaimBasic(indexSlot, dataSlot)
 		// claim := core.NewGenericClaim("iden3.io", "generic", []byte(line[0]), []byte(line[1]))
 		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()) + "\n")
@@ -132,8 +142,13 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 
 		var indexSlot [400 / 8]byte
 		var dataSlot [496 / 8]byte
-		copy(indexSlot[:], line[0][:400/8])
-		copy(dataSlot[:], line[1][:496/8])
+		if len(line[0]) != len(indexSlot) || len(line[1]) != len(dataSlot) {
+			return fmt.Errorf(
+				"Length of indexSlot and dataSlot must be %v and %v respectively",
+				len(indexSlot), len(dataSlot))
+		}
+		copy(indexSlot[:], line[0])
+		copy(dataSlot[:], line[1])
 		claim := core.NewClaimBasic(indexSlot, dataSlot)
 		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
 
