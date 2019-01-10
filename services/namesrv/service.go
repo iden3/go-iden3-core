@@ -1,7 +1,6 @@
 package namesrv
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,8 +16,8 @@ import (
 )
 
 type Service interface {
-	VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNameClaim, error)
-	ResolvAssignNameClaim(nameid string) (core.AssignNameClaim, error)
+	VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAssignName, error)
+	ResolvClaimAssignName(nameid string) (*core.ClaimAssignName, error)
 }
 
 type ServiceImpl struct {
@@ -32,68 +31,68 @@ func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer sign
 	return &ServiceImpl{claimsrv, identitysrv, signer, domain}
 }
 
-// VinculateID creates an adds a AssignNameClaim vinculating a name and an address, into the merkletree
-func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (core.AssignNameClaim, error) {
+// VinculateID creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
+func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAssignName, error) {
 	// verify vinculateIDMsg.Msg signature with the Operational Key of the identity vinculateIDMsg.EthID
 	// get the operational key
 	identity, err := ns.identitysrv.Get(vinculateIDMsg.EthID)
 	if err != nil {
-		return core.AssignNameClaim{}, err
+		return &core.ClaimAssignName{}, err
 	}
 	opkey := identity.Operational
 
 	sigBytes, err := common3.HexToBytes(vinculateIDMsg.Signature)
 	if err != nil {
-		return core.AssignNameClaim{}, err
+		return &core.ClaimAssignName{}, err
 	}
 	msgHash := vinculateIDMsg.MsgHash()
 	sigBytes[64] -= 27
 	verified := utils.VerifySig(opkey, sigBytes, msgHash[:])
 	if !verified {
-		return core.AssignNameClaim{}, errors.New("signature can not be verified")
+		return &core.ClaimAssignName{}, errors.New("signature can not be verified")
 	}
 
-	// add AssignNameClaim to merkle tree
-	nameHash := utils.HashBytes([]byte(vinculateIDMsg.Name))
-	domainHash := utils.HashBytes([]byte(ns.domain))
-	assignNameClaim := core.NewAssignNameClaim(nameHash, domainHash, vinculateIDMsg.EthID)
-	err = ns.claimsrv.AddAssignNameClaim(assignNameClaim)
+	// add ClaimAssignName to merkle tree
+	assignNameClaim := core.NewClaimAssignName(vinculateIDMsg.Name, vinculateIDMsg.EthID)
+	err = ns.claimsrv.AddClaimAssignName(*assignNameClaim)
 	if err != nil {
-		return core.AssignNameClaim{}, err
+		return &core.ClaimAssignName{}, err
 	}
 
 	return assignNameClaim, nil
 }
 
-// ResolvAssignNameClaim returns the AssignNameClaim from the merkletree, given a nameid and a namespace
-func (ns *ServiceImpl) ResolvAssignNameClaim(nameid string) (core.AssignNameClaim, error) {
+// ResolvClaimAssignName returns the ClaimAssignName from the merkletree, given a nameid and a namespace
+func (ns *ServiceImpl) ResolvClaimAssignName(nameid string) (*core.ClaimAssignName, error) {
 	// get name and domain
 	s := strings.Split(nameid, "@")
 	if len(s) != 2 {
-		return core.AssignNameClaim{}, fmt.Errorf("Invalid nameid %v", s)
+		return &core.ClaimAssignName{}, fmt.Errorf("Invalid nameid %v", s)
 	}
 	name := s[0]
-	domain := s[1]
+	// domain := s[1]
 
-	// build the AssignNameClaim Partial with the given data of the Index
-	nameHash := utils.HashBytes([]byte(name))
-	domainHash := utils.HashBytes([]byte(domain))
-	claimPartial := core.NewAssignNameClaim(nameHash, domainHash, common.Address{})
+	// build the ClaimAssignName Partial with the given data of the Index
+	claimPartial := core.NewClaimAssignName(name, common.Address{})
 
-	version, err := claimsrv.GetNextVersion(ns.claimsrv.MT(), claimPartial.Hi())
+	version, err := claimsrv.GetNextVersion(ns.claimsrv.MT(), claimPartial.Entry().HIndex())
 	if err != nil {
-		return core.AssignNameClaim{}, err
+		return &core.ClaimAssignName{}, err
 	}
-	claimPartial.BaseIndex.Version = version - 1
+	claimPartial.Version = version - 1
 
-	// get the complete AssignNameClaim in that merkle tree position
-	claimInPosBytes, err := ns.claimsrv.MT().GetValueInPos(claimPartial.Hi())
+	// get the complete ClaimAssignName in that merkle tree position
+	leafDataInPos, err := ns.claimsrv.MT().GetDataByIndex(claimPartial.Entry().HIndex())
 	if err != nil {
-		return core.AssignNameClaim{}, err
+		return &core.ClaimAssignName{}, err
 	}
-	if bytes.Equal(claimInPosBytes, merkletree.EmptyNodeValue[:]) {
-		return core.AssignNameClaim{}, errors.New("not found")
+	// if bytes.Equal(claimInPosBytes, merkletree.EmptyNodeValue[:]) {
+	//         return core.ClaimAssignName{}, errors.New("not found")
+	// }
+	entry := &merkletree.Entry{
+		Data: *leafDataInPos,
 	}
-	assignNameClaim, err := core.ParseAssignNameClaimBytes(claimInPosBytes)
-	return assignNameClaim, err
+	assignNameClaim := core.NewClaimAssignNameFromEntry(entry)
+	// assignNameClaim, err := core.ParseClaimAssignNameBytes(claimInPosBytes)
+	return assignNameClaim, nil
 }

@@ -1,15 +1,9 @@
 package main
 
-import (
-	"bytes"
-	"fmt"
+func main() {
+}
 
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
-)
-
+/*
 func main() {
 	storage, err := db.NewLevelDbStorage("./path", false)
 	if err != nil {
@@ -72,3 +66,4 @@ func main() {
 
 	fmt.Println("merkle proof of non existence checked:", checked)
 }
+*/

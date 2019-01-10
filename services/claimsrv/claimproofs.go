@@ -5,27 +5,60 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
 
 // CheckProofOfClaim checks the Merkle Proof of the Claim, the SetRootClaim, and the non revocation proof of both claims
 func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int) bool {
-	hiClaim := core.HiFromClaimBytes(pc.ClaimProof.Leaf)
-	vClaimProof := merkletree.CheckProof(pc.ClaimProof.Root, pc.ClaimProof.Proof,
-		hiClaim, merkletree.HashBytes(pc.ClaimProof.Leaf), numLevels)
+	node, err := merkletree.NewNodeFromBytes(pc.ClaimProof.Leaf)
+	if err != nil {
+		return false
+	}
+	node.Entry.HIndex()
+	pf, err := merkletree.NewProofFromBytes(pc.ClaimProof.Proof)
+	if err != nil {
+		return false
+	}
+	vClaimProof := merkletree.VerifyProof(&pc.ClaimProof.Root, pf,
+		node.Entry.HIndex(), node.Entry.HValue())
 
-	hiSetRootClaim := core.HiFromClaimBytes(pc.SetRootClaimProof.Leaf)
-	vSetRootClaimProof := merkletree.CheckProof(pc.SetRootClaimProof.Root, pc.SetRootClaimProof.Proof,
-		hiSetRootClaim, merkletree.HashBytes(pc.SetRootClaimProof.Leaf), numLevels)
+	node, err = merkletree.NewNodeFromBytes(pc.SetRootClaimProof.Leaf)
+	if err != nil {
+		return false
+	}
+	node.Entry.HIndex()
+	pf, err = merkletree.NewProofFromBytes(pc.SetRootClaimProof.Proof)
+	if err != nil {
+		return false
+	}
+	vSetRootClaimProof := merkletree.VerifyProof(&pc.SetRootClaimProof.Root, pf,
+		node.Entry.HIndex(), node.Entry.HValue())
 
-	hiNonRevocationClaim := core.HiFromClaimBytes(pc.ClaimNonRevocationProof.Leaf)
-	vClaimNonRevocationProof := merkletree.CheckProof(pc.ClaimNonRevocationProof.Root, pc.ClaimNonRevocationProof.Proof,
-		hiNonRevocationClaim, merkletree.EmptyNodeValue, numLevels)
+	node, err = merkletree.NewNodeFromBytes(pc.ClaimNonRevocationProof.Leaf)
+	if err != nil {
+		return false
+	}
+	node.Entry.HIndex()
+	pf, err = merkletree.NewProofFromBytes(pc.ClaimNonRevocationProof.Proof)
+	if err != nil {
+		return false
+	}
+	vClaimNonRevocationProof := merkletree.VerifyProof(&pc.ClaimNonRevocationProof.Root, pf,
+		node.Entry.HIndex(), node.Entry.HValue())
 
-	hiNonRevocationSetRootClaim := core.HiFromClaimBytes(pc.SetRootClaimNonRevocationProof.Leaf)
-	vSetRootClaimNonRevocationProof := merkletree.CheckProof(pc.SetRootClaimNonRevocationProof.Root, pc.SetRootClaimNonRevocationProof.Proof,
-		hiNonRevocationSetRootClaim, merkletree.EmptyNodeValue, numLevels)
+	node, err = merkletree.NewNodeFromBytes(pc.SetRootClaimNonRevocationProof.Leaf)
+	if err != nil {
+		return false
+	}
+	node.Entry.HIndex()
+	pf, err = merkletree.NewProofFromBytes(pc.SetRootClaimNonRevocationProof.Proof)
+	if err != nil {
+		return false
+	}
+	vSetRootClaimNonRevocationProof := merkletree.VerifyProof(&pc.SetRootClaimNonRevocationProof.Root, pf,
+		node.Entry.HIndex(), node.Entry.HValue())
 
 	// additional, check caducity of the pc.Date
 
@@ -51,21 +84,25 @@ func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int)
 // CheckKSignInIDdb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
 func CheckKSignInIDdb(mt *merkletree.MerkleTree, ksign common.Address) bool {
 	// generate the AuthorizeKSignClaim
-	authorizeKSignClaim := core.NewOperationalKSignClaim(ksign)
-	ht := authorizeKSignClaim.Ht()
-	value, err := mt.Storage().Get(ht[:])
+	var tmpFakeAx [16]byte
+	var tmpFakeAy [16]byte
+	claimAuthorizeKSign := core.NewClaimAuthorizeKSign(false, tmpFakeAx, tmpFakeAy) // TODO ethAddress to pubK
+	entry := claimAuthorizeKSign.Entry()
+	node := merkletree.NewNodeLeaf(entry)
+	nodeGetted, err := mt.GetNode(node.Key())
 	if err != nil {
 		return false
 	}
-	if !bytes.Equal(authorizeKSignClaim.Bytes(), value[5:]) { // value[5:] to skip the db prefix
+	if !bytes.Equal(node.Value(), nodeGetted.Value()) {
 		return false
 	}
 
 	// non revocation
-	authorizeKSignClaim.BaseIndex.Version++
-	ht = authorizeKSignClaim.Ht()
-	value, err = mt.Storage().Get(ht[:])
-	if err.Error() != "key not found" {
+	claimAuthorizeKSign.Version++
+	entry = claimAuthorizeKSign.Entry()
+	node = merkletree.NewNodeLeaf(entry)
+	_, err = mt.GetNode(node.Key())
+	if err != db.ErrNotFound {
 		return false
 	}
 

@@ -51,20 +51,29 @@ func cmdAddClaim(c *cli.Context) error {
 	indexData := c.Args().Get(0)
 	outData := c.Args().Get(1)
 
-	claim := core.NewGenericClaim("iden3.io", "generic", []byte(indexData), []byte(outData))
-	fmt.Println("clam: " + common3.BytesToHex(claim.Bytes()))
+	var indexSlot [400 / 8]byte
+	var dataSlot [496 / 8]byte
+	if len(indexData) != len(indexSlot) || len(outData) != len(dataSlot) {
+		return fmt.Errorf(
+			"Length of indexSlot and dataSlot must be %v and %v respectively",
+			len(indexSlot), len(dataSlot))
+	}
+	copy(indexSlot[:], indexData)
+	copy(dataSlot[:], outData)
+	claim := core.NewClaimBasic(indexSlot, dataSlot)
+	fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
 
-	err := claimservice.AddDirectClaim(claim)
+	err := claimservice.AddDirectClaim(*claim)
 	if err != nil {
 		return err
 	}
-	fmt.Print("root updated: " + mt.Root().Hex())
+	fmt.Print("root updated: " + mt.RootKey().Hex())
 
-	mp, err := mt.GenerateProof(claim.Hi())
+	mp, err := mt.GenerateProof(claim.Entry().HIndex())
 	if err != nil {
 		return err
 	}
-	fmt.Print("merkleproof: " + common3.BytesToHex(mp))
+	fmt.Print("merkleproof: " + common3.BytesToHex(mp.Bytes()))
 
 	return nil
 }
@@ -98,11 +107,21 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 
 		fmt.Println("importing claim with index: " + line[0] + ", outside index: " + line[1])
 
-		claim := core.NewGenericClaim("iden3.io", "generic", []byte(line[0]), []byte(line[1]))
-		fmt.Println("clam: " + common3.BytesToHex(claim.Bytes()) + "\n")
+		var indexSlot [400 / 8]byte
+		var dataSlot [496 / 8]byte
+		if len(line[0]) != len(indexSlot) || len(line[1]) != len(dataSlot) {
+			return fmt.Errorf(
+				"Length of indexSlot and dataSlot must be %v and %v respectively",
+				len(indexSlot), len(dataSlot))
+		}
+		copy(indexSlot[:], line[0])
+		copy(dataSlot[:], line[1])
+		claim := core.NewClaimBasic(indexSlot, dataSlot)
+		// claim := core.NewGenericClaim("iden3.io", "generic", []byte(line[0]), []byte(line[1]))
+		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()) + "\n")
 
 		// add claim to merkletree, without updating the root, that will be done on the end of the loop (csv file)
-		err = mt.Add(claim)
+		err = mt.Add(claim.Entry())
 		if err != nil {
 			return err
 		}
@@ -121,19 +140,28 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 
 		fmt.Println("generating merkleproof of claim with index: " + line[0] + ", outside index: " + line[1])
 
-		claim := core.NewGenericClaim("iden3.io", "generic", []byte(line[0]), []byte(line[1]))
-		fmt.Println("clam: " + common3.BytesToHex(claim.Bytes()))
+		var indexSlot [400 / 8]byte
+		var dataSlot [496 / 8]byte
+		if len(line[0]) != len(indexSlot) || len(line[1]) != len(dataSlot) {
+			return fmt.Errorf(
+				"Length of indexSlot and dataSlot must be %v and %v respectively",
+				len(indexSlot), len(dataSlot))
+		}
+		copy(indexSlot[:], line[0])
+		copy(dataSlot[:], line[1])
+		claim := core.NewClaimBasic(indexSlot, dataSlot)
+		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
 
 		// the proofs better generate them once all claims are added
-		mp, err := mt.GenerateProof(claim.Hi())
+		mp, err := mt.GenerateProof(claim.Entry().HIndex())
 		if err != nil {
 			return err
 		}
-		fmt.Println("merkleproof: " + common3.BytesToHex(mp) + "\n")
+		fmt.Println("merkleproof: " + common3.BytesToHex(mp.Bytes()) + "\n")
 	}
 	// update the root in the smart contract
-	rootservice.SetRoot(mt.Root())
-	fmt.Println("merkletree root: " + mt.Root().Hex())
+	rootservice.SetRoot(*mt.RootKey())
+	fmt.Println("merkletree root: " + mt.RootKey().Hex())
 
 	return nil
 }

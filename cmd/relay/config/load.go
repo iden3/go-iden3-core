@@ -68,9 +68,9 @@ func LoadStorage() db.Storage {
 
 func LoadMerkele(storage db.Storage) *merkletree.MerkleTree {
 	mtstorage := storage.WithPrefix(dbMerkletreePrefix)
-	mt, err := merkletree.New(mtstorage, 140)
+	mt, err := merkletree.NewMerkleTree(mtstorage, 140)
 	assert("Cannot open merkle tree", err)
-	log.WithField("hash", mt.Root().Hex()).Info("Current root")
+	log.WithField("hash", mt.RootKey().Hex()).Info("Current root")
 
 	return mt
 }

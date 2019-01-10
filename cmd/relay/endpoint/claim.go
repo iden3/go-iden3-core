@@ -9,7 +9,6 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
 
-	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 )
 
@@ -50,7 +49,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(setRootClaim.Hi())
+	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(*setRootClaim.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
@@ -65,6 +64,50 @@ func handlePostClaim(c *gin.Context) {
 	idaddr := common.HexToAddress(idaddrhex)
 	var bytesSignedMsg claimsrv.BytesSignedMsg
 	c.BindJSON(&bytesSignedMsg)
+
+	bytesValue, err := common3.HexToBytes(bytesSignedMsg.ValueHex)
+	if err != nil {
+		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
+		return
+	}
+
+	// bytesValue to Element data
+	var dataBytes [128]byte
+	copy(dataBytes[:], bytesValue)
+	data := merkletree.BytesToData(dataBytes)
+	entry := merkletree.Entry{
+		Data: *data,
+	}
+
+	claimValueMsg := claimsrv.ClaimValueMsg{
+		ClaimValue: entry,
+		Signature:  bytesSignedMsg.SignatureHex,
+		KSign:      bytesSignedMsg.KSign,
+	}
+	err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
+	if err != nil {
+		fail(c, "error on AddUserIDClaim", err)
+		return
+	}
+	// return claim with proofs
+	proofOfClaim, err := claimservice.GetClaimByHi(idaddr, *entry.HIndex())
+	if err != nil {
+		fail(c, "error on GetClaimByHi", err)
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"proofOfClaim": proofOfClaim.Hex(),
+	})
+	return
+}
+
+/*
+func handlePostClaim(c *gin.Context) {
+	idaddrhex := c.Param("idaddr")
+	idaddr := common.HexToAddress(idaddrhex)
+	var bytesSignedMsg claimsrv.BytesSignedMsg
+	c.BindJSON(&bytesSignedMsg)
 	bytesValue, err := common3.HexToBytes(bytesSignedMsg.ValueHex)
 	if err != nil {
 		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
@@ -73,7 +116,7 @@ func handlePostClaim(c *gin.Context) {
 	typeBytes := bytesValue[32:56]
 
 	switch common3.BytesToHex(typeBytes) {
-	case common3.BytesToHex(core.GenericType):
+	case common3.BytesToHex(core.ClaimTypeBasic[:]):
 		claimGeneric, err := core.ParseGenericClaimBytes(bytesValue)
 		if err != nil {
 			fail(c, "error on parsing GenericClaim bytes", err)
@@ -159,6 +202,7 @@ func handlePostClaim(c *gin.Context) {
 		fail(c, "type not found", errors.New("claim type not found"))
 	}
 }
+*/
 
 func handleGetIDRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
@@ -169,9 +213,9 @@ func handleGetIDRoot(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"root":        claimservice.MT().Root().Hex(),  // relay root
-		"idRoot":      idRoot.Hex(),                    // user id root
-		"idRootProof": common3.BytesToHex(idRootProof), // user id root proof in the relay merkletree
+		"root":        claimservice.MT().RootKey().Hex(), // relay root
+		"idRoot":      idRoot.Hex(),                      // user id root
+		"idRootProof": common3.BytesToHex(idRootProof),   // user id root proof in the relay merkletree
 	})
 	return
 }

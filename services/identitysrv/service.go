@@ -183,8 +183,13 @@ func (s *ServiceImpl) Forward(
 	sig []byte,
 ) (common.Hash, error) {
 
-	ksignclaim := core.NewOperationalKSignClaim(ksignkey)
-	proof, err := s.cs.GetClaimByHi(idaddr, ksignclaim.Hi())
+	// ksignclaim := core.NewOperationalKSignClaim(ksignkey)
+	// TODO get the sign, ax, ay values
+	sign := true
+	ax := [128 / 8]byte{}
+	ay := [128 / 8]byte{}
+	ksignclaim := core.NewClaimAuthorizeKSign(sign, ax, ay) // TODO
+	proof, err := s.cs.GetClaimByHi(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
 		return common.Hash{}, err
@@ -239,8 +244,13 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
-	claim := core.NewOperationalKSignClaim(id.Operational)
-	return s.cs.AddAuthorizeKSignClaimFirst(idaddr, claim)
+	// TODO get the sign, ax, ay values
+	sign := true
+	ax := [128 / 8]byte{}
+	ay := [128 / 8]byte{}
+	claim := core.NewClaimAuthorizeKSign(sign, ax, ay) // TODO
+	// claim := core.NewOperationalKSignClaim(id.Operational)
+	return s.cs.AddClaimAuthorizeKSignFirst(idaddr, *claim)
 }
 
 func (m *ServiceImpl) List(limit int) ([]common.Address, error) {

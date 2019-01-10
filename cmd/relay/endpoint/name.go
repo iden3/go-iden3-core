@@ -15,13 +15,13 @@ func handleVinculateID(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(assignNameClaim.Hi())
+	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(*assignNameClaim.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"assignNameClaim":   common3.BytesToHex(assignNameClaim.Bytes()),
+		"assignNameClaim":   common3.BytesToHex(assignNameClaim.Entry().Bytes()),
 		"name":              vinculateIDMsg.Name,
 		"ethID":             assignNameClaim.EthID,
 		"proofOfRelayClaim": proofOfRelayClaim.Hex(),
@@ -30,13 +30,13 @@ func handleVinculateID(c *gin.Context) {
 func handleAssignNameClaimResolv(c *gin.Context) {
 	nameid := c.Param("nameid")
 
-	assignNameClaim, err := nameservice.ResolvAssignNameClaim(nameid)
+	assignNameClaim, err := nameservice.ResolvClaimAssignName(nameid)
 	if err != nil {
 		fail(c, "nameid not found in merkletree", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"claim": common3.BytesToHex(assignNameClaim.Bytes()),
+		"claim": common3.BytesToHex(assignNameClaim.Entry().Bytes()),
 		"ethID": assignNameClaim.EthID,
 	})
 }
