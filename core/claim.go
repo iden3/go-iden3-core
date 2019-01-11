@@ -110,7 +110,7 @@ func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
 	return c
 }
 
-// ToEntry serializes the claim into an Entry.
+// Entry serializes the claim into an Entry.
 func (c *ClaimBasic) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
@@ -155,7 +155,7 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 	return c
 }
 
-// ToEntry serializes the claim into an Entry.
+// Entry serializes the claim into an Entry.
 func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
@@ -206,7 +206,7 @@ func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSign {
 	return c
 }
 
-// ToEntry serializes the claim into an Entry.
+// Entry serializes the claim into an Entry.
 func (c *ClaimAuthorizeKSign) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
@@ -260,7 +260,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	return c
 }
 
-// ToEntry serializes the claim into an Entry.
+// Entry serializes the claim into an Entry.
 func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)

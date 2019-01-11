@@ -107,7 +107,9 @@ var (
 	rootNodeValue = []byte("currentroot")
 )
 
-// Entry is the generic type that is stored in the MT.
+// Entry is the generic type that is stored in the MT.  The entry should not be
+// modified after creating because the cached hIndex and hValue won't be
+// updated.
 type Entry struct {
 	Data Data
 	// hIndex is a cache used to avoid recalculating hIndex
