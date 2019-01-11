@@ -121,6 +121,18 @@ func TestAddEntry16(t *testing.T) {
 		mt1.RootKey().Hex())
 }
 
+func TestAddEntryRepeatIndex(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+	e0 := NewEntryFromInts(0, 12, 0, 3)
+	if err := mt.Add(&e0); err != nil {
+		t.Fatal(err)
+	}
+	e1 := NewEntryFromInts(0, 45, 0, 3)
+	err := mt.Add(&e1)
+	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
+}
+
 func TestEntriesIndex(t *testing.T) {
 	// Two entries with different Index generate different hash index
 	a := NewEntryFromInts(0, 0, 0, 1)
