@@ -19,7 +19,8 @@ const (
 	DBEntryTypeRoot NodeType = 3
 )
 
-// Node is the struct that represents a node in the MT.
+// Node is the struct that represents a node in the MT. The node should not be
+// modified after creation because the cached key won't be updated.
 type Node struct {
 	// Type is the type of node in the tree.
 	Type NodeType
