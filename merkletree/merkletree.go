@@ -77,8 +77,8 @@ const (
 )
 
 var (
-	// ErrNodeAlreadyExists is used when a node already exists.
-	ErrNodeAlreadyExists = errors.New("node already exists")
+	// ErrNodeKeyAlreadyExists is used when a node key already exists.
+	ErrNodeKeyAlreadyExists = errors.New("node already exists")
 	// ErrEntryIndexNotFound is used when no entry is found for an index.
 	ErrEntryIndexNotFound = errors.New("node index not found in the DB")
 	// ErrNodeDataBadSize is used when the data of a node has an incorrect
@@ -96,6 +96,9 @@ var (
 	// invalid (for example, it doen't contain a byte header and a []byte
 	// body of at least len=1.
 	ErrInvalidDBValue = errors.New("the value in the DB is invalid")
+	// ErrEntryIndexAlreadyExists is used when the entry index already
+	// exists in the tree.
+	ErrEntryIndexAlreadyExists = errors.New("the entry index already exists in the tree")
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
@@ -299,6 +302,10 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 	case NodeTypeLeaf:
 		// TODO: delete old node n???  Make this optional???
 		hIndex := n.Entry.HIndex()
+		// Check if leaf node found contains the leaf node we are trying to add
+		if bytes.Equal(hIndex[:], newLeaf.Entry.HIndex()[:]) {
+			return nil, ErrEntryIndexAlreadyExists
+		}
 		pathOldLeaf := getPath(mt.maxLevels, hIndex)
 		// We need to push newLeaf down until its path diverges from n's path
 		return mt.pushLeaf(tx, newLeaf, n, lvl, path, pathOldLeaf)
@@ -615,7 +622,7 @@ func (mt *MerkleTree) AddNode(tx db.Tx, n *Node) (*Hash, error) {
 	k, v := n.Key(), n.Value()
 	// Check that the node key doesn't already exist
 	if _, err := tx.Get(k[:]); err == nil {
-		return nil, ErrNodeAlreadyExists
+		return nil, ErrNodeKeyAlreadyExists
 	}
 	tx.Put(k[:], v)
 	return k, nil
