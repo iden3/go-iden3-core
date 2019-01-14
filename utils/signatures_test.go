@@ -3,6 +3,7 @@ package utils
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/stretchr/testify/assert"
@@ -11,20 +12,6 @@ import (
 const (
 	testPrivKHex = "da7079f082a1ced80c5dee3bf00752fd67f75321a637e5d5073ce1489af062d8"
 )
-
-/* TODO: FIX
-func TestSign(t *testing.T) {
-	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
-	assert.Nil(t, err)
-	msgHash := merkletree.HashBytes([]byte("to sign"))
-	signature, err := Sign(msgHash, testPrivK)
-	assert.Equal(t, "0xd45d0a89d5bbe9770ce3241cf8672aefdcdd2f204b5d63c8500e9770335314c532d0b16e3b41caabd1dde37c62a7cb6273d97c09b7394080ae7d1d8d211e05fb00", common3.BytesToHex(signature))
-
-	msgHash = merkletree.HashBytes([]byte("test"))
-	signature, err = Sign(msgHash, testPrivK)
-	assert.Equal(t, "0xbc5a47a1d4ad475be6679b15e9f71e3f2ee2bb58b2d5086ba42cc766fd27794f68efe72fb87d3bd3501c42cf146493c1c9faa4436760f8c67927fcb8de7f3b6801", common3.BytesToHex(signature))
-}
-*/
 
 func TestVerifySig(t *testing.T) {
 	signatureHex := "0xd45d0a89d5bbe9770ce3241cf8672aefdcdd2f204b5d63c8500e9770335314c532d0b16e3b41caabd1dde37c62a7cb6273d97c09b7394080ae7d1d8d211e05fb00"
@@ -37,14 +24,23 @@ func TestVerifySig(t *testing.T) {
 	assert.True(t, VerifySig(testAddr, signature, msgHash[:]))
 }
 
-/* TODO: FIX
+func TestVerifySigFromJS(t *testing.T) {
+	// verify signature performed in iden3js
+	signatureHex := "0x5413b44384531e9e92bdd80ff21cea7449441dcfff6f4ed0f90864583e3fcade3d5c8857672b473f71d09355e034dba11bb2ca4aa73c55c534293fdca68941041c"
+	signature, err := common3.HexToBytes(signatureHex)
+	signature[64] -= 27
+	assert.Nil(t, err)
+	testAddr := common.HexToAddress("0xBc8C480E68d0895f1E410f4e4eA6E2d6b160Ca9F")
+	msgHash := EthHash([]byte("test"))
+	assert.True(t, VerifySig(testAddr, signature, msgHash[:]))
+}
+
 func TestSignAndVerify(t *testing.T) {
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
 	assert.Nil(t, err)
-	msgHash := merkletree.HashBytes([]byte("to sign"))
-	signature, err := Sign(msgHash, testPrivK)
+	msgHash := EthHash([]byte("test"))
+	signature, err := crypto.Sign(msgHash[:], testPrivK)
 	assert.Nil(t, err)
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
 	assert.True(t, VerifySig(testAddr, signature, msgHash[:]))
 }
-*/

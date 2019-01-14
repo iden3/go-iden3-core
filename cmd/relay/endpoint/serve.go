@@ -49,7 +49,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/id/:idaddr/forward", handleForwardId)
 
 	serviceapi.POST("/vinculateid", handleVinculateID)
-	serviceapi.GET("/identities/resolv/:nameid", handleAssignNameClaimResolv)
+	serviceapi.GET("/identities/resolv/:nameid", handleClaimAssignNameResolv)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
 	go func() {

@@ -9,34 +9,41 @@ import (
 func handleVinculateID(c *gin.Context) {
 	var vinculateIDMsg namesrv.VinculateIDMsg
 	c.BindJSON(&vinculateIDMsg)
-	assignNameClaim, err := nameservice.VinculateID(vinculateIDMsg)
+	claimAssignName, err := nameservice.VinculateID(vinculateIDMsg)
 	if err != nil {
 		fail(c, "error name.VinculateID", err)
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetRelayClaimByHi(*assignNameClaim.Entry().HIndex())
+	proofOfClaimAssignName, err := claimservice.GetRelayClaimByHi(*claimAssignName.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"assignNameClaim":   common3.BytesToHex(assignNameClaim.Entry().Bytes()),
-		"name":              vinculateIDMsg.Name,
-		"ethID":             assignNameClaim.EthID,
-		"proofOfRelayClaim": proofOfRelayClaim.Hex(),
+		"claimAssignName":        common3.BytesToHex(claimAssignName.Entry().Bytes()),
+		"name":                   vinculateIDMsg.Name,
+		"ethID":                  claimAssignName.EthID,
+		"proofOfClaimAssignName": proofOfClaimAssignName.Hex(),
 	})
 }
-func handleAssignNameClaimResolv(c *gin.Context) {
+func handleClaimAssignNameResolv(c *gin.Context) {
 	nameid := c.Param("nameid")
 
-	assignNameClaim, err := nameservice.ResolvClaimAssignName(nameid)
+	claimAssignName, err := nameservice.ResolvClaimAssignName(nameid)
 	if err != nil {
 		fail(c, "nameid not found in merkletree", err)
 		return
 	}
+
+	proofOfClaimAssignName, err := claimservice.GetRelayClaimByHi(*claimAssignName.Entry().HIndex())
+	if err != nil {
+		fail(c, "error on GetClaimByHi", err)
+		return
+	}
 	c.JSON(200, gin.H{
-		"claim": common3.BytesToHex(assignNameClaim.Entry().Bytes()),
-		"ethID": assignNameClaim.EthID,
+		"claim":                  common3.BytesToHex(claimAssignName.Entry().Bytes()),
+		"ethID":                  claimAssignName.EthID,
+		"proofOfClaimAssignName": proofOfClaimAssignName.Hex(),
 	})
 }
