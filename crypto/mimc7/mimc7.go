@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const SEED = "iden3_mimc"
+const SEED = "mimc"
 
 // RElem is a big.Int of maximum 253 bits
 type RElem *big.Int
