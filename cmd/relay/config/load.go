@@ -26,6 +26,11 @@ var (
 	dbIdentityPrefix   = []byte{1}
 )
 
+const (
+	passwdPrefix = "passwd:"
+	filePrefix   = "file:"
+)
+
 func assert(msg string, err error) {
 	if err != nil {
 		log.Error(msg, " ", err.Error())
@@ -34,10 +39,28 @@ func assert(msg string, err error) {
 }
 
 func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
+
+	var err error
+	var passwd string
+
 	// Load keystore
 	ks := keystore.NewKeyStore(C.KeyStore.Path, keystore.StandardScryptN, keystore.StandardScryptP)
-	passwd, err := ioutil.ReadFile(C.KeyStore.Password)
-	assert("Cannot read password", err)
+
+	// Password can be prefixed by two options
+	//   file: <path to file containing the password>
+	//   passwd: raw password
+	// if is not prefixed by any of those, file: is used
+	if strings.HasPrefix(C.KeyStore.Password, passwdPrefix) {
+		passwd = C.KeyStore.Password[len(passwdPrefix):]
+	} else {
+		filename := C.KeyStore.Password
+		if strings.HasPrefix(filename, filePrefix) {
+			filename = C.KeyStore.Password[len(filePrefix):]
+		}
+		passwdbytes, err := ioutil.ReadFile(filename)
+		assert("Cannot read password", err)
+		passwd = string(passwdbytes)
+	}
 
 	acc, err := ks.Find(accounts.Account{
 		Address: common.HexToAddress(C.KeyStore.Address),
