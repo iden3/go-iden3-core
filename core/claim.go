@@ -63,15 +63,21 @@ func NewClaimType(name string) *ClaimType {
 	return t
 }
 
+func NewClaimTypeNum(num uint64) *ClaimType {
+	ct := ClaimType{}
+	binary.BigEndian.PutUint64(ct[:], num)
+	return &ct
+}
+
 var (
 	// ClaimTypeBasic is a simple claim type that can be used for anything.
-	ClaimTypeBasic = NewClaimType("iden3.claim.basic")
-	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
-	ClaimTypeAssignName = NewClaimType("iden3.claim.assign_name")
+	ClaimTypeBasic = NewClaimTypeNum(0)
 	// ClaimTypeAuthorizeKSign is a claim type to autorize a public key for signing.
-	ClaimTypeAuthorizeKSign = NewClaimType("iden3.claim.authorize_k_sign")
+	ClaimTypeAuthorizeKSign = NewClaimTypeNum(1)
 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
-	ClaimTypeSetRootKey = NewClaimType("iden3.claim.set_root_key")
+	ClaimTypeSetRootKey = NewClaimTypeNum(2)
+	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
+	ClaimTypeAssignName = NewClaimTypeNum(3)
 )
 
 // ClaimVersionLen is the length in bytes of the version in a claim.
@@ -175,19 +181,16 @@ type ClaimAuthorizeKSign struct {
 	Version uint32
 	// Sign means positive if false, negative if true.
 	Sign bool
-	// Ax is the x coordinate of the elliptic curve public key.
-	Ax [128 / 8]byte
-	// Ay is the x coordinate of the elliptic curve public key.
-	Ay [128 / 8]byte
+	// Ay is the y coordinate of the elliptic curve public key.
+	Ay merkletree.ElemBytes
 }
 
 // NewClaimAuthorizeKSign returns a ClaimAuthorizeKSign with the given elliptic
 // public key parameters.
-func NewClaimAuthorizeKSign(sign bool, ax, ay [128 / 8]byte) *ClaimAuthorizeKSign {
+func NewClaimAuthorizeKSign(sign bool, ay merkletree.ElemBytes) *ClaimAuthorizeKSign {
 	return &ClaimAuthorizeKSign{
 		Version: 0,
 		Sign:    sign,
-		Ax:      ax,
 		Ay:      ay,
 	}
 }
@@ -201,8 +204,7 @@ func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSign {
 	if sign[0] == 1 {
 		c.Sign = true
 	}
-	copyFromElemBytes(c.Ax[:], ClaimTypeVersionLen+1, &e.Data[3])
-	copyFromElemBytes(c.Ay[:], 0, &e.Data[2])
+	c.Ay = e.Data[2]
 	return c
 }
 
@@ -215,8 +217,7 @@ func (c *ClaimAuthorizeKSign) Entry() *merkletree.Entry {
 		sign = []byte{1}
 	}
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, sign)
-	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen+1, c.Ax[:])
-	copyToElemBytes(&e.Data[2], 0, c.Ay[:])
+	e.Data[2] = c.Ay
 	return e
 }
 
@@ -256,7 +257,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
 	c.Era = binary.BigEndian.Uint32(era[:])
 	copyFromElemBytes(c.EthID[:], 0, &e.Data[2])
-	copyFromElemBytes(c.RootKey[:], 0, &e.Data[1])
+	c.RootKey = merkletree.Hash(e.Data[1])
 	return c
 }
 
@@ -268,7 +269,7 @@ func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
 	copyToElemBytes(&e.Data[2], 0, c.EthID[:])
-	copyToElemBytes(&e.Data[1], 0, c.RootKey[:])
+	e.Data[1] = merkletree.ElemBytes(c.RootKey)
 	return e
 }
 
