@@ -38,13 +38,18 @@ func TestClaimBasic(t *testing.T) {
 	c0 := NewClaimBasic(indexSlot, dataSlot)
 	c0.Version = 1
 	e := c0.Entry()
-	assert.Equal(t, "0x0d1770cf7af29da78eb31086bfa35a5945f39a8c4fa35edee71ac12a75b4a30b", e.HIndex().Hex())
-	assert.Equal(t, "0x14869ce50566e440424a2571816b117d88a2e5e3d10a0abb7f89a89032b9e07f", e.HValue().Hex())
+	assert.Equal(t,
+		"0x08bcca6fecfa4e8ce29416e7cea7d69681da88dab06f2708f1f7de9b923249b9",
+		e.HIndex().Hex())
+	assert.Equal(t,
+		"0x1458af7076ff255f5337ae8a9d443b9b42c777103453d20f86849012141638dc",
+		e.HValue().Hex())
+	//fmt.Println(dataTestOutput(&e.Data))
 	assert.Equal(t, ""+
 		"0056585858585858585858585858585858585858585858585858585858585858"+
 		"0058585858585858585858585858585858585858585858585858585858585859"+
 		"00292a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a"+
-		"002a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2b000000015735944c6eb8f12d",
+		"002a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2b000000010000000000000000",
 		e.Data.String())
 	c1 := NewClaimBasicFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -63,13 +68,19 @@ func TestClaimAssignName(t *testing.T) {
 	c0 := NewClaimAssignName(name, ethID)
 	c0.Version = 1
 	e := c0.Entry()
-	assert.Equal(t, "0x23966b07b31bad5aebd8af6c72c7650f8ab45886e442f427da6c1bce73dbd2bb", e.HIndex().Hex())
-	assert.Equal(t, "0x279689e54ed1540614ba9ca682a01e83eb8b6aa3abf85b1f659fd537a75c5d6a", e.HValue().Hex())
+	assert.Equal(t,
+		"0x1a683948126fa90a02487e55b4d1b3330ce81fdcfb81b74f02ad2ab3026269ac",
+		e.HIndex().Hex())
+	assert.Equal(t,
+		"0x2885886a50650e0c3292c3fb459c34a272c9bf4680a85d8d89a59135d4db0797",
+
+		e.HValue().Hex())
+	//fmt.Println(dataTestOutput(&e.Data))
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"000000000000000000000000393939393939393939393939393939393939393a"+
 		"00d67b05d8e2d1ace8f3e84b8451dd2e9da151578c3c6be23e7af11add5a807a"+
-		"000000000000000000000000000000000000000000000001f60d928459d792ed",
+		"0000000000000000000000000000000000000000000000010000000000000003",
 		e.Data.String())
 	c1 := NewClaimAssignNameFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -81,22 +92,29 @@ func TestClaimAssignName(t *testing.T) {
 func TestClaimAuthorizeKSign(t *testing.T) {
 	// ClaimAuthorizeKSign
 	sign := true
-	ax := [128 / 8]byte{
+	ay := merkletree.ElemBytes{
+		0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
+		0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
 		0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05,
 		0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x05, 0x06}
-	ay := [128 / 8]byte{
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
-		0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x08}
-	c0 := NewClaimAuthorizeKSign(sign, ax, ay)
+	//ay := [128 / 8]byte{
+	//	0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07,
+	//	0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x07, 0x08}
+	c0 := NewClaimAuthorizeKSign(sign, ay)
 	c0.Version = 1
 	e := c0.Entry()
-	assert.Equal(t, "0x18f1032141d6a2abda87e2cf053edcffb5be55ba0dc4c5a9073805c4aa7aee54", e.HIndex().Hex())
-	assert.Equal(t, "0x15331daa10ae035babcaabb76a80198bc449d32240ebb7f456ff2b03cd69bca4", e.HValue().Hex())
+	assert.Equal(t,
+		"0x2ebf2c9f89d2a81762e9701db839592ef34ea145a3801f669b456655e45b6797",
+		e.HIndex().Hex())
+	assert.Equal(t,
+		"0x13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		e.HValue().Hex())
+	//fmt.Println(dataTestOutput(&e.Data))
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"0000000000000000000000000000000007070707070707070707070707070708"+
-		"0000000505050505050505050505050505050601000000015714c3724876e56d",
+		"0505050505050505050505050505050505050505050505050505050505050506"+
+		"0000000000000000000000000000000000000001000000010000000000000001",
 		e.Data.String())
 	c1 := NewClaimAuthorizeKSignFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -120,13 +138,18 @@ func TestClaimSetRootKey(t *testing.T) {
 	c0.Version = 1
 	c0.Era = 1
 	e := c0.Entry()
-	assert.Equal(t, "0x0a2d38687ea5f987637ded13030b22d1657be60bdb35add74bb53c8d5d126f8f", e.HIndex().Hex())
-	assert.Equal(t, "0x2e27903d404fcab9363967a4ffe7da6a615f9ce6f55c43661a0297a040d336a4", e.HValue().Hex())
+	assert.Equal(t,
+		"0x1c0f4440c0c64f4fcf67c780012592435223e3053a28c6281d6e9d1a7c0f12a3",
+		e.HIndex().Hex())
+	assert.Equal(t,
+		"0x13c1515996ee7a147f13c1429b9df006fc513541caf8ef7e39c8c6f647497b2f",
+		e.HValue().Hex())
+	//fmt.Println(dataTestOutput(&e.Data))
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
 		"000000000000000000000000393939393939393939393939393939393939393a"+
-		"000000000000000000000000000000000000000100000001b111df93ad32c22c",
+		"0000000000000000000000000000000000000001000000010000000000000002",
 		e.Data.String())
 	c1 := NewClaimSetRootKeyFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -137,10 +160,10 @@ func TestClaimSetRootKey(t *testing.T) {
 
 func dataTestOutput(d *merkletree.Data) string {
 	s := bytes.NewBufferString("")
-	fmt.Fprintf(s, "\"%v\"+\n", hex.EncodeToString(d[0][:]))
-	fmt.Fprintf(s, "\"%v\"+\n", hex.EncodeToString(d[1][:]))
-	fmt.Fprintf(s, "\"%v\"+\n", hex.EncodeToString(d[2][:]))
-	fmt.Fprintf(s, "\"%v\",", hex.EncodeToString(d[3][:]))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[0][:]))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[1][:]))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[2][:]))
+	fmt.Fprintf(s, "\t\t\"%v\",", hex.EncodeToString(d[3][:]))
 	return s.String()
 }
 
