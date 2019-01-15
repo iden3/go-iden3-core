@@ -45,10 +45,10 @@ func TestClaimBasic(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x08bcca6fecfa4e8ce29416e7cea7d69681da88dab06f2708f1f7de9b923249b9",
+		"0x10dae586534145cf6bf10cb0f7dc7f0a343b6fb32c04501e85cace56c9381f73",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x1458af7076ff255f5337ae8a9d443b9b42c777103453d20f86849012141638dc",
+		"0x00fa98173f610358b765b4ff593ed7bae0db326d287eec86b1782da9bea45748",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -75,10 +75,10 @@ func TestClaimAssignName(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x1a683948126fa90a02487e55b4d1b3330ce81fdcfb81b74f02ad2ab3026269ac",
+		"0x1b90afca6decbbbeb9422a441731f7c9a666b3ce15307d327f43b2c4506fe29c",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x2885886a50650e0c3292c3fb459c34a272c9bf4680a85d8d89a59135d4db0797",
+		"0x19ff0e5ed571621bbc36bf4c0027dbe097975e11c03841b8c8d773b833b71f84",
 
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
@@ -110,10 +110,10 @@ func TestClaimAuthorizeKSign(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x2ebf2c9f89d2a81762e9701db839592ef34ea145a3801f669b456655e45b6797",
+		"0x2933b00c626c11d1dacadc6bbfbbdd7d008efb3db3565fbadc9dadfc8ac57eff",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		"0x1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -141,10 +141,10 @@ func TestClaimAuthorizeKSignP256(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x12d019e5804e0e4c794a15af9f59cf7fea84fa23313325362ca4ecaadecf0377",
+		"0x0c1a5dd38e78b838a2ddef52d1237896690285ae10de10bc012a25988c05de1a",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		"0x1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -179,10 +179,10 @@ func TestClaimSetRootKey(t *testing.T) {
 	c0.Era = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x1c0f4440c0c64f4fcf67c780012592435223e3053a28c6281d6e9d1a7c0f12a3",
+		"0x0f92abb8209409736929512c2018467a497ed35f409bb90579c62b9a4e0b2aa8",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x13c1515996ee7a147f13c1429b9df006fc513541caf8ef7e39c8c6f647497b2f",
+		"0x0ad7edbf562757b1ad2282c44e2c248f95e9e6b09ba0d32809aa724fbf148e0c",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
