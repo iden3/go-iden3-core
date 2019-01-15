@@ -20,15 +20,18 @@ var constants = generateConstantsData()
 type constantsData struct {
 	maxFieldVal *big.Int
 	seedHash    *big.Int
+	iv          *big.Int
 	fqR         fields.Fq
 	nRounds     int
 	cts         []*big.Int
 }
 
+func getIV(seed string) {
+}
+
 func generateConstantsData() constantsData {
 	var constants constantsData
 
-	constants.seedHash = new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
 	fqR, err := bn128.NewFqR()
 	if err != nil {
 		panic(err)
@@ -36,6 +39,11 @@ func generateConstantsData() constantsData {
 	constants.fqR = fqR
 	// maxFieldVal is the R value of the Finite Field
 	constants.maxFieldVal = constants.fqR.Q
+
+	constants.seedHash = new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
+	c := new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED + "_iv")))
+	constants.iv = new(big.Int).Mod(c, constants.maxFieldVal)
+
 	constants.nRounds = 91
 	cts, err := getConstants(constants.fqR, SEED, constants.nRounds)
 	if err != nil {
@@ -110,9 +118,9 @@ func MIMC7HashGeneric(fqR fields.Fq, xIn, k *big.Int, nRounds int) (*big.Int, er
 }
 
 // HashGeneric performs the MIMC7 hash over a RElem array, in a generic way, where it can be specified the Finite Field over R, and the number of rounds
-func HashGeneric(arrEl []RElem, fqR fields.Fq, nRounds int) (RElem, error) {
+func HashGeneric(iv *big.Int, arrEl []RElem, fqR fields.Fq, nRounds int) (RElem, error) {
 	arr := RElemsToBigInts(arrEl)
-	r := fqR.Zero()
+	r := iv
 	var err error
 	for i := 0; i < len(arr); i++ {
 		r, err = MIMC7HashGeneric(fqR, r, arr[i], nRounds)
@@ -143,7 +151,8 @@ func MIMC7Hash(xIn, k *big.Int) *big.Int {
 // Hash performs the MIMC7 hash over a RElem array
 func Hash(arrEl []RElem) RElem {
 	arr := RElemsToBigInts(arrEl)
-	r := constants.fqR.Zero()
+	// r := constants.fqR.Zero()
+	r := constants.iv
 	for i := 0; i < len(arr); i++ {
 		r = MIMC7Hash(r, arr[i])
 	}
