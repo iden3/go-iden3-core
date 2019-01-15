@@ -2,6 +2,7 @@ package merkletree
 
 import (
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,19 +28,38 @@ func TestGetSetBitmap(t *testing.T) {
 func TestHashElems(t *testing.T) {
 	d := IntsToData(0, 0, 0, 0)
 	h := HashElems(d[:]...)
-	assert.Equal(t, "0x01bcec76425a7b51ecbbfa7cbf37f4ec55df516ae9f8b28ff012a2e5e61f44b5", h.Hex())
+	hashTestOutput(h)
+	assert.Equal(t,
+		"0x242b5c83eda327009115428013c28a3eefde6e0283dedee194d80ab70bb71904",
+		h.Hex())
 
 	d = IntsToData(1, 0, 0, 0)
 	h = HashElems(d[:]...)
-	assert.Equal(t, "0x13c75402700abf74fadf64e67d61576045a43113f3b36fd5557fe1f5ee5402fa", h.Hex())
+	hashTestOutput(h)
+	assert.Equal(t,
+		"0x06c81898c60327061330f4bd12d75087a303e181fc9ad3a62e10e4d290f1fec0",
+		h.Hex())
 
 	d = IntsToData(0, 0, 0, 1)
 	h = HashElems(d[:]...)
-	assert.Equal(t, "0x1354710c5d868228ca7b854a2ad9a47074761d78581996315067203272a2b5c0", h.Hex())
+	hashTestOutput(h)
+	assert.Equal(t,
+		"0x148cd22d6573de244de1bccf18a283c0ce91ddd6edec11b91f934c51cec80bfa",
+		h.Hex())
 
 	d = IntsToData(12, 45, 78, 41)
 	h = HashElems(d[:]...)
-	assert.Equal(t, "0x1e027004fed670669c5ac756f7cf39cd607299252c241a14d49f478dbd52c3a5", h.Hex())
+	hashTestOutput(h)
+	assert.Equal(t,
+		"0x09a31174e6239fadbe9143f2c1e1b1bbf6aab3ad4df395449bbf74154bb329f9",
+		h.Hex())
+}
+
+func hashTestOutput(h *Hash) {
+	if !debug {
+		return
+	}
+	fmt.Printf("\t\t\"%v\",\n", h.Hex())
 }
 
 func BenchmarkHashElems(b *testing.B) {

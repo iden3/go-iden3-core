@@ -84,9 +84,8 @@ func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int)
 // CheckKSignInIDdb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
 func CheckKSignInIDdb(mt *merkletree.MerkleTree, ksign common.Address) bool {
 	// generate the AuthorizeKSignClaim
-	var tmpFakeAx [16]byte
-	var tmpFakeAy [16]byte
-	claimAuthorizeKSign := core.NewClaimAuthorizeKSign(false, tmpFakeAx, tmpFakeAy) // TODO ethAddress to pubK
+	var tmpFakeAy merkletree.ElemBytes
+	claimAuthorizeKSign := core.NewClaimAuthorizeKSign(false, tmpFakeAy) // TODO ethAddress to pubK
 	entry := claimAuthorizeKSign.Entry()
 	node := merkletree.NewNodeLeaf(entry)
 	nodeGetted, err := mt.GetNode(node.Key())

@@ -12,6 +12,7 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
+	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 
 	log "github.com/sirupsen/logrus"
@@ -186,9 +187,8 @@ func (s *ServiceImpl) Forward(
 	// ksignclaim := core.NewOperationalKSignClaim(ksignkey)
 	// TODO get the sign, ax, ay values
 	sign := true
-	ax := [128 / 8]byte{}
-	ay := [128 / 8]byte{}
-	ksignclaim := core.NewClaimAuthorizeKSign(sign, ax, ay) // TODO
+	var ay merkletree.ElemBytes
+	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
 	proof, err := s.cs.GetClaimByHi(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
@@ -246,9 +246,8 @@ func (s *ServiceImpl) Add(id *Identity) error {
 
 	// TODO get the sign, ax, ay values
 	sign := true
-	ax := [128 / 8]byte{}
-	ay := [128 / 8]byte{}
-	claim := core.NewClaimAuthorizeKSign(sign, ax, ay) // TODO
+	var ay merkletree.ElemBytes
+	claim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
 	// claim := core.NewOperationalKSignClaim(id.Operational)
 	return s.cs.AddClaimAuthorizeKSignFirst(idaddr, *claim)
 }
