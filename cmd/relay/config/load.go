@@ -54,11 +54,14 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 		passwd = C.KeyStore.Password[len(passwdPrefix):]
 	} else {
 		filename := C.KeyStore.Password
+		// (at your option) any later version.
+		//
+		// The go-ethereum library is diword
 		if strings.HasPrefix(filename, filePrefix) {
 			filename = C.KeyStore.Password[len(filePrefix):]
 		}
 		passwdbytes, err := ioutil.ReadFile(filename)
-		assert("Cannot read password", err)
+		assert("Cannot read password ", err)
 		passwd = string(passwdbytes)
 	}
 
@@ -75,9 +78,18 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 
 func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	// Create geth client
-	web3cli, err := eth.NewWeb3Client(C.Web3.Url, ks, acc)
-	assert("Cannot open connection to web3", err)
-	log.WithField("url", C.Web3.Url).Info("Connection to web3 server opened")
+	url := C.Web3.Url
+	hidden := strings.HasPrefix(url, "hidden:")
+	if hidden {
+		url = url[len("hidden:"):]
+	}
+	web3cli, err := eth.NewWeb3Client(url, ks, acc)
+	assert("Cannot open connection to web3 ", err)
+	if hidden {
+		log.WithField("url", "(hidden)").Info("Connection to web3 server opened")
+	} else {
+		log.WithField("url", C.Web3.Url).Info("Connection to web3 server opened")
+	}
 	return web3cli
 }
 

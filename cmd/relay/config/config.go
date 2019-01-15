@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
@@ -45,6 +47,7 @@ func MustRead(c *cli.Context) error {
 	viper.AddConfigPath(".")      // adding home directory as first search path
 	viper.SetEnvPrefix("relay2i") // so viper.AutomaticEnv will get matching envvars starting with O2M_
 	viper.AutomaticEnv()          // read in environment variables that match
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if c.GlobalString("config") != "" {
 		viper.SetConfigFile(c.GlobalString("config"))
