@@ -60,7 +60,7 @@ func BigIntsToData(a, b, c, d *big.Int) (data Data) {
 func TestEntry(t *testing.T) {
 	e := NewEntryFromInts(12, 45, 78, 41)
 	assert.Equal(t,
-		"0a546e62170e636895398e3831a7834affd35adad67016ff2d5215828e643aaf",
+		"1fd4bc970a697084ec1f83ecf81936d4a047e27c654752ddbc89f9ed1728e0ab",
 		hex.EncodeToString(e.HIndex()[:]))
 }
 
@@ -79,7 +79,7 @@ func TestAddEntry1(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t,
-		"0x2e4bd3b61579f9ed4d814dfa4228c743b853fb6d0b5d6a80735bd5aab579231f",
+		"0x112bae1c89a7a51a9a09e88c2f095bfe8a7d94d7c0cf5ba017a491c3e0b95c8f",
 		mt.RootKey().Hex())
 }
 
@@ -96,7 +96,7 @@ func TestAddEntry2(t *testing.T) {
 		t.Fatal(err)
 	}
 	assert.Equal(t,
-		"0x2c0efd3fd64110611ee03714790060b506fc52229146df05474f89b50b8018fa",
+		"0x1fb755a3677f8fd6c47b5462b69778ef6383c31d2d498b765e953f8cacaa6744",
 		mt.RootKey().Hex())
 }
 
@@ -121,7 +121,7 @@ func TestAddEntry16(t *testing.T) {
 
 	assert.Equal(t, mt1.RootKey().Hex(), mt2.RootKey().Hex())
 	assert.Equal(t,
-		"0x171726a6de9a2e6112f467543ce72f67871e7804c070355ff98f6ba63631c25f",
+		"0x173fd27f6622526dfb21c4d8d83e3c95adba5d8f46a397113e4e80e629c6de76",
 		mt1.RootKey().Hex())
 }
 
@@ -216,10 +216,8 @@ func TestGenerateProof4(t *testing.T) {
 	}
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
-		"000400000000000000000000000000000000000000000000000000000000000d"+
-		"2f5e46500bd35bd62bcd14a6587f33003270e26a74a5a0f606e6380d209c338c"+
-		"0a108d874a3f027a9f3e8e2b6f3dad0faa5304fd3c5c7a70c6289b7fbe44dd43"+
-		"04e61a72b69b24e24458f33ed6c07fcb8126782b47fba27b9123182a9b4e3ff2",
+		"0001000000000000000000000000000000000000000000000000000000000001"+
+		"05086d2d031b3aeb91b850c7a0280499ded7ba4b8b25caffff5dc754ed207eb8",
 		hex.EncodeToString(proof.Bytes()))
 }
 
@@ -251,12 +249,12 @@ func TestGenerateProof64(t *testing.T) {
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
 		"000700000000000000000000000000000000000000000000000000000000005f"+
-		"292f31c3effbd4ef90051e62e453ce5ba9253a790c33e99ee7989d3778b841c9"+
-		"176f8d38c4bda0ced90edd02a1131d9f328ed83659dff2a6a5b7072a53484944"+
-		"01eae6da67bc0a8033b7f7ea961a9b88a14477f8f7a90fa0ac7fcb10a7f06626"+
-		"0fe17cbefb6ad59ca52b64788a80f77636bb0a03b5ee8ce41bdd327323ded8f5"+
-		"2f26ab8d6d6a3eae1d7e9b3522b55ede77619cbc4e157c23f63522a6298b88b0"+
-		"260716f66b66072ba0c6b418995af4ba604953f91d376c76d5ca2a655f4a073b",
+		"1a412100b0a427796bf11048f3759c9c2163dc39f44d2b243dd8d8fee531800d"+
+		"21284e40a8d3e9658d429ebedbef7d509de684b9143aac0b1be3c3979a4e5ed0"+
+		"005844e6e7d83169766472da339496a1663ebc14a1016dd39105ca13848f68d4"+
+		"102e955ce94001fa069fdd144a3fda637020dd21f1a4a9f23ae0665a4ed27457"+
+		"28b82cce3a8d858c295e42c8f058b4a73ca39b0222754165db9f8c7ecf5f431a"+
+		"1e220bd9bea43d106d41b7bc2a5d2e88d0fc4f0429c3f8de7059a0bf93e40212",
 		hex.EncodeToString(proof.Bytes()))
 }
 
@@ -283,12 +281,12 @@ func TestVerifyProof1(t *testing.T) {
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
 		"000700000000000000000000000000000000000000000000000000000000005f"+
-		"292f31c3effbd4ef90051e62e453ce5ba9253a790c33e99ee7989d3778b841c9"+
-		"176f8d38c4bda0ced90edd02a1131d9f328ed83659dff2a6a5b7072a53484944"+
-		"01eae6da67bc0a8033b7f7ea961a9b88a14477f8f7a90fa0ac7fcb10a7f06626"+
-		"0fe17cbefb6ad59ca52b64788a80f77636bb0a03b5ee8ce41bdd327323ded8f5"+
-		"2f26ab8d6d6a3eae1d7e9b3522b55ede77619cbc4e157c23f63522a6298b88b0"+
-		"260716f66b66072ba0c6b418995af4ba604953f91d376c76d5ca2a655f4a073b",
+		"1a412100b0a427796bf11048f3759c9c2163dc39f44d2b243dd8d8fee531800d"+
+		"21284e40a8d3e9658d429ebedbef7d509de684b9143aac0b1be3c3979a4e5ed0"+
+		"005844e6e7d83169766472da339496a1663ebc14a1016dd39105ca13848f68d4"+
+		"102e955ce94001fa069fdd144a3fda637020dd21f1a4a9f23ae0665a4ed27457"+
+		"28b82cce3a8d858c295e42c8f058b4a73ca39b0222754165db9f8c7ecf5f431a"+
+		"1e220bd9bea43d106d41b7bc2a5d2e88d0fc4f0429c3f8de7059a0bf93e40212",
 		hex.EncodeToString(proof.Bytes()))
 }
 
@@ -314,11 +312,11 @@ func TestVerifyProofEmpty(t *testing.T) {
 	assert.True(t, verify)
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
-		"0302000000000000000000000000000000000000000000000000000000000003"+
-		"0397d8b2557e1fd4d6ca48508c0a976bfea8a5b81e99e0f08c1dfddd93ddd16b"+
-		"2b0905533da6edc91cd889feca537ffb36ec12546bebd31554d090d9a751a966"+
-		"21299cf503028e491b03603fbff7714e25aad3195eb76fe44f7d03638f5a3d0a"+
-		"13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		"0105000000000000000000000000000000000000000000000000000000000017"+
+		"2e2e61a54ec48cb031effbf00420cd06d707535616965f1ffda2edd1006b807c"+
+		"0b9a1a9cc13e5fe12e380fb702c10fde1a9201b7f89e25051f57e00862f20522"+
+		"1e1b8f66c3bd26be093e358ed6c54f9d1986411ea404d01482fcf26b04912a0c"+
+		"17974735b062a464506127e92858392e853b6abbcb3a1d93a5924af42198c3d1",
 		hex.EncodeToString(proof.Bytes()))
 }
 
@@ -343,18 +341,19 @@ func TestVerifyProofCases(t *testing.T) {
 	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
-		"0002000000000000000000000000000000000000000000000000000000000003"+
-		"06704e71b5ba8daa15428ae04764b14c403211e7a4dd57dca9e1ff3cd7b7f0e7"+
-		"128c1ba622cda99a3144e7178a6bdc59ad8d180b642aee16622613ab65c97419",
+		"0003000000000000000000000000000000000000000000000000000000000007"+
+		"2e2e61a54ec48cb031effbf00420cd06d707535616965f1ffda2edd1006b807c"+
+		"0b9a1a9cc13e5fe12e380fb702c10fde1a9201b7f89e25051f57e00862f20522"+
+		"00b1574ea5a96e97ff7b0c964c14d0ad7b9da5b56d068b3aabe10fd3051b0d2a",
 		hex.EncodeToString(proof.Bytes()))
 
-	//for i := 8; i < 32; i++ {
-	//	e = NewEntryFromInts(0, 0, 0, int64(i))
-	//	proof, err = mt.GenerateProof(e.HIndex())
-	//	fmt.Println(i, proof)
-	//}
+	for i := 8; i < 32; i++ {
+		e = NewEntryFromInts(0, 0, 0, int64(i))
+		proof, err = mt.GenerateProof(e.HIndex())
+		fmt.Println(i, proof)
+	}
 	// Non-existence proof, empty aux
-	e = NewEntryFromInts(0, 0, 0, int64(11))
+	e = NewEntryFromInts(0, 0, 0, int64(12))
 	proof, err = mt.GenerateProof(e.HIndex())
 	if err != nil {
 		t.Fatal(err)
@@ -365,10 +364,10 @@ func TestVerifyProofCases(t *testing.T) {
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
 		"0105000000000000000000000000000000000000000000000000000000000017"+
-		"06704e71b5ba8daa15428ae04764b14c403211e7a4dd57dca9e1ff3cd7b7f0e7"+
-		"0ca6fc5e3a7efbcd8253564af04933f8a5a4fcdc0416b2a7aa951a9a92a6b15a"+
-		"0200592d33c08050ca689c511bfba5366727f9a440c444f248837cf5f85b0a74"+
-		"22d492ff12960c3b3214afd2a18f762b04651c2d35ce2a4edb5ab5b26b23ce8c",
+		"2e2e61a54ec48cb031effbf00420cd06d707535616965f1ffda2edd1006b807c"+
+		"0b9a1a9cc13e5fe12e380fb702c10fde1a9201b7f89e25051f57e00862f20522"+
+		"1e1b8f66c3bd26be093e358ed6c54f9d1986411ea404d01482fcf26b04912a0c"+
+		"17974735b062a464506127e92858392e853b6abbcb3a1d93a5924af42198c3d1",
 		hex.EncodeToString(proof.Bytes()))
 
 	// Non-existence proof, diff. node aux
@@ -382,11 +381,12 @@ func TestVerifyProofCases(t *testing.T) {
 	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
-		"0302000000000000000000000000000000000000000000000000000000000003"+
-		"06704e71b5ba8daa15428ae04764b14c403211e7a4dd57dca9e1ff3cd7b7f0e7"+
-		"128c1ba622cda99a3144e7178a6bdc59ad8d180b642aee16622613ab65c97419"+
-		"01b64831f1504ebb67612647c67a30640023df5b51236ab409cd85923b0206d5"+
-		"13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		"030400000000000000000000000000000000000000000000000000000000000b"+
+		"0a439bd423b069c01717cd8641d610f286ec5062c9ecee6f2412af76ff551cb5"+
+		"1c0fd5c25407d0220a0bcbc6734908153fd18ec43ee62ee157030462c43f537d"+
+		"2d5899d3a66630d86c3b9ff896a99b0f2b9e7afc49b69175ed07773ae39263f5"+
+		"149648851923be5e707629f0619a1f391452d3c252291d5492d5f9280542380f"+
+		"1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
 		hex.EncodeToString(proof.Bytes()))
 }
 
