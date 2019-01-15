@@ -4,17 +4,23 @@ import (
 	//"bytes"
 	//"encoding/hex"
 	"bytes"
+	"crypto/ecdsa"
+	//"crypto/elliptic"
+	//"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	//common3 "github.com/iden3/go-iden3/common"
 	//"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	//"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
+
+var debug = false
 
 func TestClaimBasic(t *testing.T) {
 	// ClaimBasic
@@ -44,7 +50,7 @@ func TestClaimBasic(t *testing.T) {
 	assert.Equal(t,
 		"0x1458af7076ff255f5337ae8a9d443b9b42c777103453d20f86849012141638dc",
 		e.HValue().Hex())
-	//fmt.Println(dataTestOutput(&e.Data))
+	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0056585858585858585858585858585858585858585858585858585858585858"+
 		"0058585858585858585858585858585858585858585858585858585858585859"+
@@ -75,7 +81,7 @@ func TestClaimAssignName(t *testing.T) {
 		"0x2885886a50650e0c3292c3fb459c34a272c9bf4680a85d8d89a59135d4db0797",
 
 		e.HValue().Hex())
-	//fmt.Println(dataTestOutput(&e.Data))
+	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"000000000000000000000000393939393939393939393939393939393939393a"+
@@ -109,7 +115,7 @@ func TestClaimAuthorizeKSign(t *testing.T) {
 	assert.Equal(t,
 		"0x13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
 		e.HValue().Hex())
-	//fmt.Println(dataTestOutput(&e.Data))
+	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
@@ -117,6 +123,40 @@ func TestClaimAuthorizeKSign(t *testing.T) {
 		"0000000000000000000000000000000000000001000000010000000000000001",
 		e.Data.String())
 	c1 := NewClaimAuthorizeKSignFromEntry(e)
+	c2, err := NewClaimFromEntry(e)
+	assert.Nil(t, err)
+	assert.Equal(t, c0, c1)
+	assert.Equal(t, c0, c2)
+}
+
+func TestClaimAuthorizeKSignP256(t *testing.T) {
+	// ClaimAuthorizeKSignP256
+	skHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
+	sk, err := crypto.HexToECDSA(skHex)
+	if err != nil {
+		panic(err)
+	}
+	pk := sk.Public().(*ecdsa.PublicKey)
+	c0 := NewClaimAuthorizeKSignP256(pk)
+	c0.Version = 1
+	e := c0.Entry()
+	assert.Equal(t,
+		"0x12d019e5804e0e4c794a15af9f59cf7fea84fa23313325362ca4ecaadecf0377",
+		e.HIndex().Hex())
+	assert.Equal(t,
+		"0x13580fd5d3ca0f7604a3a50f663cb4fd23c214f1955fa5b3ee9ed5ed06bb70a3",
+		e.HValue().Hex())
+	dataTestOutput(&e.Data)
+	assert.Equal(t, ""+
+		"0000000000000000000000000000000000000000000000000000000000000000"+
+		"0000000000000000000000000000000000000000000000000000000000000000"+
+		"0000036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806"+
+		"0000000000000000000000000000000000bd4d59000000010000000000000004",
+		e.Data.String())
+	c1, err := NewClaimAuthorizeKSignP256FromEntry(e)
+	if err != nil {
+		panic(err)
+	}
 	c2, err := NewClaimFromEntry(e)
 	assert.Nil(t, err)
 	assert.Equal(t, c0, c1)
@@ -144,7 +184,7 @@ func TestClaimSetRootKey(t *testing.T) {
 	assert.Equal(t,
 		"0x13c1515996ee7a147f13c1429b9df006fc513541caf8ef7e39c8c6f647497b2f",
 		e.HValue().Hex())
-	//fmt.Println(dataTestOutput(&e.Data))
+	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
@@ -158,13 +198,16 @@ func TestClaimSetRootKey(t *testing.T) {
 	assert.Equal(t, c0, c2)
 }
 
-func dataTestOutput(d *merkletree.Data) string {
+func dataTestOutput(d *merkletree.Data) {
+	if !debug {
+		return
+	}
 	s := bytes.NewBufferString("")
 	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[0][:]))
 	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[1][:]))
 	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[2][:]))
 	fmt.Fprintf(s, "\t\t\"%v\",", hex.EncodeToString(d[3][:]))
-	return s.String()
+	fmt.Println(s.String())
 }
 
 // TODO: Update to new claim spec.
