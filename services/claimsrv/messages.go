@@ -1,6 +1,8 @@
 package claimsrv
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
@@ -31,6 +33,13 @@ type ClaimAuthorizeKSignMsg struct {
 	ClaimAuthorizeKSign core.ClaimAuthorizeKSign
 	Signature           string
 	KSign               common.Address
+}
+
+// ClaimAuthorizeKSignSecp256k1Msg contains a core.ClaimAuthorizeKSignP256 with its signature in Hex
+type ClaimAuthorizeKSignSecp256k1Msg struct {
+	ClaimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1
+	Signature                    string
+	KSignP256                    *ecdsa.PublicKey
 }
 
 // SetRootMsg contains the data to set the SetRootClaim with its signature in Hex

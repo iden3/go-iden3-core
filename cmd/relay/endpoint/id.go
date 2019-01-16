@@ -15,9 +15,10 @@ import (
 )
 
 type handlePostIdReq struct {
-	Operational common.Address `json:"operational"`
-	Recoverer   common.Address `json:"recoverer"`
-	Revokator   common.Address `json:"revokator"`
+	Operational   common.Address `json:"operational"`
+	OperationalPk string         `json:"operationalpk"`
+	Recoverer     common.Address `json:"recoverer"`
+	Revokator     common.Address `json:"revokator"`
 }
 
 type handlePostIdRes struct {

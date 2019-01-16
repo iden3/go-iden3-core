@@ -21,6 +21,10 @@ type Service interface {
 	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
 	AddClaimAuthorizeKSign(ethID common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignFirst(ethID common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
+	// TODO
+	//AddClaimAuthorizeKSignSecp256k1(ethID common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
+	AddClaimAuthorizeKSignSecp256k1First(ethID common.Address,
+		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
 	AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error
 	AddDirectClaim(claim core.ClaimBasic) error
 	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
@@ -196,6 +200,106 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethID common.Address, claimAu
 
 	// add ClaimAuthorizeKSign into the User's ID Merkle Tree
 	err = userMT.Add(claimAuthorizeKSign.Entry())
+	if err != nil {
+		return err
+	}
+
+	// create new ClaimSetRootKey
+	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+
+	// get next version of the claim
+	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+	if err != nil {
+		return err
+	}
+	claimSetRootKey.Version = version
+
+	// add User's ID Merkle Root into the Relay's Merkle Tree
+	err = cs.mt.Add(claimSetRootKey.Entry())
+	if err != nil {
+		return err
+	}
+
+	// update Relay's Root in the Smart Contract
+	cs.rootsrv.SetRoot(*cs.mt.RootKey())
+
+	return nil
+}
+
+// TODO
+// AddClaimAuthorizeKSignSecp256k1 adds ClaimAuthorizeKSignSecp256k1 into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
+//func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1(ethID common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
+//
+//	// get the user's id storage, using the user id prefix (the idaddress itself)
+//	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+//
+//	// open the MerkleTree of the user
+//	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// verify that the KSign is authorized
+//	if !CheckKSignInIDdb(userMT, claimAuthorizeKSignMsg.KSign) {
+//		return errors.New("can not verify the KSign")
+//	}
+//
+//	// verify signature of the ClaimAuthorizeKSign
+//	signature, err := common3.HexToBytes(claimAuthorizeKSignMsg.Signature)
+//	if err != nil {
+//		return err
+//	}
+//	msgHash := utils.EthHash(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes())
+//	signature[64] -= 27
+//	if !utils.VerifySig(claimAuthorizeKSignMsg.KSign, signature, msgHash[:]) {
+//		return errors.New("signature can not be verified")
+//	}
+//
+//	// add ClaimAuthorizeKSign into the User's ID Merkle Tree
+//	err = userMT.Add(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry())
+//	if err != nil {
+//		return err
+//	}
+//
+//	// create new ClaimSetRootKey
+//	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+//
+//	// get next version of the claim
+//	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+//	if err != nil {
+//		return err
+//	}
+//	claimSetRootKey.Version = version
+//
+//	// add User's ID Merkle Root into the Relay's Merkle Tree
+//	err = cs.mt.Add(claimSetRootKey.Entry())
+//	if err != nil {
+//		return err
+//	}
+//
+//	// update Relay's Root in the Smart Contract
+//	cs.rootsrv.SetRoot(*cs.mt.RootKey())
+//
+//	return nil
+//}
+
+// AddClaimAuthorizeKSignSecp256k1First adds ClaimAuthorizeKSignSecp256k1 into
+// the ID's merkletree, and adds the ID's merkle root into the Relay's
+// merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
+func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(ethID common.Address,
+	claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error {
+
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+	if err != nil {
+		return err
+	}
+
+	// add ClaimAuthorizeKSign into the User's ID Merkle Tree
+	err = userMT.Add(claimAuthorizeKSignSecp256k1.Entry())
 	if err != nil {
 		return err
 	}

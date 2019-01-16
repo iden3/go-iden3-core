@@ -137,7 +137,7 @@ func TestClaimAuthorizeKSignP256(t *testing.T) {
 		panic(err)
 	}
 	pk := sk.Public().(*ecdsa.PublicKey)
-	c0 := NewClaimAuthorizeKSignP256(pk)
+	c0 := NewClaimAuthorizeKSignSecp256k1(pk)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
@@ -153,7 +153,7 @@ func TestClaimAuthorizeKSignP256(t *testing.T) {
 		"0000036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806"+
 		"0000000000000000000000000000000000bd4d59000000010000000000000004",
 		e.Data.String())
-	c1, err := NewClaimAuthorizeKSignP256FromEntry(e)
+	c1, err := NewClaimAuthorizeKSignSecp256k1FromEntry(e)
 	if err != nil {
 		panic(err)
 	}
