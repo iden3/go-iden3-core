@@ -9,7 +9,9 @@ import (
 func Serve() {
 	r := gin.Default()
 	r.Use(cors.Default())
-	r.POST("/auth", handleAuth)
-	r.GET("/ws/:id", handleWs)
+
+	api := r.Group("/api/v0.1")
+	api.POST("/auth", handleAuth)
+	api.GET("/ws/:id", handleWs)
 	r.Run(config.C.Server.ServiceApi)
 }
