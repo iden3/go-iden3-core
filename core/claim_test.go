@@ -129,15 +129,18 @@ func TestClaimAuthorizeKSign(t *testing.T) {
 	assert.Equal(t, c0, c2)
 }
 
-func TestClaimAuthorizeKSignP256(t *testing.T) {
-	// ClaimAuthorizeKSignP256
-	skHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-	sk, err := crypto.HexToECDSA(skHex)
+func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
+	// ClaimAuthorizeKSignSecp256k1
+	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
+	secKey, err := crypto.HexToECDSA(secKeyHex)
 	if err != nil {
 		panic(err)
 	}
-	pk := sk.Public().(*ecdsa.PublicKey)
-	c0 := NewClaimAuthorizeKSignSecp256k1(pk)
+	pubKey := secKey.Public().(*ecdsa.PublicKey)
+	assert.Equal(t,
+		"036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806bd4d59",
+		hex.EncodeToString(crypto.CompressPubkey(pubKey)))
+	c0 := NewClaimAuthorizeKSignSecp256k1(pubKey)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,

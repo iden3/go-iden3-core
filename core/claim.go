@@ -234,8 +234,8 @@ func (c *ClaimAuthorizeKSign) Type() ClaimType {
 type ClaimAuthorizeKSignSecp256k1 struct {
 	// Version is the claim version.
 	Version uint32
-	// Pk is the ECDSA public key.
-	Pk *ecdsa.PublicKey
+	// PubKey is the ECDSA public key.
+	PubKey *ecdsa.PublicKey
 }
 
 // NewClaimAuthorizeKSignSecp256k1 returns a ClaimAuthorizeKSignSecp256k1 with the given elliptic
@@ -243,7 +243,7 @@ type ClaimAuthorizeKSignSecp256k1 struct {
 func NewClaimAuthorizeKSignSecp256k1(pk *ecdsa.PublicKey) *ClaimAuthorizeKSignSecp256k1 {
 	return &ClaimAuthorizeKSignSecp256k1{
 		Version: 0,
-		Pk:      pk,
+		PubKey:  pk,
 	}
 }
 
@@ -255,7 +255,7 @@ func NewClaimAuthorizeKSignSecp256k1FromEntry(e *merkletree.Entry) (*ClaimAuthor
 	copyFromElemBytes(cpk[merkletree.ElemBytesLen-2:], ClaimTypeVersionLen, &e.Data[3])
 	copyFromElemBytes(cpk[:merkletree.ElemBytesLen-2], 0, &e.Data[2])
 	var err error
-	c.Pk, err = crypto.DecompressPubkey(cpk[:])
+	c.PubKey, err = crypto.DecompressPubkey(cpk[:])
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func NewClaimAuthorizeKSignSecp256k1FromEntry(e *merkletree.Entry) (*ClaimAuthor
 func (c *ClaimAuthorizeKSignSecp256k1) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
-	cpk := crypto.CompressPubkey(c.Pk)
+	cpk := crypto.CompressPubkey(c.PubKey)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, cpk[merkletree.ElemBytesLen-2:])
 	copyToElemBytes(&e.Data[2], 0, cpk[:merkletree.ElemBytesLen-2])
 	return e
