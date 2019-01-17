@@ -203,7 +203,7 @@ func (s *ServiceImpl) Forward(
 	sign := true
 	var ay merkletree.ElemBytes
 	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
-	proof, err := s.cs.GetClaimByHi(idaddr, *ksignclaim.Entry().HIndex())
+	proof, err := s.cs.GetClaimProofUserByHi(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
 		return common.Hash{}, err

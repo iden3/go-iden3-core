@@ -91,8 +91,8 @@ func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 	return r
 }
 
-// ProofOfClaim is the proof of a claim in the Identity MerkleTree, and the SetRootClaim of that MerkleTree inside the Relay's MerkleTree. Also with the proofs of non revocation of both claims
-type ProofOfClaim struct {
+// ProofOfClaimUser is the proof of a claim in the Identity MerkleTree, and the SetRootClaim of that MerkleTree inside the Relay's MerkleTree. Also with the proofs of non revocation of both claims
+type ProofOfClaimUser struct {
 	ClaimProof                     ProofOfTreeLeaf
 	SetRootClaimProof              ProofOfTreeLeaf
 	ClaimNonRevocationProof        ProofOfTreeLeaf
@@ -100,7 +100,8 @@ type ProofOfClaim struct {
 	Date                           uint64
 	Signature                      []byte // signature of the Root of the Relay
 }
-type ProofOfClaimHex struct {
+
+type ProofOfClaimUserHex struct {
 	ClaimProof                     ProofOfTreeLeafHex
 	SetRootClaimProof              ProofOfTreeLeafHex
 	ClaimNonRevocationProof        ProofOfTreeLeafHex
@@ -109,12 +110,52 @@ type ProofOfClaimHex struct {
 	Signature                      string // signature of the Root of the Relay
 }
 
-func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
-	r := ProofOfClaimHex{
+func (pc *ProofOfClaimUser) Hex() ProofOfClaimUserHex {
+	r := ProofOfClaimUserHex{
 		pc.ClaimProof.Hex(),
 		pc.SetRootClaimProof.Hex(),
 		pc.ClaimNonRevocationProof.Hex(),
 		pc.SetRootClaimNonRevocationProof.Hex(),
+		pc.Date,
+		common3.BytesToHex(pc.Signature),
+	}
+	return r
+}
+func (pch *ProofOfClaimUserHex) Unhex() (ProofOfClaimUser, error) {
+	sigBytes, err := common3.HexToBytes(pch.Signature)
+	if err != nil {
+		return ProofOfClaimUser{}, err
+	}
+	r := ProofOfClaimUser{
+		pch.ClaimProof.Unhex(),
+		pch.SetRootClaimProof.Unhex(),
+		pch.ClaimNonRevocationProof.Unhex(),
+		pch.SetRootClaimNonRevocationProof.Unhex(),
+		pch.Date,
+		sigBytes,
+	}
+	return r, nil
+}
+
+// ProofOfClaim is the proof of a claim in the Relay's MerkleTree, and the proof of non revocation of the claim
+type ProofOfClaim struct {
+	ClaimProof              ProofOfTreeLeaf
+	ClaimNonRevocationProof ProofOfTreeLeaf
+	Date                    uint64
+	Signature               []byte // signature of the Root of the Relay
+}
+
+type ProofOfClaimHex struct {
+	ClaimProof              ProofOfTreeLeafHex
+	ClaimNonRevocationProof ProofOfTreeLeafHex
+	Date                    uint64
+	Signature               string // signature of the Root of the Relay
+}
+
+func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
+	r := ProofOfClaimHex{
+		pc.ClaimProof.Hex(),
+		pc.ClaimNonRevocationProof.Hex(),
 		pc.Date,
 		common3.BytesToHex(pc.Signature),
 	}
@@ -126,46 +167,6 @@ func (pch *ProofOfClaimHex) Unhex() (ProofOfClaim, error) {
 		return ProofOfClaim{}, err
 	}
 	r := ProofOfClaim{
-		pch.ClaimProof.Unhex(),
-		pch.SetRootClaimProof.Unhex(),
-		pch.ClaimNonRevocationProof.Unhex(),
-		pch.SetRootClaimNonRevocationProof.Unhex(),
-		pch.Date,
-		sigBytes,
-	}
-	return r, nil
-}
-
-// ProofOfRelayClaim is the proof of a claim in the Relay's MerkleTree, and the proof of non revocation of the claim
-type ProofOfRelayClaim struct {
-	ClaimProof              ProofOfTreeLeaf
-	ClaimNonRevocationProof ProofOfTreeLeaf
-	Date                    uint64
-	Signature               []byte // signature of the Root of the Relay
-}
-
-type ProofOfRelayClaimHex struct {
-	ClaimProof              ProofOfTreeLeafHex
-	ClaimNonRevocationProof ProofOfTreeLeafHex
-	Date                    uint64
-	Signature               string // signature of the Root of the Relay
-}
-
-func (pc *ProofOfRelayClaim) Hex() ProofOfRelayClaimHex {
-	r := ProofOfRelayClaimHex{
-		pc.ClaimProof.Hex(),
-		pc.ClaimNonRevocationProof.Hex(),
-		pc.Date,
-		common3.BytesToHex(pc.Signature),
-	}
-	return r
-}
-func (pch *ProofOfRelayClaimHex) Unhex() (ProofOfRelayClaim, error) {
-	sigBytes, err := common3.HexToBytes(pch.Signature)
-	if err != nil {
-		return ProofOfRelayClaim{}, err
-	}
-	r := ProofOfRelayClaim{
 		pch.ClaimProof.Unhex(),
 		pch.ClaimNonRevocationProof.Unhex(),
 		pch.Date,

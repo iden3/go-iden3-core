@@ -114,7 +114,7 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 		DataSignature:   "",
 		Type:            "",
 		KSign:           "currentversion",
-		ProofOfKSignHex: claimsrv.ProofOfClaimHex{},
+		ProofOfKSignHex: claimsrv.ProofOfClaimUserHex{},
 		RelayAddr:       "",
 		Version:         m.Version,
 		Nonce:           0,

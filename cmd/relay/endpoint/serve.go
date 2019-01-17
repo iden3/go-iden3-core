@@ -42,7 +42,8 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/root/:idaddr", handleCommitNewIDRoot)
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
-	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
+	serviceapi.GET("/claim_proof/idaddr/:idaddr/hi/:hi", handleGetClaimProofUserByHi) // Get user claim proof
+	serviceapi.GET("/claim_proof/hi/:hi", handleGetClaimProofByHi)                    // Get relay claim proof
 
 	serviceapi.POST("/id", handleCreateId)
 	serviceapi.GET("/id/:idaddr", handleGetId)

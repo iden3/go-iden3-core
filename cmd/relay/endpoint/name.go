@@ -15,7 +15,7 @@ func handleVinculateID(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfClaimAssignName, err := claimservice.GetRelayClaimByHi(*claimAssignName.Entry().HIndex())
+	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(*claimAssignName.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
@@ -36,7 +36,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 		return
 	}
 
-	proofOfClaimAssignName, err := claimservice.GetRelayClaimByHi(*claimAssignName.Entry().HIndex())
+	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(*claimAssignName.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
