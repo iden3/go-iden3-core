@@ -60,7 +60,7 @@ func TestVinculateID(t *testing.T) {
 	vinculateIDMsg.Msg.RawIdentityTx.KSignOperational_p = "0xKSign_p"
 	vinculateIDMsg.Msg.RawIdentityTx.KRecovery_p = "0xKRecovery_p"
 	vinculateIDMsg.Msg.RawIdentityTx.KRevocation_p = "0xKRevocation_p"
-	vinculateIDMsg.Msg.EthID = testAddr.Hex()
+	vinculateIDMsg.Msg.EthAddr = testAddr.Hex()
 	msgHash := vinculateIDMsg.MsgHash()
 
 	sig, err := utils.Sign(msgHash, testPrivK)

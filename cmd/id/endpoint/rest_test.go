@@ -80,7 +80,7 @@ func TestVinculateID(t *testing.T) {
 	vinculateIDMsg.Msg.RawIdentityTx.KSignOperational_p = "0xKSign_p"
 	vinculateIDMsg.Msg.RawIdentityTx.KRecovery_p = "0xKRecovery_p"
 	vinculateIDMsg.Msg.RawIdentityTx.KRevocation_p = "0xKRevocation_p"
-	vinculateIDMsg.Msg.EthID = testAddr.Hex()
+	vinculateIDMsg.Msg.EthAddr = testAddr.Hex()
 	msgHash := vinculateIDMsg.MsgHash()
 	sig, err := utils.Sign(msgHash, testPrivK)
 	assert.Nil(t, err)
@@ -103,14 +103,14 @@ func TestHandleClaimNameResolv(t *testing.T) {
 	var response map[string]string
 	// err := json.Unmarshal([]byte(w.Body.String()), &response)
 	json.Unmarshal([]byte(w.Body.String()), &response)
-	ethIDHex, exists := response["ethID"]
+	ethAddrHex, exists := response["ethAddr"]
 	assert.True(t, exists)
-	ethID := common.HexToAddress(ethIDHex)
+	ethAddr := common.HexToAddress(ethAddrHex)
 	testPrivK, err := crypto.HexToECDSA(testPrivHex)
 	assert.Nil(t, err)
 	testAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
-	if !bytes.Equal(testAddr.Bytes(), ethID.Bytes()) {
-		t.Errorf("EthID not equal to the expected Address")
+	if !bytes.Equal(testAddr.Bytes(), ethAddr.Bytes()) {
+		t.Errorf("EthAddr not equal to the expected Address")
 	}
 }
 */

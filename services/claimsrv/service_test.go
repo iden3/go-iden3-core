@@ -166,7 +166,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 func TestGetClaimByHi(t *testing.T) {
 	initializeEnvironment(t)
 
-	ethID := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
+	ethAddr := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 
 	indexData := []byte("data01")
 	data := []byte{}
@@ -177,7 +177,7 @@ func TestGetClaimByHi(t *testing.T) {
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := mt.Storage().WithPrefix(ethID.Hash().Bytes())
+	stoUserID := mt.Storage().WithPrefix(ethAddr.Hash().Bytes())
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
 	assert.Nil(t, err)
@@ -187,13 +187,13 @@ func TestGetClaimByHi(t *testing.T) {
 	assert.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
-	setRootClaim := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	setRootClaim := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim.Entry())
 	assert.Nil(t, err)
 
-	proofOfClaim, err := service.GetClaimByHi(ethID, *claim.Entry().HIndex())
+	proofOfClaim, err := service.GetClaimByHi(ethAddr, *claim.Entry().HIndex())
 	assert.Nil(t, err)
 	if err != nil {
 		panic(err)
@@ -260,8 +260,8 @@ func TestAssignNameClaim(t *testing.T) {
 
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
 	domainHash := merkletree.HashBytes([]byte(c.Domain))
-	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
-	assignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethID)
+	ethAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
+	assignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethAddr)
 	// signature, err := utils.Sign(assignNameClaim.Ht(), testPrivK)
 	// assert.Nil(t, err)
 	// signatureHex := common3.BytesToHex(signature)
@@ -291,8 +291,8 @@ func TestResolvAssignNameClaim(t *testing.T) {
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
 	domainHash := merkletree.HashBytes([]byte(c.Domain))
 	testPrivK, err := crypto.HexToECDSA(testPrivKHex)
-	ethID := crypto.PubkeyToAddress(testPrivK.PublicKey)
-	originalAssignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethID)
+	ethAddr := crypto.PubkeyToAddress(testPrivK.PublicKey)
+	originalAssignNameClaim := core.NewAssignNameClaim(c.Namespace, nameHash, domainHash, ethAddr)
 	assignNameClaim, err := ResolvAssignNameClaim(mt, "johndoe@iden3.io", c.Namespace)
 	if err != nil {
 		t.Errorf(err.Error())

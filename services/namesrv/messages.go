@@ -17,7 +17,7 @@ type RawIdentityTx struct {
 // VinculateIDMsg is the structure that contains
 type VinculateIDMsg struct {
 	// This kind of message does not need the caducity
-	EthID     common.Address `json:"ethID"` // temp, will be calculated directly from RawIdentityTx
+	EthAddr   common.Address `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx
 	Name      string         `json:"name"`
 	Signature string         `json:"signature"` // hex format
 	KSign     common.Address `json:"ksign"`
@@ -26,7 +26,7 @@ type VinculateIDMsg struct {
 // MsgHash returns the Hash(VinculateIDMsg)
 func (m *VinculateIDMsg) MsgHash() utils.Hash {
 	var b []byte
-	b = append(b, m.EthID.Bytes()...)
+	b = append(b, m.EthAddr.Bytes()...)
 	b = append(b, []byte(m.Name)...)
 	return utils.EthHash(b)
 }

@@ -33,9 +33,9 @@ func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer sign
 
 // VinculateID creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
 func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAssignName, error) {
-	// verify vinculateIDMsg.Msg signature with the Operational Key of the identity vinculateIDMsg.EthID
+	// verify vinculateIDMsg.Msg signature with the Operational Key of the identity vinculateIDMsg.EthAddr
 	// get the operational key
-	identity, err := ns.identitysrv.Get(vinculateIDMsg.EthID)
+	identity, err := ns.identitysrv.Get(vinculateIDMsg.EthAddr)
 	if err != nil {
 		return &core.ClaimAssignName{}, err
 	}
@@ -53,7 +53,7 @@ func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAs
 	}
 
 	// add ClaimAssignName to merkle tree
-	assignNameClaim := core.NewClaimAssignName(vinculateIDMsg.Name, vinculateIDMsg.EthID)
+	assignNameClaim := core.NewClaimAssignName(vinculateIDMsg.Name, vinculateIDMsg.EthAddr)
 	err = ns.claimsrv.AddClaimAssignName(*assignNameClaim)
 	if err != nil {
 		return &core.ClaimAssignName{}, err

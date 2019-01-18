@@ -67,11 +67,11 @@ func TestClaimBasic(t *testing.T) {
 func TestClaimAssignName(t *testing.T) {
 	// ClaimAssignName
 	name := "example.iden3.eth"
-	ethID := common.BytesToAddress([]byte{
+	ethAddr := common.BytesToAddress([]byte{
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x3a})
-	c0 := NewClaimAssignName(name, ethID)
+	c0 := NewClaimAssignName(name, ethAddr)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
@@ -79,7 +79,6 @@ func TestClaimAssignName(t *testing.T) {
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x19ff0e5ed571621bbc36bf4c0027dbe097975e11c03841b8c8d773b833b71f84",
-
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -144,7 +143,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x0c1a5dd38e78b838a2ddef52d1237896690285ae10de10bc012a25988c05de1a",
+		"0x2f04e25bb5c9e01946aca5c80307d73bace3c3f1496175451db4495dd5a6c423",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
@@ -153,8 +152,8 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"0000036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806"+
-		"0000000000000000000000000000000000bd4d59000000010000000000000004",
+		"00036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806bd"+
+		"0000000000000000000000000000000000004d59000000010000000000000004",
 		e.Data.String())
 	c1, err := NewClaimAuthorizeKSignSecp256k1FromEntry(e)
 	if err != nil {
@@ -168,7 +167,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 
 func TestClaimSetRootKey(t *testing.T) {
 	// ClaimSetRootKey
-	ethID := common.BytesToAddress([]byte{
+	ethAddr := common.BytesToAddress([]byte{
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x3a})
@@ -177,7 +176,7 @@ func TestClaimSetRootKey(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c})
-	c0 := NewClaimSetRootKey(ethID, rootKey)
+	c0 := NewClaimSetRootKey(ethAddr, rootKey)
 	c0.Version = 1
 	c0.Era = 1
 	e := c0.Entry()
