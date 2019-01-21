@@ -26,6 +26,11 @@ var (
 	dbIdentityPrefix   = []byte{1}
 )
 
+const (
+	passwdPrefix = "passwd:"
+	filePrefix   = "file:"
+)
+
 func assert(msg string, err error) {
 	if err != nil {
 		log.Error(msg, " ", err.Error())
@@ -34,10 +39,28 @@ func assert(msg string, err error) {
 }
 
 func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
+
+	var err error
+	var passwd string
+
 	// Load keystore
 	ks := keystore.NewKeyStore(C.KeyStore.Path, keystore.StandardScryptN, keystore.StandardScryptP)
-	passwd, err := ioutil.ReadFile(C.KeyStore.Password)
-	assert("Cannot read password", err)
+
+	// Password can be prefixed by two options
+	//   file: <path to file containing the password>
+	//   passwd: raw password
+	// if is not prefixed by any of those, file: is used
+	if strings.HasPrefix(C.KeyStore.Password, passwdPrefix) {
+		passwd = C.KeyStore.Password[len(passwdPrefix):]
+	} else {
+		filename := C.KeyStore.Password
+		if strings.HasPrefix(filename, filePrefix) {
+			filename = C.KeyStore.Password[len(filePrefix):]
+		}
+		passwdbytes, err := ioutil.ReadFile(filename)
+		assert("Cannot read password ", err)
+		passwd = string(passwdbytes)
+	}
 
 	acc, err := ks.Find(accounts.Account{
 		Address: common.HexToAddress(C.KeyStore.Address),
@@ -52,9 +75,18 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 
 func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	// Create geth client
-	web3cli, err := eth.NewWeb3Client(C.Web3.Url, ks, acc)
-	assert("Cannot open connection to web3", err)
-	log.WithField("url", C.Web3.Url).Info("Connection to web3 server opened")
+	url := C.Web3.Url
+	hidden := strings.HasPrefix(url, "hidden:")
+	if hidden {
+		url = url[len("hidden:"):]
+	}
+	web3cli, err := eth.NewWeb3Client(url, ks, acc)
+	assert("Cannot open connection to web3 ", err)
+	if hidden {
+		log.WithField("url", "(hidden)").Info("Connection to web3 server opened")
+	} else {
+		log.WithField("url", C.Web3.Url).Info("Connection to web3 server opened")
+	}
 	return web3cli
 }
 
