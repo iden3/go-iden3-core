@@ -2,6 +2,8 @@ package claimsrv
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
+	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -137,40 +139,74 @@ func (pch *ProofOfClaimUserHex) Unhex() (ProofOfClaimUser, error) {
 	return r, nil
 }
 
+type ProofOfClaimPartial struct {
+	Mtp0 *merkletree.Proof
+	Mtp1 *merkletree.Proof
+	Root *merkletree.Hash
+	Aux  *SetRootAux
+}
+
+func (p *ProofOfClaimPartial) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"Mtp0": hex.EncodeToString(p.Mtp0.Bytes()),
+		"Mtp1": hex.EncodeToString(p.Mtp1.Bytes()),
+		"Root": hex.EncodeToString(p.Root[:]),
+		"Aux":  p.Aux,
+	})
+}
+
+type SetRootAux struct {
+	Version uint32
+	Era     uint32
+	EthAddr common.Address
+}
+
 // ProofOfClaim is the proof of a claim in the Relay's MerkleTree, and the proof of non revocation of the claim
 type ProofOfClaim struct {
-	ClaimProof              ProofOfTreeLeaf
-	ClaimNonRevocationProof ProofOfTreeLeaf
-	Date                    uint64
-	Signature               []byte // signature of the Root of the Relay
+	//ClaimProof              ProofOfTreeLeaf
+	//ClaimNonRevocationProof ProofOfTreeLeaf
+	Proofs    []ProofOfClaimPartial
+	Leaf      *merkletree.Data
+	Date      uint64
+	Signature []byte // signature of the Root of the Relay
 }
 
-type ProofOfClaimHex struct {
-	ClaimProof              ProofOfTreeLeafHex
-	ClaimNonRevocationProof ProofOfTreeLeafHex
-	Date                    uint64
-	Signature               string // signature of the Root of the Relay
+func (p *ProofOfClaim) MarshalJSON() ([]byte, error) {
+	leafBytes := p.Leaf.Bytes()
+	return json.Marshal(map[string]interface{}{
+		"Proofs":    p.Proofs,
+		"Leaf":      hex.EncodeToString(leafBytes[:]),
+		"Date":      p.Date,
+		"Signature": hex.EncodeToString(p.Signature),
+	})
 }
 
-func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
-	r := ProofOfClaimHex{
-		pc.ClaimProof.Hex(),
-		pc.ClaimNonRevocationProof.Hex(),
-		pc.Date,
-		common3.BytesToHex(pc.Signature),
-	}
-	return r
-}
-func (pch *ProofOfClaimHex) Unhex() (ProofOfClaim, error) {
-	sigBytes, err := common3.HexToBytes(pch.Signature)
-	if err != nil {
-		return ProofOfClaim{}, err
-	}
-	r := ProofOfClaim{
-		pch.ClaimProof.Unhex(),
-		pch.ClaimNonRevocationProof.Unhex(),
-		pch.Date,
-		sigBytes,
-	}
-	return r, nil
-}
+//type ProofOfClaimHex struct {
+//	ClaimProof              ProofOfTreeLeafHex
+//	ClaimNonRevocationProof ProofOfTreeLeafHex
+//	Date                    uint64
+//	Signature               string // signature of the Root of the Relay
+//}
+
+//func (pc *ProofOfClaim) Hex() ProofOfClaimHex {
+//	r := ProofOfClaimHex{
+//		pc.ClaimProof.Hex(),
+//		pc.ClaimNonRevocationProof.Hex(),
+//		pc.Date,
+//		common3.BytesToHex(pc.Signature),
+//	}
+//	return r
+//}
+//func (pch *ProofOfClaimHex) Unhex() (ProofOfClaim, error) {
+//	sigBytes, err := common3.HexToBytes(pch.Signature)
+//	if err != nil {
+//		return ProofOfClaim{}, err
+//	}
+//	r := ProofOfClaim{
+//		pch.ClaimProof.Unhex(),
+//		pch.ClaimNonRevocationProof.Unhex(),
+//		pch.Date,
+//		sigBytes,
+//	}
+//	return r, nil
+//}

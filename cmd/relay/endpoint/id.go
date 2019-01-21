@@ -9,16 +9,35 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/identitysrv"
 )
 
 type handlePostIdReq struct {
-	Operational   common.Address `json:"operational"`
-	OperationalPk string         `json:"operationalpk"`
-	Recoverer     common.Address `json:"recoverer"`
-	Revokator     common.Address `json:"revokator"`
+	//Operational   common.Address     `json:"operational"`
+	OperationalPk *common3.PublicKey `json:"operationalpk"`
+	Recoverer     common.Address     `json:"recoverer"`
+	Revokator     common.Address     `json:"revokator"`
+}
+
+func (h *handlePostIdReq) UnmarshalJSON(bs []byte) (err error) {
+	var h1 struct {
+		//Operational   common.Address
+		OperationalPk *common3.PublicKey
+		Recoverer     common.Address
+		Revokator     common.Address
+	}
+	if err = json.Unmarshal(bs, &h1); err != nil {
+		return err
+	}
+	if h1.OperationalPk == nil {
+		return fmt.Errorf("missing OperationalPk")
+	}
+	*h = handlePostIdReq(h1)
+	return nil
 }
 
 type handlePostIdRes struct {
@@ -56,12 +75,14 @@ func handleCreateId(c *gin.Context) {
 		return
 	}
 
+	operational := crypto.PubkeyToAddress(idreq.OperationalPk.PublicKey)
 	id := &identitysrv.Identity{
-		Operational: idreq.Operational,
-		Relayer:     common.HexToAddress(cfg.C.KeyStore.Address),
-		Recoverer:   idreq.Recoverer,
-		Revokator:   idreq.Revokator,
-		Impl:        *idservice.ImplAddr(),
+		Operational:   operational,
+		OperationalPk: idreq.OperationalPk,
+		Relayer:       common.HexToAddress(cfg.C.KeyStore.Address),
+		Recoverer:     idreq.Recoverer,
+		Revokator:     idreq.Revokator,
+		Impl:          *idservice.ImplAddr(),
 	}
 
 	addr, err := idservice.AddressOf(id)

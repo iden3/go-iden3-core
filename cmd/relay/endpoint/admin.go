@@ -73,5 +73,5 @@ func handleAddClaimBasic(c *gin.Context) {
 	if err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}
-	c.JSON(http.StatusOK, proofOfClaim.Hex())
+	c.JSON(http.StatusOK, proofOfClaim)
 }

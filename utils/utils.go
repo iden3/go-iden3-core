@@ -49,15 +49,22 @@ func VerifyTimestamp(timestamp uint64, timelimit int) bool {
 	return true
 }
 
-func Uint32ToEthBytes(u uint32) ([]byte, error) {
+func Uint32ToEthBytes(u uint32) []byte {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.BigEndian, u)
-	return buff.Bytes(), err
+	if err != nil {
+		panic(err)
+	}
+	return buff.Bytes()
 }
-func Uint64ToEthBytes(u uint64) ([]byte, error) {
+
+func Uint64ToEthBytes(u uint64) []byte {
 	buff := new(bytes.Buffer)
 	err := binary.Write(buff, binary.BigEndian, u)
-	return buff.Bytes(), err
+	if err != nil {
+		panic(err)
+	}
+	return buff.Bytes()
 }
 
 func EthBytesToUint32(b []byte) uint32 {

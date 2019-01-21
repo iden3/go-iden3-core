@@ -1,10 +1,13 @@
 package claimsrv
 
 import (
+	"crypto/ecdsa"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
@@ -15,9 +18,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+var debug = true
+
 var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
+
+var relaySecKey *ecdsa.PrivateKey
+var relayPubKey *ecdsa.PublicKey
+var relayAddr common.Address
 
 type RootServiceMock struct {
 	mock.Mock
@@ -29,6 +38,7 @@ func (m *RootServiceMock) Start() {
 func (m *RootServiceMock) StopAndJoin() {
 
 }
+
 func (m *RootServiceMock) GetRoot(addr common.Address) (merkletree.Hash, error) {
 	args := m.Called(addr)
 	return args.Get(0).(merkletree.Hash), args.Error(1)
@@ -42,8 +52,9 @@ type SignServiceMock struct {
 }
 
 func (m *SignServiceMock) SignHash(h utils.Hash) ([]byte, error) {
-	args := m.Called(h)
-	return args.Get(0).([]byte), args.Error(1)
+	//args := m.Called(h)
+	//return args.Get(0).([]byte), args.Error(1)
+	return crypto.Sign(h[:], relaySecKey)
 }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
@@ -80,6 +91,14 @@ func initializeEnvironment(t *testing.T) {
 	}
 
 	service = New(mt, &RootServiceMock{}, &SignServiceMock{})
+
+	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
+	relaySecKey, err = crypto.HexToECDSA(secKeyHex)
+	if err != nil {
+		panic(err)
+	}
+	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
+	relayAddr = crypto.PubkeyToAddress(*relayPubKey)
 }
 
 func TestGetNextVersion(t *testing.T) {
@@ -163,14 +182,13 @@ func TestGetNonRevocationProof(t *testing.T) {
 	assert.True(t, verified)
 }
 
-/*
-func TestGetClaimByHi(t *testing.T) {
+func TestGetClaimProof(t *testing.T) {
 	initializeEnvironment(t)
 
 	ethAddr := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 
-	indexData := []byte("data01")
-	data := []byte{}
+	indexData := []byte("index01")
+	data := []byte("data01")
 	var indexSlot [400 / 8]byte
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], indexData[:])
@@ -194,61 +212,79 @@ func TestGetClaimByHi(t *testing.T) {
 	err = mt.Add(setRootClaim.Entry())
 	assert.Nil(t, err)
 
-	proofOfClaim, err := service.GetClaimByHi(ethAddr, *claim.Entry().HIndex())
+	proofOfClaim, err := service.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	assert.Nil(t, err)
 	if err != nil {
 		panic(err)
 	}
-	claimProof := proofOfClaim.ClaimProof
-	claimNonRevocationProof := proofOfClaim.ClaimNonRevocationProof
-	setRootClaimProof := proofOfClaim.SetRootClaimProof
-	setRootClaimNonRevocationProof := proofOfClaim.SetRootClaimNonRevocationProof
+	p, err := proofOfClaim.MarshalJSON()
+	if err != nil {
+		panic(err)
+	}
+	if debug {
+		fmt.Println(string(p))
+	}
 
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000048000000006461746161736466", common3.BytesToHex(claimProof.Leaf))
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(claimProof.Proof))
-	assert.Equal(t, "0x1415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", claimProof.Root.Hex())
-	assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000970e8128ab834e8eac17ab8e3812f010678cf7911415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", common3.BytesToHex(setRootClaimProof.Leaf))
-	assert.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000474c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.BytesToHex(setRootClaimProof.Proof))
-	assert.Equal(t, "0xf73c98cbaa1d43ada4ed5520300c348985dd47cc283e3cf7186434a07a46886a", setRootClaimProof.Root.Hex())
-	assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000025563046fb69f065953f0fdb0b3033f721457184adfae2824c02932090bf8f281", common3.BytesToHex(claimNonRevocationProof.Proof))
-	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000014367d7c39348c9b7f2d488a7cd2edfbae56d608ec92a1b0a747adda3c4aaf763d74c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.BytesToHex(setRootClaimNonRevocationProof.Proof))
+	ok, err := VerifyProofOfClaim(relayAddr, proofOfClaim)
+	if !ok || err != nil {
+		panic(err)
+	}
 
-	assert.Equal(t, claimProof.Root.Bytes(), claimNonRevocationProof.Root.Bytes())
-	assert.Equal(t, setRootClaimProof.Root.Bytes(), setRootClaimNonRevocationProof.Root.Bytes())
+	//proofOfClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
+	//assert.Nil(t, err)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//claimProof := proofOfClaim.ClaimProof
+	//claimNonRevocationProof := proofOfClaim.ClaimNonRevocationProof
+	//setRootClaimProof := proofOfClaim.SetRootClaimProof
+	//setRootClaimNonRevocationProof := proofOfClaim.SetRootClaimNonRevocationProof
 
-	var leafBytes [128]byte
-	copy(leafBytes[:], claimProof.Leaf)
-	entry := merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	proof, err := merkletree.NewProofFromBytes(claimProof.Proof)
-	assert.Nil(t, err)
-	verified := merkletree.VerifyProof(&claimProof.Root, proof, entry.HIndex(), entry.HValue())
-	assert.True(t, verified)
+	//assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000048000000006461746161736466", common3.BytesToHex(claimProof.Leaf))
+	//assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.BytesToHex(claimProof.Proof))
+	//assert.Equal(t, "0x1415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", claimProof.Root.Hex())
+	//assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000970e8128ab834e8eac17ab8e3812f010678cf7911415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", common3.BytesToHex(setRootClaimProof.Leaf))
+	//assert.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000474c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.BytesToHex(setRootClaimProof.Proof))
+	//assert.Equal(t, "0xf73c98cbaa1d43ada4ed5520300c348985dd47cc283e3cf7186434a07a46886a", setRootClaimProof.Root.Hex())
+	//assert.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000025563046fb69f065953f0fdb0b3033f721457184adfae2824c02932090bf8f281", common3.BytesToHex(claimNonRevocationProof.Proof))
+	//assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000014367d7c39348c9b7f2d488a7cd2edfbae56d608ec92a1b0a747adda3c4aaf763d74c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.BytesToHex(setRootClaimNonRevocationProof.Proof))
 
-	leafBytes = [128]byte{}
-	copy(leafBytes[:], setRootClaimProof.Leaf)
-	entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	proof, err = merkletree.NewProofFromBytes(setRootClaimProof.Proof)
-	assert.Nil(t, err)
-	verified = merkletree.VerifyProof(&setRootClaimProof.Root, proof, entry.HIndex(), entry.HValue())
-	assert.True(t, verified)
+	//assert.Equal(t, claimProof.Root.Bytes(), claimNonRevocationProof.Root.Bytes())
+	//assert.Equal(t, setRootClaimProof.Root.Bytes(), setRootClaimNonRevocationProof.Root.Bytes())
 
-	leafBytes = [128]byte{}
-	copy(leafBytes[:], claimNonRevocationProof.Leaf)
-	entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	proof, err = merkletree.NewProofFromBytes(claimNonRevocationProof.Proof)
-	assert.Nil(t, err)
-	verified = merkletree.VerifyProof(&claimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
-	assert.True(t, verified)
+	//var leafBytes [128]byte
+	//copy(leafBytes[:], claimProof.Leaf)
+	//entry := merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
+	//proof, err := merkletree.NewProofFromBytes(claimProof.Proof)
+	//assert.Nil(t, err)
+	//verified := merkletree.VerifyProof(&claimProof.Root, proof, entry.HIndex(), entry.HValue())
+	//assert.True(t, verified)
 
-	leafBytes = [128]byte{}
-	copy(leafBytes[:], setRootClaimNonRevocationProof.Leaf)
-	entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	proof, err = merkletree.NewProofFromBytes(setRootClaimNonRevocationProof.Proof)
-	assert.Nil(t, err)
-	verified = merkletree.VerifyProof(&setRootClaimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
-	assert.True(t, verified)
+	//leafBytes = [128]byte{}
+	//copy(leafBytes[:], setRootClaimProof.Leaf)
+	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
+	//proof, err = merkletree.NewProofFromBytes(setRootClaimProof.Proof)
+	//assert.Nil(t, err)
+	//verified = merkletree.VerifyProof(&setRootClaimProof.Root, proof, entry.HIndex(), entry.HValue())
+	//assert.True(t, verified)
+
+	//leafBytes = [128]byte{}
+	//copy(leafBytes[:], claimNonRevocationProof.Leaf)
+	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
+	//proof, err = merkletree.NewProofFromBytes(claimNonRevocationProof.Proof)
+	//assert.Nil(t, err)
+	//verified = merkletree.VerifyProof(&claimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
+	//assert.True(t, verified)
+
+	//leafBytes = [128]byte{}
+	//copy(leafBytes[:], setRootClaimNonRevocationProof.Leaf)
+	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
+	//proof, err = merkletree.NewProofFromBytes(setRootClaimNonRevocationProof.Proof)
+	//assert.Nil(t, err)
+	//verified = merkletree.VerifyProof(&setRootClaimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
+	//assert.True(t, verified)
 }
-*/
+
 /*
 func TestAssignNameClaim(t *testing.T) {
 	initializeEnvironment()

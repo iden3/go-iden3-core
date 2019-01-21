@@ -15,7 +15,7 @@ func handleVinculateID(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(*claimAssignName.Entry().HIndex())
+	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(claimAssignName.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
@@ -24,7 +24,7 @@ func handleVinculateID(c *gin.Context) {
 		"claimAssignName":        common3.BytesToHex(claimAssignName.Entry().Bytes()),
 		"name":                   vinculateIDMsg.Name,
 		"ethAddr":                claimAssignName.EthAddr,
-		"proofOfClaimAssignName": proofOfClaimAssignName.Hex(),
+		"proofOfClaimAssignName": proofOfClaimAssignName,
 	})
 }
 func handleClaimAssignNameResolv(c *gin.Context) {
@@ -36,7 +36,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 		return
 	}
 
-	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(*claimAssignName.Entry().HIndex())
+	proofOfClaimAssignName, err := claimservice.GetClaimProofByHi(claimAssignName.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
@@ -44,6 +44,6 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"claim":                  common3.BytesToHex(claimAssignName.Entry().Bytes()),
 		"ethAddr":                claimAssignName.EthAddr,
-		"proofOfClaimAssignName": proofOfClaimAssignName.Hex(),
+		"proofOfClaimAssignName": proofOfClaimAssignName,
 	})
 }
