@@ -70,7 +70,7 @@ func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaimUser, numLevels 
 	}
 	rootdate := pc.SetRootClaimProof.Root[:]
 	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := merkletree.HashBytes(rootdate)
+	rootdateHash := utils.HashBytes(rootdate)
 	if !utils.VerifySig(relayAddr, pc.Signature, rootdateHash[:]) {
 		return false
 	}

@@ -496,7 +496,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi merkletr
 	}
 	rootdate := claimSetRootKeyProof.Root[:]
 	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := merkletree.HashBytes(rootdate)
+	rootdateHash := utils.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
 	// sig[64] += 27
 	if err != nil {
@@ -548,7 +548,7 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi merkletree.Hash) (*ProofOfClaim, err
 	}
 	rootdate := claimProof.Root[:]
 	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := merkletree.HashBytes(rootdate)
+	rootdateHash := utils.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
 	if err != nil {
 		return nil, err

@@ -9,6 +9,7 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/utils"
 	"github.com/ipfsconsortium/go-ipfsc/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -40,7 +41,7 @@ type SignServiceMock struct {
 	mock.Mock
 }
 
-func (m *SignServiceMock) SignHash(h merkletree.Hash) ([]byte, error) {
+func (m *SignServiceMock) SignHash(h utils.Hash) ([]byte, error) {
 	args := m.Called(h)
 	return args.Get(0).([]byte), args.Error(1)
 }

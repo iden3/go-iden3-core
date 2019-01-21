@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3/crypto/mimc7"
 )
 
@@ -26,14 +25,6 @@ func (h Hash) Hex() string {
 // Bytes returns a byte array from a Hash.
 func (h Hash) Bytes() []byte {
 	return h[:]
-}
-
-// TODO: Remove
-// HashBytes is a placeholder temorary function for the transition to the new Merklee Tree
-func HashBytes(b []byte) (hash Hash) {
-	h := crypto.Keccak256(b)
-	copy(hash[:], h)
-	return hash
 }
 
 // ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
