@@ -11,7 +11,7 @@ import (
 )
 
 // CheckProofOfClaim checks the Merkle Proof of the Claim, the SetRootClaim, and the non revocation proof of both claims
-func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaim, numLevels int) bool {
+func CheckProofOfClaim(relayAddr common.Address, pc ProofOfClaimUser, numLevels int) bool {
 	node, err := merkletree.NewNodeFromBytes(pc.ClaimProof.Leaf)
 	if err != nil {
 		return false

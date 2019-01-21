@@ -33,15 +33,17 @@ func init() {
 
 func serveServiceApi() *http.Server {
 	// start serviceapi
-	serviceapi := gin.Default()
-	serviceapi.Use(cors.Default())
+	api := gin.Default()
+	api.Use(cors.Default())
 
+	serviceapi := api.Group("/api/v0.1")
 	serviceapi.GET("/root", handleGetRoot)
 
 	serviceapi.POST("/root/:idaddr", handleCommitNewIDRoot)
 	serviceapi.POST("/claim/:idaddr", handlePostClaim)
 	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
-	serviceapi.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
+	serviceapi.GET("/claim_proof/idaddr/:idaddr/hi/:hi", handleGetClaimProofUserByHi) // Get user claim proof
+	serviceapi.GET("/claim_proof/hi/:hi", handleGetClaimProofByHi)                    // Get relay claim proof
 
 	serviceapi.POST("/id", handleCreateId)
 	serviceapi.GET("/id/:idaddr", handleGetId)
@@ -51,7 +53,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/vinculateid", handleVinculateID)
 	serviceapi.GET("/identities/resolv/:nameid", handleClaimAssignNameResolv)
 
-	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
+	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
 		if err := serviceapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -62,8 +64,9 @@ func serveServiceApi() *http.Server {
 }
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
-	adminapi := gin.Default()
-	adminapi.Use(cors.Default())
+	api := gin.Default()
+	api.Use(cors.Default())
+	adminapi := api.Group("/api/v0.1")
 
 	adminapi.POST("/stop", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/stop
@@ -78,7 +81,7 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi.POST("/mimc7", handleMimc7)
 	adminapi.POST("/claims/basic", handleAddClaimBasic)
 
-	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: adminapi}
+	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: api}
 	go func() {
 		log.Info("ADMIN server at ", config.C.Server.AdminApi)
 		if err := adminapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

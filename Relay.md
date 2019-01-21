@@ -156,7 +156,7 @@ Returns:
 Input:
 ```js
 {
-  ethID: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
+  ethAddr: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
   name: 'username',
   signature: '0xeda8b278eae69cd8c4863380f0af5cfe8360481790d8ea5c188705b552bc0d5e1384efb627db5b423d4a163ad02ca23a2f05eea5dc787ac5837789aa95f50f101b'
 }
@@ -166,7 +166,7 @@ Returns:
 ```js
 {
   assignNameClaim: '0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae900000080000000008a440962fb17f0fe928a3d930137743fe63b8f4c0ce5a5da63991310103d9aef3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074bc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
-  ethID: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
+  ethAddr: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
   name: 'username',
   proofOfRelayClaim: {
     ClaimProof: {
@@ -192,6 +192,6 @@ Returns:
 ```js
 {
   claim: '0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074b7ae3d3a2056c54f48763999f3ff99caffaaba3bab58cae900000080000000008a440962fb17f0fe928a3d930137743fe63b8f4c0ce5a5da63991310103d9aef3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074bc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f',
-  ethID: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f'
+  ethAddr: '0xbc8c480e68d0895f1e410f4e4ea6e2d6b160ca9f'
 }
 ```

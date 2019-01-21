@@ -16,8 +16,9 @@ import (
 var backupservice backupsrv.Service
 
 func serveServiceApi() *http.Server {
-	serviceapi := gin.Default()
-	serviceapi.Use(cors.Default())
+	api := gin.Default()
+	api.Use(cors.Default())
+	serviceapi := api.Group("/api/v0.1")
 	serviceapi.GET("/", handleInfo)
 	serviceapi.POST("/:idaddr/save", handleSave)
 	serviceapi.POST("/:idaddr/recover", handleRecover)
@@ -26,7 +27,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/:idaddr/recover/type/:type", handleRecoverByType)
 	serviceapi.POST("/:idaddr/recover/version/:version/type/:type", handleRecoverSinceVersionByType)
 
-	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: serviceapi}
+	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {
 		log.Info("API server at ", config.C.Server.ServiceApi)
 		if err := serviceapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

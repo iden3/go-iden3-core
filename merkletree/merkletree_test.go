@@ -559,10 +559,10 @@ func TestMerkleTreeRootStored(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
-	ethID := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
+	ethAddr := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := mt.Storage().WithPrefix(ethAddr.Bytes())
 	// open the MerkleTree of the user
 	userMT, err := NewMerkleTree(stoUserID, 140)
 	assert.Nil(t, err)

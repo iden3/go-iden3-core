@@ -49,7 +49,7 @@ func handleAssignNameClaimResolv(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"success": "ok",
 			"claim":   assignNameClaim,
-			"ethID":   assignNameClaim.EthID,
+			"ethAddr":   assignNameClaim.EthAddr,
 		})
 	*/
 }

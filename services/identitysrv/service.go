@@ -2,6 +2,7 @@ package identitysrv
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"math/big"
@@ -17,6 +18,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+const CompressedPkLen = 33
 
 type Service interface {
 	Initialized() bool
@@ -41,25 +44,36 @@ type ServiceImpl struct {
 }
 
 type Identity struct {
-	Operational common.Address
-	Relayer     common.Address
-	Recoverer   common.Address
-	Revokator   common.Address
-	Impl        common.Address
+	Operational   common.Address
+	OperationalPk *ecdsa.PublicKey
+	Relayer       common.Address
+	Recoverer     common.Address
+	Revokator     common.Address
+	Impl          common.Address
 }
 
 func (i *Identity) Encode() []byte {
 	var b bytes.Buffer
 	b.Write(i.Operational[:])
+	b.Write(crypto.CompressPubkey(i.OperationalPk))
 	b.Write(i.Relayer[:])
 	b.Write(i.Recoverer[:])
 	b.Write(i.Revokator[:])
 	b.Write(i.Impl[:])
 	return b.Bytes()
 }
+
 func (i *Identity) Decode(encoded []byte) error {
 	b := bytes.NewBuffer(encoded)
 	if _, err := b.Read(i.Operational[:]); err != nil {
+		return err
+	}
+	var operationalPkComp [CompressedPkLen]byte
+	if _, err := b.Read(operationalPkComp[:]); err != nil {
+		return err
+	}
+	var err error
+	if i.OperationalPk, err = crypto.DecompressPubkey(operationalPkComp[:]); err != nil {
 		return err
 	}
 	if _, err := b.Read(i.Relayer[:]); err != nil {
@@ -189,7 +203,7 @@ func (s *ServiceImpl) Forward(
 	sign := true
 	var ay merkletree.ElemBytes
 	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
-	proof, err := s.cs.GetClaimByHi(idaddr, *ksignclaim.Entry().HIndex())
+	proof, err := s.cs.GetClaimProofUserByHi(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
 		return common.Hash{}, err
@@ -244,12 +258,8 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
-	// TODO get the sign, ax, ay values
-	sign := true
-	var ay merkletree.ElemBytes
-	claim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
-	// claim := core.NewOperationalKSignClaim(id.Operational)
-	return s.cs.AddClaimAuthorizeKSignFirst(idaddr, *claim)
+	claim := core.NewClaimAuthorizeKSignSecp256k1(id.OperationalPk)
+	return s.cs.AddClaimAuthorizeKSignSecp256k1First(idaddr, *claim)
 }
 
 func (m *ServiceImpl) List(limit int) ([]common.Address, error) {

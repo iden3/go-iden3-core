@@ -19,13 +19,17 @@ var ErrNotFound = errors.New("value not found")
 type Service interface {
 	CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error)
 	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
-	AddClaimAuthorizeKSign(ethID common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
-	AddClaimAuthorizeKSignFirst(ethID common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
-	AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error
+	AddClaimAuthorizeKSign(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
+	AddClaimAuthorizeKSignFirst(ethAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
+	// TODO
+	//AddClaimAuthorizeKSignSecp256k1(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
+	AddClaimAuthorizeKSignSecp256k1First(ethAddr common.Address,
+		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
+	AddUserIDClaim(ethAddr common.Address, claimValueMsg ClaimValueMsg) error
 	AddDirectClaim(claim core.ClaimBasic) error
-	GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error)
-	GetClaimByHi(ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error)
-	GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim, error)
+	GetIDRoot(ethAddr common.Address) (merkletree.Hash, []byte, error)
+	GetClaimProofUserByHi(ethAddr common.Address, hi merkletree.Hash) (*ProofOfClaimUser, error)
+	GetClaimProofByHi(hi merkletree.Hash) (*ProofOfClaim, error)
 	MT() *merkletree.MerkleTree
 }
 
@@ -127,10 +131,10 @@ func (cs *ServiceImpl) AddClaimAssignName(claimAssignName core.ClaimAssignName) 
 }
 
 // AddClaimAuthorizeKSign adds ClaimAuthorizeKSign into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethID common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
+func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
@@ -161,7 +165,7 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethID common.Address, claimAuthori
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -183,10 +187,10 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethID common.Address, claimAuthori
 }
 
 // AddClaimAuthorizeKSign adds ClaimAuthorizeKSign into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethID common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error {
+func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error {
 
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
@@ -201,7 +205,107 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethID common.Address, claimAu
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
+
+	// get next version of the claim
+	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+	if err != nil {
+		return err
+	}
+	claimSetRootKey.Version = version
+
+	// add User's ID Merkle Root into the Relay's Merkle Tree
+	err = cs.mt.Add(claimSetRootKey.Entry())
+	if err != nil {
+		return err
+	}
+
+	// update Relay's Root in the Smart Contract
+	cs.rootsrv.SetRoot(*cs.mt.RootKey())
+
+	return nil
+}
+
+// TODO
+// AddClaimAuthorizeKSignSecp256k1 adds ClaimAuthorizeKSignSecp256k1 into the ID's merkletree, and adds the ID's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
+//func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
+//
+//	// get the user's id storage, using the user id prefix (the idaddress itself)
+//	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
+//
+//	// open the MerkleTree of the user
+//	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+//	if err != nil {
+//		return err
+//	}
+//
+//	// verify that the KSign is authorized
+//	if !CheckKSignInIDdb(userMT, claimAuthorizeKSignMsg.KSign) {
+//		return errors.New("can not verify the KSign")
+//	}
+//
+//	// verify signature of the ClaimAuthorizeKSign
+//	signature, err := common3.HexToBytes(claimAuthorizeKSignMsg.Signature)
+//	if err != nil {
+//		return err
+//	}
+//	msgHash := utils.EthHash(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes())
+//	signature[64] -= 27
+//	if !utils.VerifySig(claimAuthorizeKSignMsg.KSign, signature, msgHash[:]) {
+//		return errors.New("signature can not be verified")
+//	}
+//
+//	// add ClaimAuthorizeKSign into the User's ID Merkle Tree
+//	err = userMT.Add(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry())
+//	if err != nil {
+//		return err
+//	}
+//
+//	// create new ClaimSetRootKey
+//	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
+//
+//	// get next version of the claim
+//	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+//	if err != nil {
+//		return err
+//	}
+//	claimSetRootKey.Version = version
+//
+//	// add User's ID Merkle Root into the Relay's Merkle Tree
+//	err = cs.mt.Add(claimSetRootKey.Entry())
+//	if err != nil {
+//		return err
+//	}
+//
+//	// update Relay's Root in the Smart Contract
+//	cs.rootsrv.SetRoot(*cs.mt.RootKey())
+//
+//	return nil
+//}
+
+// AddClaimAuthorizeKSignSecp256k1First adds ClaimAuthorizeKSignSecp256k1 into
+// the ID's merkletree, and adds the ID's merkle root into the Relay's
+// merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
+func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(ethAddr common.Address,
+	claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error {
+
+	// get the user's id storage, using the user id prefix (the idaddress itself)
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
+
+	// open the MerkleTree of the user
+	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+	if err != nil {
+		return err
+	}
+
+	// add ClaimAuthorizeKSign into the User's ID Merkle Tree
+	err = userMT.Add(claimAuthorizeKSignSecp256k1.Entry())
+	if err != nil {
+		return err
+	}
+
+	// create new ClaimSetRootKey
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -223,9 +327,9 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethID common.Address, claimAu
 }
 
 // AddUserIDClaim adds a claim into the ID's merkle tree, and with the ID's root, creates a new ClaimSetRootKey and adds it to the Relay's merkletree
-func (cs *ServiceImpl) AddUserIDClaim(ethID common.Address, claimValueMsg ClaimValueMsg) error {
+func (cs *ServiceImpl) AddUserIDClaim(ethAddr common.Address, claimValueMsg ClaimValueMsg) error {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
@@ -259,7 +363,7 @@ func (cs *ServiceImpl) AddUserIDClaim(ethID common.Address, claimValueMsg ClaimV
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return err
@@ -289,9 +393,9 @@ func (cs *ServiceImpl) AddDirectClaim(claim core.ClaimBasic) error {
 }
 
 // GetIDRoot returns the root of an ID tree, and the proof of that Root ID tree in the Relay Merkle Tree
-func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte, error) {
+func (cs *ServiceImpl) GetIDRoot(ethAddr common.Address) (merkletree.Hash, []byte, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
@@ -300,7 +404,7 @@ func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte,
 	}
 
 	// build ClaimSetRootKey of the user id
-	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
@@ -315,37 +419,37 @@ func (cs *ServiceImpl) GetIDRoot(ethID common.Address) (merkletree.Hash, []byte,
 	return *userMT.RootKey(), idRootProof.Bytes(), nil
 }
 
-// GetClaimByHi given a Hash(index) (Hi) and an ID, returns the Claim in that Hi position inside the ID's merkletree, and the ClaimSetRootKey with the ID's root in the Relay's merkletree
-func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (ProofOfClaim, error) {
+// GetClaimProofUserByHi given a Hash(index) (Hi) and an ID, returns the Claim in that Hi position inside the ID's merkletree, and the ClaimSetRootKey with the ID's root in the Relay's merkletree
+func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi merkletree.Hash) (*ProofOfClaimUser, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethID.Bytes())
+	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 
 	// get the value in the hi position
 	// valueBytes, err := userMT.GetValueInPos(hi)
 	leafData, err := userMT.GetDataByIndex(&hi)
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 	// if bytes.Equal(valueBytes, merkletree.EmptyNodeValue[:]) {
-	//         return ProofOfClaim{}, ErrNotFound
+	//         return nil, ErrNotFound
 	// }
 
 	// value, err := core.ParseValueFromBytes(valueBytes)
 	// if err != nil {
-	//         return ProofOfClaim{}, err
+	//         return nil, err
 	// }
 
 	// get the proof of the value in the User ID Tree
 	// idProof, err := userMT.GenerateProof(merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
 	idProof, err := userMT.GenerateProof(&hi)
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 
 	leafBytes := leafData.Bytes()
@@ -356,17 +460,17 @@ func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (P
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(ethID, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 	claimSetRootKey.Version = version - 1
 
 	// get the proof of the ClaimSetRootKey in the Relay Tree
 	relayProof, err := cs.mt.GenerateProof(claimSetRootKey.Entry().HIndex())
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 	claimSetRootKeyProof := ProofOfTreeLeaf{
 		Leaf:  claimSetRootKey.Entry().Bytes(),
@@ -377,18 +481,18 @@ func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (P
 	// get non revocation proofs of the claim
 	claimNonRevocationProof, err := getNonRevocationProof(userMT, hi)
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 	claimSetRootKeyNonRevocationProof, err := getNonRevocationProof(cs.mt, *claimSetRootKey.Entry().HIndex())
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 
 	// sign root + date
 	dateUint64 := uint64(time.Now().Unix())
 	dateBytes, err := utils.Uint64ToEthBytes(dateUint64)
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 	rootdate := claimSetRootKeyProof.Root[:]
 	rootdate = append(rootdate, dateBytes...)
@@ -396,32 +500,32 @@ func (cs *ServiceImpl) GetClaimByHi(ethID common.Address, hi merkletree.Hash) (P
 	sig, err := cs.signer.SignHash(rootdateHash)
 	// sig[64] += 27
 	if err != nil {
-		return ProofOfClaim{}, err
+		return nil, err
 	}
 
-	proofOfClaim := ProofOfClaim{
+	proofOfClaim := ProofOfClaimUser{
 		claimProof,
-		claimSetRootKeyProof,
 		claimNonRevocationProof,
+		claimSetRootKeyProof,
 		claimSetRootKeyNonRevocationProof,
 		dateUint64,
 		sig,
 	}
-	return proofOfClaim, nil
+	return &proofOfClaim, nil
 }
 
-// GetRelayClaimByHi given a Hash(index) (Hi), returns the Claim in that Hi position inside the Relay merkletree, and it's proof of non revocated
-func (cs *ServiceImpl) GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim, error) {
+// GetClaimProofByHi given a Hash(index) (Hi), returns the Claim in that Hi position inside the Relay merkletree, and it's proof of non revocated
+func (cs *ServiceImpl) GetClaimProofByHi(hi merkletree.Hash) (*ProofOfClaim, error) {
 	// get the value in the hi position
 	leafData, err := cs.mt.GetDataByIndex(&hi)
 	if err != nil {
-		return ProofOfRelayClaim{}, err
+		return nil, err
 	}
 
 	// get the proof of the ClaimSetRootKey in the Relay Tree
 	relayProof, err := cs.mt.GenerateProof(&hi)
 	if err != nil {
-		return ProofOfRelayClaim{}, err
+		return nil, err
 	}
 
 	leafBytes := leafData.Bytes()
@@ -433,30 +537,30 @@ func (cs *ServiceImpl) GetRelayClaimByHi(hi merkletree.Hash) (ProofOfRelayClaim,
 
 	claimNonRevocationProof, err := getNonRevocationProof(cs.mt, hi)
 	if err != nil {
-		return ProofOfRelayClaim{}, err
+		return nil, err
 	}
 
 	// sign root + date
 	dateUint64 := uint64(time.Now().Unix())
 	dateBytes, err := utils.Uint64ToEthBytes(dateUint64)
 	if err != nil {
-		return ProofOfRelayClaim{}, err
+		return nil, err
 	}
 	rootdate := claimProof.Root[:]
 	rootdate = append(rootdate, dateBytes...)
 	rootdateHash := merkletree.HashBytes(rootdate)
 	sig, err := cs.signer.SignHash(rootdateHash)
 	if err != nil {
-		return ProofOfRelayClaim{}, err
+		return nil, err
 	}
 
-	proofOfRelayClaim := ProofOfRelayClaim{
+	proofOfRelayClaim := ProofOfClaim{
 		claimProof,
 		claimNonRevocationProof,
 		dateUint64,
 		sig,
 	}
-	return proofOfRelayClaim, nil
+	return &proofOfRelayClaim, nil
 }
 
 func (cs *ServiceImpl) MT() *merkletree.MerkleTree {

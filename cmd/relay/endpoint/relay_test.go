@@ -75,10 +75,10 @@ func TestHandlePostAssignNameClaim(t *testing.T) {
 
 	privK, err := crypto.HexToECDSA(testPrivHex)
 	assert.Nil(t, err)
-	ethID := crypto.PubkeyToAddress(privK.PublicKey)
+	ethAddr := crypto.PubkeyToAddress(privK.PublicKey)
 	nameHash := merkletree.HashBytes([]byte("johndoe"))
 	domainHash := merkletree.HashBytes([]byte(config.C.Domain))
-	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethID)
+	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethAddr)
 	signature, err := utils.Sign(assignNameClaim.Ht(), privK)
 	assert.Nil(t, err)
 	signatureHex := common3.BytesToHex(signature)
@@ -90,7 +90,7 @@ func TestHandlePostAssignNameClaim(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	w := performRequest(r, "POST", "/claim/"+ethID.Hex(), string(json))
+	w := performRequest(r, "POST", "/claim/"+ethAddr.Hex(), string(json))
 	assert.Equal(t, http.StatusOK, w.Code)
 	buf := make([]byte, 1024)
 
@@ -110,8 +110,8 @@ func TestHandlePostAuthorizeKSignClaim(t *testing.T) {
 	r.POST("/claim/:idaddr", handlePostClaim)
 
 	privK, _ := crypto.HexToECDSA(testPrivHex)
-	ethID := crypto.PubkeyToAddress(privK.PublicKey)
-	authorizeKSignClaim := core.NewAuthorizeKSignClaim("iden3.io", ethID, "app1", "appauthz", 1535208350, 1535208350)
+	ethAddr := crypto.PubkeyToAddress(privK.PublicKey)
+	authorizeKSignClaim := core.NewAuthorizeKSignClaim("iden3.io", ethAddr, "app1", "appauthz", 1535208350, 1535208350)
 
 	signature, err := utils.Sign(authorizeKSignClaim.Ht(), privK)
 	assert.Nil(t, err)
@@ -124,7 +124,7 @@ func TestHandlePostAuthorizeKSignClaim(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	w := performRequest(r, "POST", "/claim/"+ethID.Hex(), string(json))
+	w := performRequest(r, "POST", "/claim/"+ethAddr.Hex(), string(json))
 	assert.Equal(t, http.StatusOK, w.Code)
 	// buf := make([]byte, 1024)
 	// num, _ := w.Body.Read(buf)
@@ -148,8 +148,8 @@ func TestGetIDRoot(t *testing.T) {
 	gin.DefaultWriter = ioutil.Discard
 	r.GET("/claim/:idaddr/root", handleGetIDRoot)
 	privK, _ := crypto.HexToECDSA(testPrivHex)
-	ethID := crypto.PubkeyToAddress(privK.PublicKey)
-	w := performRequest(r, "GET", "/claim/"+ethID.Hex()+"/root", "")
+	ethAddr := crypto.PubkeyToAddress(privK.PublicKey)
+	w := performRequest(r, "GET", "/claim/"+ethAddr.Hex()+"/root", "")
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 func TestGetClaimByHiThatDontExist(t *testing.T) {
@@ -157,9 +157,9 @@ func TestGetClaimByHiThatDontExist(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DefaultWriter = ioutil.Discard
 	r.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
-	ethIDHex := "0x970E8128AB834E8EAC17Ab8E3812F010678CF791"
+	ethAddrHex := "0x970E8128AB834E8EAC17Ab8E3812F010678CF791"
 	hiHex := "0x784adb4a490b9c0521c11298f384bf847881711f1a522a40129d76e3cfc68c9a"
-	w := performRequest(r, "GET", "/claim/"+ethIDHex+"/hi/"+hiHex, "")
+	w := performRequest(r, "GET", "/claim/"+ethAddrHex+"/hi/"+hiHex, "")
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 func TestAddClaimAndGetClaimByHi(t *testing.T) {
@@ -169,7 +169,7 @@ func TestAddClaimAndGetClaimByHi(t *testing.T) {
 	r.GET("/claim/:idaddr/hi/:hi", handleGetClaimByHi)
 
 	privK, _ := crypto.HexToECDSA(testPrivHex)
-	ethID := crypto.PubkeyToAddress(privK.PublicKey)
+	ethAddr := crypto.PubkeyToAddress(privK.PublicKey)
 	claim := core.NewClaimDefault("namespace.io", "default", []byte("dataasdf"))
 	signature, err := utils.Sign(claim.Ht(), privK)
 	assert.Nil(t, err)
@@ -178,10 +178,10 @@ func TestAddClaimAndGetClaimByHi(t *testing.T) {
 		claim,
 		signatureHex,
 	}
-	_, _, err = claimsrv.AddUserIDClaim(mt, "namespace.io", ethID, claimValueMsg, config.C.ContractsAddress.Identities)
+	_, _, err = claimsrv.AddUserIDClaim(mt, "namespace.io", ethAddr, claimValueMsg, config.C.ContractsAddress.Identities)
 	assert.Nil(t, err)
 	hi := claim.Hi()
-	w := performRequest(r, "GET", "/claim/"+ethID.Hex()+"/hi/"+hi.Hex(), "")
+	w := performRequest(r, "GET", "/claim/"+ethAddr.Hex()+"/hi/"+hi.Hex(), "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	// buf := make([]byte, 1024)
 	// num, _ := w.Body.Read(buf)

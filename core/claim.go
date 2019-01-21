@@ -80,8 +80,8 @@ var (
 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
 	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
 	ClaimTypeAssignName = NewClaimTypeNum(3)
-	// ClaimTypeAuthorizeKSignP256 is a claim type to autorize a P-256 public key for signing.
-	ClaimTypeAuthorizeKSignP256 = NewClaimTypeNum(4)
+	// ClaimTypeAuthorizeKSignSecp256k1 is a claim type to autorize a secp256k1 public key for signing.
+	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
 )
 
 // ClaimVersionLen is the length in bytes of the version in a claim.
@@ -142,17 +142,17 @@ type ClaimAssignName struct {
 	Version uint32
 	// NameHash is the hash of the name.
 	NameHash [248 / 8]byte
-	// EthID is the assigned Ethereum ID.
-	EthID common.Address
+	// EthAddr is the assigned Ethereum Address.
+	EthAddr common.Address
 }
 
 // NewClaimAssignName returns a ClaimAssignName with the name and Eth address.
-func NewClaimAssignName(name string, ethID common.Address) *ClaimAssignName {
+func NewClaimAssignName(name string, ethAddr common.Address) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
 	hash := utils.HashBytes([]byte(name))
 	copy(c.NameHash[:], hash[len(hash)-248/8:])
-	c.EthID = ethID
+	c.EthAddr = ethAddr
 	return c
 }
 
@@ -161,7 +161,7 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	_, c.Version = getClaimTypeVersion(e)
 	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
-	copyFromElemBytes(c.EthID[:], 0, &e.Data[1])
+	copyFromElemBytes(c.EthAddr[:], 0, &e.Data[1])
 	return c
 }
 
@@ -170,7 +170,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.EthID[:])
+	copyToElemBytes(&e.Data[1], 0, c.EthAddr[:])
 	return e
 }
 
@@ -230,32 +230,32 @@ func (c *ClaimAuthorizeKSign) Type() ClaimType {
 	return *ClaimTypeAuthorizeKSign
 }
 
-// ClaimAuthorizeKSignP256 is a claim to autorize a public key for signing.
-type ClaimAuthorizeKSignP256 struct {
+// ClaimAuthorizeKSignSecp256k1 is a claim to autorize a public key for signing.
+type ClaimAuthorizeKSignSecp256k1 struct {
 	// Version is the claim version.
 	Version uint32
-	// Pk is the ECDSA public key.
-	Pk *ecdsa.PublicKey
+	// PubKey is the ECDSA public key.
+	PubKey *ecdsa.PublicKey
 }
 
-// NewClaimAuthorizeKSignP256 returns a ClaimAuthorizeKSignP256 with the given elliptic
+// NewClaimAuthorizeKSignSecp256k1 returns a ClaimAuthorizeKSignSecp256k1 with the given elliptic
 // public key parameters.
-func NewClaimAuthorizeKSignP256(pk *ecdsa.PublicKey) *ClaimAuthorizeKSignP256 {
-	return &ClaimAuthorizeKSignP256{
+func NewClaimAuthorizeKSignSecp256k1(pk *ecdsa.PublicKey) *ClaimAuthorizeKSignSecp256k1 {
+	return &ClaimAuthorizeKSignSecp256k1{
 		Version: 0,
-		Pk:      pk,
+		PubKey:  pk,
 	}
 }
 
-// NewClaimAuthorizeKSignP256FromEntry deserializes a ClaimAuthorizeKSignP256 from an Entry.
-func NewClaimAuthorizeKSignP256FromEntry(e *merkletree.Entry) (*ClaimAuthorizeKSignP256, error) {
-	c := &ClaimAuthorizeKSignP256{}
+// NewClaimAuthorizeKSignSecp256k1FromEntry deserializes a ClaimAuthorizeKSignSecp256k1 from an Entry.
+func NewClaimAuthorizeKSignSecp256k1FromEntry(e *merkletree.Entry) (*ClaimAuthorizeKSignSecp256k1, error) {
+	c := &ClaimAuthorizeKSignSecp256k1{}
 	_, c.Version = getClaimTypeVersion(e)
 	var cpk [33]byte
-	copyFromElemBytes(cpk[merkletree.ElemBytesLen-2:], ClaimTypeVersionLen, &e.Data[3])
-	copyFromElemBytes(cpk[:merkletree.ElemBytesLen-2], 0, &e.Data[2])
+	copyFromElemBytes(cpk[len(cpk)-2:], ClaimTypeVersionLen, &e.Data[3])
+	copyFromElemBytes(cpk[:len(cpk)-2], 0, &e.Data[2])
 	var err error
-	c.Pk, err = crypto.DecompressPubkey(cpk[:])
+	c.PubKey, err = crypto.DecompressPubkey(cpk[:])
 	if err != nil {
 		return nil, err
 	}
@@ -263,18 +263,18 @@ func NewClaimAuthorizeKSignP256FromEntry(e *merkletree.Entry) (*ClaimAuthorizeKS
 }
 
 // Entry serializes the claim into an Entry.
-func (c *ClaimAuthorizeKSignP256) Entry() *merkletree.Entry {
+func (c *ClaimAuthorizeKSignSecp256k1) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
-	cpk := crypto.CompressPubkey(c.Pk)
-	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, cpk[merkletree.ElemBytesLen-2:])
-	copyToElemBytes(&e.Data[2], 0, cpk[:merkletree.ElemBytesLen-2])
+	cpk := crypto.CompressPubkey(c.PubKey)
+	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, cpk[len(cpk)-2:])
+	copyToElemBytes(&e.Data[2], 0, cpk[:len(cpk)-2])
 	return e
 }
 
 // Type returns the ClaimType of the claim.
-func (c *ClaimAuthorizeKSignP256) Type() ClaimType {
-	return *ClaimTypeAuthorizeKSignP256
+func (c *ClaimAuthorizeKSignSecp256k1) Type() ClaimType {
+	return *ClaimTypeAuthorizeKSignSecp256k1
 }
 
 // ClaimSetRootKey is a claim of the root key of a merkle tree that goes into the relay.
@@ -283,19 +283,19 @@ type ClaimSetRootKey struct {
 	Version uint32
 	// Era is used for labeling epochs.
 	Era uint32
-	// EthID is the Ethereum ID related to the root key.
-	EthID common.Address
+	// EthAddr is the Ethereum Address related to the root key.
+	EthAddr common.Address
 	// RootKey is the root of the mekrlee tree.
 	RootKey merkletree.Hash
 }
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(ethID common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(ethAddr common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
-		EthID:   ethID,
+		EthAddr: ethAddr,
 		RootKey: rootKey,
 	}
 }
@@ -307,7 +307,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	var era [32 / 8]byte
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
 	c.Era = binary.BigEndian.Uint32(era[:])
-	copyFromElemBytes(c.EthID[:], 0, &e.Data[2])
+	copyFromElemBytes(c.EthAddr[:], 0, &e.Data[2])
 	c.RootKey = merkletree.Hash(e.Data[1])
 	return c
 }
@@ -319,7 +319,7 @@ func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	var era [32 / 8]byte
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
-	copyToElemBytes(&e.Data[2], 0, c.EthID[:])
+	copyToElemBytes(&e.Data[2], 0, c.EthAddr[:])
 	e.Data[1] = merkletree.ElemBytes(c.RootKey)
 	return e
 }
@@ -345,8 +345,8 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	case *ClaimTypeSetRootKey:
 		c := NewClaimSetRootKeyFromEntry(e)
 		return c, nil
-	case *ClaimTypeAuthorizeKSignP256:
-		return NewClaimAuthorizeKSignP256FromEntry(e)
+	case *ClaimTypeAuthorizeKSignSecp256k1:
+		return NewClaimAuthorizeKSignSecp256k1FromEntry(e)
 	default:
 		return nil, ErrInvalidClaimType
 	}
