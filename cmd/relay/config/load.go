@@ -54,9 +54,6 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 		passwd = C.KeyStore.Password[len(passwdPrefix):]
 	} else {
 		filename := C.KeyStore.Password
-		// (at your option) any later version.
-		//
-		// The go-ethereum library is diword
 		if strings.HasPrefix(filename, filePrefix) {
 			filename = C.KeyStore.Password[len(filePrefix):]
 		}
