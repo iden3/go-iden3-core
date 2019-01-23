@@ -35,7 +35,7 @@ func Auth(authMsg AuthMsg) error {
 		return err
 	}
 	relayAddr := common.BytesToAddress(addrBytes)
-	if !claimsrv.CheckProofOfClaim(relayAddr, proofOfKSign, 140) { //TODO send the address of the Relay, to check the signature of proofOfKSign
+	if !claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140) { //TODO send the address of the Relay, to check the signature of proofOfKSign
 		return errors.New("ProofOfKSign can not be verified")
 	}
 

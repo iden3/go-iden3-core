@@ -123,7 +123,7 @@ func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]
 	// update Relay Root in Smart Contract
 	as.rootsrv.SetRoot(*as.mt.RootKey())
 
-	proofOfClaim, err := as.claimsrv.GetClaimProofByHi(*claim.Entry().HIndex())
+	proofOfClaim, err := as.claimsrv.GetClaimProofByHi(claim.Entry().HIndex())
 	if err != nil {
 		fmt.Println("err", err.Error())
 		return nil, err

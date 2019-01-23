@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -31,4 +30,14 @@ func VerifySig(addr common.Address, sig, msgHash []byte) bool {
 	pubKey, _ := crypto.UnmarshalPubkey(recoveredPub)
 	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
 	return bytes.Equal(addr.Bytes(), recoveredAddr.Bytes())
+}
+
+func VerifySigBytes(addr common.Address, sig, msg []byte) bool {
+	msgHash := HashBytes(msg)
+	return VerifySig(addr, sig, msgHash[:])
+}
+
+func VerifySigBytesDate(addr common.Address, sig, msg []byte, date uint64) bool {
+	dateBytes := Uint64ToEthBytes(date)
+	return VerifySigBytes(addr, sig, append(msg[:], dateBytes...))
 }

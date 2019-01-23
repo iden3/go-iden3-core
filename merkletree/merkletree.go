@@ -162,32 +162,10 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 	mt := MerkleTree{storage: storage, maxLevels: maxLevels}
 	_, gettedRoot, err := mt.dbGet(rootNodeValue)
 	if err != nil {
-		/*
-			tx, err := mt.storage.NewTx()
-			if err != nil {
-				return &mt, err
-			}
-			mt.Lock()
-			defer func() {
-				if err == nil {
-					tx.Commit()
-				} else {
-					tx.Close()
-				}
-				mt.Unlock()
-			}()
-
-			nodeRoot := NewNodeEmpty()
-			k, _ := nodeRoot.Key(), nodeRoot.Value()
-			mt.rootKey = k
-			mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
-		*/
 		tx, err := mt.storage.NewTx()
 		if err != nil {
 			return nil, err
 		}
-		mt.Lock()
-		defer mt.Unlock()
 		nodeRoot := NewNodeEmpty()
 		k, _ := nodeRoot.Key(), nodeRoot.Value()
 		mt.rootKey = k
@@ -203,6 +181,16 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 	return &mt, nil
 }
 
+func (mt *MerkleTree) Snapshot(rootKey *Hash) (*MerkleTree, error) {
+	mt.RLock()
+	defer mt.RUnlock()
+	_, err := mt.GetNode(rootKey)
+	if err != nil {
+		return nil, err
+	}
+	return &MerkleTree{storage: mt.storage, maxLevels: mt.maxLevels, rootKey: rootKey}, nil
+}
+
 // Storage returns the MT storage
 func (mt *MerkleTree) Storage() db.Storage {
 	return mt.storage
@@ -210,6 +198,8 @@ func (mt *MerkleTree) Storage() db.Storage {
 
 // RootKey returns the MT root node key
 func (mt *MerkleTree) RootKey() *Hash {
+	mt.RLock()
+	defer mt.RUnlock()
 	return mt.rootKey
 }
 
@@ -222,7 +212,7 @@ func (mt *MerkleTree) MaxLevels() int {
 // the index (hIndex)
 func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
 	path := getPath(mt.maxLevels, hIndex)
-	nextKey := mt.rootKey
+	nextKey := mt.RootKey()
 	for lvl := 0; lvl < mt.maxLevels; lvl++ {
 		n, err := mt.GetNode(nextKey)
 		if err != nil {
@@ -421,7 +411,7 @@ const proofFlagsLen = 2
 // Proof defines the required elements for a MT proof of existence or non-existence.
 type Proof struct {
 	// existence indicates wether this is a proof of existence or non-existence.
-	existence bool
+	Existence bool
 	// depth indicates how deep in the tree the proof goes.
 	depth uint
 	// notempties is a bitmap of non-empty siblings found in siblings.
@@ -438,7 +428,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 	}
 	p := &Proof{}
 	if (bs[0] & 0x01) == 0 {
-		p.existence = true
+		p.Existence = true
 	}
 	p.depth = uint(bs[1])
 	copy(p.notempties[:], bs[proofFlagsLen:ElemBytesLen])
@@ -456,7 +446,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 		}
 	}
 
-	if !p.existence && ((bs[0] & 0x02) != 0) {
+	if !p.Existence && ((bs[0] & 0x02) != 0) {
 		p.nodeAux = &nodeAux{hIndex: &Hash{}, hValue: &Hash{}}
 		nodeAuxBytes := siblingBytes[len(p.siblings)*ElemBytesLen:]
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
@@ -476,7 +466,7 @@ func (p *Proof) Bytes() []byte {
 	}
 	bs := make([]byte, bsLen)
 
-	if !p.existence {
+	if !p.Existence {
 		bs[0] |= 0x01
 	}
 	bs[1] = byte(p.depth)
@@ -495,8 +485,8 @@ func (p *Proof) Bytes() []byte {
 
 // String outputs a multiline string representation of the Proof.
 func (p *Proof) String() string {
-	buf := bytes.NewBufferString("Proof:")
-	fmt.Fprintf(buf, "\texistence: %v\n", p.existence)
+	buf := bytes.NewBufferString("Proof:\n")
+	fmt.Fprintf(buf, "\texistence: %v\n", p.Existence)
 	fmt.Fprintf(buf, "\tdepth: %v\n", p.depth)
 	fmt.Fprintf(buf, "\tnotempties: ")
 	for i := uint(0); i < p.depth; i++ {
@@ -531,7 +521,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
 	var siblingKey *Hash
 
 	path := getPath(mt.maxLevels, hIndex)
-	nextKey := mt.rootKey
+	nextKey := mt.RootKey()
 	for p.depth = 0; p.depth < uint(mt.maxLevels); p.depth++ {
 		n, err := mt.GetNode(nextKey)
 		if err != nil {
@@ -542,7 +532,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
 			return p, nil
 		case NodeTypeLeaf:
 			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
-				p.existence = true
+				p.Existence = true
 				return p, nil
 			} else {
 				// We found a leaf whose entry didn't match hIndex
@@ -572,7 +562,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash) (*Proof, error) {
 func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 	sibIdx := len(proof.siblings) - 1
 	var midKey *Hash
-	if proof.existence {
+	if proof.Existence {
 		midKey = LeafKey(hIndex, hValue)
 	} else {
 		if proof.nodeAux == nil {

@@ -65,7 +65,7 @@ func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error)
 	}
 	kSign := common.HexToAddress(m.KSign)
 	relayAddr := common.HexToAddress(m.RelayAddr)
-	verified := claimsrv.CheckProofOfClaim(relayAddr, proofOfKSign, 140)
+	verified := claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140)
 	if !verified {
 		return 0, errors.New("ProofOfKSign can not be verified")
 	}

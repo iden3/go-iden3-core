@@ -49,13 +49,13 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetClaimProofByHi(*setRootClaim.Entry().HIndex())
+	proofOfRelayClaim, err := claimservice.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfRelayClaim.Hex(),
+		"proofOfClaim": proofOfRelayClaim,
 	})
 }
 
@@ -90,14 +90,14 @@ func handlePostClaim(c *gin.Context) {
 		return
 	}
 	// return claim with proofs
-	proofOfClaim, err := claimservice.GetClaimProofUserByHi(idaddr, *entry.HIndex())
+	proofOfClaim, err := claimservice.GetClaimProofUserByHi(idaddr, entry.HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim.Hex(),
+		"proofOfClaim": proofOfClaim,
 	})
 	return
 }
@@ -228,7 +228,7 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 		fail(c, "error on HexToBytes of Hi", err)
 		return
 	}
-	var hi merkletree.Hash
+	hi := &merkletree.Hash{}
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
 	proofOfClaim, err := claimservice.GetClaimProofUserByHi(idaddr, hi)
@@ -237,7 +237,7 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim.Hex(),
+		"proofOfClaim": proofOfClaim,
 	})
 	return
 }
@@ -249,7 +249,7 @@ func handleGetClaimProofByHi(c *gin.Context) {
 		fail(c, "error on HexToBytes of Hi", err)
 		return
 	}
-	var hi merkletree.Hash
+	hi := &merkletree.Hash{}
 	copy(hi[:], hiBytes)
 	proofOfClaim, err := claimservice.GetClaimProofByHi(hi)
 	if err != nil {
@@ -257,7 +257,7 @@ func handleGetClaimProofByHi(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim.Hex(),
+		"proofOfClaim": proofOfClaim,
 	})
 	return
 }

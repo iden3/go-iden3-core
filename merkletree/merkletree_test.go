@@ -337,7 +337,7 @@ func TestVerifyProofCases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, proof.existence, true)
+	assert.Equal(t, proof.Existence, true)
 	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 	proofTestOutput(proof)
 	assert.Equal(t, ""+
@@ -358,7 +358,7 @@ func TestVerifyProofCases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, proof.existence, false)
+	assert.Equal(t, proof.Existence, false)
 	assert.True(t, proof.nodeAux == nil)
 	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 	proofTestOutput(proof)
@@ -376,7 +376,7 @@ func TestVerifyProofCases(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, proof.existence, false)
+	assert.Equal(t, proof.Existence, false)
 	assert.True(t, proof.nodeAux != nil)
 	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 	proofTestOutput(proof)
@@ -408,7 +408,7 @@ func TestVerifyProofFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, proof.existence, true)
+	assert.Equal(t, proof.Existence, true)
 	e1 := NewEntryFromInts(0, int64(5), 0, int64(5))
 	assert.True(t, !VerifyProof(mt.RootKey(), proof, e1.HIndex(), e1.HValue()))
 
@@ -418,10 +418,10 @@ func TestVerifyProofFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, proof.existence, true)
+	assert.Equal(t, proof.Existence, true)
 	// Now we change the proof from existence to non-existence, and add e's
 	// data as auxiliary node.
-	proof.existence = false
+	proof.Existence = false
 	proof.nodeAux = &nodeAux{hIndex: e.HIndex(), hValue: e.HValue()}
 	assert.True(t, !VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
 }

@@ -2,14 +2,15 @@ package identitysrv
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
@@ -45,7 +46,7 @@ type ServiceImpl struct {
 
 type Identity struct {
 	Operational   common.Address
-	OperationalPk *ecdsa.PublicKey
+	OperationalPk *common3.PublicKey
 	Relayer       common.Address
 	Recoverer     common.Address
 	Revokator     common.Address
@@ -55,7 +56,8 @@ type Identity struct {
 func (i *Identity) Encode() []byte {
 	var b bytes.Buffer
 	b.Write(i.Operational[:])
-	b.Write(crypto.CompressPubkey(i.OperationalPk))
+	fmt.Printf("> %+v\n", *i)
+	b.Write(crypto.CompressPubkey(&i.OperationalPk.PublicKey))
 	b.Write(i.Relayer[:])
 	b.Write(i.Recoverer[:])
 	b.Write(i.Revokator[:])
@@ -72,9 +74,10 @@ func (i *Identity) Decode(encoded []byte) error {
 	if _, err := b.Read(operationalPkComp[:]); err != nil {
 		return err
 	}
-	var err error
-	if i.OperationalPk, err = crypto.DecompressPubkey(operationalPkComp[:]); err != nil {
+	if pk, err := crypto.DecompressPubkey(operationalPkComp[:]); err != nil {
 		return err
+	} else {
+		i.OperationalPk = &common3.PublicKey{PublicKey: *pk}
 	}
 	if _, err := b.Read(i.Relayer[:]); err != nil {
 		return err
@@ -203,7 +206,7 @@ func (s *ServiceImpl) Forward(
 	sign := true
 	var ay merkletree.ElemBytes
 	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
-	proof, err := s.cs.GetClaimProofUserByHi(idaddr, *ksignclaim.Entry().HIndex())
+	proof, err := s.cs.GetClaimProofUserByHiOld(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
 		return common.Hash{}, err
@@ -247,6 +250,10 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
+	if _, err := s.sto.Get(idaddr[:]); err == nil {
+		return fmt.Errorf("the identity %v with id %+v already exists in the Relay", idaddr, *id)
+	}
+
 	tx, err := s.sto.NewTx()
 	if err != nil {
 		return err
@@ -258,7 +265,7 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
-	claim := core.NewClaimAuthorizeKSignSecp256k1(id.OperationalPk)
+	claim := core.NewClaimAuthorizeKSignSecp256k1(&id.OperationalPk.PublicKey)
 	return s.cs.AddClaimAuthorizeKSignSecp256k1First(idaddr, *claim)
 }
 
