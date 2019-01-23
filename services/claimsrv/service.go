@@ -589,12 +589,12 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*ProofOfClaim, er
 		return nil, err
 	}
 
-	// get the proof of the ClaimSetRootKey in the Relay Tree
+	// get the MT proof of existence of the claim and the non-existence of
+	// the claim's next version in the Relay Tree
 	mtpExist, err := mt.GenerateProof(hi)
 	if err != nil {
 		return nil, err
 	}
-
 	mtpNonExist, err := getNonRevocationMTProof(mt, leafData, hi)
 	if err != nil {
 		return nil, err

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -59,13 +60,16 @@ type PublicKey struct {
 
 func (pk *PublicKey) MarshalJSON() ([]byte, error) {
 	s := hex.EncodeToString(crypto.CompressPubkey(&pk.PublicKey))
-	return json.Marshal(s)
+	return json.Marshal("0x" + s)
 }
 
 func (pk *PublicKey) UnmarshalJSON(bs []byte) error {
 	hexStr := ""
 	if err := json.Unmarshal(bs, &hexStr); err != nil {
 		return err
+	}
+	if strings.HasPrefix(hexStr, "0x") {
+		hexStr = hexStr[2:]
 	}
 	pkBytes, err := hex.DecodeString(hexStr)
 	if err != nil {
