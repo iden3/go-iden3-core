@@ -250,6 +250,10 @@ func (s *ServiceImpl) Add(id *Identity) error {
 		return err
 	}
 
+	if _, err := s.sto.Get(idaddr[:]); err == nil {
+		return fmt.Errorf("the identity %v with id %+v already exists in the Relay", idaddr, *id)
+	}
+
 	tx, err := s.sto.NewTx()
 	if err != nil {
 		return err
