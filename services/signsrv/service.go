@@ -26,14 +26,14 @@ func (s *ServiceImpl) SignHash(h utils.Hash) ([]byte, error) {
 }
 
 func SignBytes(s Service, data []byte) ([]byte, error) {
-	h := utils.HashBytes(data[:])
+	h := utils.EthHash(data[:])
 	return s.SignHash(h)
 }
 
 func SignBytesDate(s Service, data []byte) ([]byte, uint64, error) {
 	dateUint64 := uint64(time.Now().Unix())
 	dateBytes := utils.Uint64ToEthBytes(dateUint64)
-	h := utils.HashBytes(append(data[:], dateBytes...))
+	h := utils.EthHash(append(data[:], dateBytes...))
 	sig, err := s.SignHash(h)
 	if err != nil {
 		return nil, 0, err

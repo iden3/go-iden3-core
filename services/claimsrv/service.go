@@ -2,7 +2,6 @@ package claimsrv
 
 import (
 	"errors"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -491,13 +490,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 	}
 
 	// sign root + date
-	dateUint64 := uint64(time.Now().Unix())
-	dateBytes := utils.Uint64ToEthBytes(dateUint64)
-	rootdate := claimSetRootKeyProof.Root[:]
-	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := utils.HashBytes(rootdate)
-	sig, err := cs.signer.SignHash(rootdateHash)
-	// sig[64] += 27
+	sig, date, err := signsrv.SignBytesDate(cs.signer, claimSetRootKeyProof.Root[:])
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +500,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 		claimNonRevocationProof,
 		claimSetRootKeyProof,
 		claimSetRootKeyNonRevocationProof,
-		dateUint64,
+		date,
 		sig,
 	}
 	return &proofOfClaim, nil
