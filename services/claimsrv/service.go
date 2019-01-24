@@ -518,11 +518,8 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 // of non-revocation, and the proof of existence and of non-revocation for the
 // set root claim in the relay tree, all in the form of a ProofOfClaim
 func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi *merkletree.Hash) (*ProofOfClaim, error) {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
-
 	// open the MerkleTree of the user
-	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+	userMT, err := utils.NewMerkleTreeUser(ethAddr, cs.mt.Storage(), 140)
 	if err != nil {
 		return nil, err
 	}
@@ -571,6 +568,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi *merklet
 		},
 	}
 	proofClaim.Proofs = []ProofOfClaimPartial{proofClaimUserPartial, proofClaim.Proofs[0]}
+	proofClaim.Leaf = leafData
 
 	return proofClaim, nil
 }
