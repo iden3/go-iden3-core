@@ -195,10 +195,8 @@ func TestGetClaimProof(t *testing.T) {
 	copy(dataSlot[:], data[:])
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := mt.Storage().WithPrefix(ethAddr.Hash().Bytes())
 	// open the MerkleTree of the user
-	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+	userMT, err := utils.NewMerkleTreeUser(ethAddr, mt.Storage(), 140)
 	assert.Nil(t, err)
 
 	// add claim in User ID Merkle Tree
@@ -214,13 +212,8 @@ func TestGetClaimProof(t *testing.T) {
 
 	proofOfClaim, err := service.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	assert.Nil(t, err)
-	if err != nil {
-		panic(err)
-	}
 	p, err := proofOfClaim.MarshalJSON()
-	if err != nil {
-		panic(err)
-	}
+	assert.Nil(t, err)
 	if debug {
 		fmt.Println(string(p))
 	}
@@ -229,6 +222,17 @@ func TestGetClaimProof(t *testing.T) {
 	if !ok || err != nil {
 		panic(err)
 	}
+
+	proofOfClaimUser, err := service.GetClaimProofUserByHi(ethAddr, claim.Entry().HIndex())
+	assert.Nil(t, err)
+	p, err = proofOfClaimUser.MarshalJSON()
+	if debug {
+		fmt.Println(string(p))
+	}
+
+	ok, err = VerifyProofOfClaim(relayAddr, proofOfClaimUser)
+	assert.Equal(t, ok, true)
+	assert.Nil(t, err)
 
 	//proofOfClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
 	//assert.Nil(t, err)

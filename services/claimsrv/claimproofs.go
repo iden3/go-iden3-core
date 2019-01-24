@@ -121,11 +121,7 @@ func CheckProofOfClaimUser(relayAddr common.Address, pc ProofOfClaimUser, numLev
 
 	// check signature of the ProofOfClaim.SetRootClaimProof.Root with the identity of the Relay
 	// checking this Root and the four Merkle Proofs, we check the full ProofOfClaim
-	dateBytes := utils.Uint64ToEthBytes(pc.Date)
-	rootdate := pc.SetRootClaimProof.Root[:]
-	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := utils.HashBytes(rootdate)
-	if !utils.VerifySig(relayAddr, pc.Signature, rootdateHash[:]) {
+	if !utils.VerifySigBytesDate(relayAddr, pc.Signature, pc.SetRootClaimProof.Root[:], pc.Date) {
 		return false
 	}
 

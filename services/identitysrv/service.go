@@ -29,7 +29,7 @@ type Service interface {
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
 	Forward(idaddr common.Address, ksignkey common.Address, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
-	Add(id *Identity) error
+	Add(id *Identity) (*claimsrv.ProofOfClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(idaddr common.Address) (*Identity, error)
 	DeployerAddr() *common.Address
@@ -241,32 +241,37 @@ func (s *ServiceImpl) Forward(
 
 }
 
-func (s *ServiceImpl) Add(id *Identity) error {
-
+func (s *ServiceImpl) Add(id *Identity) (*claimsrv.ProofOfClaim, error) {
 	var err error
 
 	idaddr, _, err := s.codeAndAddress(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if _, err := s.sto.Get(idaddr[:]); err == nil {
-		return fmt.Errorf("the identity %v with id %+v already exists in the Relay", idaddr, *id)
+		return nil, fmt.Errorf("the identity %v with id %+v already exists in the Relay", idaddr, *id)
 	}
 
 	tx, err := s.sto.NewTx()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// store identity
 	tx.Put(idaddr[:], id.Encode())
 	if err = tx.Commit(); err != nil {
-		return err
+		return nil, err
 	}
 
 	claim := core.NewClaimAuthorizeKSignSecp256k1(&id.OperationalPk.PublicKey)
-	return s.cs.AddClaimAuthorizeKSignSecp256k1First(idaddr, *claim)
+	err = s.cs.AddClaimAuthorizeKSignSecp256k1First(idaddr, *claim)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.cs.GetClaimProofUserByHi(idaddr, claim.Entry().HIndex())
+
 }
 
 func (m *ServiceImpl) List(limit int) ([]common.Address, error) {

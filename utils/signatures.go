@@ -33,7 +33,7 @@ func VerifySig(addr common.Address, sig, msgHash []byte) bool {
 }
 
 func VerifySigBytes(addr common.Address, sig, msg []byte) bool {
-	msgHash := HashBytes(msg)
+	msgHash := EthHash(msg)
 	return VerifySig(addr, sig, msgHash[:])
 }
 

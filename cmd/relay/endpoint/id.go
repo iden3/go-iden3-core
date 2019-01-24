@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 )
 
@@ -41,7 +42,8 @@ func (h *handlePostIdReq) UnmarshalJSON(bs []byte) (err error) {
 }
 
 type handlePostIdRes struct {
-	IDAddr common.Address `json:"idaddr"`
+	IDAddr       common.Address         `json:"idaddr"`
+	ProofOfClaim *claimsrv.ProofOfClaim `json:"proofOfClaim"`
 }
 
 type handleDeployIdRes struct {
@@ -91,12 +93,12 @@ func handleCreateId(c *gin.Context) {
 		return
 	}
 
-	if err := idservice.Add(id); err != nil {
+	if proofOfClaim, err := idservice.Add(id); err != nil {
 		fail(c, "failed adding identity ", err)
 		return
+	} else {
+		c.JSON(http.StatusOK, handlePostIdRes{IDAddr: addr, ProofOfClaim: proofOfClaim})
 	}
-
-	c.JSON(http.StatusOK, handlePostIdRes{addr})
 }
 
 func handleDeployId(c *gin.Context) {

@@ -2,7 +2,6 @@ package claimsrv
 
 import (
 	"errors"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
@@ -491,13 +490,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 	}
 
 	// sign root + date
-	dateUint64 := uint64(time.Now().Unix())
-	dateBytes := utils.Uint64ToEthBytes(dateUint64)
-	rootdate := claimSetRootKeyProof.Root[:]
-	rootdate = append(rootdate, dateBytes...)
-	rootdateHash := utils.HashBytes(rootdate)
-	sig, err := cs.signer.SignHash(rootdateHash)
-	// sig[64] += 27
+	sig, date, err := signsrv.SignBytesDate(cs.signer, claimSetRootKeyProof.Root[:])
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +500,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 		claimNonRevocationProof,
 		claimSetRootKeyProof,
 		claimSetRootKeyNonRevocationProof,
-		dateUint64,
+		date,
 		sig,
 	}
 	return &proofOfClaim, nil
@@ -518,11 +511,8 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 // of non-revocation, and the proof of existence and of non-revocation for the
 // set root claim in the relay tree, all in the form of a ProofOfClaim
 func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi *merkletree.Hash) (*ProofOfClaim, error) {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserID := cs.mt.Storage().WithPrefix(ethAddr.Bytes())
-
 	// open the MerkleTree of the user
-	userMT, err := merkletree.NewMerkleTree(stoUserID, 140)
+	userMT, err := utils.NewMerkleTreeUser(ethAddr, cs.mt.Storage(), 140)
 	if err != nil {
 		return nil, err
 	}
@@ -571,6 +561,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(ethAddr common.Address, hi *merklet
 		},
 	}
 	proofClaim.Proofs = []ProofOfClaimPartial{proofClaimUserPartial, proofClaim.Proofs[0]}
+	proofClaim.Leaf = leafData
 
 	return proofClaim, nil
 }
