@@ -2,6 +2,7 @@ package identitysrv
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ type Service interface {
 	Deploy(id *Identity) (common.Address, *types.Transaction, error)
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
-	Forward(idaddr common.Address, ksignkey common.Address, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
+	Forward(idaddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
 	Add(id *Identity) (*claimsrv.ProofOfClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(idaddr common.Address) (*Identity, error)
@@ -193,7 +193,7 @@ func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 
 func (s *ServiceImpl) Forward(
 	idaddr common.Address,
-	ksignkey common.Address,
+	ksignpk *ecdsa.PublicKey,
 	to common.Address,
 	data []byte,
 	value *big.Int,
@@ -201,11 +201,7 @@ func (s *ServiceImpl) Forward(
 	sig []byte,
 ) (common.Hash, error) {
 
-	// ksignclaim := core.NewOperationalKSignClaim(ksignkey)
-	// TODO get the sign, ax, ay values
-	sign := true
-	var ay merkletree.ElemBytes
-	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
+	ksignclaim := core.NewClaimAuthorizeKSignSecp256k1(ksignpk)
 	proof, err := s.cs.GetClaimProofUserByHiOld(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)

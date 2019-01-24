@@ -15,7 +15,7 @@ import (
 type BytesSignedMsg struct {
 	ValueHex     string             `json:"valueHex"` // claim.Bytes() in a hex format
 	SignatureHex string             `json:"signatureHex"`
-	KSignPk      *common3.PublicKey `json:"ksignpk"`
+	KSignPk      *common3.PublicKey `json:"ksignpk" binding:"required"`
 }
 
 // ClaimBasicMsg contains a core.ClaimBasic with its signature in Hex

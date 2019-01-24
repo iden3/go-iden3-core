@@ -2,6 +2,7 @@ package namesrv
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/utils"
 )
 
@@ -17,10 +18,10 @@ type RawIdentityTx struct {
 // VinculateIDMsg is the structure that contains
 type VinculateIDMsg struct {
 	// This kind of message does not need the caducity
-	EthAddr   common.Address `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx
-	Name      string         `json:"name"`
-	Signature string         `json:"signature"` // hex format
-	KSign     common.Address `json:"ksign"`
+	EthAddr   common.Address     `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx
+	Name      string             `json:"name"`
+	Signature string             `json:"signature"` // hex format
+	KSignPk   *common3.PublicKey `json:"ksignpk" binding:"required"`
 }
 
 // MsgHash returns the Hash(VinculateIDMsg)

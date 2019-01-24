@@ -19,26 +19,9 @@ import (
 
 type handlePostIdReq struct {
 	//Operational   common.Address     `json:"operational"`
-	OperationalPk *common3.PublicKey `json:"operationalpk"`
+	OperationalPk *common3.PublicKey `json:"operationalpk" binding:"required"`
 	Recoverer     common.Address     `json:"recoverer"`
 	Revokator     common.Address     `json:"revokator"`
-}
-
-func (h *handlePostIdReq) UnmarshalJSON(bs []byte) (err error) {
-	var h1 struct {
-		//Operational   common.Address
-		OperationalPk *common3.PublicKey
-		Recoverer     common.Address
-		Revokator     common.Address
-	}
-	if err = json.Unmarshal(bs, &h1); err != nil {
-		return err
-	}
-	if h1.OperationalPk == nil {
-		return fmt.Errorf("missing OperationalPk")
-	}
-	*h = handlePostIdReq(h1)
-	return nil
 }
 
 type handlePostIdRes struct {
@@ -52,12 +35,12 @@ type handleDeployIdRes struct {
 }
 
 type handleForwardIdReq struct {
-	KSignKey common.Address `json:"ksignkey"`
-	To       common.Address `json:"to"`
-	Data     string         `json:"data"`
-	Value    string         `json:"value"`
-	Gas      uint64         `json:"gas"` // gaslimit
-	Sig      string         `json:"sig"`
+	KSignPk *common3.PublicKey `json:"ksignpk" binding:"required"`
+	To      common.Address     `json:"to"`
+	Data    string             `json:"data"`
+	Value   string             `json:"value"`
+	Gas     uint64             `json:"gas"` // gaslimit
+	Sig     string             `json:"sig"`
 }
 
 type handleForwardIdRes struct {
@@ -208,7 +191,7 @@ func handleForwardId(c *gin.Context) {
 	}
 
 	tx, err := idservice.Forward(idaddr,
-		req.KSignKey,
+		&req.KSignPk.PublicKey,
 		req.To, data, value, req.Gas, sig)
 
 	if err != nil {
