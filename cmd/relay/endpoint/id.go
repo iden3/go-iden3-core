@@ -13,10 +13,11 @@ import (
 	"github.com/gin-gonic/gin"
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
 	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/identitysrv"
 )
 
+// handlePostIdReq is the request used to create a new user tree in the relay.
 type handlePostIdReq struct {
 	//Operational   common.Address     `json:"operational"`
 	OperationalPk *common3.PublicKey `json:"operationalpk" binding:"required"`
@@ -24,11 +25,13 @@ type handlePostIdReq struct {
 	Revokator     common.Address     `json:"revokator"`
 }
 
+// handlePostIdRes is the response of a creation of a new user tree in the relay.
 type handlePostIdRes struct {
-	IDAddr       common.Address         `json:"idaddr"`
-	ProofOfClaim *claimsrv.ProofOfClaim `json:"proofOfClaim"`
+	IDAddr       common.Address     `json:"idaddr"`
+	ProofOfClaim *core.ProofOfClaim `json:"proofOfClaim"`
 }
 
+// handleDeployIdRes is the response of a deploy of the user contract in the blockchain.
 type handleDeployIdRes struct {
 	IDAddr common.Address `json:"idaddr"`
 	Tx     string         `json:"tx"`
@@ -47,6 +50,7 @@ type handleForwardIdRes struct {
 	Tx common.Hash `json:"tx"`
 }
 
+// handleCreateId handles the creation of a new user tree from the user keys.
 func handleCreateId(c *gin.Context) {
 
 	if idservice.ImplAddr() == nil {
@@ -84,6 +88,7 @@ func handleCreateId(c *gin.Context) {
 	}
 }
 
+// handleDeployId handles the deploying of the user contract in the blockchain.
 func handleDeployId(c *gin.Context) {
 
 	idaddr := common.HexToAddress(c.Param("idaddr"))

@@ -32,11 +32,14 @@ func VerifySig(addr common.Address, sig, msgHash []byte) bool {
 	return bytes.Equal(addr.Bytes(), recoveredAddr.Bytes())
 }
 
+// VerifySigBytes verifies the signature of a byte array given an ethereum address.
 func VerifySigBytes(addr common.Address, sig, msg []byte) bool {
 	msgHash := EthHash(msg)
 	return VerifySig(addr, sig, msgHash[:])
 }
 
+// VerifySigBytesDate verifies the signature of a byte array with a date
+// appended given an ethereum address.
 func VerifySigBytesDate(addr common.Address, sig, msg []byte, date uint64) bool {
 	dateBytes := Uint64ToEthBytes(date)
 	return VerifySigBytes(addr, sig, append(msg[:], dateBytes...))

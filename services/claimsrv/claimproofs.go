@@ -13,7 +13,7 @@ import (
 )
 
 // CheckProofOfClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
-func VerifyProofOfClaim(relayAddr common.Address, pc *ProofOfClaim) (bool, error) {
+func VerifyProofOfClaim(relayAddr common.Address, pc *core.ProofOfClaim) (bool, error) {
 	// For now we only allow proof verification of Nameserver (one level) and
 	// Relay (two levels: relay + user)
 	if len(pc.Proofs) > 2 || len(pc.Proofs) < 1 {
@@ -65,71 +65,6 @@ func VerifyProofOfClaim(relayAddr common.Address, pc *ProofOfClaim) (bool, error
 		leaf = claim.Entry()
 	}
 	return true, nil
-}
-
-// CheckProofOfClaimUser checks the Merkle Proof of the Claim, the SetRootClaim,
-// and the non revocation proof of both claims
-func CheckProofOfClaimUser(relayAddr common.Address, pc ProofOfClaimUser, numLevels int) bool {
-	node, err := merkletree.NewNodeFromBytes(pc.ClaimProof.Leaf)
-	if err != nil {
-		return false
-	}
-	node.Entry.HIndex()
-	pf, err := merkletree.NewProofFromBytes(pc.ClaimProof.Proof)
-	if err != nil {
-		return false
-	}
-	vClaimProof := merkletree.VerifyProof(&pc.ClaimProof.Root, pf,
-		node.Entry.HIndex(), node.Entry.HValue())
-
-	node, err = merkletree.NewNodeFromBytes(pc.SetRootClaimProof.Leaf)
-	if err != nil {
-		return false
-	}
-	node.Entry.HIndex()
-	pf, err = merkletree.NewProofFromBytes(pc.SetRootClaimProof.Proof)
-	if err != nil {
-		return false
-	}
-	vSetRootClaimProof := merkletree.VerifyProof(&pc.SetRootClaimProof.Root, pf,
-		node.Entry.HIndex(), node.Entry.HValue())
-
-	node, err = merkletree.NewNodeFromBytes(pc.ClaimNonRevocationProof.Leaf)
-	if err != nil {
-		return false
-	}
-	node.Entry.HIndex()
-	pf, err = merkletree.NewProofFromBytes(pc.ClaimNonRevocationProof.Proof)
-	if err != nil {
-		return false
-	}
-	vClaimNonRevocationProof := merkletree.VerifyProof(&pc.ClaimNonRevocationProof.Root, pf,
-		node.Entry.HIndex(), node.Entry.HValue())
-
-	node, err = merkletree.NewNodeFromBytes(pc.SetRootClaimNonRevocationProof.Leaf)
-	if err != nil {
-		return false
-	}
-	node.Entry.HIndex()
-	pf, err = merkletree.NewProofFromBytes(pc.SetRootClaimNonRevocationProof.Proof)
-	if err != nil {
-		return false
-	}
-	vSetRootClaimNonRevocationProof := merkletree.VerifyProof(&pc.SetRootClaimNonRevocationProof.Root, pf,
-		node.Entry.HIndex(), node.Entry.HValue())
-
-	// additional, check caducity of the pc.Date
-
-	// check signature of the ProofOfClaim.SetRootClaimProof.Root with the identity of the Relay
-	// checking this Root and the four Merkle Proofs, we check the full ProofOfClaim
-	if !utils.VerifySigBytesDate(relayAddr, pc.Signature, pc.SetRootClaimProof.Root[:], pc.Date) {
-		return false
-	}
-
-	if vClaimProof && vSetRootClaimProof && vClaimNonRevocationProof && vSetRootClaimNonRevocationProof {
-		return true
-	}
-	return false
 }
 
 // CheckKSignInIDdb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)

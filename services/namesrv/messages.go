@@ -6,7 +6,7 @@ import (
 	"github.com/iden3/go-iden3/utils"
 )
 
-// RawIdentityTx
+// RawIdentityTx is TODO
 type RawIdentityTx struct {
 	contractByteCode   []byte
 	KRecovery_p        string // ecdsa.PublicKey
@@ -15,7 +15,8 @@ type RawIdentityTx struct {
 	IDRelayer          *common.Address
 }
 
-// VinculateIDMsg is the structure that contains
+// VinculateIDMsg is the structure that contains a request to assign an
+// ethereum address to a name.
 type VinculateIDMsg struct {
 	// This kind of message does not need the caducity
 	EthAddr   common.Address     `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx

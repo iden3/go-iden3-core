@@ -40,6 +40,9 @@ package centrauthsrv
 //
 //	// verify the Signature of the Challenge with the KSign
 //	// TODO Use Verify Eth Sig
+//      msgHash := utils.EthHash([]byte(authMsg.Challenge))
+//      sigBytes[64] -= 27
+//      verified := utils.VerifySig(ksign, sigBytes, msgHash[:])
 //	if !utils.VerifySigBytes(crypto.PubkeyToAddress(authMsg.KSignPk.PublicKey), sigBytes, authMsg.Challenge) {
 //		return errors.New("signature of challenge can not be verified")
 //	}

@@ -11,14 +11,6 @@ import (
 	"github.com/iden3/go-iden3/db"
 )
 
-// TODO: Remove
-// Value is a placeholder interface of a generic claim, a key value object
-// stored in the leveldb, for the transition to the new Merklee Tree.
-type Value interface {
-	IndexLength() uint32 // returns the index length value
-	Bytes() []byte       // returns the value in byte array representation
-}
-
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes
 // corresponds to the serialization of an element from mimc7.
 type ElemBytes [ElemBytesLen]byte
