@@ -75,8 +75,7 @@ func cmdIdAdd(c *cli.Context) error {
 		return err
 	}
 
-	err = idservice.Add(&id)
-	if err != nil {
+	if _, err = idservice.Add(&id); err != nil {
 		return err
 	}
 
