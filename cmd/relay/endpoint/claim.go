@@ -20,7 +20,6 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	c.BindJSON(&setRootMsg)
 
 	idaddrMsg := common.HexToAddress(setRootMsg.IdAddr)
-	kSign := common.HexToAddress(setRootMsg.KSign)
 
 	// make sure that the given idaddr from the post url matches with the idaddr from the post data
 	if !bytes.Equal(idaddr.Bytes(), idaddrMsg.Bytes()) {
@@ -42,7 +41,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	copy(root[:], rootBytes[:32])
 
 	// add the root throught claimservice
-	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, kSign, root, setRootMsg.Timestamp, signature)
+	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, &setRootMsg.KSignPk.PublicKey, root, setRootMsg.Timestamp, signature)
 	if err != nil {
 		fail(c, "error on AddAuthorizeKSignClaim", err)
 		return
@@ -82,7 +81,7 @@ func handlePostClaim(c *gin.Context) {
 	claimValueMsg := claimsrv.ClaimValueMsg{
 		ClaimValue: entry,
 		Signature:  bytesSignedMsg.SignatureHex,
-		KSign:      bytesSignedMsg.KSign,
+		KSignPk:    bytesSignedMsg.KSignPk,
 	}
 	err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
 	if err != nil {

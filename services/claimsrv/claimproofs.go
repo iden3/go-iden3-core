@@ -2,6 +2,7 @@ package claimsrv
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -132,17 +133,15 @@ func CheckProofOfClaimUser(relayAddr common.Address, pc ProofOfClaimUser, numLev
 }
 
 // CheckKSignInIDdb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
-func CheckKSignInIDdb(mt *merkletree.MerkleTree, ksign common.Address) bool {
-	// generate the AuthorizeKSignClaim
-	var tmpFakeAy merkletree.ElemBytes
-	claimAuthorizeKSign := core.NewClaimAuthorizeKSign(false, tmpFakeAy) // TODO ethAddress to pubK
+func CheckKSignInIDdb(mt *merkletree.MerkleTree, kSignPk *ecdsa.PublicKey) bool {
+	claimAuthorizeKSign := core.NewClaimAuthorizeKSignSecp256k1(kSignPk)
 	entry := claimAuthorizeKSign.Entry()
 	node := merkletree.NewNodeLeaf(entry)
-	nodeGetted, err := mt.GetNode(node.Key())
+	nodeGot, err := mt.GetNode(node.Key())
 	if err != nil {
 		return false
 	}
-	if !bytes.Equal(node.Value(), nodeGetted.Value()) {
+	if !bytes.Equal(node.Value(), nodeGot.Value()) {
 		return false
 	}
 

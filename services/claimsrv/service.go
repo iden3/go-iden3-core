@@ -1,9 +1,11 @@
 package claimsrv
 
 import (
+	"crypto/ecdsa"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
@@ -19,7 +21,7 @@ var (
 )
 
 type Service interface {
-	CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error)
+	CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error)
 	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
 	AddClaimAuthorizeKSign(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignFirst(ethAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
@@ -47,7 +49,7 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Serv
 }
 
 // SetNewIDRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emmiting ID
-func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Address, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error) {
+func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
@@ -58,7 +60,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Addre
 	}
 
 	// verify that the KSign is authorized
-	if !CheckKSignInIDdb(userMT, kSign) {
+	if !CheckKSignInIDdb(userMT, kSignPk) {
 		return &core.ClaimSetRootKey{}, errors.New("can not verify the KSign")
 	}
 	// in the future the user merkletree will be in the client side, and this step will be a check of the ProofOfKSign
@@ -78,7 +80,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSign common.Addre
 	msg = append(msg, timestampBytes...)
 	msgHash := utils.EthHash(msg)
 	signature[64] -= 27
-	if !utils.VerifySig(kSign, signature, msgHash[:]) {
+	if !utils.VerifySig(crypto.PubkeyToAddress(*kSignPk), signature, msgHash[:]) {
 		return &core.ClaimSetRootKey{}, errors.New("signature can not be verified")
 	}
 
@@ -143,7 +145,7 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethAddr common.Address, claimAutho
 	}
 
 	// verify that the KSign is authorized
-	if !CheckKSignInIDdb(userMT, claimAuthorizeKSignMsg.KSign) {
+	if !CheckKSignInIDdb(userMT, &claimAuthorizeKSignMsg.KSignPk.PublicKey) {
 		return errors.New("can not verify the KSign")
 	}
 
@@ -154,7 +156,7 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethAddr common.Address, claimAutho
 	}
 	msgHash := utils.EthHash(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes())
 	signature[64] -= 27
-	if !utils.VerifySig(claimAuthorizeKSignMsg.KSign, signature, msgHash[:]) {
+	if !utils.VerifySig(crypto.PubkeyToAddress(claimAuthorizeKSignMsg.KSignPk.PublicKey), signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -338,7 +340,7 @@ func (cs *ServiceImpl) AddUserIDClaim(ethAddr common.Address, claimValueMsg Clai
 	}
 
 	// verify that the KSign is authorized
-	if !CheckKSignInIDdb(userMT, claimValueMsg.KSign) {
+	if !CheckKSignInIDdb(userMT, &claimValueMsg.KSignPk.PublicKey) {
 		return errors.New("can not verify the KSign")
 	}
 
@@ -350,8 +352,7 @@ func (cs *ServiceImpl) AddUserIDClaim(ethAddr common.Address, claimValueMsg Clai
 
 	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
 	signature[64] -= 27
-	ksign := claimValueMsg.KSign
-	if !utils.VerifySig(ksign, signature, msgHash[:]) {
+	if !utils.VerifySig(crypto.PubkeyToAddress(claimValueMsg.KSignPk.PublicKey), signature, msgHash[:]) {
 		return errors.New("signature can not be verified")
 	}
 
