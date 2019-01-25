@@ -1,25 +1,19 @@
 package backupsrv
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/mongosrv"
-	"github.com/iden3/go-iden3/utils"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type Service interface {
 	GetPoWDifficulty() int
 	GetLastVersion(idaddr common.Address) (uint64, error)
-	Save(idaddr common.Address, saveBackupMsg BackupData) (uint64, error)
+	//Save(idaddr common.Address, saveBackupMsg BackupData) (uint64, error)
 	RecoverAll(idaddr common.Address) ([]BackupData, error)
 	RecoverSinceVersion(idaddr common.Address, version uint64) ([]BackupData, error)
 	RecoverByType(idaddr common.Address, dataType string) ([]BackupData, error)
@@ -46,82 +40,83 @@ func (bs *ServiceImpl) GetLastVersion(idaddr common.Address) (uint64, error) {
 	return currVer.Version, err
 }
 
+// TODO: Update to new claim ksign secp256k1
 // Save verifies the proofs for auth, and stores the data packet in the database
-func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error) {
-	// check PoW
-	b, err := json.Marshal(m)
-	if err != nil {
-		return 0, err
-	}
-	hash := utils.HashBytes(b)
-	if !utils.CheckPoW(hash, bs.GetPoWDifficulty()) {
-		return 0, errors.New("PoW not passed")
-	}
-
-	// check ksignClaim proof (in user identity tree and in the relay tree)
-	proofOfKSign, err := m.ProofOfKSignHex.Unhex()
-	if err != nil {
-		return 0, err
-	}
-	kSign := common.HexToAddress(m.KSign)
-	relayAddr := common.HexToAddress(m.RelayAddr)
-	verified := claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140)
-	if !verified {
-		return 0, errors.New("ProofOfKSign can not be verified")
-	}
-
-	// check saveBackupMsg.KSign match with authorizedksign from the ProofOfKSign, Leaf[64:84] is where is placed the KeyToAuthorize (KSign authorized) in the Claim data
-	if !bytes.Equal(kSign.Bytes(), proofOfKSign.ClaimProof.Leaf[64:84]) {
-		return 0, errors.New("KSign not equal to the ProofOfKSign.ClaimProof.Leaf[KeyToAuthorize]")
-	}
-
-	// check idaddr match with setRootClaim from the proofOfKSign, Leaf[64:84] is where is placed the idaddr in the SetRootClaim
-	if !bytes.Equal(idaddr.Bytes(), proofOfKSign.SetRootClaimProof.Leaf[64:84]) {
-		return 0, errors.New("idaddr don't match with the idaddr from the ProofOfKSign.SetRootClaimProof.Leaf[EthAddr]")
-	}
-
-	// verify data signature
-	sigBytes, err := common3.HexToBytes(m.DataSignature)
-	if err != nil {
-		return 0, err
-	}
-	sigBytes[64] -= 27
-	msgHash := utils.EthHash([]byte(m.Data))
-	verified = utils.VerifySig(kSign, sigBytes, msgHash[:])
-	if !verified {
-		return 0, errors.New("signature of the data can not be verified")
-	}
-
-	// check version (check that the current version is == lastversion+1)
-	var aux BackupData
-	err = bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "version": m.Version}).One(&aux)
-	if err == nil {
-		// if data exists, the given version is not valid
-		return m.Version, errors.New("given version not valid")
-	}
-
-	// store in database
-	err = bs.mongodb.GetCollections()["data"].Insert(m)
-	if err != nil {
-		return 0, err
-	}
-
-	// TODO store in leveldb instead of mongodb. key: idaddr+version, value: type+dataencrypted
-	// the currentVersion will be stored as key: idaddr+"currver", value: currver
-	currVer := BackupData{
-		IdAddrHex:       idaddr.Hex(),
-		Data:            "",
-		DataSignature:   "",
-		Type:            "",
-		KSign:           "currentversion",
-		ProofOfKSignHex: claimsrv.ProofOfClaimUserHex{},
-		RelayAddr:       "",
-		Version:         m.Version,
-		Nonce:           0,
-	}
-	err = bs.mongodb.GetCollections()["data"].Update(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "ksign": "currentversion"}, currVer)
-	return m.Version, nil
-}
+//func (bs *ServiceImpl) Save(idaddr common.Address, m BackupData) (uint64, error) {
+//	// check PoW
+//	b, err := json.Marshal(m)
+//	if err != nil {
+//		return 0, err
+//	}
+//	hash := utils.HashBytes(b)
+//	if !utils.CheckPoW(hash, bs.GetPoWDifficulty()) {
+//		return 0, errors.New("PoW not passed")
+//	}
+//
+//	// check ksignClaim proof (in user identity tree and in the relay tree)
+//	proofOfKSign, err := m.ProofOfKSignHex.Unhex()
+//	if err != nil {
+//		return 0, err
+//	}
+//	kSignComp := crypto.CompressPubkey(m.KSignPk)
+//	relayAddr := common.HexToAddress(m.RelayAddr)
+//	verified := claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140)
+//	if !verified {
+//		return 0, errors.New("ProofOfKSign can not be verified")
+//	}
+//
+//	// check saveBackupMsg.KSign match with authorizedksign from the ProofOfKSign, Leaf[64:84] is where is placed the KeyToAuthorize (KSign authorized) in the Claim data
+//	if !bytes.Equal(kSignComp, proofOfKSign.ClaimProof.Leaf[64:84]) {
+//		return 0, errors.New("KSign not equal to the ProofOfKSign.ClaimProof.Leaf[KeyToAuthorize]")
+//	}
+//
+//	// check idaddr match with setRootClaim from the proofOfKSign, Leaf[64:84] is where is placed the idaddr in the SetRootClaim
+//	if !bytes.Equal(idaddr.Bytes(), proofOfKSign.SetRootClaimProof.Leaf[64:84]) {
+//		return 0, errors.New("idaddr don't match with the idaddr from the ProofOfKSign.SetRootClaimProof.Leaf[EthAddr]")
+//	}
+//
+//	// verify data signature
+//	sigBytes, err := common3.HexToBytes(m.DataSignature)
+//	if err != nil {
+//		return 0, err
+//	}
+//	sigBytes[64] -= 27
+//	msgHash := utils.EthHash([]byte(m.Data))
+//	verified = utils.VerifySig(kSign, sigBytes, msgHash[:])
+//	if !verified {
+//		return 0, errors.New("signature of the data can not be verified")
+//	}
+//
+//	// check version (check that the current version is == lastversion+1)
+//	var aux BackupData
+//	err = bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "version": m.Version}).One(&aux)
+//	if err == nil {
+//		// if data exists, the given version is not valid
+//		return m.Version, errors.New("given version not valid")
+//	}
+//
+//	// store in database
+//	err = bs.mongodb.GetCollections()["data"].Insert(m)
+//	if err != nil {
+//		return 0, err
+//	}
+//
+//	// TODO store in leveldb instead of mongodb. key: idaddr+version, value: type+dataencrypted
+//	// the currentVersion will be stored as key: idaddr+"currver", value: currver
+//	currVer := BackupData{
+//		IdAddrHex:       idaddr.Hex(),
+//		Data:            "",
+//		DataSignature:   "",
+//		Type:            "",
+//		KSign:           "currentversion",
+//		ProofOfKSignHex: claimsrv.ProofOfClaimUserHex{},
+//		RelayAddr:       "",
+//		Version:         m.Version,
+//		Nonce:           0,
+//	}
+//	err = bs.mongodb.GetCollections()["data"].Update(bson.M{"idaddrhex": strings.ToLower(idaddr.Hex()), "ksign": "currentversion"}, currVer)
+//	return m.Version, nil
+//}
 
 // RecoverAll returns all the data packets stored by an idaddr
 func (bs *ServiceImpl) RecoverAll(idaddr common.Address) ([]BackupData, error) {

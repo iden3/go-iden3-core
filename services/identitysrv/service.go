@@ -2,6 +2,7 @@ package identitysrv
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
-	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 
 	log "github.com/sirupsen/logrus"
@@ -28,8 +28,8 @@ type Service interface {
 	Deploy(id *Identity) (common.Address, *types.Transaction, error)
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
-	Forward(idaddr common.Address, ksignkey common.Address, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
-	Add(id *Identity) (*claimsrv.ProofOfClaim, error)
+	Forward(idaddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
+	Add(id *Identity) (*core.ProofOfClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(idaddr common.Address) (*Identity, error)
 	DeployerAddr() *common.Address
@@ -138,11 +138,14 @@ func (s *ServiceImpl) codeAndAddress(id *Identity) (common.Address, []byte, erro
 	return addr, code, nil
 }
 
+// AddressOf returns the address of the smart contract given the identity data
+// of a user.
 func (m *ServiceImpl) AddressOf(id *Identity) (common.Address, error) {
 	addr, _, err := m.codeAndAddress(id)
 	return addr, err
 }
 
+// IsDeployed checks if the users's smart contract is deployed in the blockchain.
 func (m *ServiceImpl) IsDeployed(idaddr common.Address) (bool, error) {
 	deployedcode, err := m.deployer.Client().CodeAt(idaddr)
 	if err != nil {
@@ -154,6 +157,7 @@ func (m *ServiceImpl) IsDeployed(idaddr common.Address) (bool, error) {
 	return true, nil
 }
 
+// Deploy deploys the user's smart contract in the blockchain.
 func (m *ServiceImpl) Deploy(id *Identity) (common.Address, *types.Transaction, error) {
 
 	addr, code, err := m.codeAndAddress(id)
@@ -193,7 +197,7 @@ func (s *ServiceImpl) Info(idaddr common.Address) (*Info, error) {
 
 func (s *ServiceImpl) Forward(
 	idaddr common.Address,
-	ksignkey common.Address,
+	ksignpk *ecdsa.PublicKey,
 	to common.Address,
 	data []byte,
 	value *big.Int,
@@ -201,11 +205,7 @@ func (s *ServiceImpl) Forward(
 	sig []byte,
 ) (common.Hash, error) {
 
-	// ksignclaim := core.NewOperationalKSignClaim(ksignkey)
-	// TODO get the sign, ax, ay values
-	sign := true
-	var ay merkletree.ElemBytes
-	ksignclaim := core.NewClaimAuthorizeKSign(sign, ay) // TODO
+	ksignclaim := core.NewClaimAuthorizeKSignSecp256k1(ksignpk)
 	proof, err := s.cs.GetClaimProofUserByHiOld(idaddr, *ksignclaim.Entry().HIndex())
 	if err != nil {
 		log.Warn("Error retieving proof ", err)
@@ -241,7 +241,9 @@ func (s *ServiceImpl) Forward(
 
 }
 
-func (s *ServiceImpl) Add(id *Identity) (*claimsrv.ProofOfClaim, error) {
+// Add creates a merkle tree of a new user in the relay, given the identity
+// data of the user.
+func (s *ServiceImpl) Add(id *Identity) (*core.ProofOfClaim, error) {
 	var err error
 
 	idaddr, _, err := s.codeAndAddress(id)

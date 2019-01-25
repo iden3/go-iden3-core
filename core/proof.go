@@ -1,23 +1,54 @@
 package core
 
-import "github.com/iden3/go-iden3/merkletree"
+import (
+	"encoding/hex"
+	"encoding/json"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3/merkletree"
+)
 
-// MerkleProof is the data structure of the proof of a leaf in the Merkle Tree
-type MerkleProof struct {
-	Root     merkletree.Hash
-	Proof    []byte
-	Leaf     []byte          // claim
-	LeafHash merkletree.Hash // claim hash
+// ProofOfClaimPartial is a proof of existence and non-existence of a claim in
+// a single tree (only one level).
+type ProofOfClaimPartial struct {
+	Mtp0 *merkletree.Proof
+	Mtp1 *merkletree.Proof
+	Root *merkletree.Hash
+	Aux  *SetRootAux
 }
 
-// ClaimWithProof is the data structure of the needed MerkleProofs to proof a Claim
-type ClaimWithProof struct {
-	// claim and merkleproof of the Claim in the user identity's merkletree
-	Claim          []byte      // the claim in bytes format
-	ExistenceProof MerkleProof // exists
-	SoundnessProof MerkleProof // non-revocated
+func (p *ProofOfClaimPartial) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"Mtp0": hex.EncodeToString(p.Mtp0.Bytes()),
+		"Mtp1": hex.EncodeToString(p.Mtp1.Bytes()),
+		"Root": hex.EncodeToString(p.Root[:]),
+		"Aux":  p.Aux,
+	})
+}
 
-	// merkleproof of the IDRootClaim of that user identity in the Relay merkletree
-	RootSignature   []byte // signature of the root
-	RelayRootsProof MerkleProof
+// SetRootAux is the auxiliary data to build the set root claim from a root in
+// a partial proof of claim.
+type SetRootAux struct {
+	Version uint32
+	Era     uint32
+	EthAddr common.Address
+}
+
+// ProofOfClaim is a complete proof of a claim that includes all the proofs of
+// existence and non-existence for mutliple levels from the leaf of a tree to
+// the signed root of possibly another tree whose root.
+type ProofOfClaim struct {
+	Proofs    []ProofOfClaimPartial
+	Leaf      *merkletree.Data
+	Date      uint64
+	Signature []byte // signature of the Root of the Relay
+}
+
+func (p *ProofOfClaim) MarshalJSON() ([]byte, error) {
+	leafBytes := p.Leaf.Bytes()
+	return json.Marshal(map[string]interface{}{
+		"Proofs":    p.Proofs,
+		"Leaf":      hex.EncodeToString(leafBytes[:]),
+		"Date":      p.Date,
+		"Signature": hex.EncodeToString(p.Signature),
+	})
 }

@@ -18,7 +18,7 @@ type Service interface {
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
-	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*claimsrv.ProofOfClaim, error)
+	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofOfClaim, error)
 }
 
 type ServiceImpl struct {
@@ -107,7 +107,7 @@ func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
 
 }
 
-func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*claimsrv.ProofOfClaim, error) {
+func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofOfClaim, error) {
 	// TODO check if indexSlot and dataSlot fit inside R element
 	// var indexSlot [400 / 8]byte
 	// var dataSlot [496 / 8]byte

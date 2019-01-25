@@ -12,6 +12,8 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 )
 
+// handleCommitNewIDRoot handles a request to set the root key of a user tree
+// though a set root claim.
 func handleCommitNewIDRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
@@ -20,7 +22,6 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	c.BindJSON(&setRootMsg)
 
 	idaddrMsg := common.HexToAddress(setRootMsg.IdAddr)
-	kSign := common.HexToAddress(setRootMsg.KSign)
 
 	// make sure that the given idaddr from the post url matches with the idaddr from the post data
 	if !bytes.Equal(idaddr.Bytes(), idaddrMsg.Bytes()) {
@@ -41,8 +42,9 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	var root merkletree.Hash
 	copy(root[:], rootBytes[:32])
 
-	// add the root throught claimservice
-	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, kSign, root, setRootMsg.Timestamp, signature)
+	// add the root through claimservice
+	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, &setRootMsg.KSignPk.PublicKey,
+		root, setRootMsg.Timestamp, signature)
 	if err != nil {
 		fail(c, "error on AddAuthorizeKSignClaim", err)
 		return
@@ -59,6 +61,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	})
 }
 
+// handlePostClaim handles the request to add a claim to a user tree.
 func handlePostClaim(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
@@ -82,7 +85,7 @@ func handlePostClaim(c *gin.Context) {
 	claimValueMsg := claimsrv.ClaimValueMsg{
 		ClaimValue: entry,
 		Signature:  bytesSignedMsg.SignatureHex,
-		KSign:      bytesSignedMsg.KSign,
+		KSignPk:    bytesSignedMsg.KSignPk,
 	}
 	err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
 	if err != nil {
@@ -102,108 +105,7 @@ func handlePostClaim(c *gin.Context) {
 	return
 }
 
-/*
-func handlePostClaim(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr := common.HexToAddress(idaddrhex)
-	var bytesSignedMsg claimsrv.BytesSignedMsg
-	c.BindJSON(&bytesSignedMsg)
-	bytesValue, err := common3.HexToBytes(bytesSignedMsg.ValueHex)
-	if err != nil {
-		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
-		return
-	}
-	typeBytes := bytesValue[32:56]
-
-	switch common3.BytesToHex(typeBytes) {
-	case common3.BytesToHex(core.ClaimTypeBasic[:]):
-		claimGeneric, err := core.ParseGenericClaimBytes(bytesValue)
-		if err != nil {
-			fail(c, "error on parsing GenericClaim bytes", err)
-			return
-		}
-
-		claimValueMsg := claimsrv.ClaimValueMsg{
-			claimGeneric,
-			bytesSignedMsg.SignatureHex,
-			bytesSignedMsg.KSign,
-		}
-		err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
-		if err != nil {
-			fail(c, "error on AddUserIDClaim", err)
-			return
-		}
-		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, claimGeneric.Hi())
-		if err != nil {
-			fail(c, "error on GetClaimByHi", err)
-			return
-		}
-		c.JSON(200, gin.H{
-			"proofOfClaim": proofOfClaim.Hex(),
-		})
-		return
-
-	case common3.BytesToHex(core.AssignNameType):
-		assignNameClaim, err := core.ParseAssignNameClaimBytes(bytesValue)
-		if err != nil {
-			fail(c, "error on parsing AssignNameClaim bytes", err)
-			return
-		}
-
-		err = claimservice.AddAssignNameClaim(assignNameClaim)
-		if err != nil {
-			fail(c, "error on AddAssignNameClaim", err)
-			return
-		}
-
-		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, assignNameClaim.Hi())
-		if err != nil {
-			fail(c, "error on GetClaimByHi", err)
-			return
-		}
-		c.JSON(200, gin.H{
-			"proofOfClaim": proofOfClaim.Hex(),
-		})
-		return
-
-	case common3.BytesToHex(core.AuthorizeksignType):
-		authorizeKSignClaim, err := core.ParseAuthorizeKSignClaimBytes(bytesValue)
-		if err != nil {
-			fail(c, "error on parsing AuthorizeKSignClaim bytes", err)
-			return
-		}
-		authorizeKSignClaimMsg := claimsrv.AuthorizeKSignClaimMsg{
-			authorizeKSignClaim,
-			bytesSignedMsg.SignatureHex,
-			bytesSignedMsg.KSign,
-		}
-		err = claimservice.AddAuthorizeKSignClaim(idaddr, authorizeKSignClaimMsg)
-		if err != nil {
-			fail(c, "error on AddAuthorizeKSignClaim", err)
-			return
-		}
-		// return claim with proofs
-		proofOfClaim, err := claimservice.GetClaimByHi(idaddr, authorizeKSignClaim.Hi())
-		if err != nil {
-			fail(c, "error on GetClaimByHi", err)
-			return
-		}
-		c.JSON(200, gin.H{
-			"proofOfClaim": proofOfClaim.Hex(),
-		})
-		return
-
-	case common3.BytesToHex(core.SetRootType):
-		break
-
-	default:
-		fail(c, "type not found", errors.New("claim type not found"))
-	}
-}
-*/
-
+// handleGetIDRoot handles a request to query the root key of a user tree.
 func handleGetIDRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
@@ -220,6 +122,8 @@ func handleGetIDRoot(c *gin.Context) {
 	return
 }
 
+// handleGetClaimProofUserByHi handles the request to query the claim proof of
+// a user claim (by hIndex).
 func handleGetClaimProofUserByHi(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	hihex := c.Param("hi")
@@ -242,6 +146,8 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 	return
 }
 
+// handleGetClaimProofByHi handles the request to query the claim proof of a
+// relay claim (by hIndex).
 func handleGetClaimProofByHi(c *gin.Context) {
 	hihex := c.Param("hi")
 	hiBytes, err := common3.HexToBytes(hihex)

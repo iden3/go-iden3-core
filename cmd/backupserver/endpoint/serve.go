@@ -20,7 +20,7 @@ func serveServiceApi() *http.Server {
 	api.Use(cors.Default())
 	serviceapi := api.Group("/api/v0.1")
 	serviceapi.GET("/", handleInfo)
-	serviceapi.POST("/:idaddr/save", handleSave)
+	//serviceapi.POST("/:idaddr/save", handleSave) // TODO: Redo
 	serviceapi.POST("/:idaddr/recover", handleRecover)
 	//TODO get with specific version
 	serviceapi.POST("/:idaddr/recover/version/:version", handleRecoverSinceVersion)

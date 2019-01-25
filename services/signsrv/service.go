@@ -17,19 +17,24 @@ type ServiceImpl struct {
 	acc accounts.Account
 }
 
+// New creates a new signsrv service.
 func New(ks *keystore.KeyStore, acc accounts.Account) *ServiceImpl {
 	return &ServiceImpl{ks, acc}
 }
 
+// SignHash signs a hash.
 func (s *ServiceImpl) SignHash(h utils.Hash) ([]byte, error) {
 	return s.ks.SignHash(s.acc, h[:])
 }
 
+// SignBytes signs a byte array.
 func SignBytes(s Service, data []byte) ([]byte, error) {
 	h := utils.EthHash(data[:])
 	return s.SignHash(h)
 }
 
+// SignBytesDate signs a byte array appended by the current time and returns
+// the signature and the time used in the signature.
 func SignBytesDate(s Service, data []byte) ([]byte, uint64, error) {
 	dateUint64 := uint64(time.Now().Unix())
 	dateBytes := utils.Uint64ToEthBytes(dateUint64)

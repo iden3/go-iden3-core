@@ -11,7 +11,7 @@ func Serve() {
 	r.Use(cors.Default())
 
 	api := r.Group("/api/v0.1")
-	api.POST("/auth", handleAuth)
+	//api.POST("/auth", handleAuth) // TODO: Redo
 	api.GET("/ws/:id", handleWs)
 	r.Run(config.C.Server.ServiceApi)
 }
