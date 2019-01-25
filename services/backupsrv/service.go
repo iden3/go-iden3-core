@@ -76,14 +76,11 @@ func (bs *ServiceImpl) GetLastVersion(idaddr common.Address) (uint64, error) {
 //	}
 //
 //	// verify data signature
-//	sigBytes, err := common3.HexToBytes(m.DataSignature)
+//	sigBytes, err := common3.HexDecode(m.DataSignature)
 //	if err != nil {
 //		return 0, err
 //	}
-//	sigBytes[64] -= 27
-//	msgHash := utils.EthHash([]byte(m.Data))
-//	verified = utils.VerifySig(kSign, sigBytes, msgHash[:])
-//	if !verified {
+//	if !utils.VerifySigEthMsg(kSign, sigBytes, []byte(m.Data)) {
 //		return 0, errors.New("signature of the data can not be verified")
 //	}
 //

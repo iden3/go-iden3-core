@@ -20,7 +20,7 @@ func VerifyProofOfClaim(relayAddr common.Address, pc *core.ProofOfClaim) (bool, 
 		return false, fmt.Errorf("Invalid number of partial proofs")
 	}
 	// Top root signature (by Relay) verification
-	if !utils.VerifySigBytesDate(relayAddr, pc.Signature, pc.Proofs[len(pc.Proofs)-1].Root[:], pc.Date) {
+	if !utils.VerifySigEthMsgDate(relayAddr, pc.Signature, pc.Proofs[len(pc.Proofs)-1].Root[:], pc.Date) {
 		return false, fmt.Errorf("Invalid signature")
 	}
 

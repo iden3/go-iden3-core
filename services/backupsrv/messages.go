@@ -1,7 +1,6 @@
 package backupsrv
 
 import (
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/utils"
 )
@@ -11,7 +10,7 @@ type BackupData struct {
 	Data            string                       `json:"data"`
 	DataSignature   string                       `json:"datasignature"`
 	Type            string                       `json:"type"`
-	KSignPk         *common3.PublicKey           `json:"ksignpk" binding:"required"`
+	KSignPk         *utils.PublicKey             `json:"ksignpk" binding:"required"`
 	ProofOfKSignHex claimsrv.ProofOfClaimUserHex `json:"proofofksignhex"`
 	RelayAddr       string                       `json:"relayaddr"`
 	Version         uint64                       `json:"version"`

@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/rootsrv"
@@ -21,7 +20,7 @@ var (
 )
 
 type Service interface {
-	CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error)
+	CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
 	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
 	AddClaimAuthorizeKSign(ethAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignFirst(ethAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
@@ -49,7 +48,7 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Serv
 }
 
 // SetNewIDRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting ID
-func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature []byte) (*core.ClaimSetRootKey, error) {
+func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserID := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
@@ -78,9 +77,7 @@ func (cs *ServiceImpl) CommitNewIDRoot(idaddr common.Address, kSignPk *ecdsa.Pub
 	msg = append(msg, idaddr.Bytes()...)
 	msg = append(msg, root.Bytes()...)
 	msg = append(msg, timestampBytes...)
-	msgHash := utils.EthHash(msg)
-	signature[64] -= 27
-	if !utils.VerifySig(crypto.PubkeyToAddress(*kSignPk), signature, msgHash[:]) {
+	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(*kSignPk), signature, msg) {
 		return &core.ClaimSetRootKey{}, errors.New("signature can not be verified")
 	}
 
@@ -150,13 +147,8 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSign(ethAddr common.Address, claimAutho
 	}
 
 	// verify signature of the ClaimAuthorizeKSign
-	signature, err := common3.HexToBytes(claimAuthorizeKSignMsg.Signature)
-	if err != nil {
-		return err
-	}
-	msgHash := utils.EthHash(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes())
-	signature[64] -= 27
-	if !utils.VerifySig(crypto.PubkeyToAddress(claimAuthorizeKSignMsg.KSignPk.PublicKey), signature, msgHash[:]) {
+	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(claimAuthorizeKSignMsg.KSignPk.PublicKey),
+		claimAuthorizeKSignMsg.Signature, claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes()) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -247,13 +239,12 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(ethAddr common.Address, claim
 //	}
 //
 //	// verify signature of the ClaimAuthorizeKSign
-//	signature, err := common3.HexToBytes(claimAuthorizeKSignMsg.Signature)
+//	signature, err := common3.HexDecode(claimAuthorizeKSignMsg.Signature)
 //	if err != nil {
 //		return err
 //	}
-//	msgHash := utils.EthHash(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes())
-//	signature[64] -= 27
-//	if !utils.VerifySig(claimAuthorizeKSignMsg.KSign, signature, msgHash[:]) {
+//	if !utils.VerifySigEthMsg(claimAuthorizeKSignMsg.KSign, signature,
+//		claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes()) {
 //		return errors.New("signature can not be verified")
 //	}
 //
@@ -345,14 +336,8 @@ func (cs *ServiceImpl) AddUserIDClaim(ethAddr common.Address, claimValueMsg Clai
 	}
 
 	// verify signature with KSign
-	signature, err := common3.HexToBytes(claimValueMsg.Signature)
-	if err != nil {
-		return err
-	}
-
-	msgHash := utils.EthHash(claimValueMsg.ClaimValue.Bytes())
-	signature[64] -= 27
-	if !utils.VerifySig(crypto.PubkeyToAddress(claimValueMsg.KSignPk.PublicKey), signature, msgHash[:]) {
+	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(claimValueMsg.KSignPk.PublicKey),
+		claimValueMsg.Signature, claimValueMsg.ClaimValue.Bytes()) {
 		return errors.New("signature can not be verified")
 	}
 
@@ -502,7 +487,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(ethAddr common.Address, hi merkl
 		claimSetRootKeyProof,
 		claimSetRootKeyNonRevocationProof,
 		date,
-		sig,
+		sig[:],
 	}
 	return &proofOfClaim, nil
 }

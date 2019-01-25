@@ -21,7 +21,7 @@ func handleVinculateID(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"claimAssignName":        common3.BytesToHex(claimAssignName.Entry().Bytes()),
+		"claimAssignName":        common3.HexEncode(claimAssignName.Entry().Bytes()),
 		"name":                   vinculateIDMsg.Name,
 		"ethAddr":                claimAssignName.EthAddr,
 		"proofOfClaimAssignName": proofOfClaimAssignName,
@@ -42,7 +42,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"claim":                  common3.BytesToHex(claimAssignName.Entry().Bytes()),
+		"claim":                  common3.HexEncode(claimAssignName.Entry().Bytes()),
 		"ethAddr":                claimAssignName.EthAddr,
 		"proofOfClaimAssignName": proofOfClaimAssignName,
 	})

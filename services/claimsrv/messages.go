@@ -6,38 +6,39 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/utils"
 )
 
 // BytesSignedMsg contains the value and its signature in Hex representation
 type BytesSignedMsg struct {
-	ValueHex     string             `json:"valueHex"` // claim.Bytes() in a hex format
-	SignatureHex string             `json:"signatureHex"`
-	KSignPk      *common3.PublicKey `json:"ksignpk" binding:"required"`
+	ValueHex  string                 `json:"valueHex"` // claim.Bytes() in a hex format
+	Signature *utils.SignatureEthMsg `json:"signatureHex"`
+	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
 }
 
 // ClaimBasicMsg contains a core.ClaimBasic with its signature in Hex
 type ClaimBasicMsg struct {
 	ClaimBasic core.ClaimBasic
-	Signature  string
+	Signature  *utils.SignatureEthMsg
 }
 
 // ClaimAssignNameMsg contains a core.ClaimAssignName with its signature in Hex
 type ClaimAssignNameMsg struct {
 	ClaimAssignName core.ClaimAssignName
-	Signature       string
+	Signature       *utils.SignatureEthMsg
 }
 
 // ClaimAuthorizeKSignMsg contains a core.AuthorizeKSignClaim with its signature in Hex
 type ClaimAuthorizeKSignMsg struct {
 	ClaimAuthorizeKSign core.ClaimAuthorizeKSign
-	Signature           string
-	KSignPk             *common3.PublicKey
+	Signature           *utils.SignatureEthMsg
+	KSignPk             *utils.PublicKey
 }
 
 // ClaimAuthorizeKSignSecp256k1Msg contains a core.ClaimAuthorizeKSignP256 with its signature in Hex
 type ClaimAuthorizeKSignSecp256k1Msg struct {
 	ClaimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1
-	Signature                    string
+	Signature                    *utils.SignatureEthMsg
 	KSignP256                    *ecdsa.PublicKey
 }
 
@@ -45,16 +46,16 @@ type ClaimAuthorizeKSignSecp256k1Msg struct {
 type SetRootMsg struct {
 	Root      string
 	IdAddr    string
-	KSignPk   *common3.PublicKey
+	KSignPk   *utils.PublicKey
 	Timestamp uint64
-	Signature string
+	Signature *utils.SignatureEthMsg
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex
 type ClaimValueMsg struct {
 	ClaimValue merkletree.Entry
-	Signature  string
-	KSignPk    *common3.PublicKey
+	Signature  *utils.SignatureEthMsg
+	KSignPk    *utils.PublicKey
 }
 
 // TODO: Remove in next refactor
@@ -76,9 +77,9 @@ type ProofOfTreeLeafHex struct {
 // TODO: Remove in next refactor
 func (plh *ProofOfTreeLeafHex) Unhex() ProofOfTreeLeaf {
 	var r ProofOfTreeLeaf
-	r.Leaf, _ = common3.HexToBytes(plh.Leaf)
-	r.Proof, _ = common3.HexToBytes(plh.Proof)
-	rootBytes, _ := common3.HexToBytes(plh.Root)
+	r.Leaf, _ = common3.HexDecode(plh.Leaf)
+	r.Proof, _ = common3.HexDecode(plh.Proof)
+	rootBytes, _ := common3.HexDecode(plh.Root)
 	copy(r.Root[:], rootBytes[:32])
 	return r
 }
@@ -87,8 +88,8 @@ func (plh *ProofOfTreeLeafHex) Unhex() ProofOfTreeLeaf {
 // Hex returns a ProofOfTreeLeafHex data structure
 func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 	r := ProofOfTreeLeafHex{
-		common3.BytesToHex(pl.Leaf),
-		common3.BytesToHex(pl.Proof),
+		common3.HexEncode(pl.Leaf),
+		common3.HexEncode(pl.Proof),
 		pl.Root.Hex(),
 	}
 	return r
@@ -123,14 +124,14 @@ func (pc *ProofOfClaimUser) Hex() ProofOfClaimUserHex {
 		pc.ClaimNonRevocationProof.Hex(),
 		pc.SetRootClaimNonRevocationProof.Hex(),
 		pc.Date,
-		common3.BytesToHex(pc.Signature),
+		common3.HexEncode(pc.Signature),
 	}
 	return r
 }
 
 // TODO: Remove in next refactor
 func (pch *ProofOfClaimUserHex) Unhex() (ProofOfClaimUser, error) {
-	sigBytes, err := common3.HexToBytes(pch.Signature)
+	sigBytes, err := common3.HexDecode(pch.Signature)
 	if err != nil {
 		return ProofOfClaimUser{}, err
 	}

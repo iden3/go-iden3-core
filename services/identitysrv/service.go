@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -46,7 +46,7 @@ type ServiceImpl struct {
 
 type Identity struct {
 	Operational   common.Address
-	OperationalPk *common3.PublicKey
+	OperationalPk *utils.PublicKey
 	Relayer       common.Address
 	Recoverer     common.Address
 	Revokator     common.Address
@@ -56,7 +56,6 @@ type Identity struct {
 func (i *Identity) Encode() []byte {
 	var b bytes.Buffer
 	b.Write(i.Operational[:])
-	fmt.Printf("> %+v\n", *i)
 	b.Write(crypto.CompressPubkey(&i.OperationalPk.PublicKey))
 	b.Write(i.Relayer[:])
 	b.Write(i.Recoverer[:])
@@ -77,7 +76,7 @@ func (i *Identity) Decode(encoded []byte) error {
 	if pk, err := crypto.DecompressPubkey(operationalPkComp[:]); err != nil {
 		return err
 	} else {
-		i.OperationalPk = &common3.PublicKey{PublicKey: *pk}
+		i.OperationalPk = &utils.PublicKey{PublicKey: *pk}
 	}
 	if _, err := b.Read(i.Relayer[:]); err != nil {
 		return err
@@ -273,7 +272,6 @@ func (s *ServiceImpl) Add(id *Identity) (*core.ProofOfClaim, error) {
 	}
 
 	return s.cs.GetClaimProofUserByHi(idaddr, claim.Entry().HIndex())
-
 }
 
 func (m *ServiceImpl) List(limit int) ([]common.Address, error) {

@@ -41,7 +41,7 @@ func main() {
 	}
 	fmt.Println("merkle root: " + mt.Root().Hex())
 
-	mpHex := common3.BytesToHex(mp)
+	mpHex := common3.HexEncode(mp)
 	fmt.Println("merkle proof: " + mpHex)
 	checked := merkletree.CheckProof(mt.Root(), mp, claim0.Hi(), claim0.Ht(), mt.NumLevels())
 	fmt.Println("merkle proof checked:", checked)

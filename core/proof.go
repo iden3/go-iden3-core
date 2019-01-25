@@ -3,8 +3,10 @@ package core
 import (
 	"encoding/hex"
 	"encoding/json"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/utils"
 )
 
 // ProofOfClaimPartial is a proof of existence and non-existence of a claim in
@@ -40,7 +42,7 @@ type ProofOfClaim struct {
 	Proofs    []ProofOfClaimPartial
 	Leaf      *merkletree.Data
 	Date      uint64
-	Signature []byte // signature of the Root of the Relay
+	Signature *utils.SignatureEthMsg // signature of the Root of the Relay
 }
 
 func (p *ProofOfClaim) MarshalJSON() ([]byte, error) {
@@ -49,6 +51,6 @@ func (p *ProofOfClaim) MarshalJSON() ([]byte, error) {
 		"Proofs":    p.Proofs,
 		"Leaf":      hex.EncodeToString(leafBytes[:]),
 		"Date":      p.Date,
-		"Signature": hex.EncodeToString(p.Signature),
+		"Signature": p.Signature,
 	})
 }

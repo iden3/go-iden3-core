@@ -14,9 +14,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/iden3/go-iden3/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -208,21 +208,17 @@ func (c *Web3Client) Call(to *common.Address, value *big.Int, calldata []byte) (
 
 // Sign does a web3 signature
 func (c *Web3Client) Sign(data ...[]byte) ([3][32]byte, error) {
-	web3SignaturePrefix := []byte("\x19Ethereum Signed Message:\n32")
-
-	hash := crypto.Keccak256(data...)
-	prefixedHash := crypto.Keccak256(web3SignaturePrefix, hash)
 
 	var ret [3][32]byte
 
 	// The produced signature is in the [R || S || V] format where V is 0 or 1.
-	sig, err := c.ks.SignHash(*c.account, prefixedHash)
+	sig, err := utils.SignEthMsg(c.ks, *c.account, data[0])
 	if err != nil {
 		return ret, err
 	}
 
 	// We need to convert it to the format []uint256 = {v,r,s} format
-	ret[0][31] = sig[64] + 27
+	ret[0][31] = sig[64]
 	copy(ret[1][:], sig[0:32])
 	copy(ret[2][:], sig[32:64])
 	return ret, nil

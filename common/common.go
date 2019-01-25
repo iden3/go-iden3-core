@@ -2,14 +2,12 @@ package common
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Base64ToBytes converts a base64 encoded string into array of bytes
@@ -24,18 +22,31 @@ func BytesToBase64(bytesArray []byte) string {
 	return h
 }
 
-// BytesToHex converts from an array of bytes to a hex encoded string
-func BytesToHex(bytesArray []byte) string {
-	r := "0x"
-	h := hex.EncodeToString(bytesArray)
-	r = r + h
-	return r
+// HexEncode encodes an array of bytes into a string in hex.
+func HexEncode(bs []byte) string {
+	return fmt.Sprintf("0x%s", hex.EncodeToString(bs))
 }
 
-// HexToBytes converts from a hex string into an array of bytes
-func HexToBytes(h string) ([]byte, error) {
-	b, err := hex.DecodeString(h[2:])
-	return b, err
+// HexDecode decodes a hex string into an array of bytes.
+func HexDecode(h string) ([]byte, error) {
+	if strings.HasPrefix(h, "0x") {
+		h = h[2:]
+	}
+	return hex.DecodeString(h)
+}
+
+// HexDecodeInto decodes a hex string into an array of bytes (bs).
+func HexDecodeInto(bs []byte, h []byte) error {
+	if bytes.HasPrefix(h, []byte("0x")) {
+		h = h[2:]
+	}
+	n, err := hex.Decode(bs, h)
+	if err != nil {
+		return err
+	} else if n != len(bs) {
+		return fmt.Errorf("expected %v bytes when decoding hex string, got %v", len(bs), n)
+	}
+	return nil
 }
 
 // Uint32ToBytes returns a byte array from a uint32
@@ -53,29 +64,12 @@ func BytesToUint32(b []byte) uint32 {
 	return binary.LittleEndian.Uint32(b)
 }
 
-// TODO: Find a better place for this
-type PublicKey struct {
-	ecdsa.PublicKey
-}
-
-func (pk *PublicKey) MarshalJSON() ([]byte, error) {
-	s := hex.EncodeToString(crypto.CompressPubkey(&pk.PublicKey))
-	return json.Marshal("0x" + s)
-}
-
-func (pk *PublicKey) UnmarshalJSON(bs []byte) error {
+// Unmarshal
+func UnmarshalJSONHexDecodeInto(dst []byte, bs []byte) error {
 	hexStr := ""
-	if err := json.Unmarshal(bs, &hexStr); err != nil {
-		return err
-	}
-	if strings.HasPrefix(hexStr, "0x") {
-		hexStr = hexStr[2:]
-	}
-	pkBytes, err := hex.DecodeString(hexStr)
+	err := json.Unmarshal(bs, &hexStr)
 	if err != nil {
 		return err
 	}
-	pk1, err := crypto.DecompressPubkey(pkBytes)
-	pk.PublicKey = *pk1
-	return err
+	return HexDecodeInto(dst[:], []byte(hexStr))
 }

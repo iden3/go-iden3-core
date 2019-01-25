@@ -16,12 +16,12 @@ func TestBase64ToBytes(t *testing.T) {
 	assert.Equal(t, []byte("test"), s)
 }
 
-func TestBytesToHex(t *testing.T) {
-	h := BytesToHex([]byte("test"))
+func TestHexEncode(t *testing.T) {
+	h := HexEncode([]byte("test"))
 	assert.Equal(t, "0x74657374", h)
 }
-func TestHexToBytes(t *testing.T) {
-	s, err := HexToBytes("0x74657374")
+func TestHexDecode(t *testing.T) {
+	s, err := HexDecode("0x74657374")
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("test"), s)
 }

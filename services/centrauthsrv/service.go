@@ -17,7 +17,7 @@ package centrauthsrv
 //		return err
 //	}
 //
-//	sigBytes, err := common3.HexToBytes(authMsg.Signature)
+//	sigBytes, err := common3.HexDecode(authMsg.Signature)
 //	if err != nil {
 //		return err
 //	}
@@ -29,7 +29,7 @@ package centrauthsrv
 //	}
 //
 //	// TODO get the Relay address, now it's hardcoded, will be getted from the counterfactual contract of the Relay
-//	addrBytes, err := common3.HexToBytes("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+//	addrBytes, err := common3.HexDecode("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 //	if err != nil {
 //		return err
 //	}
@@ -39,11 +39,8 @@ package centrauthsrv
 //	}
 //
 //	// verify the Signature of the Challenge with the KSign
-//	// TODO Use Verify Eth Sig
-//      msgHash := utils.EthHash([]byte(authMsg.Challenge))
-//      sigBytes[64] -= 27
-//      verified := utils.VerifySig(ksign, sigBytes, msgHash[:])
-//	if !utils.VerifySigBytes(crypto.PubkeyToAddress(authMsg.KSignPk.PublicKey), sigBytes, authMsg.Challenge) {
+//	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(authMsg.KSignPk.PublicKey),
+//		sigBytes, []byte(authMsg.Challenge)) {
 //		return errors.New("signature of challenge can not be verified")
 //	}
 //

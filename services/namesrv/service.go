@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -41,14 +40,7 @@ func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAs
 	}
 	opkey := identity.Operational
 
-	sigBytes, err := common3.HexToBytes(vinculateIDMsg.Signature)
-	if err != nil {
-		return &core.ClaimAssignName{}, err
-	}
-	msgHash := vinculateIDMsg.MsgHash()
-	sigBytes[64] -= 27
-	verified := utils.VerifySig(opkey, sigBytes, msgHash[:])
-	if !verified {
+	if !utils.VerifySigEthMsg(opkey, vinculateIDMsg.Signature, vinculateIDMsg.Bytes()) {
 		return &core.ClaimAssignName{}, errors.New("signature can not be verified")
 	}
 

@@ -59,7 +59,7 @@ func cmdDbIPFSexport(c *cli.Context) error {
 			fmt.Fprintf(os.Stderr, "error: %s", err)
 			os.Exit(1)
 		}
-		fmt.Println("value of key "+common3.BytesToHex(iter.Key())+" added, ipfs hash: ", cid)
+		fmt.Println("value of key "+common3.HexEncode(iter.Key())+" added, ipfs hash: ", cid)
 	}
 	iter.Release()
 	return nil
