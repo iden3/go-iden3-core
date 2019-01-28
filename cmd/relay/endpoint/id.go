@@ -12,17 +12,17 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
 	cfg "github.com/iden3/go-iden3/cmd/relay/config"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/identitysrv"
+	"github.com/iden3/go-iden3/utils"
 )
 
 // handlePostIdReq is the request used to create a new user tree in the relay.
 type handlePostIdReq struct {
 	//Operational   common.Address     `json:"operational"`
-	OperationalPk *common3.PublicKey `json:"operationalpk" binding:"required"`
-	Recoverer     common.Address     `json:"recoverer"`
-	Revokator     common.Address     `json:"revokator"`
+	OperationalPk *utils.PublicKey `json:"operationalpk" binding:"required"`
+	Recoverer     common.Address   `json:"recoverer"`
+	Revokator     common.Address   `json:"revokator"`
 }
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
@@ -38,12 +38,12 @@ type handleDeployIdRes struct {
 }
 
 type handleForwardIdReq struct {
-	KSignPk *common3.PublicKey `json:"ksignpk" binding:"required"`
-	To      common.Address     `json:"to"`
-	Data    string             `json:"data"`
-	Value   string             `json:"value"`
-	Gas     uint64             `json:"gas"` // gaslimit
-	Sig     string             `json:"sig"`
+	KSignPk *utils.PublicKey `json:"ksignpk" binding:"required"`
+	To      common.Address   `json:"to"`
+	Data    string           `json:"data"`
+	Value   string           `json:"value"`
+	Gas     uint64           `json:"gas"` // gaslimit
+	Sig     string           `json:"sig"`
 }
 
 type handleForwardIdRes struct {

@@ -45,7 +45,7 @@ func TestPoWBackupData(t *testing.T) {
     }
 	`
 
-	var backupData BackupData
+	var backupData BackupDataMsg
 	json.Unmarshal([]byte(backupDataJSON), &backupData)
 	assert.Equal(t, backupData.ProofOfKSignHex.SetRootClaimProof.Root, "0x05e2729903acfde930ad687011291f321d71674470eae0136a30ea076391494b")
 

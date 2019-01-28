@@ -65,7 +65,7 @@ func TestVinculateID(t *testing.T) {
 
 	sig, err := utils.Sign(msgHash, testPrivK)
 	assert.Nil(t, err)
-	vinculateIDMsg.MsgSignature = common3.BytesToHex(sig)
+	vinculateIDMsg.MsgSignature = common3.HexEncode(sig)
 	assert.Equal(t, "0x87da22a43b63bda4fa77f65f966677161a1e5dc6af65f71eb84b628d485c881d", vinculateIDMsg.MsgHash().Hex())
 
 	assignNameClaim, err := VinculateID(mt, vinculateIDMsg, config.C.ContractsAddress.Identities, testPrivK)

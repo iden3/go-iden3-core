@@ -45,8 +45,8 @@ func (as *ServiceImpl) RawDump() map[string]string {
 	data := make(map[string]string)
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
-		// out = out + "key: " + common3.BytesToHex(key) + ", value: " + common3.BytesToHex(value) + "\n"
-		data[common3.BytesToHex(key)] = common3.BytesToHex(value)
+		// out = out + "key: " + common3.HexEncode(key) + ", value: " + common3.HexEncode(value) + "\n"
+		data[common3.HexEncode(key)] = common3.HexEncode(value)
 	})
 	return data
 }
@@ -70,11 +70,11 @@ func (as *ServiceImpl) RawImport(raw map[string]string) (int, error) {
 	}()
 
 	for k, v := range raw {
-		kBytes, err := common3.HexToBytes(k)
+		kBytes, err := common3.HexDecode(k)
 		if err != nil {
 			return count, err
 		}
-		vBytes, err := common3.HexToBytes(v)
+		vBytes, err := common3.HexDecode(v)
 		if err != nil {
 			return count, err
 		}
@@ -90,7 +90,7 @@ func (as *ServiceImpl) ClaimsDump() map[string]string {
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
 		if value[0] == byte(merkletree.NodeTypeLeaf) {
-			data[common3.BytesToHex(key)] = common3.BytesToHex(value)
+			data[common3.HexEncode(key)] = common3.HexEncode(value)
 		}
 	})
 	return data

@@ -61,7 +61,7 @@ func cmdAddClaim(c *cli.Context) error {
 	copy(indexSlot[:], indexData)
 	copy(dataSlot[:], outData)
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
-	fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
+	fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
 	err := claimservice.AddDirectClaim(*claim)
 	if err != nil {
@@ -73,7 +73,7 @@ func cmdAddClaim(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Print("merkleproof: " + common3.BytesToHex(mp.Bytes()))
+	fmt.Print("merkleproof: " + common3.HexEncode(mp.Bytes()))
 
 	return nil
 }
@@ -118,7 +118,7 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 		copy(dataSlot[:], line[1])
 		claim := core.NewClaimBasic(indexSlot, dataSlot)
 		// claim := core.NewGenericClaim("iden3.io", "generic", []byte(line[0]), []byte(line[1]))
-		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()) + "\n")
+		fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()) + "\n")
 
 		// add claim to merkletree, without updating the root, that will be done on the end of the loop (csv file)
 		err = mt.Add(claim.Entry())
@@ -150,14 +150,14 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 		copy(indexSlot[:], line[0])
 		copy(dataSlot[:], line[1])
 		claim := core.NewClaimBasic(indexSlot, dataSlot)
-		fmt.Println("clam: " + common3.BytesToHex(claim.Entry().Bytes()))
+		fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
 		// the proofs better generate them once all claims are added
 		mp, err := mt.GenerateProof(claim.Entry().HIndex())
 		if err != nil {
 			return err
 		}
-		fmt.Println("merkleproof: " + common3.BytesToHex(mp.Bytes()) + "\n")
+		fmt.Println("merkleproof: " + common3.HexEncode(mp.Bytes()) + "\n")
 	}
 	// update the root in the smart contract
 	rootservice.SetRoot(*mt.RootKey())

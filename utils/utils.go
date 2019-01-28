@@ -19,7 +19,7 @@ type PoWData interface {
 // CheckPoW verifies the PoW difficulty of a Hash
 func CheckPoW(hash Hash, difficulty int) bool {
 	var empty [32]byte
-	if !bytes.Equal(hash.Bytes()[0:difficulty], empty[0:difficulty]) {
+	if !bytes.Equal(hash[:][0:difficulty], empty[0:difficulty]) {
 		return false
 	}
 	return true

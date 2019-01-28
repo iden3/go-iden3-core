@@ -17,6 +17,6 @@ func handleGetRoot(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{
 		"root":         claimservice.MT().RootKey().Hex(),
-		"contractRoot": common3.BytesToHex(root[:]),
+		"contractRoot": common3.HexEncode(root[:]),
 	})
 }

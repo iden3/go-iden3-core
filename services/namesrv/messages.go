@@ -2,7 +2,6 @@ package namesrv
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/utils"
 )
 
@@ -19,16 +18,16 @@ type RawIdentityTx struct {
 // ethereum address to a name.
 type VinculateIDMsg struct {
 	// This kind of message does not need the caducity
-	EthAddr   common.Address     `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx
-	Name      string             `json:"name"`
-	Signature string             `json:"signature"` // hex format
-	KSignPk   *common3.PublicKey `json:"ksignpk" binding:"required"`
+	EthAddr   common.Address         `json:"ethAddr" binding:"required"` // temp, will be calculated directly from RawIdentityTx
+	Name      string                 `json:"name" binding:"required"`
+	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // hex format
+	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
 }
 
-// MsgHash returns the Hash(VinculateIDMsg)
-func (m *VinculateIDMsg) MsgHash() utils.Hash {
+// Bytes returns the byte array serialization of VinculateIDMsg
+func (m *VinculateIDMsg) Bytes() []byte {
 	var b []byte
 	b = append(b, m.EthAddr.Bytes()...)
 	b = append(b, []byte(m.Name)...)
-	return utils.EthHash(b)
+	return b
 }

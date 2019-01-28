@@ -28,13 +28,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 		fail(c, "error on PostNewRoot, idaddr not match", errors.New("PostNewRoot idaddr not match"))
 		return
 	}
-	// get signature from setRootClaimMsg
-	signature, err := common3.HexToBytes(setRootMsg.Signature)
-	if err != nil {
-		fail(c, "error on PostNewRoot parse signature", err)
-		return
-	}
-	rootBytes, err := common3.HexToBytes(setRootMsg.Root)
+	rootBytes, err := common3.HexDecode(setRootMsg.Root)
 	if err != nil {
 		fail(c, "error on PostNewRoot parse root", err)
 		return
@@ -44,7 +38,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 
 	// add the root through claimservice
 	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, &setRootMsg.KSignPk.PublicKey,
-		root, setRootMsg.Timestamp, signature)
+		root, setRootMsg.Timestamp, setRootMsg.Signature)
 	if err != nil {
 		fail(c, "error on AddAuthorizeKSignClaim", err)
 		return
@@ -68,7 +62,7 @@ func handlePostClaim(c *gin.Context) {
 	var bytesSignedMsg claimsrv.BytesSignedMsg
 	c.BindJSON(&bytesSignedMsg)
 
-	bytesValue, err := common3.HexToBytes(bytesSignedMsg.ValueHex)
+	bytesValue, err := common3.HexDecode(bytesSignedMsg.ValueHex)
 	if err != nil {
 		fail(c, "error on parsing bytesSignedMsg.HexValue to bytes", err)
 		return
@@ -84,7 +78,7 @@ func handlePostClaim(c *gin.Context) {
 
 	claimValueMsg := claimsrv.ClaimValueMsg{
 		ClaimValue: entry,
-		Signature:  bytesSignedMsg.SignatureHex,
+		Signature:  bytesSignedMsg.Signature,
 		KSignPk:    bytesSignedMsg.KSignPk,
 	}
 	err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
@@ -117,7 +111,7 @@ func handleGetIDRoot(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"root":        claimservice.MT().RootKey().Hex(), // relay root
 		"idRoot":      idRoot.Hex(),                      // user id root
-		"idRootProof": common3.BytesToHex(idRootProof),   // user id root proof in the relay merkletree
+		"idRootProof": common3.HexEncode(idRootProof),    // user id root proof in the relay merkletree
 	})
 	return
 }
@@ -127,9 +121,9 @@ func handleGetIDRoot(c *gin.Context) {
 func handleGetClaimProofUserByHi(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	hihex := c.Param("hi")
-	hiBytes, err := common3.HexToBytes(hihex)
+	hiBytes, err := common3.HexDecode(hihex)
 	if err != nil {
-		fail(c, "error on HexToBytes of Hi", err)
+		fail(c, "error on HexDecode of Hi", err)
 		return
 	}
 	hi := &merkletree.Hash{}
@@ -150,9 +144,9 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 // relay claim (by hIndex).
 func handleGetClaimProofByHi(c *gin.Context) {
 	hihex := c.Param("hi")
-	hiBytes, err := common3.HexToBytes(hihex)
+	hiBytes, err := common3.HexDecode(hihex)
 	if err != nil {
-		fail(c, "error on HexToBytes of Hi", err)
+		fail(c, "error on HexDecode of Hi", err)
 		return
 	}
 	hi := &merkletree.Hash{}

@@ -81,9 +81,9 @@ func TestHandlePostAssignNameClaim(t *testing.T) {
 	assignNameClaim := core.NewAssignNameClaim(config.C.Namespace, nameHash, domainHash, ethAddr)
 	signature, err := utils.Sign(assignNameClaim.Ht(), privK)
 	assert.Nil(t, err)
-	signatureHex := common3.BytesToHex(signature)
+	signatureHex := common3.HexEncode(signature)
 	claimValueMsg := claimsrv.BytesSignedMsg{
-		common3.BytesToHex(assignNameClaim.Bytes()),
+		common3.HexEncode(assignNameClaim.Bytes()),
 		signatureHex,
 	}
 	json, err := json.Marshal(claimValueMsg)
@@ -115,9 +115,9 @@ func TestHandlePostAuthorizeKSignClaim(t *testing.T) {
 
 	signature, err := utils.Sign(authorizeKSignClaim.Ht(), privK)
 	assert.Nil(t, err)
-	signatureHex := common3.BytesToHex(signature)
+	signatureHex := common3.HexEncode(signature)
 	claimValueMsg := claimsrv.BytesSignedMsg{
-		common3.BytesToHex(authorizeKSignClaim.Bytes()),
+		common3.HexEncode(authorizeKSignClaim.Bytes()),
 		signatureHex,
 	}
 	json, err := json.Marshal(claimValueMsg)
@@ -173,7 +173,7 @@ func TestAddClaimAndGetClaimByHi(t *testing.T) {
 	claim := core.NewClaimDefault("namespace.io", "default", []byte("dataasdf"))
 	signature, err := utils.Sign(claim.Ht(), privK)
 	assert.Nil(t, err)
-	signatureHex := common3.BytesToHex(signature)
+	signatureHex := common3.HexEncode(signature)
 	claimValueMsg := claimsrv.ClaimValueMsg{
 		claim,
 		signatureHex,

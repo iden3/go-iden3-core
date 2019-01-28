@@ -2,29 +2,87 @@ package utils
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	common3 "github.com/iden3/go-iden3/common"
 )
+
+// Signature is a secp256k1 ecdsa signature.
+type Signature [65]byte
+
+// UnmarshalJSON deserializes a signature from a hex string.
+func (s *Signature) UnmarshalJSON(bs []byte) error {
+	return common3.UnmarshalJSONHexDecodeInto(s[:], bs)
+}
+
+// MarshalJSON serializes a signature as a hex string.
+func (s *Signature) MarshalJSON() ([]byte, error) {
+	return json.Marshal(common3.HexEncode(s[:]))
+}
+
+// SignatureEthMsg is a secp256k1 ecdsa signature of an ethereum message:
+// https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sig://github.com/ethereum/wiki/wiki/JSON-RPC#eth_sign
+type SignatureEthMsg [65]byte
+
+// UnmarshalJSON deserializes a signature from a hex string.
+func (s *SignatureEthMsg) UnmarshalJSON(bs []byte) error {
+	return common3.UnmarshalJSONHexDecodeInto(s[:], bs)
+}
+
+// MarshalJSON serializes a signature as a hex string.
+func (s *SignatureEthMsg) MarshalJSON() ([]byte, error) {
+	return json.Marshal(common3.HexEncode(s[:]))
+}
+
+const web3SignaturePrefix = "\x19Ethereum Signed Message:\n"
 
 // Sign performs the signature over a Hash
 func Sign(h Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
 	return ks.SignHash(acc, h[:])
 }
 
+// SignEthMsg performs an ethereum message signature over a Hash.
+func SignEthMsg(ks *keystore.KeyStore, acc accounts.Account, msg []byte) (*SignatureEthMsg, error) {
+	hash := EthHash(msg)
+	sig, err := ks.SignHash(acc, hash[:])
+	if err != nil {
+		return nil, err
+	}
+	sig[64] += 27
+	sigEthMsg := &SignatureEthMsg{}
+	copy(sigEthMsg[:], sig)
+	return sigEthMsg, nil
+}
+
+// EthHash is the hashing function used before signing ethereum messages.
 func EthHash(b []byte) Hash {
-	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(b), b)
-	return HashBytes([]byte(msg))
+	header := fmt.Sprintf("%s%d", web3SignaturePrefix, len(b))
+	return HashBytes([]byte(header), b)
+}
+
+func VerifySigEthMsg(addr common.Address, sig *SignatureEthMsg, msg []byte) bool {
+	hash := EthHash(msg)
+	sig[64] -= 27
+	return VerifySig(addr, (*Signature)(sig), hash[:])
+}
+
+// VerifySigEthMsgDate verifies the signature of a byte array with a date
+// appended given an ethereum address.
+func VerifySigEthMsgDate(addr common.Address, sig *SignatureEthMsg, msg []byte, date uint64) bool {
+	dateBytes := Uint64ToEthBytes(date)
+	return VerifySigEthMsg(addr, sig, append(msg[:], dateBytes...))
 }
 
 // VerifySig verifies a given signature and the msgHash with the expected address
-func VerifySig(addr common.Address, sig, msgHash []byte) bool {
-	recoveredPub, err := crypto.Ecrecover(msgHash, sig)
+func VerifySig(addr common.Address, sig *Signature, msgHash []byte) bool {
+	recoveredPub, err := crypto.Ecrecover(msgHash, sig[:])
 	if err != nil {
-		fmt.Printf("ECRecover error: %s", err)
+		fmt.Printf("ECRecover error: %s\n", err)
 		return false
 	}
 	pubKey, _ := crypto.UnmarshalPubkey(recoveredPub)
@@ -33,14 +91,14 @@ func VerifySig(addr common.Address, sig, msgHash []byte) bool {
 }
 
 // VerifySigBytes verifies the signature of a byte array given an ethereum address.
-func VerifySigBytes(addr common.Address, sig, msg []byte) bool {
-	msgHash := EthHash(msg)
-	return VerifySig(addr, sig, msgHash[:])
-}
+//func VerifySigBytes(addr common.Address, sig *Signature, msg []byte) bool {
+//	msgHash := EthHash(msg)
+//	return VerifySig(addr, sig, msgHash[:])
+//}
 
 // VerifySigBytesDate verifies the signature of a byte array with a date
 // appended given an ethereum address.
-func VerifySigBytesDate(addr common.Address, sig, msg []byte, date uint64) bool {
-	dateBytes := Uint64ToEthBytes(date)
-	return VerifySigBytes(addr, sig, append(msg[:], dateBytes...))
-}
+//func VerifySigBytesDate(addr common.Address, sig *Signature, msg []byte, date uint64) bool {
+//	dateBytes := Uint64ToEthBytes(date)
+//	return VerifySigBytes(addr, sig, append(msg[:], dateBytes...))
+//}
