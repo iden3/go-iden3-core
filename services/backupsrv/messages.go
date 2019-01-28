@@ -5,7 +5,7 @@ import (
 	"github.com/iden3/go-iden3/utils"
 )
 
-type BackupData struct {
+type BackupDataMsg struct {
 	IdAddrHex       string                       `json:"idaddrhex" binding:"required"`
 	Data            string                       `json:"data" binding:"required"`
 	DataSignature   string                       `json:"datasignature" binding:"required"`
@@ -18,7 +18,7 @@ type BackupData struct {
 }
 
 // IncrementNonce implements the method for the PoWData interface
-func (bd BackupData) IncrementNonce() utils.PoWData {
+func (bd BackupDataMsg) IncrementNonce() utils.PoWData {
 	bd.Nonce++
 	return bd
 }
