@@ -11,51 +11,51 @@ import (
 
 // BytesSignedMsg contains the value and its signature in Hex representation
 type BytesSignedMsg struct {
-	ValueHex  string                 `json:"valueHex"` // claim.Bytes() in a hex format
-	Signature *utils.SignatureEthMsg `json:"signatureHex"`
+	ValueHex  string                 `json:"valueHex" binding:"required"` // claim.Bytes() in a hex format
+	Signature *utils.SignatureEthMsg `json:"signatureHex" binding:"required"`
 	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
 }
 
 // ClaimBasicMsg contains a core.ClaimBasic with its signature in Hex
 type ClaimBasicMsg struct {
-	ClaimBasic core.ClaimBasic
-	Signature  *utils.SignatureEthMsg
+	ClaimBasic core.ClaimBasic        `binding:"required"`
+	Signature  *utils.SignatureEthMsg `binding:"required"`
 }
 
 // ClaimAssignNameMsg contains a core.ClaimAssignName with its signature in Hex
 type ClaimAssignNameMsg struct {
-	ClaimAssignName core.ClaimAssignName
-	Signature       *utils.SignatureEthMsg
+	ClaimAssignName core.ClaimAssignName   `binding:"required"`
+	Signature       *utils.SignatureEthMsg `binding:"required"`
 }
 
 // ClaimAuthorizeKSignMsg contains a core.AuthorizeKSignClaim with its signature in Hex
 type ClaimAuthorizeKSignMsg struct {
-	ClaimAuthorizeKSign core.ClaimAuthorizeKSign
-	Signature           *utils.SignatureEthMsg
-	KSignPk             *utils.PublicKey
+	ClaimAuthorizeKSign core.ClaimAuthorizeKSign `binding:"required"`
+	Signature           *utils.SignatureEthMsg   `binding:"required"`
+	KSignPk             *utils.PublicKey         `binding:"required"`
 }
 
 // ClaimAuthorizeKSignSecp256k1Msg contains a core.ClaimAuthorizeKSignP256 with its signature in Hex
 type ClaimAuthorizeKSignSecp256k1Msg struct {
-	ClaimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1
-	Signature                    *utils.SignatureEthMsg
-	KSignP256                    *ecdsa.PublicKey
+	ClaimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1 `binding:"required"`
+	Signature                    *utils.SignatureEthMsg            `binding:"required"`
+	KSignP256                    *ecdsa.PublicKey                  `binding:"required"`
 }
 
 // SetRootMsg contains the data to set the SetRootClaim with its signature in Hex
 type SetRootMsg struct {
-	Root      string
-	IdAddr    string
-	KSignPk   *utils.PublicKey
-	Timestamp uint64
-	Signature *utils.SignatureEthMsg
+	Root      string                 `binding:"required"`
+	IdAddr    string                 `binding:"required"`
+	KSignPk   *utils.PublicKey       `binding:"required"`
+	Timestamp uint64                 `binding:"required"`
+	Signature *utils.SignatureEthMsg `binding:"required"`
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex
 type ClaimValueMsg struct {
-	ClaimValue merkletree.Entry
-	Signature  *utils.SignatureEthMsg
-	KSignPk    *utils.PublicKey
+	ClaimValue merkletree.Entry       `binding:"required"`
+	Signature  *utils.SignatureEthMsg `binding:"required"`
+	KSignPk    *utils.PublicKey       `binding:"required"`
 }
 
 // TODO: Remove in next refactor

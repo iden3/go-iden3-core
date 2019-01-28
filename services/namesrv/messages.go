@@ -18,9 +18,9 @@ type RawIdentityTx struct {
 // ethereum address to a name.
 type VinculateIDMsg struct {
 	// This kind of message does not need the caducity
-	EthAddr   common.Address         `json:"ethAddr"` // temp, will be calculated directly from RawIdentityTx
-	Name      string                 `json:"name"`
-	Signature *utils.SignatureEthMsg `json:"signature"` // hex format
+	EthAddr   common.Address         `json:"ethAddr" binding:"required"` // temp, will be calculated directly from RawIdentityTx
+	Name      string                 `json:"name" binding:"required"`
+	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // hex format
 	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
 }
 

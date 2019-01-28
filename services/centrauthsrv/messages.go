@@ -14,6 +14,6 @@ type AuthMsg struct {
 }
 
 type AuthTokenMsg struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token"`
+	Success bool   `json:"success" binding:"required"`
+	Token   string `json:"token" binding:"required"`
 }

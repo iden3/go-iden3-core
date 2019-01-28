@@ -6,15 +6,15 @@ import (
 )
 
 type BackupData struct {
-	IdAddrHex       string                       `json:"idaddrhex"`
-	Data            string                       `json:"data"`
-	DataSignature   string                       `json:"datasignature"`
-	Type            string                       `json:"type"`
+	IdAddrHex       string                       `json:"idaddrhex" binding:"required"`
+	Data            string                       `json:"data" binding:"required"`
+	DataSignature   string                       `json:"datasignature" binding:"required"`
+	Type            string                       `json:"type" binding:"required"`
 	KSignPk         *utils.PublicKey             `json:"ksignpk" binding:"required"`
-	ProofOfKSignHex claimsrv.ProofOfClaimUserHex `json:"proofofksignhex"`
-	RelayAddr       string                       `json:"relayaddr"`
-	Version         uint64                       `json:"version"`
-	Nonce           uint                         `json:"nonce"`
+	ProofOfKSignHex claimsrv.ProofOfClaimUserHex `json:"proofofksignhex" binding:"required"`
+	RelayAddr       string                       `json:"relayaddr" binding:"required"`
+	Version         uint64                       `json:"version" binding:"required"`
+	Nonce           uint                         `json:"nonce" binding:"required"`
 }
 
 // IncrementNonce implements the method for the PoWData interface
