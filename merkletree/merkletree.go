@@ -3,11 +3,13 @@ package merkletree
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"sync"
 
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/db"
 )
 
@@ -48,6 +50,11 @@ func (d *Data) Bytes() (b [ElemBytesLen * DataLen]byte) {
 		copy(b[i*ElemBytesLen:(i+1)*ElemBytesLen], d[i][:])
 	}
 	return b
+}
+
+func (d *Data) MarshalJSON() ([]byte, error) {
+	dataBytes := d.Bytes()
+	return json.Marshal(common3.HexEncode(dataBytes[:]))
 }
 
 func BytesToData(b [ElemBytesLen * DataLen]byte) *Data {
@@ -473,6 +480,10 @@ func (p *Proof) Bytes() []byte {
 		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hValue[:])
 	}
 	return bs
+}
+
+func (p *Proof) MarshalJSON() ([]byte, error) {
+	return json.Marshal(common3.HexEncode(p.Bytes()))
 }
 
 // String outputs a multiline string representation of the Proof.

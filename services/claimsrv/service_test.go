@@ -2,6 +2,7 @@ package claimsrv
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"testing"
@@ -219,7 +220,7 @@ func TestGetClaimProof(t *testing.T) {
 
 	proofOfClaim, err := service.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	assert.Nil(t, err)
-	p, err := proofOfClaim.MarshalJSON()
+	p, err := json.Marshal(proofOfClaim)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println(string(p))
@@ -232,7 +233,7 @@ func TestGetClaimProof(t *testing.T) {
 
 	proofOfClaimUser, err := service.GetClaimProofUserByHi(ethAddr, claim.Entry().HIndex())
 	assert.Nil(t, err)
-	p, err = proofOfClaimUser.MarshalJSON()
+	p, err = json.Marshal(proofOfClaimUser)
 	if debug {
 		fmt.Println(string(p))
 	}

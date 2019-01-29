@@ -2,9 +2,11 @@ package merkletree
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/crypto/mimc7"
 )
 
@@ -25,6 +27,10 @@ func (h Hash) Hex() string {
 // Bytes returns a byte array from a Hash.
 func (h Hash) Bytes() []byte {
 	return h[:]
+}
+
+func (h *Hash) MarshalJSON() ([]byte, error) {
+	return json.Marshal(common3.HexEncode(h.Bytes()))
 }
 
 // ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
