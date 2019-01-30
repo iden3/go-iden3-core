@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var debug = false
+var debug = true
 
 type Fatalable interface {
 	Fatal(args ...interface{})
