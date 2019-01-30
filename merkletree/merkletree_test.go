@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	//"strconv"
 	"testing"
 	//"time"
@@ -11,11 +12,12 @@ import (
 
 	//common3 "github.com/iden3/go-iden3/common"
 	"github.com/ethereum/go-ethereum/common"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/stretchr/testify/assert"
 )
 
-var debug = true
+var debug = false
 
 type Fatalable interface {
 	Fatal(args ...interface{})
@@ -350,7 +352,9 @@ func TestVerifyProofCases(t *testing.T) {
 	for i := 8; i < 32; i++ {
 		e = NewEntryFromInts(0, 0, 0, int64(i))
 		proof, err = mt.GenerateProof(e.HIndex())
-		fmt.Println(i, proof)
+		if debug {
+			fmt.Println(i, proof)
+		}
 	}
 	// Non-existence proof, empty aux
 	e = NewEntryFromInts(0, 0, 0, int64(12))
@@ -424,24 +428,6 @@ func TestVerifyProofFalse(t *testing.T) {
 	proof.Existence = false
 	proof.nodeAux = &nodeAux{hIndex: e.HIndex(), hValue: e.HValue()}
 	assert.True(t, !VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
-}
-
-func TestMTGraphViz(t *testing.T) {
-	mt := newTestingMerkle(t, 140)
-	defer mt.Storage().Close()
-
-	for i := 0; i < 16; i++ {
-		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	s := bytes.NewBufferString("")
-	mt.GraphViz(s)
-	if debug {
-		fmt.Println(s)
-	}
 }
 
 func TestProofFromBytesSmall(t *testing.T) {
@@ -594,5 +580,91 @@ func proofTestOutput(p *Proof) {
 
 		}
 	}
-	fmt.Println(s.String())
+	if debug {
+		fmt.Println(s.String())
+	}
+}
+
+func TestMTWalk(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 16; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	w := bytes.NewBufferString("")
+	err := mt.Walk(mt.RootKey(), func(n *Node) {
+		if n.Type != NodeTypeEmpty {
+			fmt.Fprintf(w, "node \"%v\"\n", common3.HexEncode(n.Value()))
+		}
+	})
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(w)
+	}
+}
+
+func TestMTWalkGraphViz(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 16; i++ {
+		e := NewEntryFromInts(0, 0, 0, int64(i))
+		if err := mt.Add(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	w := bytes.NewBufferString("")
+	fmt.Fprintf(w, "--------\nGraphViz of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n")
+	err := mt.GraphViz(w, nil)
+	fmt.Fprintf(w, "End of GraphViz of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n--------\n")
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(w)
+	}
+}
+
+func copyToElemBytes(e *ElemBytes, start int, src []byte) {
+	copy(e[ElemBytesLen-start-len(src):], src)
+}
+func newClaimBasicEntry(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) *Entry {
+	e := &Entry{}
+	claimTypeVersionLen := (64 / 8) + (32 / 8)
+	copyToElemBytes(&e.Data[3], claimTypeVersionLen, indexSlot[len(indexSlot)-152/8:])
+	copyToElemBytes(&e.Data[2], 0, indexSlot[:248/8])
+	copyToElemBytes(&e.Data[1], 0, dataSlot[248/8:])
+	copyToElemBytes(&e.Data[0], 0, dataSlot[:248/8])
+	return e
+}
+func TestMTWalkDumpLeafs(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 16; i++ {
+		rawIndex := strconv.Itoa(i) + "-testtesttesttesttesttesttesttesttesttesttesttest"
+		rawData := "testtesttesttesttesttesttesttesttesttesttesttesttesttesttesttest-"
+		var indexSlot [400 / 8]byte
+		var dataSlot [496 / 8]byte
+		copy(indexSlot[:], rawIndex[:400/8])
+		copy(dataSlot[:], rawData[:496/8])
+		e := newClaimBasicEntry(indexSlot, dataSlot)
+
+		if err := mt.Add(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	w := bytes.NewBufferString("")
+	fmt.Fprintf(w, "--------\nDumpClaims of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n")
+	err := mt.DumpClaims(w, nil)
+	fmt.Fprintf(w, "End of DumpClaims of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n--------\n")
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(w)
+	}
 }
