@@ -1,7 +1,7 @@
 # Merkletree usage
 
-
 ## Import
+
 Import packages:
 ```go
 import (
@@ -13,6 +13,7 @@ import (
 ```
 
 ## New Merkletree
+
 Define new tree:
 ```go
 // first we create the storage, where will be placed the leveldb database
@@ -30,7 +31,9 @@ defer mt.Storage().Close()
 ```
 
 ## Add claims
-To add claims, first we need to have a claim data struct that fits the `Entrier` interface:
+
+To add claims, first we need to have a claim data struct that fits the
+`Entrier` interface:
 ```go
 // Data consists of 4 elements of the mimc7 field.
 type Data [4]ElemBytes
@@ -60,7 +63,8 @@ ethAddr1 := common.HexToAddress("0x28f8267fb21e8ce0cdd9888a6e532764eb8d52dd")
 claim1 := core.NewClaimAssignName(name1, ethAddr1)
 claimEntry1 := claim1.Entry()
 ```
-Once we have the `claim` struct that fits the `Entrier` interface, we can add it to the merkletree:
+Once we have the `claim` struct that fits the `Entrier` interface, we can add
+it to the merkletree:
 ```go
 err = mt.Add(claimEntry0)
 if err != nil {
@@ -73,6 +77,7 @@ if err != nil {
 ```
 
 ## Generate merkle proof
+
 Now we can generat the merkle proof of this claim:
 ```go
 mp, err := mt.GenerateProof(claimEntry0.HIndex())
@@ -91,6 +96,7 @@ fmt.Println("merkle proof: ", mp)
 ```
 
 ## Check merkle proof
+
 Now from a given merkle proof, we can check that it's data is consistent:
 ```go
 checked := merkletree.VerifyProof(mt.RootKey(), mp,
@@ -99,6 +105,7 @@ checked := merkletree.VerifyProof(mt.RootKey(), mp,
 ```
 
 ## Get value in position
+
 We can also get the `claim` byte data in a certain position of the merkle tree
 (determined by its Hash Index (`HIndex`)):
 ```go
@@ -109,6 +116,7 @@ if err!=nil{
 ```
 
 ## Proof of non existence
+
 Also, we can generate a `Proof of non existence`, that is, the merkle proof
 that a claim is not in the tree.
 For example, we have this `claim2` that is not added in the merkletree:
@@ -141,11 +149,62 @@ is determined by its Hash Index (`HIndex`)) there is no data stored (so, it's an
 `NodeTypeEmpty` not actually stored in the tree).
 
 We can check this proof by calling the `VerifyProof` function, and in the
-parameter where we put the Hash Total (`HtTotal`) we can actually put anything, because we can proof that anything is not there.  We will use the Hash Total of the claim2 for convenience.
+parameter where we put the Hash Total (`HtTotal`) we can actually put anything,
+because we can proof that anything is not there.  We will use the Hash Total of
+the claim2 for convenience.
 ```go
 checked = merkletree.VerifyProof(mt.RootKey(), mp, claimEntry2.HIndex(), claimEntry2.HValue())
 // checked == true
 ```
+
+## Merkle tree visual representation
+
+Finally, you can get a visual representation of the merkle tree with graphviz,
+in which only the last bytes of each node key are shown in hexadecimal to make
+a compact representation.  In the following example print the graphviz code for
+the representation of a merkle tree with 10 claims:
+
+```go
+s := bytes.NewBufferString("")
+mt2.GraphViz(s, nil)
+fmt.Println(s)
+```
+
+GraphViz output code:
+```
+digraph hierarchy {
+node [fontname=Monospace,fontsize=10,shape=box]
+"b0830ca8" -> {"5ae3cb67" "570088ed"}
+"5ae3cb67" -> {"6ce2c761" "37b29928"}
+"empty0" [style=dashed,label=0];
+"6ce2c761" -> {"e82bf1e7" "empty0"}
+"e82bf1e7" -> {"6ee500bf" "63289a99"}
+"6ee500bf" [style=filled];
+"63289a99" [style=filled];
+"37b29928" -> {"ef87b970" "8b6e9f1c"}
+"ef87b970" -> {"1481190a" "93c79331"}
+"1481190a" [style=filled];
+"93c79331" [style=filled];
+"8b6e9f1c" [style=filled];
+"570088ed" -> {"4f3d0101" "8a2524f6"}
+"4f3d0101" -> {"74924bbf" "6aa34a3d"}
+"74924bbf" [style=filled];
+"empty1" [style=dashed,label=0];
+"6aa34a3d" -> {"empty1" "69003eca"}
+"69003eca" -> {"fac8618d" "43f442c5"}
+"fac8618d" [style=filled];
+"43f442c5" [style=filled];
+"8a2524f6" -> {"3f5e7a5f" "d76c6447"}
+"3f5e7a5f" [style=filled];
+"d76c6447" [style=filled];
+}
+```
+
+The GraphViz visualization looks like this:
+![](./merkletree_graphviz.png)
+
+You can also view the graph using an online [graphviz
+renderer](http://www.webgraphviz.com/).
 
 ## Complete example
 The complete example can be found in this directory in the file [`example.go`]( https://github.com/iden3/go-iden3/blob/master/merkletreeDoc/example.go).
