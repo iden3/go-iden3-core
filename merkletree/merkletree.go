@@ -356,43 +356,78 @@ func (mt *MerkleTree) Add(e *Entry) error {
 	return nil
 }
 
-// graphViz is a helper recursive function to output the tree in GraphViz syntax.
-func (mt *MerkleTree) graphViz(w io.Writer, key *Hash, cnt *int) error {
+// walk is a helper recursive function to iterate over all tree branches
+func (mt *MerkleTree) walk(key *Hash, f func(*Node)) error {
 	n, err := mt.GetNode(key)
 	if err != nil {
 		return err
 	}
 	switch n.Type {
 	case NodeTypeEmpty:
+		f(n)
 	case NodeTypeLeaf:
-		fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
+		f(n)
 	case NodeTypeMiddle:
-		lr := [2]string{n.ChildL.String(), n.ChildR.String()}
-		for i, _ := range lr {
-			if lr[i] == "00000000" {
-				lr[i] = fmt.Sprintf("empty%v", *cnt)
-				fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
-				(*cnt)++
-			}
-		}
-		fmt.Fprintf(w, "\"%v\" -> {\"%v\" \"%v\"}\n", n.Key(), lr[0], lr[1])
-		mt.graphViz(w, n.ChildL, cnt)
-		mt.graphViz(w, n.ChildR, cnt)
+		f(n)
+		mt.walk(n.ChildL, f)
+		mt.walk(n.ChildR, f)
 	default:
 		return ErrInvalidNodeFound
 	}
 	return nil
 }
 
-// GraphViz generates a string GraphViz representation of the tree and writes
-// it to w.
-func (mt *MerkleTree) GraphViz(w io.Writer) error {
+// Walk iterates over all the branches of a MerkleTree with the given rootKey
+// if rootKey is nil, it will get the current RootKey of the current state of the MerkleTree.
+// For each node, it calls the f function given in the parameters.
+// See some examples of the Walk function usage in the merkletree_test.go
+// test functions: TestMTWalk, TestMTWalkGraphViz, TestMTWalkDumpClaims
+func (mt *MerkleTree) Walk(rootKey *Hash, f func(*Node)) error {
+	if rootKey == nil {
+		rootKey = mt.RootKey()
+	}
+	err := mt.walk(rootKey, f)
+	return err
+}
+
+// GraphViz uses Walk function to generate a string GraphViz representation of the
+// tree and writes it to w
+func (mt *MerkleTree) GraphViz(w io.Writer, rootKey *Hash) error {
 	fmt.Fprintf(w, `digraph hierarchy {
 node [fontname=Monospace,fontsize=10,shape=box]
 `)
 	cnt := 0
-	err := mt.graphViz(w, mt.RootKey(), &cnt)
-	fmt.Fprintf(w, "}")
+	err := mt.Walk(rootKey, func(n *Node) {
+		switch n.Type {
+		case NodeTypeEmpty:
+		case NodeTypeLeaf:
+			fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
+		case NodeTypeMiddle:
+			lr := [2]string{n.ChildL.String(), n.ChildR.String()}
+			for i, _ := range lr {
+				if lr[i] == "00000000" {
+					lr[i] = fmt.Sprintf("empty%v", cnt)
+					fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
+					cnt++
+				}
+			}
+			fmt.Fprintf(w, "\"%v\" -> {\"%v\" \"%v\"}\n", n.Key(), lr[0], lr[1])
+		default:
+		}
+	})
+	fmt.Fprintf(w, "}\n")
+	return err
+}
+
+// DumpClaims uses Walk function to get all the Claims of the tree and write them to w
+func (mt *MerkleTree) DumpClaims(w io.Writer, rootKey *Hash) error {
+	fmt.Fprintf(w, "[\n")
+	err := mt.Walk(rootKey, func(n *Node) {
+		if n.Type == NodeTypeLeaf {
+			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Value()))
+		}
+	})
+	fmt.Fprintf(w, "]\n")
 	return err
 }
 
