@@ -80,4 +80,29 @@ func main() {
 	checked = merkletree.VerifyProof(mt.RootKey(), mp, claimEntry2.HIndex(), claimEntry2.HValue())
 
 	fmt.Println("merkle proof of non existence checked:", checked)
+
+	// New merkle tree with some claims to get the graphviz visualization.
+	storage2, err := db.NewLevelDbStorage("./graph", false)
+	if err != nil {
+		panic(err)
+	}
+	mt2, err := merkletree.NewMerkleTree(storage2, 140)
+	if err != nil {
+		panic(err)
+	}
+	defer mt2.Storage().Close()
+
+	for i := 0; i < 10; i++ {
+		name := fmt.Sprintf("%v@iden3.io", i)
+		ethAddr := common.HexToAddress("0x28f8267fb21e8ce0cdd9888a6e532764eb8d52dd")
+		claim := core.NewClaimAssignName(name, ethAddr)
+		err = mt2.Add(claim.Entry())
+		if err != nil {
+			panic(err)
+		}
+	}
+	s := bytes.NewBufferString("")
+	mt2.GraphViz(s, nil)
+	fmt.Println("GraphViz code:")
+	fmt.Println(s)
 }
