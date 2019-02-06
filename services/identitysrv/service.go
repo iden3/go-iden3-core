@@ -45,12 +45,12 @@ type ServiceImpl struct {
 }
 
 type Identity struct {
-	Operational   common.Address
-	OperationalPk *utils.PublicKey
-	Relayer       common.Address
-	Recoverer     common.Address
-	Revokator     common.Address
-	Impl          common.Address
+	Operational   common.Address   `json:"operational"`
+	OperationalPk *utils.PublicKey `json:"operationalPk"`
+	Relayer       common.Address   `json:"relayer"`
+	Recoverer     common.Address   `json:"recoverer"`
+	Revokator     common.Address   `json:"revokator"`
+	Impl          common.Address   `json:"impl"`
 }
 
 func (i *Identity) Encode() []byte {

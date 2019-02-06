@@ -11,23 +11,23 @@ type RawIdentityTx struct {
 	KRecovery_p        string // ecdsa.PublicKey
 	KRevocation_p      string // ecdsa.PublicKey
 	KSignOperational_p string // ecdsa.PublicKey
-	IDRelayer          *common.Address
+	IdRelayer          *common.Address
 }
 
-// VinculateIDMsg is the structure that contains a request to assign an
+// VinculateIdMsg is the structure that contains a request to assign an
 // ethereum address to a name.
-type VinculateIDMsg struct {
+type VinculateIdMsg struct {
 	// This kind of message does not need the caducity
-	EthAddr   common.Address         `json:"ethAddr" binding:"required"` // temp, will be calculated directly from RawIdentityTx
+	IdAddr    common.Address         `json:"idAddr" binding:"required"` // temp, will be calculated directly from RawIdentityTx
 	Name      string                 `json:"name" binding:"required"`
 	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // hex format
-	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
+	KSignPk   *utils.PublicKey       `json:"kSignPk" binding:"required"`
 }
 
-// Bytes returns the byte array serialization of VinculateIDMsg
-func (m *VinculateIDMsg) Bytes() []byte {
+// Bytes returns the byte array serialization of VinculateIdMsg
+func (m *VinculateIdMsg) Bytes() []byte {
 	var b []byte
-	b = append(b, m.EthAddr.Bytes()...)
+	b = append(b, m.IdAddr.Bytes()...)
 	b = append(b, []byte(m.Name)...)
 	return b
 }

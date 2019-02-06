@@ -13,7 +13,7 @@ import (
 type BytesSignedMsg struct {
 	ValueHex  string                 `json:"valueHex" binding:"required"` // claim.Bytes() in a hex format
 	Signature *utils.SignatureEthMsg `json:"signatureHex" binding:"required"`
-	KSignPk   *utils.PublicKey       `json:"ksignpk" binding:"required"`
+	KSignPk   *utils.PublicKey       `json:"kSignPK" binding:"required"`
 }
 
 // ClaimBasicMsg contains a core.ClaimBasic with its signature in Hex

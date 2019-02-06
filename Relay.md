@@ -228,7 +228,7 @@ Returns:
 Returns:
 ```js
 {
-  "IDAddr": "0x7b471a1bdbd3b8ac98f3715507449f3a8e1f3b22",
+  "IdAddr": "0x7b471a1bdbd3b8ac98f3715507449f3a8e1f3b22",
   "LocalDb": {
     "Operational": "0xc7d89fe96acdb257b434bf580b8e6eb677d445a9",
     "OperationalPk": "0x03c2e48632c87932663beff7a1f6deb692cc61b041262ae8f310203d0f5ff57833",

@@ -59,7 +59,7 @@ func VerifyProofOfClaim(relayAddr common.Address, pc *core.ProofOfClaim) (bool, 
 		}
 
 		// Create the set root key claim for the next level
-		claim := core.NewClaimSetRootKey(proof.Aux.EthAddr, *rootKey)
+		claim := core.NewClaimSetRootKey(proof.Aux.IdAddr, *rootKey)
 		claim.Version = proof.Aux.Version
 		claim.Era = proof.Aux.Era
 		leaf = claim.Entry()
@@ -67,8 +67,8 @@ func VerifyProofOfClaim(relayAddr common.Address, pc *core.ProofOfClaim) (bool, 
 	return true, nil
 }
 
-// CheckKSignInIDdb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
-func CheckKSignInIDdb(mt *merkletree.MerkleTree, kSignPk *ecdsa.PublicKey) bool {
+// CheckKSignInIddb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
+func CheckKSignInIddb(mt *merkletree.MerkleTree, kSignPk *ecdsa.PublicKey) bool {
 	claimAuthorizeKSign := core.NewClaimAuthorizeKSignSecp256k1(kSignPk)
 	entry := claimAuthorizeKSign.Entry()
 	node := merkletree.NewNodeLeaf(entry)
