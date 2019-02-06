@@ -98,6 +98,8 @@ var (
 	// ErrEntryIndexAlreadyExists is used when the entry index already
 	// exists in the tree.
 	ErrEntryIndexAlreadyExists = errors.New("the entry index already exists in the tree")
+	// ErrNotWritable is used when the MerkleTree is not writable and a write function is called
+	ErrNotWritable = errors.New("Merkle Tree not writable")
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
@@ -154,11 +156,13 @@ type MerkleTree struct {
 	rootKey *Hash
 	// maxLevels is the maximum number of levels of the Merkle Tree.
 	maxLevels int
+	// writable indicates if the Merkle Tree allows to write or only to read
+	writable bool
 }
 
 // NewMerkleTree generates a new Merkle Tree
 func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
-	mt := MerkleTree{storage: storage, maxLevels: maxLevels}
+	mt := MerkleTree{storage: storage, maxLevels: maxLevels, writable: true}
 	_, gettedRoot, err := mt.dbGet(rootNodeValue)
 	if err != nil {
 		tx, err := mt.storage.NewTx()
@@ -187,7 +191,7 @@ func (mt *MerkleTree) Snapshot(rootKey *Hash) (*MerkleTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &MerkleTree{storage: mt.storage, maxLevels: mt.maxLevels, rootKey: rootKey}, nil
+	return &MerkleTree{storage: mt.storage, maxLevels: mt.maxLevels, rootKey: rootKey, writable: false}, nil
 }
 
 // Storage returns the MT storage
@@ -258,7 +262,7 @@ func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
 		} else {
 			newNodeMiddle = NewNodeMiddle(nextKey, &HashZero) // go left
 		}
-		return mt.AddNode(tx, newNodeMiddle)
+		return mt.addNode(tx, newNodeMiddle)
 	} else {
 		if pathNewLeaf[lvl] {
 			newNodeMiddle = NewNodeMiddle(oldLeaf.Key(), newLeaf.Key())
@@ -266,11 +270,11 @@ func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
 			newNodeMiddle = NewNodeMiddle(newLeaf.Key(), oldLeaf.Key())
 		}
 		// We can add newLeaf now.  We don't need to add oldLeaf because it's already in the tree.
-		_, err := mt.AddNode(tx, newLeaf)
+		_, err := mt.addNode(tx, newLeaf)
 		if err != nil {
 			return nil, err
 		}
-		return mt.AddNode(tx, newNodeMiddle)
+		return mt.addNode(tx, newNodeMiddle)
 	}
 }
 
@@ -289,7 +293,7 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 	switch n.Type {
 	case NodeTypeEmpty:
 		// We can add newLeaf now
-		return mt.AddNode(tx, newLeaf)
+		return mt.addNode(tx, newLeaf)
 	case NodeTypeLeaf:
 		// TODO: delete old node n???  Make this optional???
 		hIndex := n.Entry.HIndex()
@@ -315,7 +319,7 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 		}
 		// TODO: delete old node n???  Make this optional???
 		// Update the node to reflect the modified child
-		return mt.AddNode(tx, newNodeMiddle)
+		return mt.addNode(tx, newNodeMiddle)
 	default:
 		return nil, ErrInvalidNodeFound
 	}
@@ -323,8 +327,11 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 
 // Add adds the Entry to the MerkleTree
 func (mt *MerkleTree) Add(e *Entry) error {
-	// First of all, verfy that the ElemBytes are valid and fit inside the
-	// mimc7 field.
+	// verify that the MerkleTree is writable
+	if !mt.writable {
+		return ErrNotWritable
+	}
+	// verfy that the ElemBytes are valid and fit inside the mimc7 field.
 	_, err := ElemsBytesToRElems(e.Data[:]...)
 	if err != nil {
 		return err
@@ -643,9 +650,13 @@ func (mt *MerkleTree) GetNode(key *Hash) (*Node, error) {
 	return NewNodeFromBytes(nBytes)
 }
 
-// AddNode adds a node into the MT.  Empty nodes are not stored in the tree;
+// addNode adds a node into the MT.  Empty nodes are not stored in the tree;
 // they are all the same and assumed to always exist.
-func (mt *MerkleTree) AddNode(tx db.Tx, n *Node) (*Hash, error) {
+func (mt *MerkleTree) addNode(tx db.Tx, n *Node) (*Hash, error) {
+	// verify that the MerkleTree is writable
+	if !mt.writable {
+		return nil, ErrNotWritable
+	}
 	if n.Type == NodeTypeEmpty {
 		return n.Key(), nil
 	}
