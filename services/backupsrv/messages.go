@@ -6,13 +6,13 @@ import (
 )
 
 type BackupDataMsg struct {
-	IdAddrHex       string                       `json:"idaddrhex" binding:"required"`
+	IdAddrHex       string                       `json:"idAddrHex" binding:"required"`
 	Data            string                       `json:"data" binding:"required"`
-	DataSignature   string                       `json:"datasignature" binding:"required"`
+	DataSignature   string                       `json:"dataSignature" binding:"required"`
 	Type            string                       `json:"type" binding:"required"`
 	KSignPk         *utils.PublicKey             `json:"ksignpk" binding:"required"`
-	ProofOfKSignHex claimsrv.ProofOfClaimUserHex `json:"proofofksignhex" binding:"required"`
-	RelayAddr       string                       `json:"relayaddr" binding:"required"`
+	ProofOfKSignHex claimsrv.ProofOfClaimUserHex `json:"proofKSignHex" binding:"required"`
+	RelayAddr       string                       `json:"relayAddr" binding:"required"`
 	Version         uint64                       `json:"version" binding:"required"`
 	Nonce           uint                         `json:"nonce" binding:"required"`
 }

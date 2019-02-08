@@ -20,7 +20,7 @@ type ProofOfClaimPartial struct {
 type SetRootAux struct {
 	Version uint32         `json:"version" binding:"required"`
 	Era     uint32         `json:"era" binding:"required"`
-	EthAddr common.Address `json:"ethAddr" binding:"required"`
+	IdAddr  common.Address `json:"idAddr" binding:"required"`
 }
 
 // ProofOfClaim is a complete proof of a claim that includes all the proofs of

@@ -6,12 +6,12 @@ import (
 	"github.com/iden3/go-iden3/services/namesrv"
 )
 
-func handleVinculateID(c *gin.Context) {
-	var vinculateIDMsg namesrv.VinculateIDMsg
-	c.BindJSON(&vinculateIDMsg)
-	claimAssignName, err := nameservice.VinculateID(vinculateIDMsg)
+func handleVinculateId(c *gin.Context) {
+	var vinculateIdMsg namesrv.VinculateIdMsg
+	c.BindJSON(&vinculateIdMsg)
+	claimAssignName, err := nameservice.VinculateId(vinculateIdMsg)
 	if err != nil {
-		fail(c, "error name.VinculateID", err)
+		fail(c, "error name.VinculateId", err)
 	}
 
 	// return claim with proofs
@@ -21,10 +21,10 @@ func handleVinculateID(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"claimAssignName":        common3.HexEncode(claimAssignName.Entry().Bytes()),
-		"name":                   vinculateIDMsg.Name,
-		"ethAddr":                claimAssignName.EthAddr,
-		"proofOfClaimAssignName": proofOfClaimAssignName,
+		"claimAssignName":      common3.HexEncode(claimAssignName.Entry().Bytes()),
+		"name":                 vinculateIdMsg.Name,
+		"idAddr":               claimAssignName.IdAddr,
+		"proofClaimAssignName": proofOfClaimAssignName,
 	})
 }
 func handleClaimAssignNameResolv(c *gin.Context) {
@@ -43,7 +43,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{
 		"claim":                  common3.HexEncode(claimAssignName.Entry().Bytes()),
-		"ethAddr":                claimAssignName.EthAddr,
+		"idAddr":                 claimAssignName.IdAddr,
 		"proofOfClaimAssignName": proofOfClaimAssignName,
 	})
 }

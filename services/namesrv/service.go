@@ -15,7 +15,7 @@ import (
 )
 
 type Service interface {
-	VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAssignName, error)
+	VinculateId(vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error)
 	ResolvClaimAssignName(nameid string) (*core.ClaimAssignName, error)
 }
 
@@ -30,22 +30,24 @@ func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer sign
 	return &ServiceImpl{claimsrv, identitysrv, signer, domain}
 }
 
-// VinculateID creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
-func (ns *ServiceImpl) VinculateID(vinculateIDMsg VinculateIDMsg) (*core.ClaimAssignName, error) {
-	// verify vinculateIDMsg.Msg signature with the Operational Key of the identity vinculateIDMsg.EthAddr
+// VinculateId creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
+func (ns *ServiceImpl) VinculateId(vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error) {
+	// verify vinculateIdMsg.Msg signature with the Operational Key of the identity vinculateIdMsg.IdAddr
 	// get the operational key
-	identity, err := ns.identitysrv.Get(vinculateIDMsg.EthAddr)
+	fmt.Println(vinculateIdMsg.IdAddr)
+	identity, err := ns.identitysrv.Get(vinculateIdMsg.IdAddr)
 	if err != nil {
+		fmt.Println("aaa")
 		return &core.ClaimAssignName{}, err
 	}
 	opkey := identity.Operational
 
-	if !utils.VerifySigEthMsg(opkey, vinculateIDMsg.Signature, vinculateIDMsg.Bytes()) {
+	if !utils.VerifySigEthMsg(opkey, vinculateIdMsg.Signature, vinculateIdMsg.Bytes()) {
 		return &core.ClaimAssignName{}, errors.New("signature can not be verified")
 	}
 
 	// add ClaimAssignName to merkle tree
-	assignNameClaim := core.NewClaimAssignName(vinculateIDMsg.Name, vinculateIDMsg.EthAddr)
+	assignNameClaim := core.NewClaimAssignName(vinculateIdMsg.Name, vinculateIdMsg.IdAddr)
 	err = ns.claimsrv.AddClaimAssignName(*assignNameClaim)
 	if err != nil {
 		return &core.ClaimAssignName{}, err

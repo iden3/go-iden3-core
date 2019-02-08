@@ -12,9 +12,9 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 )
 
-// handleCommitNewIDRoot handles a request to set the root key of a user tree
+// handleCommitNewIdRoot handles a request to set the root key of a user tree
 // though a set root claim.
-func handleCommitNewIDRoot(c *gin.Context) {
+func handleCommitNewIdRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
 
@@ -37,7 +37,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 	copy(root[:], rootBytes[:32])
 
 	// add the root through claimservice
-	setRootClaim, err := claimservice.CommitNewIDRoot(idaddr, &setRootMsg.KSignPk.PublicKey,
+	setRootClaim, err := claimservice.CommitNewIdRoot(idaddr, &setRootMsg.KSignPk.PublicKey,
 		root, setRootMsg.Timestamp, setRootMsg.Signature)
 	if err != nil {
 		fail(c, "error on AddAuthorizeKSignClaim", err)
@@ -51,7 +51,7 @@ func handleCommitNewIDRoot(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfRelayClaim,
+		"proofClaim": proofOfRelayClaim,
 	})
 }
 
@@ -81,9 +81,9 @@ func handlePostClaim(c *gin.Context) {
 		Signature:  bytesSignedMsg.Signature,
 		KSignPk:    bytesSignedMsg.KSignPk,
 	}
-	err = claimservice.AddUserIDClaim(idaddr, claimValueMsg)
+	err = claimservice.AddUserIdClaim(idaddr, claimValueMsg)
 	if err != nil {
-		fail(c, "error on AddUserIDClaim", err)
+		fail(c, "error on AddUserIdClaim", err)
 		return
 	}
 	// return claim with proofs
@@ -94,24 +94,24 @@ func handlePostClaim(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim,
+		"proofClaim": proofOfClaim,
 	})
 	return
 }
 
-// handleGetIDRoot handles a request to query the root key of a user tree.
-func handleGetIDRoot(c *gin.Context) {
+// handleGetIdRoot handles a request to query the root key of a user tree.
+func handleGetIdRoot(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
 	idaddr := common.HexToAddress(idaddrhex)
-	idRoot, idRootProof, err := claimservice.GetIDRoot(idaddr)
+	idRoot, idRootProof, err := claimservice.GetIdRoot(idaddr)
 	if err != nil {
-		fail(c, "error on GetIDRoot", err)
+		fail(c, "error on GetIdRoot", err)
 		return
 	}
 	c.JSON(200, gin.H{
 		"root":        claimservice.MT().RootKey().Hex(), // relay root
 		"idRoot":      idRoot.Hex(),                      // user id root
-		"idRootProof": common3.HexEncode(idRootProof),    // user id root proof in the relay merkletree
+		"proofIdRoot": common3.HexEncode(idRootProof),    // user id root proof in the relay merkletree
 	})
 	return
 }
@@ -135,7 +135,7 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim,
+		"proofClaim": proofOfClaim,
 	})
 	return
 }
@@ -157,7 +157,7 @@ func handleGetClaimProofByHi(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofOfClaim": proofOfClaim,
+		"proofClaim": proofOfClaim,
 	})
 	return
 }

@@ -122,7 +122,7 @@ func cmdIdDeploy(c *cli.Context) error {
 }
 
 type idInfo struct {
-	IDAddr  common.Address
+	IdAddr  common.Address
 	LocalDb *identitysrv.Identity
 	Onchain *identitysrv.Info
 }
@@ -141,14 +141,14 @@ func cmdIdInfo(c *cli.Context) error {
 
 	var idi idInfo
 
-	idi.IDAddr = common.HexToAddress(c.Args()[0])
-	info, err := idservice.Info(idi.IDAddr)
+	idi.IdAddr = common.HexToAddress(c.Args()[0])
+	info, err := idservice.Info(idi.IdAddr)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		idi.Onchain = info
 	}
-	id, err := idservice.Get(idi.IDAddr)
+	id, err := idservice.Get(idi.IdAddr)
 	if err != nil {
 		fmt.Println(err)
 	} else {

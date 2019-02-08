@@ -27,13 +27,13 @@ type handlePostIdReq struct {
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
 type handlePostIdRes struct {
-	IDAddr       common.Address     `json:"idaddr"`
-	ProofOfClaim *core.ProofOfClaim `json:"proofOfClaim"`
+	IdAddr       common.Address     `json:"idAddr"`
+	ProofOfClaim *core.ProofOfClaim `json:"proofClaim"`
 }
 
 // handleDeployIdRes is the response of a deploy of the user contract in the blockchain.
 type handleDeployIdRes struct {
-	IDAddr common.Address `json:"idaddr"`
+	IdAddr common.Address `json:"idAddr"`
 	Tx     string         `json:"tx"`
 }
 
@@ -84,7 +84,7 @@ func handleCreateId(c *gin.Context) {
 		fail(c, "failed adding identity ", err)
 		return
 	} else {
-		c.JSON(http.StatusOK, handlePostIdRes{IDAddr: addr, ProofOfClaim: proofOfClaim})
+		c.JSON(http.StatusOK, handlePostIdRes{IdAddr: addr, ProofOfClaim: proofOfClaim})
 	}
 }
 
@@ -118,7 +118,7 @@ func handleDeployId(c *gin.Context) {
 }
 
 type handleGetIdRes struct {
-	IDAddr  common.Address
+	IdAddr  common.Address
 	LocalDb *identitysrv.Identity
 	Onchain *identitysrv.Info
 }
@@ -126,12 +126,12 @@ type handleGetIdRes struct {
 func handleGetId(c *gin.Context) {
 	var idi handleGetIdRes
 
-	idi.IDAddr = common.HexToAddress(c.Param("idaddr"))
+	idi.IdAddr = common.HexToAddress(c.Param("idaddr"))
 
-	if info, err := idservice.Info(idi.IDAddr); err == nil {
+	if info, err := idservice.Info(idi.IdAddr); err == nil {
 		idi.Onchain = info
 	}
-	if id, err := idservice.Get(idi.IDAddr); err == nil {
+	if id, err := idservice.Get(idi.IdAddr); err == nil {
 		idi.LocalDb = id
 	}
 	c.JSON(http.StatusOK, idi)

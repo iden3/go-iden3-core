@@ -142,17 +142,17 @@ type ClaimAssignName struct {
 	Version uint32
 	// NameHash is the hash of the name.
 	NameHash [248 / 8]byte
-	// EthAddr is the assigned Ethereum Address.
-	EthAddr common.Address
+	// IdAddr is the assigned Ethereum Address.
+	IdAddr common.Address
 }
 
-// NewClaimAssignName returns a ClaimAssignName with the name and Eth address.
-func NewClaimAssignName(name string, ethAddr common.Address) *ClaimAssignName {
+// NewClaimAssignName returns a ClaimAssignName with the name and IdAddr
+func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
 	hash := utils.HashBytes([]byte(name))
 	copy(c.NameHash[:], hash[len(hash)-248/8:])
-	c.EthAddr = ethAddr
+	c.IdAddr = idAddr
 	return c
 }
 
@@ -161,7 +161,7 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	_, c.Version = getClaimTypeVersion(e)
 	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
-	copyFromElemBytes(c.EthAddr[:], 0, &e.Data[1])
+	copyFromElemBytes(c.IdAddr[:], 0, &e.Data[1])
 	return c
 }
 
@@ -170,7 +170,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.EthAddr[:])
+	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:])
 	return e
 }
 
@@ -283,19 +283,19 @@ type ClaimSetRootKey struct {
 	Version uint32
 	// Era is used for labeling epochs.
 	Era uint32
-	// EthAddr is the Ethereum Address related to the root key.
-	EthAddr common.Address
+	// IdAddr is the Ethereum Address related to the root key.
+	IdAddr common.Address
 	// RootKey is the root of the mekrlee tree.
 	RootKey merkletree.Hash
 }
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(ethAddr common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(idAddr common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
-		EthAddr: ethAddr,
+		IdAddr:  idAddr,
 		RootKey: rootKey,
 	}
 }
@@ -307,7 +307,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	var era [32 / 8]byte
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
 	c.Era = binary.BigEndian.Uint32(era[:])
-	copyFromElemBytes(c.EthAddr[:], 0, &e.Data[2])
+	copyFromElemBytes(c.IdAddr[:], 0, &e.Data[2])
 	c.RootKey = merkletree.Hash(e.Data[1])
 	return c
 }
@@ -319,7 +319,7 @@ func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	var era [32 / 8]byte
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
-	copyToElemBytes(&e.Data[2], 0, c.EthAddr[:])
+	copyToElemBytes(&e.Data[2], 0, c.IdAddr[:])
 	e.Data[1] = merkletree.ElemBytes(c.RootKey)
 	return e
 }

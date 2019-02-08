@@ -36,22 +36,22 @@ func serveServiceApi() *http.Server {
 	api := gin.Default()
 	api.Use(cors.Default())
 
-	serviceapi := api.Group("/api/v0.1")
+	serviceapi := api.Group("/api/unstable")
 	serviceapi.GET("/root", handleGetRoot)
 
-	serviceapi.POST("/root/:idaddr", handleCommitNewIDRoot)
-	serviceapi.POST("/claim/:idaddr", handlePostClaim)
-	serviceapi.GET("/claim/:idaddr/root", handleGetIDRoot)
-	serviceapi.GET("/claim_proof/idaddr/:idaddr/hi/:hi", handleGetClaimProofUserByHi) // Get user claim proof
-	serviceapi.GET("/claim_proof/hi/:hi", handleGetClaimProofByHi)                    // Get relay claim proof
+	serviceapi.GET("/claims/:hi/proof", handleGetClaimProofByHi) // Get relay claim proof
 
-	serviceapi.POST("/id", handleCreateId)
-	serviceapi.GET("/id/:idaddr", handleGetId)
-	serviceapi.POST("/id/:idaddr/deploy", handleDeployId)
-	serviceapi.POST("/id/:idaddr/forward", handleForwardId)
+	serviceapi.POST("/ids", handleCreateId)
+	serviceapi.GET("/ids/:idaddr", handleGetId)
+	serviceapi.POST("/ids/:idaddr/deploy", handleDeployId)
+	serviceapi.POST("/ids/:idaddr/forward", handleForwardId)
+	serviceapi.GET("/ids/:idaddr/root", handleGetIdRoot)
+	serviceapi.POST("/ids/:idaddr/root", handleCommitNewIdRoot)
+	serviceapi.POST("/ids/:idaddr/claims", handlePostClaim)
+	serviceapi.GET("/ids/:idaddr/claims/:hi/proof", handleGetClaimProofUserByHi) // Get user claim proof
 
-	serviceapi.POST("/vinculateid", handleVinculateID)
-	serviceapi.GET("/identities/resolv/:nameid", handleClaimAssignNameResolv)
+	serviceapi.POST("/names", handleVinculateId)
+	serviceapi.GET("/names/:nameid", handleClaimAssignNameResolv)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {
@@ -66,7 +66,7 @@ func serveServiceApi() *http.Server {
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	api := gin.Default()
 	api.Use(cors.Default())
-	adminapi := api.Group("/api/v0.1")
+	adminapi := api.Group("/api/unstable")
 
 	adminapi.POST("/stop", func(c *gin.Context) {
 		// yeah, use curl -X POST http://<adminserver>/stop

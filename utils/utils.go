@@ -86,8 +86,8 @@ func EthBytesToUint64(b []byte) uint64 {
 // NewMerkleTreeUser creates a new user merkle tree by using an storage with
 // the user addres prefix.
 func NewMerkleTreeUser(ethAddr common.Address, storage db.Storage, levels int) (*merkletree.MerkleTree, error) {
-	stoUserID := storage.WithPrefix(ethAddr.Bytes())
-	if userMT, err := merkletree.NewMerkleTree(stoUserID, levels); err != nil {
+	stoUserId := storage.WithPrefix(ethAddr.Bytes())
+	if userMT, err := merkletree.NewMerkleTree(stoUserId, levels); err != nil {
 		return nil, err
 	} else {
 		return userMT, nil
