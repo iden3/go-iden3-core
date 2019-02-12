@@ -15,17 +15,36 @@ import (
 
 var backupservice backupsrv.Service
 
+func fail(c *gin.Context, msg string, err error) {
+	if err != nil {
+		log.WithError(err).Error(msg)
+	} else {
+		log.Error(msg)
+	}
+	c.JSON(400, gin.H{
+		"error": msg,
+	})
+	return
+}
+
 func serveServiceApi() *http.Server {
 	api := gin.Default()
 	api.Use(cors.Default())
-	serviceapi := api.Group("/api/v0.1")
+	serviceapi := api.Group("/api/unstable")
 	serviceapi.GET("/", handleInfo)
+
+	// BACKUP SERVICE
+	serviceapi.POST("/register", handleRegister)
+	serviceapi.POST("/backup/upload", handleBackupUpload)
+	serviceapi.POST("/backup/download", handleBackupDownload)
+
+	// SYNCHRONIZATION SERVICE
 	//serviceapi.POST("/:idaddr/save", handleSave) // TODO: Redo
-	serviceapi.POST("/:idaddr/recover", handleRecover)
+	serviceapi.POST("/folder/:idaddr/recover", handleRecover)
 	//TODO get with specific version
-	serviceapi.POST("/:idaddr/recover/version/:version", handleRecoverSinceVersion)
-	serviceapi.POST("/:idaddr/recover/type/:type", handleRecoverByType)
-	serviceapi.POST("/:idaddr/recover/version/:version/type/:type", handleRecoverSinceVersionByType)
+	serviceapi.POST("/folder/:idaddr/recover/version/:version", handleRecoverSinceVersion)
+	serviceapi.POST("/folder/:idaddr/recover/type/:type", handleRecoverByType)
+	serviceapi.POST("/folder/:idaddr/recover/version/:version/type/:type", handleRecoverSinceVersionByType)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {

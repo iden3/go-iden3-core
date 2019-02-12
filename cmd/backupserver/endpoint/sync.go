@@ -6,20 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	//"github.com/iden3/go-iden3/services/backupsrv"
-	log "github.com/sirupsen/logrus"
 )
-
-func fail(c *gin.Context, msg string, err error) {
-	if err != nil {
-		log.WithError(err).Error(msg)
-	} else {
-		log.Error(msg)
-	}
-	c.JSON(400, gin.H{
-		"error": msg,
-	})
-	return
-}
 
 func handleInfo(c *gin.Context) {
 	c.JSON(200, gin.H{
