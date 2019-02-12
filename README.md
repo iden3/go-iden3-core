@@ -13,6 +13,7 @@ $ go get github.com/iden3/go-iden3
 ## Usage
 - Relay Documentation: https://github.com/iden3/go-iden3/blob/master/Relay.md
 - MerkleTree Documentation: https://github.com/iden3/go-iden3/blob/master/merkletreeDoc/merkletree.md
+- Backup Server Documentation: https://github.com/iden3/go-iden3/blob/master/cmd/backupserver/README.md
 
 ## Documentation
 

@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-
 	app := cli.NewApp()
 	app.Name = "backupserveri3"
 	app.Version = "0.1.0-alpha"

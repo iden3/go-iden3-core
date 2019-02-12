@@ -1,16 +1,24 @@
 package backupsrv
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/iden3/go-iden3/services/mongosrv"
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2/bson"
 )
 
 type Service interface {
+	// BACKUP SERVICE
+	Register(user User) error
+	BackupUpload(user User, backupPacket BackupPacket) error
+	BackupDownload(user User) (BackupPacket, error)
+
+	// SYNCHRONIZATION SERVICE
 	GetPoWDifficulty() int
 	GetLastVersion(idaddr common.Address) (uint64, error)
 	//Save(idaddr common.Address, saveBackupMsg BackupDataMsg) (uint64, error)
@@ -27,6 +35,80 @@ type ServiceImpl struct {
 
 func New(mongoservice mongosrv.Service, powDiff int) *ServiceImpl {
 	return &ServiceImpl{mongoservice, powDiff}
+}
+
+// Register adds a new user into the db if it already not exists
+func (bs *ServiceImpl) Register(user User) error {
+
+	existingUser := User{}
+	err := bs.mongodb.GetCollections()["users"].Find(bson.M{"username": user.Username}).One(&existingUser)
+	if err == nil {
+		// already existing user
+		return errors.New("already existing user")
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	hashStr := string(hash)
+	user.Password = hashStr
+
+	err = bs.mongodb.GetCollections()["users"].Insert(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (bs *ServiceImpl) BackupUpload(user User, backupPacket BackupPacket) error {
+	dbUser := User{}
+	err := bs.mongodb.GetCollections()["users"].Find(bson.M{"username": user.Username}).One(&dbUser)
+	if err != nil {
+		return errors.New("user not exists")
+	}
+
+	// check password
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+	if err != nil {
+		return errors.New("error with the password")
+	}
+
+	fmt.Println(backupPacket)
+	existingBackupPacket := BackupPacket{}
+	err = bs.mongodb.GetCollections()["backup"].Find(bson.M{"username": user.Username}).One(&existingBackupPacket)
+	if err != nil {
+		// first backup of the user
+		err = bs.mongodb.GetCollections()["backup"].Insert(backupPacket)
+	} else {
+		// not first backup of the user
+		err = bs.mongodb.GetCollections()["backup"].Update(bson.M{"username": user.Username}, backupPacket)
+	}
+
+	return err
+}
+
+func (bs *ServiceImpl) BackupDownload(user User) (BackupPacket, error) {
+	dbUser := User{}
+	err := bs.mongodb.GetCollections()["users"].Find(bson.M{"username": user.Username}).One(&dbUser)
+	if err != nil {
+		return BackupPacket{}, errors.New("user not exists")
+	}
+
+	// check password
+	err = bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+	if err != nil {
+		return BackupPacket{}, errors.New("error with the password")
+	}
+
+	backupPacket := BackupPacket{}
+	err = bs.mongodb.GetCollections()["backup"].Find(bson.M{"username": user.Username}).One(&backupPacket)
+	if err != nil {
+		return BackupPacket{}, err
+	}
+
+	return backupPacket, nil
 }
 
 // GetPoWDifficulty returns the configured Proof-of-Work difficulty, setted in the config file of the backupserver

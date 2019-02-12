@@ -25,7 +25,7 @@ func LoadStorage() db.Storage {
 	return storage
 }
 func LoadMongoService() mongosrv.Service {
-	collectionsArray := []string{"data"}
+	collectionsArray := []string{"users", "backup", "data"}
 	mongoservice, err := mongosrv.New(C.Mongodb.Url, C.Mongodb.Database, collectionsArray)
 	assert("Cannot open mongodb storage", err)
 	log.WithField("path", C.Mongodb.Url).Info("Mongodb storage opened")

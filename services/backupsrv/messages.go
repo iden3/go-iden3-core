@@ -5,6 +5,16 @@ import (
 	"github.com/iden3/go-iden3/utils"
 )
 
+type User struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type BackupPacket struct {
+	Username string `json:"username" binding:"required"`
+	Backup   string `json:"backup" binding:"required"`
+}
+
 type BackupDataMsg struct {
 	IdAddrHex       string                       `json:"idAddrHex" binding:"required"`
 	Data            string                       `json:"data" binding:"required"`
