@@ -69,9 +69,9 @@ func handleAddClaimBasic(c *gin.Context) {
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], m.IndexData[:400/8])
 	copy(dataSlot[:], m.Data[:496/8])
-	proofOfClaim, err := adminservice.AddClaimBasic(indexSlot, dataSlot)
+	proofClaim, err := adminservice.AddClaimBasic(indexSlot, dataSlot)
 	if err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}
-	c.JSON(http.StatusOK, proofOfClaim)
+	c.JSON(http.StatusOK, proofClaim)
 }

@@ -67,14 +67,16 @@ func EthHash(b []byte) Hash {
 
 func VerifySigEthMsg(addr common.Address, sig *SignatureEthMsg, msg []byte) bool {
 	hash := EthHash(msg)
-	sig[64] -= 27
-	return VerifySig(addr, (*Signature)(sig), hash[:])
+	var _sig SignatureEthMsg
+	copy(_sig[:], sig[:])
+	_sig[64] -= 27
+	return VerifySig(addr, (*Signature)(&_sig), hash[:])
 }
 
 // VerifySigEthMsgDate verifies the signature of a byte array with a date
 // appended given an ethereum address.
-func VerifySigEthMsgDate(addr common.Address, sig *SignatureEthMsg, msg []byte, date uint64) bool {
-	dateBytes := Uint64ToEthBytes(date)
+func VerifySigEthMsgDate(addr common.Address, sig *SignatureEthMsg, msg []byte, date int64) bool {
+	dateBytes := Uint64ToEthBytes(uint64(date))
 	return VerifySigEthMsg(addr, sig, append(msg[:], dateBytes...))
 }
 

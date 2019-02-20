@@ -27,8 +27,8 @@ type handlePostIdReq struct {
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
 type handlePostIdRes struct {
-	IdAddr       common.Address     `json:"idAddr"`
-	ProofOfClaim *core.ProofOfClaim `json:"proofClaim"`
+	IdAddr     common.Address   `json:"idAddr"`
+	ProofClaim *core.ProofClaim `json:"proofClaim"`
 }
 
 // handleDeployIdRes is the response of a deploy of the user contract in the blockchain.
@@ -80,11 +80,11 @@ func handleCreateId(c *gin.Context) {
 		return
 	}
 
-	if proofOfClaim, err := idservice.Add(id); err != nil {
+	if proofClaim, err := idservice.Add(id); err != nil {
 		fail(c, "failed adding identity ", err)
 		return
 	} else {
-		c.JSON(http.StatusOK, handlePostIdRes{IdAddr: addr, ProofOfClaim: proofOfClaim})
+		c.JSON(http.StatusOK, handlePostIdRes{IdAddr: addr, ProofClaim: proofClaim})
 	}
 }
 

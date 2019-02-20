@@ -18,7 +18,7 @@ type Service interface {
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
-	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofOfClaim, error)
+	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -107,7 +107,7 @@ func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
 
 }
 
-func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofOfClaim, error) {
+func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error) {
 	// TODO check if indexSlot and dataSlot fit inside R element
 	// var indexSlot [400 / 8]byte
 	// var dataSlot [496 / 8]byte
@@ -123,10 +123,10 @@ func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]
 	// update Relay Root in Smart Contract
 	as.rootsrv.SetRoot(*as.mt.RootKey())
 
-	proofOfClaim, err := as.claimsrv.GetClaimProofByHi(claim.Entry().HIndex())
+	proofClaim, err := as.claimsrv.GetClaimProofByHi(claim.Entry().HIndex())
 	if err != nil {
 		fmt.Println("err", err.Error())
 		return nil, err
 	}
-	return proofOfClaim, nil
+	return proofClaim, nil
 }

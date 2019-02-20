@@ -136,25 +136,25 @@ func (bs *ServiceImpl) GetLastVersion(idaddr common.Address) (uint64, error) {
 //	}
 //
 //	// check ksignClaim proof (in user identity tree and in the relay tree)
-//	proofOfKSign, err := m.ProofOfKSignHex.Unhex()
+//	proofOfKSign, err := m.ProofKSignHex.Unhex()
 //	if err != nil {
 //		return 0, err
 //	}
 //	kSignComp := crypto.CompressPubkey(m.KSignPk)
 //	relayAddr := common.HexToAddress(m.RelayAddr)
-//	verified := claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140)
+//	verified := claimsrv.CheckProofClaimUser(relayAddr, proofOfKSign, 140)
 //	if !verified {
-//		return 0, errors.New("ProofOfKSign can not be verified")
+//		return 0, errors.New("ProofKSign can not be verified")
 //	}
 //
-//	// check saveBackupMsg.KSign match with authorizedksign from the ProofOfKSign, Leaf[64:84] is where is placed the KeyToAuthorize (KSign authorized) in the Claim data
+//	// check saveBackupMsg.KSign match with authorizedksign from the ProofKSign, Leaf[64:84] is where is placed the KeyToAuthorize (KSign authorized) in the Claim data
 //	if !bytes.Equal(kSignComp, proofOfKSign.ClaimProof.Leaf[64:84]) {
-//		return 0, errors.New("KSign not equal to the ProofOfKSign.ClaimProof.Leaf[KeyToAuthorize]")
+//		return 0, errors.New("KSign not equal to the ProofKSign.ClaimProof.Leaf[KeyToAuthorize]")
 //	}
 //
 //	// check idaddr match with setRootClaim from the proofOfKSign, Leaf[64:84] is where is placed the idaddr in the SetRootClaim
 //	if !bytes.Equal(idaddr.Bytes(), proofOfKSign.SetRootClaimProof.Leaf[64:84]) {
-//		return 0, errors.New("idaddr don't match with the idaddr from the ProofOfKSign.SetRootClaimProof.Leaf[EthAddr]")
+//		return 0, errors.New("idaddr don't match with the idaddr from the ProofKSign.SetRootClaimProof.Leaf[EthAddr]")
 //	}
 //
 //	// verify data signature
@@ -188,7 +188,7 @@ func (bs *ServiceImpl) GetLastVersion(idaddr common.Address) (uint64, error) {
 //		DataSignature:   "",
 //		Type:            "",
 //		KSign:           "currentversion",
-//		ProofOfKSignHex: claimsrv.ProofOfClaimUserHex{},
+//		ProofKSignHex: claimsrv.ProofClaimUserHex{},
 //		RelayAddr:       "",
 //		Version:         m.Version,
 //		Nonce:           0,

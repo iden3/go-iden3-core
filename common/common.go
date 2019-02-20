@@ -64,7 +64,7 @@ func BytesToUint32(b []byte) uint32 {
 	return binary.LittleEndian.Uint32(b)
 }
 
-// Unmarshal
+// UnmarshalJSONHexDecodeInto decodes the JSON Hex string into bs
 func UnmarshalJSONHexDecodeInto(dst []byte, bs []byte) error {
 	hexStr := ""
 	err := json.Unmarshal(bs, &hexStr)
@@ -72,4 +72,14 @@ func UnmarshalJSONHexDecodeInto(dst []byte, bs []byte) error {
 		return err
 	}
 	return HexDecodeInto(dst[:], []byte(hexStr))
+}
+
+// UnmarshalJSONHexDecode decodes the JSON Hex string and returns the []byte
+func UnmarshalJSONHexDecode(bs []byte) ([]byte, error) {
+	hexStr := ""
+	err := json.Unmarshal(bs, &hexStr)
+	if err != nil {
+		return nil, err
+	}
+	return HexDecode(hexStr)
 }

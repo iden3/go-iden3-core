@@ -57,6 +57,16 @@ func (d *Data) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(dataBytes[:]))
 }
 
+func (d *Data) UnmarshalJSON(bs []byte) error {
+	var dataBytes [ElemBytesLen * DataLen]byte
+	err := common3.UnmarshalJSONHexDecodeInto(dataBytes[:], bs)
+	if err != nil {
+		return err
+	}
+	*d = *BytesToData(dataBytes)
+	return nil
+}
+
 func BytesToData(b [ElemBytesLen * DataLen]byte) *Data {
 	d := &Data{}
 	for i := 0; i < DataLen; i++ {
@@ -526,6 +536,19 @@ func (p *Proof) Bytes() []byte {
 
 func (p *Proof) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(p.Bytes()))
+}
+
+func (p *Proof) UnmarshalJSON(bs []byte) error {
+	proofBytes, err := common3.UnmarshalJSONHexDecode(bs)
+	if err != nil {
+		return err
+	}
+	proof, err := NewProofFromBytes(proofBytes)
+	if err != nil {
+		return err
+	}
+	*p = *proof
+	return nil
 }
 
 // String outputs a multiline string representation of the Proof.

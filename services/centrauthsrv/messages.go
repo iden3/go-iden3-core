@@ -6,11 +6,11 @@ import (
 )
 
 type AuthMsg struct {
-	Address    string                       `json:"address" binding:"required"`
-	Challenge  string                       `json:"challenge" binding:"required"`
-	Signature  string                       `json:"signature" binding:"required"`
-	KSignPk    *utils.PublicKey             `json:"ksignpk" binding:"required"`
-	KSignProof claimsrv.ProofOfClaimUserHex `json:"ksignProof" binding:"required"`
+	Address    string                     `json:"address" binding:"required"`
+	Challenge  string                     `json:"challenge" binding:"required"`
+	Signature  string                     `json:"signature" binding:"required"`
+	KSignPk    *utils.PublicKey           `json:"ksignpk" binding:"required"`
+	KSignProof claimsrv.ProofClaimUserHex `json:"ksignProof" binding:"required"`
 }
 
 type AuthTokenMsg struct {

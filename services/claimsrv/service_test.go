@@ -195,20 +195,33 @@ func TestGetClaimProof(t *testing.T) {
 
 	ethAddr := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
 
+	// Basic Claim
 	indexData := []byte("index01")
 	data := []byte("data01")
 	var indexSlot [400 / 8]byte
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claim := core.NewClaimBasic(indexSlot, dataSlot)
+	claimBasic := core.NewClaimBasic(indexSlot, dataSlot)
+
+	// KSign Claim
+	sk, err := crypto.HexToECDSA("7517685f1693593d3263460200ed903370c2318e8ba4b9bb5727acae55c32b3d")
+	if err != nil {
+		panic(err)
+	}
+	pk := sk.Public().(*ecdsa.PublicKey)
+	claimAuthKSign := core.NewClaimAuthorizeKSignSecp256k1(pk)
 
 	// open the MerkleTree of the user
 	userMT, err := utils.NewMerkleTreeUser(ethAddr, mt.Storage(), 140)
 	assert.Nil(t, err)
 
-	// add claim in User ID Merkle Tree
-	err = userMT.Add(claim.Entry())
+	// add claimBasic in User ID Merkle Tree
+	err = userMT.Add(claimBasic.Entry())
+	assert.Nil(t, err)
+
+	// add claimAuthKSign in User ID Merkle Tree
+	err = userMT.Add(claimAuthKSign.Entry())
 	assert.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
@@ -218,39 +231,57 @@ func TestGetClaimProof(t *testing.T) {
 	err = mt.Add(setRootClaim.Entry())
 	assert.Nil(t, err)
 
-	proofOfClaim, err := service.GetClaimProofByHi(setRootClaim.Entry().HIndex())
+	proofClaim, err := service.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	assert.Nil(t, err)
-	p, err := json.Marshal(proofOfClaim)
+	p, err := json.Marshal(proofClaim)
 	assert.Nil(t, err)
 	if debug {
+		fmt.Printf("\n\tSetRoot claim proof\n\n")
 		fmt.Println(string(p))
 	}
 
-	ok, err := VerifyProofOfClaim(relayAddr, proofOfClaim)
+	ok, err := core.VerifyProofClaim(relayAddr, proofClaim)
 	if !ok || err != nil {
 		panic(err)
 	}
 
-	proofOfClaimUser, err := service.GetClaimProofUserByHi(ethAddr, claim.Entry().HIndex())
+	proofClaimUser, err := service.GetClaimProofUserByHi(ethAddr, claimBasic.Entry().HIndex())
 	assert.Nil(t, err)
-	p, err = json.Marshal(proofOfClaimUser)
+	p, err = json.Marshal(proofClaimUser)
 	if debug {
+		fmt.Printf("\n\tclaim basic claim proof\n\n")
 		fmt.Println(string(p))
 	}
 
-	ok, err = VerifyProofOfClaim(relayAddr, proofOfClaimUser)
+	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	//proofOfClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
+	proofClaimUser2, err := service.GetClaimProofUserByHi(ethAddr, claimAuthKSign.Entry().HIndex())
+	assert.Nil(t, err)
+	p, err = json.Marshal(proofClaimUser2)
+	if debug {
+		fmt.Printf("\n\tclaim authorize ksign secp256k1 claim proof\n\n")
+		fmt.Println(string(p))
+	}
+
+	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser2)
+	assert.Equal(t, ok, true)
+	assert.Nil(t, err)
+
+	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
+	assert.Equal(t, ok, true)
+	assert.Nil(t, err)
+
+	//proofClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
 	//assert.Nil(t, err)
 	//if err != nil {
 	//	panic(err)
 	//}
-	//claimProof := proofOfClaim.ClaimProof
-	//claimNonRevocationProof := proofOfClaim.ClaimNonRevocationProof
-	//setRootClaimProof := proofOfClaim.SetRootClaimProof
-	//setRootClaimNonRevocationProof := proofOfClaim.SetRootClaimNonRevocationProof
+	//claimProof := proofClaim.ClaimProof
+	//claimNonRevocationProof := proofClaim.ClaimNonRevocationProof
+	//setRootClaimProof := proofClaim.SetRootClaimProof
+	//setRootClaimNonRevocationProof := proofClaim.SetRootClaimNonRevocationProof
 
 	//assert.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000048000000006461746161736466", common3.HexEncode(claimProof.Leaf))
 	//assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.HexEncode(claimProof.Proof))
