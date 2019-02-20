@@ -311,7 +311,7 @@ func (is *ServiceImpl) ImplAddr() *common.Address {
 func packAuth(
 	kclaimBytes, kclaimRoot, kclaimExistenceProof, kclaimNonNextExistenceProof []byte,
 	rclaimBytes, rclaimRoot, rclaimExistenceProof, rclaimNonNextExistenceProof []byte,
-	rclaimSigDate uint64,
+	rclaimSigDate int64,
 	rclaimSigRSV []byte) []byte {
 
 	var b bytes.Buffer
@@ -336,7 +336,7 @@ func packAuth(
 	writeBytes(rclaimExistenceProof)
 	writeBytes(rclaimNonNextExistenceProof)
 
-	writeUint64(rclaimSigDate)
+	writeUint64(uint64(rclaimSigDate))
 	writeBytes(rclaimSigRSV)
 
 	return b.Bytes()

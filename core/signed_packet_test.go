@@ -121,10 +121,10 @@ func teardown() {
 
 func TestSignedPacket(t *testing.T) {
 	setup()
+	defer teardown()
 
 	t.Run("SignPacketV01", testSignPacketV01)
 
-	teardown()
 }
 
 func testSignPacketV01(t *testing.T) {

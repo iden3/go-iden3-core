@@ -35,16 +35,17 @@ func HexDecode(h string) ([]byte, error) {
 	return hex.DecodeString(h)
 }
 
-// HexDecodeInto decodes a hex string into an array of bytes (bs).
-func HexDecodeInto(bs []byte, h []byte) error {
+// HexDecodeInto decodes a hex string into an array of bytes (dst), verifying
+// that the decoded array has the same length as dst.
+func HexDecodeInto(dst []byte, h []byte) error {
 	if bytes.HasPrefix(h, []byte("0x")) {
 		h = h[2:]
 	}
-	n, err := hex.Decode(bs, h)
+	n, err := hex.Decode(dst, h)
 	if err != nil {
 		return err
-	} else if n != len(bs) {
-		return fmt.Errorf("expected %v bytes when decoding hex string, got %v", len(bs), n)
+	} else if n != len(dst) {
+		return fmt.Errorf("expected %v bytes when decoding hex string, got %v", len(dst), n)
 	}
 	return nil
 }

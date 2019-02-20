@@ -47,7 +47,7 @@ type SetRootMsg struct {
 	Root      string                 `binding:"required"`
 	IdAddr    string                 `binding:"required"`
 	KSignPk   *utils.PublicKey       `binding:"required"`
-	Timestamp uint64                 `binding:"required"`
+	Timestamp int64                  `binding:"required"`
 	Signature *utils.SignatureEthMsg `binding:"required"`
 }
 
@@ -102,7 +102,7 @@ type ProofClaimUser struct {
 	SetRootClaimProof              ProofTreeLeaf
 	ClaimNonRevocationProof        ProofTreeLeaf
 	SetRootClaimNonRevocationProof ProofTreeLeaf
-	Date                           uint64
+	Date                           int64
 	Signature                      []byte // signature of the Root of the Relay
 }
 
@@ -112,7 +112,7 @@ type ProofClaimUserHex struct {
 	SetRootClaimProof              ProofTreeLeafHex
 	ClaimNonRevocationProof        ProofTreeLeafHex
 	SetRootClaimNonRevocationProof ProofTreeLeafHex
-	Date                           uint64
+	Date                           int64
 	Signature                      string // signature of the Root of the Relay
 }
 

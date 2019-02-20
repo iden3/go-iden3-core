@@ -14,7 +14,7 @@ func VerifyChallengeTimestamp(challenge string) error {
 	if len(strings.Split(challenge, "-")) < 2 {
 		return errors.New("VerifyChallengeTimestamp: challenge timestamp error")
 	}
-	unixTimeChallenge, err := strconv.Atoi(strings.Split(challenge, "-")[1])
+	unixTimeChallenge, err := strconv.ParseInt(strings.Split(challenge, "-")[1], 10, 64)
 	if err != nil {
 		return errors.New("VerifyChallengeTimestamp: challenge timestamp error")
 	}
@@ -23,7 +23,7 @@ func VerifyChallengeTimestamp(challenge string) error {
 	// if elapsed.Seconds() > 30000 { // 30 seconds to resolve challenge // DEV in development we use more time
 	// 	return errors.New("VerifyTimstamp: too much time elapsed since the challenge was sent")
 	// }
-	verified := utils.VerifyTimestamp(uint64(unixTimeChallenge), 30000) // 30 seconds to resolve challenge // DEV in development we use more time
+	verified := utils.VerifyTimestamp(unixTimeChallenge, 30000) // 30 seconds to resolve challenge // DEV in development we use more time
 	if !verified {
 		return errors.New("VerifyTimstamp: too much time elapsed since the challenge was sent")
 	}

@@ -19,7 +19,7 @@ var (
 )
 
 type Service interface {
-	CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
+	CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
 	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
 	AddClaimAuthorizeKSign(idAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignFirst(idAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
@@ -47,7 +47,7 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Serv
 }
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
-func (cs *ServiceImpl) CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp uint64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
+func (cs *ServiceImpl) CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the idaddress itself)
 	stoUserId := cs.mt.Storage().WithPrefix(idaddr.Bytes())
 
@@ -70,7 +70,7 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.Pub
 	}
 	// check signature with idaddr
 	// whee data signed is idaddr+root+timestamp
-	timestampBytes := utils.Uint64ToEthBytes(timestamp)
+	timestampBytes := utils.Uint64ToEthBytes(uint64(timestamp))
 	// signature of idaddr+root+timestamp, only valid if is from last X seconds
 	var msg []byte
 	msg = append(msg, idaddr.Bytes()...)
