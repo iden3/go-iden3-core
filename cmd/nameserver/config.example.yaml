@@ -1,0 +1,31 @@
+server:
+  serviceapi: 0.0.0.0:8000
+  adminapi: 0.0.0.0:8001
+
+web3:
+  url: http://127.0.0.1:8545
+
+keystore:
+  path: /var/config/keystore
+  address: 0x7277273f3fa62dfa238828934
+  passwd: /var/config/keystore.password
+  
+contracts:
+  rootcommits:
+    jsonabi: /compiled_contracts/rootcmt.json
+    address: 0x23238723498723984798234b2b2b2
+  iden3impl:
+    jsonabi: /compiled_contracts/inde3impl.json
+    address: 0x23238723498723984798234b2b2b2
+  iden3proxy:
+    jsonabi: /compiled_contracts/iden3proxy.json
+    address: 0x23238723498723984798234b2b2b2
+  iden3deployer:
+    jsonabi: /compiled_contracts/deployer.json
+    address: 0x23238723498723984798234b2b2b2
+
+storage:
+  path: /var/data/merkletree.db
+
+domain: iden3.io
+namespace: iden3.io

@@ -11,7 +11,7 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/identitysrv"
+	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 
@@ -121,28 +121,6 @@ func LoadContract(client eth.Client, jsonabifile string, address *string) *eth.C
 	return eth.NewContract(client, abi, code, addrPtr)
 }
 
-func LoadIdService(client *eth.Web3Client, claimservice claimsrv.Service, storage db.Storage) identitysrv.Service {
-
-	idstorage := storage.WithPrefix(dbIdentityPrefix)
-
-	deployerContract := LoadContract(
-		client,
-		C.Contracts.Iden3Deployer.JsonABI,
-		&C.Contracts.Iden3Deployer.Address)
-
-	implContract := LoadContract(
-		client,
-		C.Contracts.Iden3Impl.JsonABI,
-		&C.Contracts.Iden3Impl.Address)
-
-	proxyContract := LoadContract(
-		client,
-		C.Contracts.Iden3Proxy.JsonABI,
-		nil)
-
-	return identitysrv.New(deployerContract, implContract, proxyContract, claimservice, idstorage)
-}
-
 func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
 	return rootsrv.New(LoadContract(
 		client,
@@ -153,6 +131,10 @@ func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
 	return claimsrv.New(mt, rootservice, signsrv.New(ks, acc))
+}
+
+func LoadNameService(claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
+	return namesrv.New(claimservice, signsrv.New(ks, acc), domain)
 }
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {

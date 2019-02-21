@@ -6,43 +6,48 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
 )
 
 type Service interface {
-	VinculateId(vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error)
+	VinculateId(relayAddr common.Address, vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error)
 	ResolvClaimAssignName(nameid string) (*core.ClaimAssignName, error)
 }
 
 type ServiceImpl struct {
-	claimsrv    claimsrv.Service
-	identitysrv identitysrv.Service
-	signer      signsrv.Service
-	domain      string
+	claimsrv claimsrv.Service
+	signer   signsrv.Service
+	domain   string
 }
 
-func New(claimsrv claimsrv.Service, identitysrv identitysrv.Service, signer signsrv.Service, domain string) *ServiceImpl {
-	return &ServiceImpl{claimsrv, identitysrv, signer, domain}
+func New(claimsrv claimsrv.Service, signer signsrv.Service, domain string) *ServiceImpl {
+	return &ServiceImpl{claimsrv, signer, domain}
 }
 
 // VinculateId creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
-func (ns *ServiceImpl) VinculateId(vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error) {
-	// verify vinculateIdMsg.Msg signature with the Operational Key of the identity vinculateIdMsg.IdAddr
-	// get the operational key
-	fmt.Println(vinculateIdMsg.IdAddr)
-	identity, err := ns.identitysrv.Get(vinculateIdMsg.IdAddr)
+func (ns *ServiceImpl) VinculateId(relayAddr common.Address, vinculateIdMsg VinculateIdMsg) (*core.ClaimAssignName, error) {
+	// TODO here will go the VerifySignedPacket from signature protocol that we have implemented in iden3js
+	verified, err := core.VerifyProofClaim(relayAddr, &vinculateIdMsg.ProofKSign)
 	if err != nil {
-		fmt.Println("aaa")
 		return &core.ClaimAssignName{}, err
 	}
-	opkey := identity.Operational
+	if !verified {
+		return &core.ClaimAssignName{}, errors.New("proofKSign can not be verified")
+	}
+	// get kSignPub from proofKSign
+	leaf := &merkletree.Entry{Data: *vinculateIdMsg.ProofKSign.Leaf}
+	claimAuthorizeKSign, err := core.NewClaimAuthorizeKSignSecp256k1FromEntry(leaf)
+	if err != nil {
+		return &core.ClaimAssignName{}, err
+	}
 
-	if !utils.VerifySigEthMsg(opkey, vinculateIdMsg.Signature, vinculateIdMsg.Bytes()) {
+	kopAddr := crypto.PubkeyToAddress(*claimAuthorizeKSign.PubKey)
+	if !utils.VerifySigEthMsg(kopAddr, vinculateIdMsg.Signature, vinculateIdMsg.Bytes()) {
 		return &core.ClaimAssignName{}, errors.New("signature can not be verified")
 	}
 

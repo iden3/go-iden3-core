@@ -1,7 +1,9 @@
 package endpoint
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
+	cfg "github.com/iden3/go-iden3/cmd/nameserver/config"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/namesrv"
 )
@@ -9,7 +11,9 @@ import (
 func handleVinculateId(c *gin.Context) {
 	var vinculateIdMsg namesrv.VinculateIdMsg
 	c.BindJSON(&vinculateIdMsg)
-	claimAssignName, err := nameservice.VinculateId(vinculateIdMsg)
+	// relayAddr will be getted by the json, now is hardcoded
+	relayAddr := common.HexToAddress(cfg.C.KeyStore.Address)
+	claimAssignName, err := nameservice.VinculateId(relayAddr, vinculateIdMsg)
 	if err != nil {
 		fail(c, "error name.VinculateId", err)
 	}
@@ -27,7 +31,6 @@ func handleVinculateId(c *gin.Context) {
 		"proofClaimAssignName": proofClaimAssignName,
 	})
 }
-
 func handleClaimAssignNameResolv(c *gin.Context) {
 	nameid := c.Param("nameid")
 

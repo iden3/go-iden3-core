@@ -6,13 +6,15 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/cmd/nameserver/config"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/identitysrv"
+	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 
 	log "github.com/sirupsen/logrus"
@@ -21,12 +23,26 @@ import (
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
 
-var idservice identitysrv.Service
+var nameservice namesrv.Service
 
 var adminservice adminsrv.Service
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
+}
+
+func handleGetRoot(c *gin.Context) {
+	// get the contract data
+	contractAddress := common.HexToAddress(config.C.Contracts.RootCommits.Address)
+	root, err := rootservice.GetRoot(contractAddress)
+	if err != nil {
+		fail(c, "error contract.GetRoot(contractAddress)", err)
+		return
+	}
+	c.JSON(200, gin.H{
+		"root":         claimservice.MT().RootKey().Hex(),
+		"contractRoot": common3.HexEncode(root[:]),
+	})
 }
 
 func serveServiceApi() *http.Server {
@@ -37,16 +53,8 @@ func serveServiceApi() *http.Server {
 	serviceapi := api.Group("/api/unstable")
 	serviceapi.GET("/root", handleGetRoot)
 
-	serviceapi.GET("/claims/:hi/proof", handleGetClaimProofByHi) // Get relay claim proof
-
-	serviceapi.POST("/ids", handleCreateId)
-	serviceapi.GET("/ids/:idaddr", handleGetId)
-	serviceapi.POST("/ids/:idaddr/deploy", handleDeployId)
-	serviceapi.POST("/ids/:idaddr/forward", handleForwardId)
-	serviceapi.GET("/ids/:idaddr/root", handleGetIdRoot)
-	serviceapi.POST("/ids/:idaddr/root", handleCommitNewIdRoot)
-	serviceapi.POST("/ids/:idaddr/claims", handlePostClaim)
-	serviceapi.GET("/ids/:idaddr/claims/:hi/proof", handleGetClaimProofUserByHi) // Get user claim proof
+	serviceapi.POST("/names", handleVinculateId)
+	serviceapi.GET("/names/:nameid", handleClaimAssignNameResolv)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {
@@ -73,8 +81,6 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	adminapi.GET("/rawdump", handleRawDump)
 	adminapi.POST("/rawimport", handleRawImport)
 	adminapi.GET("/claimsdump", handleClaimsDump)
-	adminapi.POST("/mimc7", handleMimc7)
-	adminapi.POST("/claims/basic", handleAddClaimBasic)
 
 	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: api}
 	go func() {
@@ -86,11 +92,11 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, as adminsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service, as adminsrv.Service) {
 
-	idservice = ids
 	claimservice = cs
 	rootservice = rs
+	nameservice = ns
 	adminservice = as
 
 	stopch := make(chan interface{})
