@@ -9,8 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	cfg "github.com/iden3/go-iden3/cmd/relay/config"
-	"github.com/iden3/go-iden3/cmd/relay/endpoint"
+	cfg "github.com/iden3/go-iden3/cmd/claimserver/config"
+	"github.com/iden3/go-iden3/cmd/claimserver/endpoint"
 )
 
 var ServerCommands = []cli.Command{
@@ -47,8 +47,6 @@ func cmdStart(c *cli.Context) error {
 
 	rootservice := cfg.LoadRootsService(client)
 	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
-	idservice := cfg.LoadIdService(client, claimservice, storage)
-	nameservice := cfg.LoadNameService(idservice, claimservice, ks, acc, cfg.C.Domain, cfg.C.Namespace)
 	adminservice := cfg.LoadAdminService(mt, rootservice, claimservice)
 
 	// Check for funds
@@ -64,7 +62,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the relay address")
 	}
 
-	endpoint.Serve(rootservice, claimservice, idservice, nameservice, adminservice)
+	endpoint.Serve(rootservice, claimservice, adminservice)
 
 	rootservice.StopAndJoin()
 	storage.Close()

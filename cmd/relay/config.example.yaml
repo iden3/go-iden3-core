@@ -1,9 +1,9 @@
 server:
-	serviceapi: 0.0.0.0:8000
-	adminapi: 0.0.0.0:8001
+  serviceapi: 0.0.0.0:8000
+  adminapi: 0.0.0.0:8001
 
 web3:
-	url: http://127.0.0.1:8545
+  url: http://127.0.0.1:8545
 
 keystore:
   path: /var/config/keystore
