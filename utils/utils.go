@@ -44,8 +44,8 @@ func PoW(data PoWData, difficulty int) (PoWData, error) {
 	return data, nil
 }
 
-func VerifyTimestamp(timestamp uint64, timelimit int) bool {
-	t := time.Unix(int64(timestamp), 10)
+func VerifyTimestamp(timestamp int64, timelimit int) bool {
+	t := time.Unix(timestamp, 10)
 	elapsed := time.Since(t)
 	if int(elapsed.Seconds()) > timelimit {
 		return false

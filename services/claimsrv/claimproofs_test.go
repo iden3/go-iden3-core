@@ -2,6 +2,6 @@ package claimsrv
 
 import "testing"
 
-func TestCheckProofOfClaim(t *testing.T) {
+func TestCheckProofClaim(t *testing.T) {
 
 }

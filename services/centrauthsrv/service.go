@@ -34,8 +34,8 @@ package centrauthsrv
 //		return err
 //	}
 //	relayAddr := common.BytesToAddress(addrBytes)
-//	if !claimsrv.CheckProofOfClaimUser(relayAddr, proofOfKSign, 140) { //TODO send the address of the Relay, to check the signature of proofOfKSign
-//		return errors.New("ProofOfKSign can not be verified")
+//	if !claimsrv.CheckProofClaimUser(relayAddr, proofOfKSign, 140) { //TODO send the address of the Relay, to check the signature of proofOfKSign
+//		return errors.New("ProofKSign can not be verified")
 //	}
 //
 //	// verify the Signature of the Challenge with the KSign

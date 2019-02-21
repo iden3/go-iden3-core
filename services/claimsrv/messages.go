@@ -47,7 +47,7 @@ type SetRootMsg struct {
 	Root      string                 `binding:"required"`
 	IdAddr    string                 `binding:"required"`
 	KSignPk   *utils.PublicKey       `binding:"required"`
-	Timestamp uint64                 `binding:"required"`
+	Timestamp int64                  `binding:"required"`
 	Signature *utils.SignatureEthMsg `binding:"required"`
 }
 
@@ -59,24 +59,24 @@ type ClaimValueMsg struct {
 }
 
 // TODO: Remove in next refactor
-// ProofOfTreeLeaf contains all the parameters needed to proof that a Leaf is in a merkletree with a given Root
-type ProofOfTreeLeaf struct {
+// ProofTreeLeaf contains all the parameters needed to proof that a Leaf is in a merkletree with a given Root
+type ProofTreeLeaf struct {
 	Leaf  []byte
 	Proof []byte
 	Root  merkletree.Hash
 }
 
 // TODO: Remove in next refactor
-// ProofOfTreeLeafHex is the same data structure than ProofOfTreeLeaf but in Hexadecimal string representation
-type ProofOfTreeLeafHex struct {
+// ProofTreeLeafHex is the same data structure than ProofTreeLeaf but in Hexadecimal string representation
+type ProofTreeLeafHex struct {
 	Leaf  string
 	Proof string
 	Root  string
 }
 
 // TODO: Remove in next refactor
-func (plh *ProofOfTreeLeafHex) Unhex() ProofOfTreeLeaf {
-	var r ProofOfTreeLeaf
+func (plh *ProofTreeLeafHex) Unhex() ProofTreeLeaf {
+	var r ProofTreeLeaf
 	r.Leaf, _ = common3.HexDecode(plh.Leaf)
 	r.Proof, _ = common3.HexDecode(plh.Proof)
 	rootBytes, _ := common3.HexDecode(plh.Root)
@@ -85,9 +85,9 @@ func (plh *ProofOfTreeLeafHex) Unhex() ProofOfTreeLeaf {
 }
 
 // TODO: Remove in next refactor
-// Hex returns a ProofOfTreeLeafHex data structure
-func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
-	r := ProofOfTreeLeafHex{
+// Hex returns a ProofTreeLeafHex data structure
+func (pl *ProofTreeLeaf) Hex() ProofTreeLeafHex {
+	r := ProofTreeLeafHex{
 		common3.HexEncode(pl.Leaf),
 		common3.HexEncode(pl.Proof),
 		pl.Root.Hex(),
@@ -96,29 +96,29 @@ func (pl *ProofOfTreeLeaf) Hex() ProofOfTreeLeafHex {
 }
 
 // TODO: Remove in next refactor
-// ProofOfClaimUser is the proof of a claim in the Identity MerkleTree, and the SetRootClaim of that MerkleTree inside the Relay's MerkleTree. Also with the proofs of non revocation of both claims
-type ProofOfClaimUser struct {
-	ClaimProof                     ProofOfTreeLeaf
-	SetRootClaimProof              ProofOfTreeLeaf
-	ClaimNonRevocationProof        ProofOfTreeLeaf
-	SetRootClaimNonRevocationProof ProofOfTreeLeaf
-	Date                           uint64
+// ProofClaimUser is the proof of a claim in the Identity MerkleTree, and the SetRootClaim of that MerkleTree inside the Relay's MerkleTree. Also with the proofs of non revocation of both claims
+type ProofClaimUser struct {
+	ClaimProof                     ProofTreeLeaf
+	SetRootClaimProof              ProofTreeLeaf
+	ClaimNonRevocationProof        ProofTreeLeaf
+	SetRootClaimNonRevocationProof ProofTreeLeaf
+	Date                           int64
 	Signature                      []byte // signature of the Root of the Relay
 }
 
 // TODO: Remove in next refactor
-type ProofOfClaimUserHex struct {
-	ClaimProof                     ProofOfTreeLeafHex
-	SetRootClaimProof              ProofOfTreeLeafHex
-	ClaimNonRevocationProof        ProofOfTreeLeafHex
-	SetRootClaimNonRevocationProof ProofOfTreeLeafHex
-	Date                           uint64
+type ProofClaimUserHex struct {
+	ClaimProof                     ProofTreeLeafHex
+	SetRootClaimProof              ProofTreeLeafHex
+	ClaimNonRevocationProof        ProofTreeLeafHex
+	SetRootClaimNonRevocationProof ProofTreeLeafHex
+	Date                           int64
 	Signature                      string // signature of the Root of the Relay
 }
 
 // TODO: Remove in next refactor
-func (pc *ProofOfClaimUser) Hex() ProofOfClaimUserHex {
-	r := ProofOfClaimUserHex{
+func (pc *ProofClaimUser) Hex() ProofClaimUserHex {
+	r := ProofClaimUserHex{
 		pc.ClaimProof.Hex(),
 		pc.SetRootClaimProof.Hex(),
 		pc.ClaimNonRevocationProof.Hex(),
@@ -130,12 +130,12 @@ func (pc *ProofOfClaimUser) Hex() ProofOfClaimUserHex {
 }
 
 // TODO: Remove in next refactor
-func (pch *ProofOfClaimUserHex) Unhex() (ProofOfClaimUser, error) {
+func (pch *ProofClaimUserHex) Unhex() (ProofClaimUser, error) {
 	sigBytes, err := common3.HexDecode(pch.Signature)
 	if err != nil {
-		return ProofOfClaimUser{}, err
+		return ProofClaimUser{}, err
 	}
-	r := ProofOfClaimUser{
+	r := ProofClaimUser{
 		pch.ClaimProof.Unhex(),
 		pch.SetRootClaimProof.Unhex(),
 		pch.ClaimNonRevocationProof.Unhex(),

@@ -45,13 +45,13 @@ func handleCommitNewIdRoot(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofOfRelayClaim, err := claimservice.GetClaimProofByHi(setRootClaim.Entry().HIndex())
+	proofRelayClaim, err := claimservice.GetClaimProofByHi(setRootClaim.Entry().HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofClaim": proofOfRelayClaim,
+		"proofClaim": proofRelayClaim,
 	})
 }
 
@@ -71,7 +71,7 @@ func handlePostClaim(c *gin.Context) {
 	// bytesValue to Element data
 	var dataBytes [128]byte
 	copy(dataBytes[:], bytesValue)
-	data := merkletree.BytesToData(dataBytes)
+	data := merkletree.NewDataFromBytes(dataBytes)
 	entry := merkletree.Entry{
 		Data: *data,
 	}
@@ -87,14 +87,14 @@ func handlePostClaim(c *gin.Context) {
 		return
 	}
 	// return claim with proofs
-	proofOfClaim, err := claimservice.GetClaimProofUserByHi(idaddr, entry.HIndex())
+	proofClaim, err := claimservice.GetClaimProofUserByHi(idaddr, entry.HIndex())
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 
 	c.JSON(200, gin.H{
-		"proofClaim": proofOfClaim,
+		"proofClaim": proofClaim,
 	})
 	return
 }
@@ -129,13 +129,13 @@ func handleGetClaimProofUserByHi(c *gin.Context) {
 	hi := &merkletree.Hash{}
 	copy(hi[:], hiBytes)
 	idaddr := common.HexToAddress(idaddrhex)
-	proofOfClaim, err := claimservice.GetClaimProofUserByHi(idaddr, hi)
+	proofClaim, err := claimservice.GetClaimProofUserByHi(idaddr, hi)
 	if err != nil {
 		fail(c, "error on GetClaimByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofClaim": proofOfClaim,
+		"proofClaim": proofClaim,
 	})
 	return
 }
@@ -151,13 +151,13 @@ func handleGetClaimProofByHi(c *gin.Context) {
 	}
 	hi := &merkletree.Hash{}
 	copy(hi[:], hiBytes)
-	proofOfClaim, err := claimservice.GetClaimProofByHi(hi)
+	proofClaim, err := claimservice.GetClaimProofByHi(hi)
 	if err != nil {
 		fail(c, "error on GetClaimProofByHi", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"proofClaim": proofOfClaim,
+		"proofClaim": proofClaim,
 	})
 	return
 }

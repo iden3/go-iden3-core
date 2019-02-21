@@ -29,7 +29,7 @@ type Service interface {
 	IsDeployed(idaddr common.Address) (bool, error)
 	Info(idaddr common.Address) (*Info, error)
 	Forward(idaddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
-	Add(id *Identity) (*core.ProofOfClaim, error)
+	Add(id *Identity) (*core.ProofClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(idaddr common.Address) (*Identity, error)
 	DeployerAddr() *common.Address
@@ -242,7 +242,7 @@ func (is *ServiceImpl) Forward(
 
 // Add creates a merkle tree of a new user in the relay, given the identity
 // data of the user.
-func (is *ServiceImpl) Add(id *Identity) (*core.ProofOfClaim, error) {
+func (is *ServiceImpl) Add(id *Identity) (*core.ProofClaim, error) {
 	var err error
 
 	idaddr, _, err := is.codeAndAddress(id)
@@ -311,7 +311,7 @@ func (is *ServiceImpl) ImplAddr() *common.Address {
 func packAuth(
 	kclaimBytes, kclaimRoot, kclaimExistenceProof, kclaimNonNextExistenceProof []byte,
 	rclaimBytes, rclaimRoot, rclaimExistenceProof, rclaimNonNextExistenceProof []byte,
-	rclaimSigDate uint64,
+	rclaimSigDate int64,
 	rclaimSigRSV []byte) []byte {
 
 	var b bytes.Buffer
@@ -336,7 +336,7 @@ func packAuth(
 	writeBytes(rclaimExistenceProof)
 	writeBytes(rclaimNonNextExistenceProof)
 
-	writeUint64(rclaimSigDate)
+	writeUint64(uint64(rclaimSigDate))
 	writeBytes(rclaimSigRSV)
 
 	return b.Bytes()

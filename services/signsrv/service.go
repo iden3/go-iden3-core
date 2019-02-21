@@ -41,7 +41,7 @@ func SignBytes(s Service, data []byte) (*utils.SignatureEthMsg, error) {
 
 // SignBytesDate signs a byte array appended by the current time and returns
 // the signature and the time used in the signature.
-func SignBytesDate(s Service, data []byte) (*utils.SignatureEthMsg, uint64, error) {
+func SignBytesDate(s Service, data []byte) (*utils.SignatureEthMsg, int64, error) {
 	dateUint64 := uint64(time.Now().Unix())
 	dateBytes := utils.Uint64ToEthBytes(dateUint64)
 	h := utils.EthHash(append(data[:], dateBytes...))
@@ -49,5 +49,5 @@ func SignBytesDate(s Service, data []byte) (*utils.SignatureEthMsg, uint64, erro
 	if err != nil {
 		return nil, 0, err
 	}
-	return sig, dateUint64, nil
+	return sig, int64(dateUint64), nil
 }

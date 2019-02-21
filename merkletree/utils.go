@@ -33,6 +33,10 @@ func (h *Hash) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(h.Bytes()))
 }
 
+func (h *Hash) UnmarshalJSON(bs []byte) error {
+	return common3.UnmarshalJSONHexDecodeInto(h[:], bs)
+}
+
 // ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
 // mimc7.RElem.  This function assumes that ElemBytes are properly constructed,
 // and will panic if they are not.
