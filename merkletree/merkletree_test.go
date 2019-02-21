@@ -68,7 +68,7 @@ func TestEntry(t *testing.T) {
 
 func TestData(t *testing.T) {
 	data := IntsToData(12, 45, 78, 41)
-	dataParsed := BytesToData(data.Bytes())
+	dataParsed := NewDataFromBytes(data.Bytes())
 	assert.Equal(t, data, *dataParsed)
 }
 

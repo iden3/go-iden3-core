@@ -182,7 +182,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 	// VerifyProof with HIndex and HValue from claimProof.Leaf
 	var leafBytes [128]byte
 	copy(leafBytes[:], claimProof.Leaf)
-	dataNonE := merkletree.BytesToData(leafBytes)
+	dataNonE := merkletree.NewDataFromBytes(leafBytes)
 	claimProofEntry := merkletree.Entry{
 		Data: *dataNonE,
 	}

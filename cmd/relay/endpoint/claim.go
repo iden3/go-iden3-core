@@ -71,7 +71,7 @@ func handlePostClaim(c *gin.Context) {
 	// bytesValue to Element data
 	var dataBytes [128]byte
 	copy(dataBytes[:], bytesValue)
-	data := merkletree.BytesToData(dataBytes)
+	data := merkletree.NewDataFromBytes(dataBytes)
 	entry := merkletree.Entry{
 		Data: *data,
 	}

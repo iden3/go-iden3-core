@@ -63,11 +63,11 @@ func (d *Data) UnmarshalJSON(bs []byte) error {
 	if err != nil {
 		return err
 	}
-	*d = *BytesToData(dataBytes)
+	*d = *NewDataFromBytes(dataBytes)
 	return nil
 }
 
-func BytesToData(b [ElemBytesLen * DataLen]byte) *Data {
+func NewDataFromBytes(b [ElemBytesLen * DataLen]byte) *Data {
 	d := &Data{}
 	for i := 0; i < DataLen; i++ {
 		copy(d[i][:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
