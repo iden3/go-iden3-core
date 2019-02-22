@@ -475,7 +475,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr common.Address, hi merkle
 	}
 
 	// sign root + date
-	sig, date, err := signsrv.SignBytesDate(cs.signer, claimSetRootKeyProof.Root[:])
+	sig, date, err := cs.signer.SignEthMsgDate(claimSetRootKeyProof.Root[:])
 	if err != nil {
 		return nil, err
 	}
@@ -566,7 +566,7 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim,
 		return nil, err
 	}
 
-	sig, date, err := signsrv.SignBytesDate(cs.signer, proofClaim.Proofs[0].Root[:])
+	sig, date, err := cs.signer.SignEthMsgDate(proofClaim.Proofs[0].Root[:])
 	if err != nil {
 		return nil, err
 	}

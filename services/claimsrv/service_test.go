@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -52,9 +53,8 @@ type SignServiceMock struct {
 	mock.Mock
 }
 
-func (m *SignServiceMock) SignHash(h utils.Hash) (*utils.SignatureEthMsg, error) {
-	//args := m.Called(h)
-	//return args.Get(0).([]byte), args.Error(1)
+func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
+	h := utils.EthHash(msg)
 	sig, err := crypto.Sign(h[:], relaySecKey)
 	if err != nil {
 		return nil, err
@@ -63,6 +63,13 @@ func (m *SignServiceMock) SignHash(h utils.Hash) (*utils.SignatureEthMsg, error)
 	sigEthMsg := &utils.SignatureEthMsg{}
 	copy(sigEthMsg[:], sig)
 	return sigEthMsg, nil
+}
+
+func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+	dateInt64 := time.Now().Unix()
+	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+	sig, err := m.SignEthMsg(append(msg, dateBytes...))
+	return sig, dateInt64, err
 }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
