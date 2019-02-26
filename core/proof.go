@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
-	"time"
 )
 
 var (
@@ -133,7 +134,7 @@ func GetNonRevocationMTProof(mt *merkletree.MerkleTree, leafData *merkletree.Dat
 	entry := merkletree.Entry{
 		Data: *leafDataCpy,
 	}
-	proof, err := mt.GenerateProof(entry.HIndex())
+	proof, err := mt.GenerateProof(entry.HIndex(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +158,7 @@ func GetClaimProofByHi(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*ProofCl
 
 	// get the MT proof of existence of the claim and the non-existence of
 	// the claim's next version in the Relay Tree
-	mtpExist, err := mt.GenerateProof(hi)
+	mtpExist, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		return nil, err
 	}

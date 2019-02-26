@@ -45,7 +45,7 @@ func main() {
 		panic(err)
 	}
 
-	mp, err := mt.GenerateProof(claimEntry0.HIndex())
+	mp, err := mt.GenerateProof(claimEntry0.HIndex(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ func main() {
 	claim2 := core.NewClaimAssignName(name2, ethAddr2)
 	claimEntry2 := claim2.Entry()
 
-	mp, err = mt.GenerateProof(claimEntry2.HIndex())
+	mp, err = mt.GenerateProof(claimEntry2.HIndex(), nil)
 	if err != nil {
 		panic(err)
 	}

@@ -69,7 +69,7 @@ func cmdAddClaim(c *cli.Context) error {
 	}
 	fmt.Print("root updated: " + mt.RootKey().Hex())
 
-	mp, err := mt.GenerateProof(claim.Entry().HIndex())
+	mp, err := mt.GenerateProof(claim.Entry().HIndex(), nil)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 		fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
 		// the proofs better generate them once all claims are added
-		mp, err := mt.GenerateProof(claim.Entry().HIndex())
+		mp, err := mt.GenerateProof(claim.Entry().HIndex(), nil)
 		if err != nil {
 			return err
 		}

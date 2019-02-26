@@ -182,7 +182,7 @@ func TestGenerateProof1(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestGenerateProof4(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ func TestGenerateProof64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +273,7 @@ func TestVerifyProof1(t *testing.T) {
 
 	e := NewEntryFromInts(0, 0, 0, int64(4))
 
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +305,7 @@ func TestVerifyProofEmpty(t *testing.T) {
 
 	e := NewEntryFromInts(0, 0, 0, int64(42))
 
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +335,7 @@ func TestVerifyProofCases(t *testing.T) {
 
 	// Existence proof
 	e := NewEntryFromInts(0, 0, 0, int64(4))
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,14 +351,14 @@ func TestVerifyProofCases(t *testing.T) {
 
 	for i := 8; i < 32; i++ {
 		e = NewEntryFromInts(0, 0, 0, int64(i))
-		proof, err = mt.GenerateProof(e.HIndex())
+		proof, err = mt.GenerateProof(e.HIndex(), nil)
 		if debug {
 			fmt.Println(i, proof)
 		}
 	}
 	// Non-existence proof, empty aux
 	e = NewEntryFromInts(0, 0, 0, int64(12))
-	proof, err = mt.GenerateProof(e.HIndex())
+	proof, err = mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -376,7 +376,7 @@ func TestVerifyProofCases(t *testing.T) {
 
 	// Non-existence proof, diff. node aux
 	e = NewEntryFromInts(0, 0, 0, int64(10))
-	proof, err = mt.GenerateProof(e.HIndex())
+	proof, err = mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestVerifyProofFalse(t *testing.T) {
 	// Invalid existence proof (node used for verification doesn't
 	// correspond to node in the proof)
 	e := NewEntryFromInts(0, 0, 0, int64(4))
-	proof, err := mt.GenerateProof(e.HIndex())
+	proof, err := mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -418,7 +418,7 @@ func TestVerifyProofFalse(t *testing.T) {
 
 	// Invalid non-existence proof (Non-existence proof, diff. node aux)
 	e = NewEntryFromInts(0, 0, 0, int64(4))
-	proof, err = mt.GenerateProof(e.HIndex())
+	proof, err = mt.GenerateProof(e.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -440,7 +440,7 @@ func TestProofFromBytesSmall(t *testing.T) {
 	}
 
 	// Proof of existence, single claim MT
-	proof0, err := mt.GenerateProof(e0.HIndex())
+	proof0, err := mt.GenerateProof(e0.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +450,7 @@ func TestProofFromBytesSmall(t *testing.T) {
 
 	// Proof of non-existence with aux node, single claim MT
 	e2 := NewEntryFromInts(0, 0, 0, int64(1))
-	proof2, err := mt.GenerateProof(e2.HIndex())
+	proof2, err := mt.GenerateProof(e2.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -472,7 +472,7 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of existence, single claim MT
 	e0 := NewEntryFromInts(0, 0, 0, 0)
-	proof0, err := mt.GenerateProof(e0.HIndex())
+	proof0, err := mt.GenerateProof(e0.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of non-existence with empty node, single claim MT
 	e1 := NewEntryFromInts(0, 0, 0, int64(17))
-	proof1, err := mt.GenerateProof(e1.HIndex())
+	proof1, err := mt.GenerateProof(e1.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +492,7 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of non-existence with aux node, single claim MT
 	e2 := NewEntryFromInts(0, 0, int64(1), 0)
-	proof2, err := mt.GenerateProof(e2.HIndex())
+	proof2, err := mt.GenerateProof(e2.HIndex(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
