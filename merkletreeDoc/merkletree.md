@@ -80,7 +80,7 @@ if err != nil {
 
 Now we can generat the merkle proof of this claim:
 ```go
-mp, err := mt.GenerateProof(claimEntry0.HIndex())
+mp, err := mt.GenerateProof(claimEntry0.HIndex(), nil)
 if err != nil {
   panic(err)
 }
@@ -94,6 +94,15 @@ fmt.Println("merkle proof: ", mp)
 //         notempties: 01
 //         siblings: 0 a045683a
 ```
+
+### Generate merkle proof for a specific tree (with specific root)
+```go
+mp, err := mt.GenerateProof(claimEntry0.HIndex(), specificRoot)
+if err != nil {
+  panic(err)
+}
+```
+
 
 ## Check merkle proof
 
@@ -129,7 +138,7 @@ claimEntry2 := claim2.Entry()
 Now, we can generate the merkle proof of the data in the position of this claim
 in the merkletree, and print it to see that it's a non-existence proof:
 ```go
-mp, err = mt.GenerateProof(claimEntry2.HIndex())
+mp, err = mt.GenerateProof(claimEntry2.HIndex(), nil)
 if err != nil {
   panic(err)
 }

@@ -397,7 +397,7 @@ func (cs *ServiceImpl) GetIdRoot(idAddr common.Address) (merkletree.Hash, []byte
 	claimSetRootKey.Version = version - 1
 
 	// get proof of SetRootProof in the Relay tree
-	idRootProof, err := cs.mt.GenerateProof(claimSetRootKey.Entry().HIndex())
+	idRootProof, err := cs.mt.GenerateProof(claimSetRootKey.Entry().HIndex(), nil)
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
 	}
@@ -432,8 +432,8 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr common.Address, hi merkle
 	// }
 
 	// get the proof of the value in the User Id Tree
-	// idProof, err := userMT.GenerateProof(merkletree.HashBytes(value.Bytes()[:value.IndexLength()]))
-	idProof, err := userMT.GenerateProof(&hi)
+	// idProof, err := userMT.GenerateProof(merkletree.HashBytes(value.Bytes()[:value.IndexLength()]), nil)
+	idProof, err := userMT.GenerateProof(&hi, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +454,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr common.Address, hi merkle
 	claimSetRootKey.Version = version - 1
 
 	// get the proof of the ClaimSetRootKey in the Relay Tree
-	relayProof, err := cs.mt.GenerateProof(claimSetRootKey.Entry().HIndex())
+	relayProof, err := cs.mt.GenerateProof(claimSetRootKey.Entry().HIndex(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -511,7 +511,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(idAddr common.Address,
 
 	// get the MT proof of existence of the claim and the non-existence of
 	// the claim's next version in the User Tree
-	mtpExistUser, err := userMT.GenerateProof(hi)
+	mtpExistUser, err := userMT.GenerateProof(hi, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +601,7 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi merkletree.Hash) (Proof
 	entry := merkletree.Entry{
 		Data: *leafData,
 	}
-	mp, err := mt.GenerateProof(entry.HIndex())
+	mp, err := mt.GenerateProof(entry.HIndex(), nil)
 	if err != nil {
 		return ProofTreeLeaf{}, err
 	}
