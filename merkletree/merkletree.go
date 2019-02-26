@@ -589,6 +589,7 @@ func (p *Proof) String() string {
 
 // GenerateProof generates the proof of existence (or non-existence) of an
 // Entry's hash Index for a Merkle Tree given the root.
+// If the rootKey is nil, the current merkletree root is used
 func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error) {
 	p := &Proof{}
 	var siblingKey *Hash
