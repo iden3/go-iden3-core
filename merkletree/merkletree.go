@@ -149,12 +149,17 @@ func (e *Entry) HValue() *Hash {
 	}
 	return e.hValue
 }
+
 func (e *Entry) Bytes() []byte {
 	var b [ElemBytesLen * DataLen]byte
 	for i := 0; i < DataLen; i++ {
 		copy(b[ElemBytesLen*i:], e.Data[i][:])
 	}
 	return b[:]
+}
+
+func (e *Entry) MarshalJSON() ([]byte, error) {
+	return json.Marshal(common3.HexEncode(e.Bytes()))
 }
 
 //MerkleTree is the struct with the main elements of the Merkle Tree

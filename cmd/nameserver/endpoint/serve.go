@@ -54,7 +54,7 @@ func serveServiceApi() *http.Server {
 	serviceapi.GET("/root", handleGetRoot)
 
 	serviceapi.POST("/names", handleVinculateId)
-	serviceapi.GET("/names/:nameid", handleClaimAssignNameResolv)
+	serviceapi.GET("/names/:name", handleClaimAssignNameResolv)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {

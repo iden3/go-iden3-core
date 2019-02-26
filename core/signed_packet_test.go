@@ -137,10 +137,13 @@ func testSignPacketV01(t *testing.T) {
 	}
 	data := map[string]string{"foo": "bar"}
 	form := map[string]string{"foo": "baz"}
-	signedPacket, err := SignPacketV01(keyStore, idAddr, kSignPk, proofKSign, 600, "iden3.test", data, form)
+	signedPacket, err := NewSignPacketV01(keyStore, idAddr, kSignPk, proofKSign, 600,
+		"iden3.test", data, form)
+	assert.Nil(t, err)
+	signedPacketStr, err := signedPacket.Marshal()
 	assert.Nil(t, err)
 	if debug {
-		fmt.Println(signedPacket)
+		fmt.Println(signedPacketStr)
 	}
 
 	err = VerifySignedPacket(signedPacket)
