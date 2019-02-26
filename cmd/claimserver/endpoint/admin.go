@@ -3,39 +3,11 @@ package endpoint
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
 )
-
-func handleInfo(c *gin.Context) {
-	r := adminservice.Info()
-	c.JSON(200, gin.H{
-		"info": r,
-	})
-}
-
-func handleRawDump(c *gin.Context) {
-	r := adminservice.RawDump()
-	c.JSON(http.StatusOK, r)
-}
-
-func handleRawImport(c *gin.Context) {
-	var data map[string]string
-	c.BindJSON(&data)
-
-	count, err := adminservice.RawImport(data)
-	if err != nil {
-		c.String(http.StatusBadRequest, err.Error())
-	}
-	c.String(http.StatusOK, "imported "+strconv.Itoa(count)+" key,value entries")
-}
-
-func handleClaimsDump(c *gin.Context) {
-	r := adminservice.ClaimsDump()
-	c.JSON(http.StatusOK, r)
-}
 
 type addClaimBasicMsg struct {
 	IndexData string
@@ -48,21 +20,21 @@ func handleAddClaimBasic(c *gin.Context) {
 
 	indexData, err := common3.HexDecode(m.IndexData)
 	if err != nil {
-		fail(c, "error on handlePostClaim", err)
+		genericserver.Fail(c, "error on handlePostClaim", err)
 		return
 	}
 	data, err := common3.HexDecode(m.Data)
 	if err != nil {
-		fail(c, "error on handlePostClaim", err)
+		genericserver.Fail(c, "error on handlePostClaim", err)
 		return
 	}
 
 	if len(indexData) < 400/8 {
-		fail(c, "error on handlePostClaim", errors.New("indexData smaller than 400/8"))
+		genericserver.Fail(c, "error on handlePostClaim", errors.New("indexData smaller than 400/8"))
 		return
 	}
 	if len(data) < 496/8 {
-		fail(c, "error on handlePostClaim", errors.New("data smaller than 496/8"))
+		genericserver.Fail(c, "error on handlePostClaim", errors.New("data smaller than 496/8"))
 		return
 	}
 
@@ -70,7 +42,7 @@ func handleAddClaimBasic(c *gin.Context) {
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], indexData[:400/8])
 	copy(dataSlot[:], data[:496/8])
-	proofOfClaim, err := adminservice.AddClaimBasic(indexSlot, dataSlot)
+	proofOfClaim, err := genericserver.Adminservice.AddClaimBasic(indexSlot, dataSlot)
 	if err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 	}

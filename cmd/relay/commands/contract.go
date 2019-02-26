@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
@@ -26,23 +26,23 @@ var ContractCommands = []cli.Command{{
 	},
 }}
 
-func contractInfo() map[string]cfg.ContractInfo {
-	var info map[string]cfg.ContractInfo = make(map[string]cfg.ContractInfo)
-	info["rootcommits"] = cfg.C.Contracts.RootCommits
-	info["iden3impl"] = cfg.C.Contracts.Iden3Impl
-	info["iden3deployer"] = cfg.C.Contracts.Iden3Deployer
+func contractInfo() map[string]genericserver.ContractInfo {
+	var info map[string]genericserver.ContractInfo = make(map[string]genericserver.ContractInfo)
+	info["rootcommits"] = genericserver.C.Contracts.RootCommits
+	info["iden3impl"] = genericserver.C.Contracts.Iden3Impl
+	info["iden3deployer"] = genericserver.C.Contracts.Iden3Deployer
 	return info
 }
 
 func cmdContractInfo(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
+	ks, acc := genericserver.LoadKeyStore()
+	client := genericserver.LoadWeb3(ks, &acc)
 
-	info := func(name string, info cfg.ContractInfo) {
+	info := func(name string, info genericserver.ContractInfo) {
 		if len(info.Address) > 0 {
 			code, err := client.CodeAt(common.HexToAddress(info.Address))
 			if err != nil {
@@ -67,12 +67,12 @@ func cmdContractInfo(c *cli.Context) error {
 
 func cmdContractDeploy(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
+	ks, acc := genericserver.LoadKeyStore()
+	client := genericserver.LoadWeb3(ks, &acc)
 
 	if len(c.Args()) != 1 {
 		return fmt.Errorf("should specify contract")
@@ -83,7 +83,7 @@ func cmdContractDeploy(c *cli.Context) error {
 	if !ok {
 		return fmt.Errorf("contract %v does not exist", contractid)
 	}
-	contract := cfg.LoadContract(client, info.JsonABI, nil)
+	contract := genericserver.LoadContract(client, info.JsonABI, nil)
 
 	_, _, err := contract.DeploySync()
 	if err != nil {

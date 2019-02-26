@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/gin-gonic/gin"
-	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/utils"
@@ -53,14 +53,14 @@ type handleForwardIdRes struct {
 // handleCreateId handles the creation of a new user tree from the user keys.
 func handleCreateId(c *gin.Context) {
 
-	if idservice.ImplAddr() == nil {
-		fail(c, "idservice.ImplAddr()==nil", fmt.Errorf("Implementation not set"))
+	if genericserver.Idservice.ImplAddr() == nil {
+		genericserver.Fail(c, "idservice.ImplAddr()==nil", fmt.Errorf("Implementation not set"))
 		return
 	}
 
 	var idreq handlePostIdReq
 	if err := c.BindJSON(&idreq); err != nil {
-		fail(c, "cannot parse json body", err)
+		genericserver.Fail(c, "cannot parse json body", err)
 		return
 	}
 
@@ -68,20 +68,20 @@ func handleCreateId(c *gin.Context) {
 	id := &identitysrv.Identity{
 		Operational:   operational,
 		OperationalPk: idreq.OperationalPk,
-		Relayer:       common.HexToAddress(cfg.C.KeyStore.Address),
+		Relayer:       common.HexToAddress(genericserver.C.KeyStore.Address),
 		Recoverer:     idreq.Recoverer,
 		Revokator:     idreq.Revokator,
-		Impl:          *idservice.ImplAddr(),
+		Impl:          *genericserver.Idservice.ImplAddr(),
 	}
 
-	addr, err := idservice.AddressOf(id)
+	addr, err := genericserver.Idservice.AddressOf(id)
 	if err != nil {
-		fail(c, "failed generating identity address ", err)
+		genericserver.Fail(c, "failed generating identity address ", err)
 		return
 	}
 
-	if proofClaim, err := idservice.Add(id); err != nil {
-		fail(c, "failed adding identity ", err)
+	if proofClaim, err := genericserver.Idservice.Add(id); err != nil {
+		genericserver.Fail(c, "failed adding identity ", err)
 		return
 	} else {
 		c.JSON(http.StatusOK, handlePostIdRes{IdAddr: addr, ProofClaim: proofClaim})
@@ -92,26 +92,26 @@ func handleCreateId(c *gin.Context) {
 func handleDeployId(c *gin.Context) {
 
 	idaddr := common.HexToAddress(c.Param("idaddr"))
-	id, err := idservice.Get(idaddr)
+	id, err := genericserver.Idservice.Get(idaddr)
 	if err != nil {
-		fail(c, "cannot retrieve idaddr", err)
+		genericserver.Fail(c, "cannot retrieve idaddr", err)
 		return
 	}
 
-	isDeployed, err := idservice.IsDeployed(idaddr)
+	isDeployed, err := genericserver.Idservice.IsDeployed(idaddr)
 	if err != nil {
-		fail(c, "cannot retrieve deployment status", err)
+		genericserver.Fail(c, "cannot retrieve deployment status", err)
 		return
 	}
 
 	if isDeployed {
-		fail(c, "already deployed", fmt.Errorf("already deployed"))
+		genericserver.Fail(c, "already deployed", fmt.Errorf("already deployed"))
 		return
 	}
 
-	addr, tx, err := idservice.Deploy(id)
+	addr, tx, err := genericserver.Idservice.Deploy(id)
 	if err != nil {
-		fail(c, "error deploying", err)
+		genericserver.Fail(c, "error deploying", err)
 		return
 	}
 	c.JSON(http.StatusOK, handleDeployIdRes{addr, tx.Hash().Hex()})
@@ -128,10 +128,10 @@ func handleGetId(c *gin.Context) {
 
 	idi.IdAddr = common.HexToAddress(c.Param("idaddr"))
 
-	if info, err := idservice.Info(idi.IdAddr); err == nil {
+	if info, err := genericserver.Idservice.Info(idi.IdAddr); err == nil {
 		idi.Onchain = info
 	}
-	if id, err := idservice.Get(idi.IdAddr); err == nil {
+	if id, err := genericserver.Idservice.Get(idi.IdAddr); err == nil {
 		idi.LocalDb = id
 	}
 	c.JSON(http.StatusOK, idi)
@@ -141,7 +141,7 @@ func decodeBigIntParamOrFail(c *gin.Context, param, bivalue string) *big.Int {
 	value := new(big.Int)
 	value, ok := value.SetString(bivalue, 10)
 	if !ok {
-		fail(c, "bad "+param+" parameter", fmt.Errorf("bad"+param+" paremeter"))
+		genericserver.Fail(c, "bad "+param+" parameter", fmt.Errorf("bad"+param+" paremeter"))
 		return nil
 	}
 	return value
@@ -149,7 +149,7 @@ func decodeBigIntParamOrFail(c *gin.Context, param, bivalue string) *big.Int {
 
 func decodeHexParamOrFail(c *gin.Context, param, hexvalue string) []byte {
 	if !strings.HasPrefix(hexvalue, "0x") {
-		fail(c, "bad "+param+" parameter", fmt.Errorf("bad "+param+" paremeter"))
+		genericserver.Fail(c, "bad "+param+" parameter", fmt.Errorf("bad "+param+" paremeter"))
 		return nil
 	}
 	if hexvalue == "0x0" {
@@ -157,7 +157,7 @@ func decodeHexParamOrFail(c *gin.Context, param, hexvalue string) []byte {
 	}
 	data, err := hex.DecodeString(hexvalue[2:])
 	if err != nil {
-		fail(c, "bad data parameter", err)
+		genericserver.Fail(c, "bad data parameter", err)
 		return nil
 	}
 	return data
@@ -165,14 +165,14 @@ func decodeHexParamOrFail(c *gin.Context, param, hexvalue string) []byte {
 
 func handleForwardId(c *gin.Context) {
 
-	if idservice.ImplAddr() == nil {
-		fail(c, "idservice.ImplAddr()==nil", fmt.Errorf("Implementation not set"))
+	if genericserver.Idservice.ImplAddr() == nil {
+		genericserver.Fail(c, "idservice.ImplAddr()==nil", fmt.Errorf("Implementation not set"))
 		return
 	}
 
 	var req handleForwardIdReq
 	if err := c.BindJSON(&req); err != nil {
-		fail(c, "cannot parse json body", err)
+		genericserver.Fail(c, "cannot parse json body", err)
 		return
 	}
 
@@ -195,12 +195,12 @@ func handleForwardId(c *gin.Context) {
 		return
 	}
 
-	tx, err := idservice.Forward(idaddr,
+	tx, err := genericserver.Idservice.Forward(idaddr,
 		&req.KSignPk.PublicKey,
 		req.To, data, value, req.Gas, sig)
 
 	if err != nil {
-		fail(c, "failed to forward", err)
+		genericserver.Fail(c, "failed to forward", err)
 		return
 	}
 
