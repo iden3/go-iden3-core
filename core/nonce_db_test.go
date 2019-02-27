@@ -19,6 +19,18 @@ func TestNonceDb(t *testing.T) {
 	ok := ndb.Add(fmt.Sprintf("nonce-a-%v", 0), 10, nil)
 	assert.Equal(t, false, ok)
 
+	// Adding an Aux
+	ok = ndb.AddAux("nonce-a-0", 42)
+	assert.Equal(t, true, ok)
+
+	// Adding an Aux to a nonce that already has one must fail
+	ok = ndb.AddAux("nonce-a-0", 64)
+	assert.Equal(t, false, ok)
+
+	nObj, ok := ndb.Search("nonce-a-0")
+	assert.Equal(t, true, ok)
+	assert.Equal(t, 42, nObj.Aux)
+
 	// Test NonceDb.Search()
 	for i := int64(0); i < 256; i++ {
 		_, ok := ndb.Search(fmt.Sprintf("nonce-a-%v", i))

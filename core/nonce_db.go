@@ -96,6 +96,21 @@ func (ndb *NonceDb) Add(nonce string, delta int64, aux interface{}) bool {
 	return ndb.add(nonce, expiration, aux)
 }
 
+// AddAux adds aux data to a nonceObj only if it doesn't have an Aux already.
+// Returns true on success.
+func (ndb *NonceDb) AddAux(nonce string, aux interface{}) bool {
+	ndb.mutex.Lock()
+	defer ndb.mutex.Unlock()
+	nObj, ok := ndb.nonceObjsByNonce[nonce]
+	if !ok {
+		return false
+	} else if nObj.Aux != nil {
+		return false
+	}
+	nObj.Aux = aux
+	return true
+}
+
 // Search searches a nonce object by nonce.  Returns false if the nonce is not
 // found or expired.
 func (ndb *NonceDb) Search(nonce string) (*NonceObj, bool) {
