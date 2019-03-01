@@ -146,12 +146,17 @@ type ClaimAssignName struct {
 	IdAddr common.Address
 }
 
+func HashName(name string) (nameHash [248 / 8]byte) {
+	hash := utils.HashBytes([]byte(name))
+	copy(nameHash[:], hash[len(hash)-248/8:])
+	return nameHash
+}
+
 // NewClaimAssignName returns a ClaimAssignName with the name and IdAddr
 func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
-	hash := utils.HashBytes([]byte(name))
-	copy(c.NameHash[:], hash[len(hash)-248/8:])
+	c.NameHash = HashName(name)
 	c.IdAddr = idAddr
 	return c
 }

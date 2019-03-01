@@ -42,10 +42,69 @@ type SigHeader struct {
 // SigPayload is the JSON Web Signature Payload of a signed packet
 type SigPayload struct {
 	Type       string           `json:"type" binding:"required"`
-	Data       interface{}      `json:"data" binding:"required"`
 	KSign      *utils.PublicKey `json:"ksign" binding:"required"`
 	ProofKSign ProofClaim       `json:"proofKSign" binding:"required"`
-	Form       interface{}      `json:"form" binding:"required"`
+	DataRaw    json.RawMessage  `json:"data" binding:"required"`
+	Data       interface{}      `json:"-"`
+	FormRaw    json.RawMessage  `json:"form" binding:"required"`
+	Form       interface{}      `json:"-"`
+}
+
+type IdenAssertData struct {
+	Challenge string `json:"hallenge" binding:"required"`
+	Timeout   int64  `json:"timeout" binding:"required"`
+	Origin    string `json:"origin" binding:"required"`
+}
+
+type IdenAssertForm struct {
+	EthName         string
+	ProofAssignName ProofClaim
+}
+
+func (p SigPayload) MarshalJSON() ([]byte, error) {
+	var err error
+	p.DataRaw, err = json.Marshal(p.Data)
+	if err != nil {
+		return nil, err
+	}
+	p.FormRaw, err = json.Marshal(p.Form)
+	if err != nil {
+		return nil, err
+	}
+	type SigPayloadRaw SigPayload
+	return json.Marshal(SigPayloadRaw(p))
+}
+
+func (p *SigPayload) UnmarshalJSON(bs []byte) error {
+	type SigPayloadRaw SigPayload
+	var pRaw SigPayloadRaw
+	if err := json.Unmarshal(bs, &pRaw); err != nil {
+		return err
+	}
+	switch pRaw.Type {
+	case IDENASSERTV01:
+		var data IdenAssertData
+		if err := json.Unmarshal(pRaw.DataRaw, &data); err != nil {
+			return err
+		}
+		pRaw.Data = data
+		var form IdenAssertForm
+		if err := json.Unmarshal(pRaw.FormRaw, &form); err != nil {
+			return err
+		}
+		pRaw.Form = form
+	case GENERICSIGV01:
+		pRaw.Data = nil
+		var form map[string]string
+		if err := json.Unmarshal(pRaw.FormRaw, &form); err != nil {
+			return err
+		}
+		pRaw.Form = form
+	default:
+		return fmt.Errorf("unknown signed packet type: %v", pRaw.Type)
+	}
+	*p = SigPayload(pRaw)
+	return nil
 }
 
 // SignedPacket is a JSON Web Signature unmarshaled packet of a signed packet
@@ -139,7 +198,7 @@ func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecd
 		Algorithm:    SIGALGV01,
 	}
 	payload := SigPayload{
-		Type:       IDENASSERTV01,
+		Type:       payloadType,
 		Data:       data,
 		KSign:      &utils.PublicKey{PublicKey: *kSignPk},
 		ProofKSign: proofKSign,
@@ -150,6 +209,21 @@ func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecd
 		return nil, err
 	}
 	return &jws, nil
+}
+
+func NewSignGenericSigV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
+	proofKSign ProofClaim, expireDelta int64, form interface{}) (*SignedPacket, error) {
+	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
+		GENERICSIGV01, nil, form)
+
+}
+
+func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, ethName string,
+	proofAssignName *ProofClaim, ks *keystore.KeyStore, idAddr common.Address,
+	kSignPk *ecdsa.PublicKey, proofKSign ProofClaim, expireDelta int64) (*SignedPacket, error) {
+	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
+		IDENASSERTV01, requestIdenAssert.Body.Data,
+		IdenAssertForm{EthName: ethName, ProofAssignName: *proofAssignName})
 }
 
 func VerifySignedPacketV01(jws *SignedPacket) error {
@@ -200,7 +274,7 @@ func VerifySignedPacketV01(jws *SignedPacket) error {
 
 	// 7. VerifyProofClaim(jwsPayload.proofOfKSign, relayPk)
 	if ok, err := VerifyProofClaim(relayAddr, &jws.Payload.ProofKSign); !ok {
-		return err
+		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
 
 	return nil
@@ -214,4 +288,109 @@ func VerifySignedPacket(jws *SignedPacket) error {
 	default:
 		return fmt.Errorf("Unsupported signature packet typ: %v", jws.Header.Type)
 	}
+}
+
+type IdenAssertResult struct {
+	NonceObj *NonceObj
+	EthName  string
+	IdAddr   common.Address
+}
+
+func VerifyIdenAssertV01(nonceDb *NonceDb, origin string, jws *SignedPacket) (*IdenAssertResult, error) {
+	data, ok := jws.Payload.Data.(IdenAssertData)
+	if !ok {
+		return nil, fmt.Errorf("Invalid payload.data")
+	}
+	form, ok := jws.Payload.Form.(IdenAssertForm)
+	if !ok {
+		return nil, fmt.Errorf("Invalid payload.form")
+	}
+
+	// 2. Verify jwsPayload.data.origin is origin
+	if data.Origin != origin {
+		return nil, fmt.Errorf("Invalid origin: expected %v, but got %v", origin, data.Origin)
+	}
+
+	// check that jwsPayload.proofKSign.proofs.length <= 2
+	if len(jws.Payload.ProofKSign.Proofs) > 2 {
+		return nil, fmt.Errorf("Authorize KSign claim proofs of depth > 2 not allowed yet")
+	}
+
+	// 3. Verify jwsPayload.data.challenge is in nonceDB and hasn't expired, delete it
+	nonceObj, ok := nonceDb.SearchAndDelete(data.Challenge)
+	if !ok {
+		return nil, fmt.Errorf("Invalid nonce")
+	}
+
+	// 4. Verify that jwsHeader.iss and jwsPayload.form.ethName are in jwsPayload.proofAssignName.leaf
+	claim, err := NewClaimFromEntry(&merkletree.Entry{Data: *form.ProofAssignName.Leaf})
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing form.proofAssignNam.leaf: %v", err)
+	}
+	claimAssignName, ok := claim.(*ClaimAssignName)
+	if !ok {
+		return nil, fmt.Errorf("Invalid claim type in form.proofAssignName.leaf")
+	}
+	if HashName(form.EthName) != claimAssignName.NameHash {
+		return nil, fmt.Errorf("Assign Name claim name doesn't match with form.ethName")
+	}
+	if jws.Header.Issuer != claimAssignName.IdAddr {
+		return nil, fmt.Errorf("Assign Name claim idAddr doesn't match with header.iss")
+	}
+
+	// 5. VerifyProofClaim(jwsPayload.form.proofAssignName, relayPk)
+	if ok, err := VerifyProofClaim(relayAddr, &form.ProofAssignName); !ok {
+		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
+	}
+
+	return &IdenAssertResult{NonceObj: nonceObj, EthName: form.EthName, IdAddr: jws.Header.Issuer}, nil
+}
+
+type RequestIdenAssertHeader struct {
+	Type string `json:"typ" binding:"required"`
+}
+
+type RequestIdenAssertBody struct {
+	Type string         `json:"type" binding:"required"`
+	Data IdenAssertData `json:"data" binding:"required"`
+}
+
+type RequestIdenAssert struct {
+	Header RequestIdenAssertHeader `json:"header" binding:"required"`
+	Body   RequestIdenAssertBody   `json:"body" binding:"required"`
+}
+
+func NewRequestIdenAssert(nonceDb *NonceDb, origin string, expireDelta int64) *RequestIdenAssert {
+	nonceObj := nonceDb.New(expireDelta, nil)
+	return &RequestIdenAssert{
+		Header: RequestIdenAssertHeader{Type: SIGV01},
+		Body: RequestIdenAssertBody{
+			Type: IDENASSERTV01,
+			Data: IdenAssertData{
+				Challenge: nonceObj.Nonce,
+				Timeout:   nonceObj.Expiration,
+				Origin:    origin,
+			},
+		},
+	}
+}
+
+func VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *NonceDb, origin string) (*IdenAssertResult, error) {
+	if jws.Payload.Type != IDENASSERTV01 {
+		return nil, fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
+	}
+	if err := VerifySignedPacket(jws); err != nil {
+		return nil, err
+	}
+	return VerifyIdenAssertV01(nonceDb, origin, jws)
+}
+
+func VerifySignedPacketGeneric(jws *SignedPacket) error {
+	if jws.Payload.Type != GENERICSIGV01 {
+		return fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
+	}
+	if err := VerifySignedPacket(jws); err != nil {
+		return err
+	}
+	return nil
 }
