@@ -12,8 +12,8 @@ func TestNonceDb(t *testing.T) {
 
 	// Test NonceDb.Add()
 	for i := int64(0); i < 256; i++ {
-		ok := ndb.Add(fmt.Sprintf("nonce-a-%v", i), 10, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-a-%v", i), 10, nil)
+		assert.NotNil(t, nObj)
 	}
 	// Can't add a repeated nonce
 	nObj := ndb.Add(fmt.Sprintf("nonce-a-%v", 0), 10, nil)
@@ -57,12 +57,12 @@ func TestNonceDb(t *testing.T) {
 
 	// DeleteOld should delete half of the nonces
 	for i := int64(0); i < 8; i++ {
-		ok := ndb.Add(fmt.Sprintf("nonce-c-%v", i), -60, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-c-%v", i), -60, nil)
+		assert.NotNil(t, nObj)
 	}
 	for i := int64(0); i < 8; i++ {
-		ok := ndb.Add(fmt.Sprintf("nonce-d-%v", i), 60, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-d-%v", i), 60, nil)
+		assert.NotNil(t, nObj)
 	}
 	assert.Equal(t, 16, len(ndb.nonceObjsByNonce))
 	ndb.DeleteOld()
@@ -72,12 +72,12 @@ func TestNonceDb(t *testing.T) {
 
 	// DeleteOldOportunistic should delete half of the nonces after 128 searches
 	for i := int64(0); i < 8; i++ { // Add 8 expired nonces
-		ok := ndb.Add(fmt.Sprintf("nonce-e-%v", i), -60, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-e-%v", i), -60, nil)
+		assert.NotNil(t, nObj)
 	}
 	for i := int64(0); i < 8; i++ { // Add 8 non-expired nonces
-		ok := ndb.Add(fmt.Sprintf("nonce-f-%v", i), 60, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-f-%v", i), 60, nil)
+		assert.NotNil(t, nObj)
 
 	}
 	assert.Equal(t, 16, len(ndb.nonceObjsByNonce))
@@ -90,8 +90,8 @@ func TestNonceDb(t *testing.T) {
 	assert.Equal(t, 8, len(ndb.nonceObjsByNonce))
 	// We add more expired nonces
 	for i := int64(0); i < 8; i++ {
-		ok := ndb.Add(fmt.Sprintf("nonce-g-%v", i), -60, nil)
-		assert.Equal(t, true, ok)
+		nObj := ndb.Add(fmt.Sprintf("nonce-g-%v", i), -60, nil)
+		assert.NotNil(t, nObj)
 	}
 	// counter += 100
 	for i := 0; i < 100; i++ {

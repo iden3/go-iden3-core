@@ -53,10 +53,14 @@ github.com/gxed/hashland/murmur3 v0.0.1/go.mod h1:KjXop02n4/ckmZSnY2+HKcLud/tcmv
 github.com/hashicorp/hcl v1.0.0 h1:0Anlzjpi4vEasTeNFn2mLJgTSwt0+6sfsiTG8qcWGx4=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
+github.com/ipfs/go-ipfs-api v0.0.0-20190227013953-fc4b441cfe34 h1:iBNNFRMAM7TdtXj7jX9DfhdzjdZEBVG/xJb4AkEkZko=
+github.com/ipfs/go-ipfs-api v0.0.0-20190227013953-fc4b441cfe34/go.mod h1:YWGjU+7Bdls1CpvsKsV6EsQ/KMyQqSpBru2hme/5WQg=
 github.com/ipfs/go-ipfs-api v1.3.5 h1:NvOdNXkN1S9XiaRlpPV8SUOBKcRVlpUhoHgbDteMs60=
 github.com/ipfs/go-ipfs-api v1.3.5/go.mod h1:YWGjU+7Bdls1CpvsKsV6EsQ/KMyQqSpBru2hme/5WQg=
 github.com/ipfs/go-ipfs-cmdkit v1.1.3 h1:4sbEnLjYmh8gJOCUiqtKp0EIboSYTFrxftc7S+U3gK4=
 github.com/ipfs/go-ipfs-cmdkit v1.1.3/go.mod h1:9FtbMdUabcSqv/G4/8WCxSLxkZxn/aZEFrxxqnVcRbg=
+github.com/ipfs/go-ipfs-files v0.0.0-20190211184658-b9ab59872849 h1:zDVjiCC1yxVL0rtwzLY45QfbNY5j9uS5G7m+4VLDfco=
+github.com/ipfs/go-ipfs-files v0.0.0-20190211184658-b9ab59872849/go.mod h1:6m71fxPZM2eOasRmgz6ryrSpTkriYsggu2Cnv2cu+jA=
 github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f h1:cV3p0tC1kxjsIHqGtlED44+JsED3AxJSPZ3eMxflOqY=
 github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f/go.mod h1:4MbfcV8YX3CWjkWgUIH4vEVk002kMJlOEmhoSJP8SeE=
 github.com/jessevdk/go-flags v0.0.0-20141203071132-1679536dcc89/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
