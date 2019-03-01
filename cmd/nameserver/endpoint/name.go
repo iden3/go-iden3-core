@@ -1,9 +1,10 @@
 package endpoint
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	cfg "github.com/iden3/go-iden3/cmd/nameserver/config"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 )
 
@@ -33,10 +34,8 @@ func handleVinculateId(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"claimAssignName":      claimAssignName.Entry(),
-		"name":                 form["assignName"],
-		"idAddr":               signedPacket.Header.Issuer,
-		"proofClaimAssignName": proofClaimAssignName,
+		"ethName":         fmt.Sprintf("%v@%v", form["assignName"], cfg.C.Domain),
+		"proofAssignName": proofClaimAssignName,
 	})
 }
 func handleClaimAssignNameResolv(c *gin.Context) {
@@ -54,8 +53,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"claim":                common3.HexEncode(claimAssignName.Entry().Bytes()),
-		"idAddr":               claimAssignName.IdAddr,
-		"proofClaimAssignName": proofClaimAssignName,
+		"idAddr":          claimAssignName.IdAddr,
+		"proofAssignName": proofClaimAssignName,
 	})
 }
