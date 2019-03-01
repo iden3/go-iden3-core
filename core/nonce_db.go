@@ -2,6 +2,8 @@ package core
 
 import (
 	"container/heap"
+	"crypto/rand"
+	common3 "github.com/iden3/go-iden3/common"
 	"sync"
 	"time"
 )
@@ -78,22 +80,34 @@ func NewNonceDb() *NonceDb {
 	}
 }
 
-func (ndb *NonceDb) add(nonce string, expiration int64, aux interface{}) bool {
+func (ndb *NonceDb) add(nonce string, expiration int64, aux interface{}) *NonceObj {
 	if _, ok := ndb.nonceObjsByNonce[nonce]; ok {
-		return false
+		return nil
 	}
 	nObj := &NonceObj{nonce, expiration, aux}
 	ndb.nonceObjsByNonce[nonce] = nObj
 	ndb.noncesHeap.Push(nObj)
-	return true
+	return nObj
 }
 
-// Add adds a nonce with aux data that expires after delta seconds>
-func (ndb *NonceDb) Add(nonce string, delta int64, aux interface{}) bool {
+// Add adds a nonce with aux data that expires after delta seconds
+func (ndb *NonceDb) Add(nonce string, delta int64, aux interface{}) *NonceObj {
 	expiration := time.Now().Unix() + delta
 	ndb.mutex.Lock()
 	defer ndb.mutex.Unlock()
 	return ndb.add(nonce, expiration, aux)
+}
+
+// New adds a new nonce to the db that expires after delta seconds, and returns
+// the added NonceObj
+func (ndb *NonceDb) New(delta int64, aux interface{}) *NonceObj {
+	var rnd [256 / 8]byte
+	_, err := rand.Read(rnd[:])
+	if err != nil {
+		panic(err)
+	}
+	nonce := common3.HexEncode(rnd[:])
+	return ndb.Add(nonce, delta, aux)
 }
 
 // AddAux adds aux data to a nonceObj only if it doesn't have an Aux already.

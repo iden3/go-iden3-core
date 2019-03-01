@@ -16,18 +16,18 @@ func TestNonceDb(t *testing.T) {
 		assert.Equal(t, true, ok)
 	}
 	// Can't add a repeated nonce
-	ok := ndb.Add(fmt.Sprintf("nonce-a-%v", 0), 10, nil)
-	assert.Equal(t, false, ok)
+	nObj := ndb.Add(fmt.Sprintf("nonce-a-%v", 0), 10, nil)
+	assert.Nil(t, nObj)
 
 	// Adding an Aux
-	ok = ndb.AddAux("nonce-a-0", 42)
+	ok := ndb.AddAux("nonce-a-0", 42)
 	assert.Equal(t, true, ok)
 
 	// Adding an Aux to a nonce that already has one must fail
 	ok = ndb.AddAux("nonce-a-0", 64)
 	assert.Equal(t, false, ok)
 
-	nObj, ok := ndb.Search("nonce-a-0")
+	nObj, ok = ndb.Search("nonce-a-0")
 	assert.Equal(t, true, ok)
 	assert.Equal(t, 42, nObj.Aux)
 
@@ -48,8 +48,8 @@ func TestNonceDb(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 	// Must not exists because it has expired
-	ok = ndb.Add("nonce-b-0", -1, nil)
-	assert.Equal(t, true, ok)
+	nObj = ndb.Add("nonce-b-0", -1, nil)
+	assert.NotNil(t, nObj)
 	_, ok = ndb.Search("nonce-b-0")
 	assert.Equal(t, false, ok)
 

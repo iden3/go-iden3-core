@@ -8,25 +8,19 @@ import (
 )
 
 func handleVinculateId(c *gin.Context) {
-	var form struct {
-		AssignName string `json:"assignName" binding:"required"`
-	}
 	var signedPacket core.SignedPacket
-	signedPacket.Payload.Form = &form
 	if err := c.BindJSON(&signedPacket); err != nil {
 		fail(c, "BindJSON", err)
 		return
 	}
-	if err := core.VerifySignedPacket(&signedPacket); err != nil {
-		fail(c, "invalid signed packet", err)
+	if err := core.VerifySignedPacketGeneric(&signedPacket); err != nil {
+		fail(c, "invalid generic signed packet", err)
 		return
 	}
-	if signedPacket.Payload.Type != core.GENERICSIGV01 {
-		fail(c, "invalid signed packet payload type", nil)
-		return
-	}
+	form := signedPacket.Payload.Form.(map[string]string)
 
-	claimAssignName, err := nameservice.VinculateId(form.AssignName, cfg.C.Domain, signedPacket.Header.Issuer)
+	claimAssignName, err := nameservice.VinculateId(form["assignName"], cfg.C.Domain,
+		signedPacket.Header.Issuer)
 	if err != nil {
 		fail(c, "error name.VinculateId", err)
 		return
@@ -40,7 +34,7 @@ func handleVinculateId(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{
 		"claimAssignName":      claimAssignName.Entry(),
-		"name":                 form.AssignName,
+		"name":                 form["assignName"],
 		"idAddr":               signedPacket.Header.Issuer,
 		"proofClaimAssignName": proofClaimAssignName,
 	})
