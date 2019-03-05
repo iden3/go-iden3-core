@@ -2,6 +2,7 @@ module github.com/iden3/go-iden3
 
 require (
 	github.com/allegro/bigcache v1.2.0 // indirect
+	github.com/appleboy/gin-jwt v0.0.0-20190216100112-ca1084e5d5a2
 	github.com/aristanetworks/goarista v0.0.0-20190219163901-728bce664cf5 // indirect
 	github.com/arnaucube/go-snark v0.0.0-20190101215735-a7454213a0f2
 	github.com/deckarep/golang-set v1.7.1 // indirect
@@ -30,8 +31,10 @@ require (
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
+	github.com/ugorji/go v1.1.2-0.20180831062425-e253f1f20942 // indirect
 	github.com/urfave/cli v1.20.0
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
 	golang.org/x/crypto v0.0.0-20190228050851-31a38585487a
+	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )
