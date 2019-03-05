@@ -1,9 +1,11 @@
 package rootsrv
 
 import (
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/merkletree"
 	log "github.com/sirupsen/logrus"
@@ -17,10 +19,11 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	lastRoot    merkletree.Hash
-	stopch      chan (interface{})
-	stoppedch   chan (interface{})
-	rootcommits *eth.Contract
+	lastRoot      merkletree.Hash
+	lastRootMutex sync.RWMutex
+	stopch        chan (interface{})
+	stoppedch     chan (interface{})
+	rootcommits   *eth.Contract
 }
 
 func New(rootcommits *eth.Contract) *ServiceImpl {
@@ -28,13 +31,15 @@ func New(rootcommits *eth.Contract) *ServiceImpl {
 		stopch:      make(chan (interface{})),
 		stoppedch:   make(chan (interface{})),
 		rootcommits: rootcommits,
+		lastRoot:    merkletree.Hash{},
 	}
 }
 
 func (s *ServiceImpl) Start() {
-	s.lastRoot = merkletree.Hash{}
-	lastRoot := s.lastRoot
 	go func() {
+		s.lastRootMutex.RLock()
+		lastRoot := s.lastRoot
+		s.lastRootMutex.RUnlock()
 		log.Info("Starting root publisher")
 		for {
 			select {
@@ -43,15 +48,21 @@ func (s *ServiceImpl) Start() {
 				s.stoppedch <- nil
 				return
 			case <-time.After(time.Second):
-				if lastRoot != s.lastRoot {
-					lastRoot = s.lastRoot
-					if tx, err := s.rootcommits.SendTransaction(nil, 0, "setRoot", lastRoot); err != nil {
-						log.Error("Failed to add root", err)
+				s.lastRootMutex.RLock()
+				sLastRoot := s.lastRoot
+				s.lastRootMutex.RUnlock()
+				if lastRoot != sLastRoot {
+					lastRoot = sLastRoot
+					log.Debugf("Upading root in smart contract to %v\n",
+						common3.HexEncode(lastRoot[:]))
+					if tx, err := s.rootcommits.SendTransaction(nil, 0,
+						"setRoot", lastRoot); err != nil {
+						log.Error("Failed to add root: ", err)
 						lastRoot = merkletree.Hash{}
 					} else {
 						_, err = s.rootcommits.Client().WaitReceipt(tx.Hash())
 						if err != nil {
-							log.Error("Error waiting for receipt", err)
+							log.Error("Error waiting for receipt: ", err)
 						}
 					}
 				}
@@ -67,7 +78,9 @@ func (s *ServiceImpl) GetRoot(addr common.Address) (merkletree.Hash, error) {
 }
 
 func (s *ServiceImpl) SetRoot(hash merkletree.Hash) {
+	s.lastRootMutex.Lock()
 	s.lastRoot = hash
+	s.lastRootMutex.Unlock()
 }
 
 func (s *ServiceImpl) StopAndJoin() {
