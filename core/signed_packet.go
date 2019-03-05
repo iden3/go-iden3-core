@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	//common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
@@ -51,7 +51,7 @@ type SigPayload struct {
 }
 
 type IdenAssertData struct {
-	Challenge string `json:"hallenge" binding:"required"`
+	Challenge string `json:"challenge" binding:"required"`
 	Timeout   int64  `json:"timeout" binding:"required"`
 	Origin    string `json:"origin" binding:"required"`
 }
@@ -156,18 +156,24 @@ func (sp *SignedPacket) MarshalJSON() ([]byte, error) {
 func (sp *SignedPacket) Unmarshal(s string) error {
 	fields := strings.Split(s, ".")
 	if len(fields) != 3 {
-		return fmt.Errorf("Invalid JWT: it doesn't contain 3 dot separated fields")
+		return fmt.Errorf("Invalid JWS: it doesn't contain 3 dot separated fields")
 	}
 	jwsHeader64, jwsPayload64, signature64 := fields[0], fields[1], fields[2]
-	jwsHeader, err := base64.StdEncoding.DecodeString(jwsHeader64)
-	jwsPayload, err := base64.StdEncoding.DecodeString(jwsPayload64)
+	jwsHeader, err := common3.Base64Decode(jwsHeader64)
+	if err != nil {
+		return err
+	}
+	jwsPayload, err := common3.Base64Decode(jwsPayload64)
+	if err != nil {
+		return err
+	}
 	if err := json.Unmarshal(jwsHeader, &sp.Header); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(jwsPayload, &sp.Payload); err != nil {
 		return err
 	}
-	signature, err := base64.StdEncoding.DecodeString(signature64)
+	signature, err := common3.Base64Decode(signature64)
 	if err != nil {
 		return err
 	}
@@ -182,8 +188,7 @@ func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 	if err := json.Unmarshal(bs, &jws); err != nil {
 		return err
 	}
-	sp.Unmarshal(jws.Jws)
-	return nil
+	return sp.Unmarshal(jws.Jws)
 }
 
 func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
