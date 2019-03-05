@@ -25,12 +25,22 @@ func init() {
 	relayAddr = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 }
 
+// SIGV01 is the JWS type of an iden3 signed packet.
 const SIGV01 = "iden3.sig.v0_1"
+
+// IDENASSERTV01 is the signed packet payload type for an identity assertion.
 const IDENASSERTV01 = "iden3.iden_assert.v0_1"
+
+// GENERICSIGV01 is the signed packet payload type for a generic signature that
+// contains an empty data field and a string key to string value mapping as
+// form.
 const GENERICSIGV01 = "iden3.gen_sig.v0_1"
+
+// SIGALGV01 is the JWS algorithm used in SIGV01.  It's ECDSA with secp256k1
+// and keccak.
 const SIGALGV01 = "EK256K1"
 
-// SigHeader is the JSON Web Signature Header of a signed packet
+// SigHeader is the JSON Web Signature Header of a signed packet.
 type SigHeader struct {
 	Type         string         `json:"typ" binding:"required"`
 	Issuer       common.Address `json:"iss" binding:"required"`
@@ -39,7 +49,7 @@ type SigHeader struct {
 	Algorithm    string         `json:"alg" binding:"required"`
 }
 
-// SigPayload is the JSON Web Signature Payload of a signed packet
+// SigPayload is the JSON Web Signature Payload of a signed packet.
 type SigPayload struct {
 	Type       string           `json:"type" binding:"required"`
 	KSign      *utils.PublicKey `json:"ksign" binding:"required"`
@@ -50,17 +60,22 @@ type SigPayload struct {
 	Form       interface{}      `json:"-"`
 }
 
+// IdenAssertData contains the data field of a signed packet of type
+// iden3.iden_assert.v0_1
 type IdenAssertData struct {
 	Challenge string `json:"challenge" binding:"required"`
 	Timeout   int64  `json:"timeout" binding:"required"`
 	Origin    string `json:"origin" binding:"required"`
 }
 
+// IdenAssertForm contains the form field of a signed packet of type
+// iden3.iden_assert.v0_1
 type IdenAssertForm struct {
 	EthName         string
 	ProofAssignName ProofClaim
 }
 
+// MarshalJSON marshals the signed packet payload into JSON.
 func (p SigPayload) MarshalJSON() ([]byte, error) {
 	var err error
 	p.DataRaw, err = json.Marshal(p.Data)
@@ -75,6 +90,7 @@ func (p SigPayload) MarshalJSON() ([]byte, error) {
 	return json.Marshal(SigPayloadRaw(p))
 }
 
+// UnmarshalJSON unmarshals the signed packet payload from a JSON.
 func (p *SigPayload) UnmarshalJSON(bs []byte) error {
 	type SigPayloadRaw SigPayload
 	var pRaw SigPayloadRaw
@@ -107,7 +123,7 @@ func (p *SigPayload) UnmarshalJSON(bs []byte) error {
 	return nil
 }
 
-// SignedPacket is a JSON Web Signature unmarshaled packet of a signed packet
+// SignedPacket is a JSON Web Signature unmarshaled packet of a signed packet.
 type SignedPacket struct {
 	Header      SigHeader
 	Payload     SigPayload
@@ -115,6 +131,7 @@ type SignedPacket struct {
 	Signature   *utils.SignatureEthMsg
 }
 
+// Sign signs the signed packet with the key corresponding to addr.
 func (sp *SignedPacket) Sign(ks *keystore.KeyStore, addr common.Address) error {
 	headerJSON, err := json.Marshal(sp.Header)
 	if err != nil {
@@ -133,10 +150,13 @@ func (sp *SignedPacket) Sign(ks *keystore.KeyStore, addr common.Address) error {
 	return nil
 }
 
+// Jws represents a JWS (JSON Web Signature) sent over the network.
 type Jws struct {
 	Jws string `json:"jws" binding:"required"`
 }
 
+// Marshal serializes a signed packet (that has been signed) into a string,
+// encoding it as JWS.
 func (sp *SignedPacket) Marshal() (string, error) {
 	if sp.Signature == nil {
 		return "", fmt.Errorf("signed packet has not been signed yet")
@@ -145,6 +165,7 @@ func (sp *SignedPacket) Marshal() (string, error) {
 	return fmt.Sprintf("%v.%v", string(sp.SignedBytes), sig64), nil
 }
 
+// MarshalJSON marshals a sined packet into a Jws JSON.
 func (sp *SignedPacket) MarshalJSON() ([]byte, error) {
 	str, err := sp.Marshal()
 	if err != nil {
@@ -153,6 +174,7 @@ func (sp *SignedPacket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(Jws{Jws: str})
 }
 
+// Unmarshal deserializes a signed packet (encoded as JWS) from a string.
 func (sp *SignedPacket) Unmarshal(s string) error {
 	fields := strings.Split(s, ".")
 	if len(fields) != 3 {
@@ -183,6 +205,7 @@ func (sp *SignedPacket) Unmarshal(s string) error {
 	return nil
 }
 
+// UnmarshalJSON unmarshals a signed packet from a Jws JSON.
 func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 	var jws Jws
 	if err := json.Unmarshal(bs, &jws); err != nil {
@@ -191,6 +214,7 @@ func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 	return sp.Unmarshal(jws.Jws)
 }
 
+// NewSignPacketV01 generates and signs a SIGV01 signed packet.
 func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
 	proofKSign ProofClaim, expireDelta int64, payloadType string,
 	data interface{}, form interface{}) (*SignedPacket, error) {
@@ -216,6 +240,7 @@ func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecd
 	return &jws, nil
 }
 
+// NewSignGenericSigV01 generates and signs a signed packet with payload type GENERICSIGV01.
 func NewSignGenericSigV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
 	proofKSign ProofClaim, expireDelta int64, form interface{}) (*SignedPacket, error) {
 	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
@@ -223,6 +248,7 @@ func NewSignGenericSigV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk 
 
 }
 
+// NewSignIdenAssertV01 generates and signs a signed packet with payload type IDENASSERTV01.
 func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, ethName string,
 	proofAssignName *ProofClaim, ks *keystore.KeyStore, idAddr common.Address,
 	kSignPk *ecdsa.PublicKey, proofKSign ProofClaim, expireDelta int64) (*SignedPacket, error) {
@@ -231,6 +257,7 @@ func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, ethName string,
 		IdenAssertForm{EthName: ethName, ProofAssignName: *proofAssignName})
 }
 
+// VerifySignedPacketV01 verifies a SIGV01 signed packet.
 func VerifySignedPacketV01(jws *SignedPacket) error {
 	// 2. Verify jwsHeader.alg is 'ES255'
 	if jws.Header.Algorithm != SIGALGV01 {
@@ -285,6 +312,7 @@ func VerifySignedPacketV01(jws *SignedPacket) error {
 	return nil
 }
 
+// VerifySignedPacket verifies a signed packet.
 func VerifySignedPacket(jws *SignedPacket) error {
 	switch jws.Header.Type {
 	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_1'
@@ -295,12 +323,15 @@ func VerifySignedPacket(jws *SignedPacket) error {
 	}
 }
 
+// IdenAssertResult is the result of a successfull verification of an
+// IDENASSERTV01 payload from a signed packet.
 type IdenAssertResult struct {
 	NonceObj *NonceObj
 	EthName  string
 	IdAddr   common.Address
 }
 
+// VerifyIdenAssertV01 verifies an IDENASSERTV01 payload of a signed packet.
 func VerifyIdenAssertV01(nonceDb *NonceDb, origin string, jws *SignedPacket) (*IdenAssertResult, error) {
 	data, ok := jws.Payload.Data.(IdenAssertData)
 	if !ok {
@@ -351,20 +382,26 @@ func VerifyIdenAssertV01(nonceDb *NonceDb, origin string, jws *SignedPacket) (*I
 	return &IdenAssertResult{NonceObj: nonceObj, EthName: form.EthName, IdAddr: jws.Header.Issuer}, nil
 }
 
+// RequestIdenAssertBody is the header request of a RequestIdenAssert.
 type RequestIdenAssertHeader struct {
 	Type string `json:"typ" binding:"required"`
 }
 
+// RequestIdenAssertBody is the body request of a RequestIdenAssert.
 type RequestIdenAssertBody struct {
 	Type string         `json:"type" binding:"required"`
 	Data IdenAssertData `json:"data" binding:"required"`
 }
 
+// RequestIdenAssert is a request for a signed packet with payload type
+// IDENASSERTV01.
 type RequestIdenAssert struct {
 	Header RequestIdenAssertHeader `json:"header" binding:"required"`
 	Body   RequestIdenAssertBody   `json:"body" binding:"required"`
 }
 
+// NewRequestIdenAssert generates a signing request for a signed packet with
+// payload type IDENASSERTV01.
 func NewRequestIdenAssert(nonceDb *NonceDb, origin string, expireDelta int64) *RequestIdenAssert {
 	nonceObj := nonceDb.New(expireDelta, nil)
 	return &RequestIdenAssert{
@@ -380,6 +417,8 @@ func NewRequestIdenAssert(nonceDb *NonceDb, origin string, expireDelta int64) *R
 	}
 }
 
+// VerifySignedPacketIdenAssert verifies a signed packet and the
+// IDENASSERTV01 payload of the signed packet.
 func VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *NonceDb, origin string) (*IdenAssertResult, error) {
 	if jws.Payload.Type != IDENASSERTV01 {
 		return nil, fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
@@ -390,6 +429,8 @@ func VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *NonceDb, origin st
 	return VerifyIdenAssertV01(nonceDb, origin, jws)
 }
 
+// VerifySignedPacketGeneric verifies a signed packet and checks that the
+// payload type is GENERICSIGV01.
 func VerifySignedPacketGeneric(jws *SignedPacket) error {
 	if jws.Payload.Type != GENERICSIGV01 {
 		return fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
