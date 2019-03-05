@@ -1,4 +1,3 @@
-```go
 package main
 
 import (
@@ -28,7 +27,7 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	authapi, err := auth.AddAuthMiddleware(r, domain, nonceDb, []byte("password"))
+	authapi, err := auth.AddAuthMiddleware(&r.RouterGroup, domain, nonceDb, []byte("password"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,4 +38,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-```
