@@ -16,6 +16,20 @@ func Base64ToBytes(base64String string) ([]byte, error) {
 	return hashBytes, err
 }
 
+// Base64Decode decodes a string in base64 with optional padding into an array
+// of bytes.
+func Base64Decode(b64 string) ([]byte, error) {
+	l := len(b64)
+	if b64[l-3] == '=' {
+		b64 = b64[:l-3]
+	} else if b64[l-2] == '=' {
+		b64 = b64[:l-2]
+	} else if b64[l-1] == '=' {
+		b64 = b64[:l-1]
+	}
+	return base64.RawStdEncoding.DecodeString(b64)
+}
+
 // BytesToBase64 converts an array of bytes to a base64 encoded string
 func BytesToBase64(bytesArray []byte) string {
 	h := base64.StdEncoding.EncodeToString(bytesArray)

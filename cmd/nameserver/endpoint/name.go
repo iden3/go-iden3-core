@@ -38,6 +38,7 @@ func handleVinculateId(c *gin.Context) {
 		"proofAssignName": proofClaimAssignName,
 	})
 }
+
 func handleClaimAssignNameResolv(c *gin.Context) {
 	nameid := c.Param("name")
 
