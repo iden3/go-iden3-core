@@ -94,7 +94,8 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte) (*jwt.G
 //    RequestIdenAssert.
 //    - POST "/login": requires a JSON with jwt field containing a JWS
 //    signedPacket.
-func AddAuthMiddleware(r *gin.Engine, domain string, nonceDb *core.NonceDb, key []byte) (*gin.RouterGroup, error) {
+func AddAuthMiddleware(r *gin.RouterGroup, domain string, nonceDb *core.NonceDb,
+	key []byte) (*gin.RouterGroup, error) {
 	authMiddleware, err := NewAuthMiddleware(domain, nonceDb, key)
 	if err != nil {
 		return nil, fmt.Errorf("JWT auth middleware error: %v", err)
