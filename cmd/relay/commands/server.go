@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/cmd/relay/endpoint"
 )
 
@@ -36,19 +36,19 @@ var ServerCommands = []cli.Command{
 
 func cmdStart(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
-	storage := cfg.LoadStorage()
-	mt := cfg.LoadMerkele(storage)
+	ks, acc := genericserver.LoadKeyStore()
+	client := genericserver.LoadWeb3(ks, &acc)
+	storage := genericserver.LoadStorage()
+	mt := genericserver.LoadMerkele(storage)
 
-	rootservice := cfg.LoadRootsService(client)
-	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
-	idservice := cfg.LoadIdService(client, claimservice, storage)
-	adminservice := cfg.LoadAdminService(mt, rootservice, claimservice)
+	rootservice := genericserver.LoadRootsService(client)
+	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
+	idservice := genericserver.LoadIdService(client, claimservice, storage)
+	adminservice := genericserver.LoadAdminService(mt, rootservice, claimservice)
 
 	// Check for funds
 	balance, err := client.BalanceAt(acc.Address)
@@ -73,7 +73,7 @@ func cmdStart(c *cli.Context) error {
 
 func postAdminApi(command string) (string, error) {
 
-	hostport := strings.Split(cfg.C.Server.AdminApi, ":")
+	hostport := strings.Split(genericserver.C.Server.AdminApi, ":")
 	if hostport[0] == "0.0.0.0" {
 		hostport[0] = "127.0.0.1"
 	}
@@ -95,7 +95,7 @@ func postAdminApi(command string) (string, error) {
 }
 
 func cmdStop(c *cli.Context) error {
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 	output, err := postAdminApi("stop")
@@ -106,7 +106,7 @@ func cmdStop(c *cli.Context) error {
 }
 
 func cmdInfo(c *cli.Context) error {
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 	output, err := postAdminApi("info")

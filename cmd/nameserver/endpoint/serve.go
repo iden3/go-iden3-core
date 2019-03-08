@@ -7,10 +7,9 @@ import (
 	"os/signal"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/nameserver/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -33,10 +32,10 @@ func init() {
 
 func handleGetRoot(c *gin.Context) {
 	// get the contract data
-	contractAddress := common.HexToAddress(config.C.Contracts.RootCommits.Address)
+	contractAddress := common.HexToAddress(genericserver.C.Contracts.RootCommits.Address)
 	root, err := rootservice.GetRoot(contractAddress)
 	if err != nil {
-		fail(c, "error contract.GetRoot(contractAddress)", err)
+		genericserver.Fail(c, "error contract.GetRoot(contractAddress)", err)
 		return
 	}
 	c.JSON(200, gin.H{
@@ -46,19 +45,14 @@ func handleGetRoot(c *gin.Context) {
 }
 
 func serveServiceApi() *http.Server {
-	// start serviceapi
-	api := gin.Default()
-	api.Use(cors.Default())
-
-	serviceapi := api.Group("/api/unstable")
-	serviceapi.GET("/root", handleGetRoot)
+	api, serviceapi := genericserver.NewServiceAPI("/api/unstable")
 
 	serviceapi.POST("/names", handleVinculateId)
 	serviceapi.GET("/names/:name", handleClaimAssignNameResolv)
 
-	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
+	serviceapisrv := &http.Server{Addr: genericserver.C.Server.ServiceApi, Handler: api}
 	go func() {
-		log.Info("API server at ", config.C.Server.ServiceApi)
+		log.Info("API server at ", genericserver.C.Server.ServiceApi)
 		if err := serviceapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("listen: %s\n", err)
 		}
@@ -67,24 +61,10 @@ func serveServiceApi() *http.Server {
 }
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
-	api := gin.Default()
-	api.Use(cors.Default())
-	adminapi := api.Group("/api/unstable")
-
-	adminapi.POST("/stop", func(c *gin.Context) {
-		// yeah, use curl -X POST http://<adminserver>/stop
-		c.String(http.StatusOK, "got it, shutdowning server")
-		stopch <- nil
-	})
-
-	adminapi.GET("/info", handleInfo)
-	adminapi.GET("/rawdump", handleRawDump)
-	adminapi.POST("/rawimport", handleRawImport)
-	adminapi.GET("/claimsdump", handleClaimsDump)
-
-	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: api}
+	api, _ := genericserver.NewAdminAPI("/api/unstable", stopch)
+	adminapisrv := &http.Server{Addr: genericserver.C.Server.AdminApi, Handler: api}
 	go func() {
-		log.Info("ADMIN server at ", config.C.Server.AdminApi)
+		log.Info("ADMIN server at ", genericserver.C.Server.AdminApi)
 		if err := adminapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("listen: %s\n", err)
 		}

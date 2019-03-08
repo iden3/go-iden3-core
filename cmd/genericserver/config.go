@@ -1,4 +1,4 @@
-package config
+package genericserver
 
 import (
 	"strings"
@@ -44,9 +44,9 @@ func MustRead(c *cli.Context) error {
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")
-	viper.AddConfigPath(".")           // adding home directory as first search path
-	viper.SetEnvPrefix("nameserveri3") // so viper.AutomaticEnv will get matching envvars starting with O2M_
-	viper.AutomaticEnv()               // read in environment variables that match
+	viper.AddConfigPath(".")    // adding home directory as first search path
+	viper.SetEnvPrefix("iden3") // so viper.AutomaticEnv will get matching envvars starting with O2M_
+	viper.AutomaticEnv()        // read in environment variables that match
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	if c.GlobalString("config") != "" {

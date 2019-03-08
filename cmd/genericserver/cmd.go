@@ -1,52 +1,35 @@
-package commands
+package genericserver
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/csv"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
-	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
-	log "github.com/sirupsen/logrus"
+	"github.com/iden3/go-iden3/db"
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/urfave/cli"
 )
 
-var ClaimCommands = []cli.Command{
-	{
-		Name:  "claim",
-		Usage: "claim add",
-		Subcommands: []cli.Command{{
-			Name:   "add",
-			Usage:  "claim add",
-			Action: cmdAddClaim,
-		}},
-	},
-	{
-		Name:  "claims",
-		Usage: "claims import from file",
-		Subcommands: []cli.Command{{
-			Name:   "fromfile",
-			Usage:  "import claims from file",
-			Action: cmdAddClaimsFromFile,
-		}},
-	},
-}
-
-func cmdAddClaim(c *cli.Context) error {
-	if err := genericserver.MustRead(c); err != nil {
+// Claim
+func CmdAddClaim(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
 		return err
 	}
 
-	ks, acc := genericserver.LoadKeyStore()
-	client := genericserver.LoadWeb3(ks, &acc)
-	storage := genericserver.LoadStorage()
-	mt := genericserver.LoadMerkele(storage)
+	ks, acc := LoadKeyStore()
+	client := LoadWeb3(ks, &acc)
+	storage := LoadStorage()
+	mt := LoadMerkele(storage)
 
-	rootservice := genericserver.LoadRootsService(client)
-	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
+	rootservice := LoadRootsService(client)
+	claimservice := LoadClaimService(mt, rootservice, ks, acc)
 
 	indexData := c.Args().Get(0)
 	outData := c.Args().Get(1)
@@ -78,19 +61,19 @@ func cmdAddClaim(c *cli.Context) error {
 	return nil
 }
 
-func cmdAddClaimsFromFile(c *cli.Context) error {
-	if err := genericserver.MustRead(c); err != nil {
+func CmdAddClaimsFromFile(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
 		return err
 	}
 	// read config
 	filepath := c.Args().Get(0)
 
-	ks, acc := genericserver.LoadKeyStore()
-	client := genericserver.LoadWeb3(ks, &acc)
-	storage := genericserver.LoadStorage()
-	mt := genericserver.LoadMerkele(storage)
+	ks, acc := LoadKeyStore()
+	client := LoadWeb3(ks, &acc)
+	storage := LoadStorage()
+	mt := LoadMerkele(storage)
 
-	rootservice := genericserver.LoadRootsService(client)
+	rootservice := LoadRootsService(client)
 
 	fmt.Print("\n---\nimporting claims\n---\n\n")
 	// csv file will have the following structure: indexData, noindexData
@@ -163,5 +146,41 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 	rootservice.SetRoot(*mt.RootKey())
 	fmt.Println("merkletree root: " + mt.RootKey().Hex())
 
+	return nil
+}
+
+// DB
+func CmdDbRawDump(c *cli.Context) error {
+
+	if err := MustRead(c); err != nil {
+		return err
+	}
+	storage := LoadStorage()
+	ldb := (storage.(*db.LevelDbStorage)).LevelDB()
+	iter := ldb.NewIterator(nil, nil)
+	for iter.Next() {
+		fmt.Println(hex.EncodeToString(iter.Key()), " ", hex.EncodeToString(iter.Value()))
+	}
+	iter.Release()
+	return nil
+}
+
+func CmdDbIPFSexport(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
+		return err
+	}
+	storage := LoadStorage()
+	ldb := (storage.(*db.LevelDbStorage)).LevelDB()
+	iter := ldb.NewIterator(nil, nil)
+	for iter.Next() {
+		sh := shell.NewShell("localhost:5001") // ipfs daemon IP:Port
+		cid, err := sh.Add(bytes.NewReader(iter.Value()))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %s", err)
+			os.Exit(1)
+		}
+		fmt.Println("value of key "+common3.HexEncode(iter.Key())+" added, ipfs hash: ", cid)
+	}
+	iter.Release()
 	return nil
 }

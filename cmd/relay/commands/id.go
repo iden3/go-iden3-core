@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	cfg "github.com/iden3/go-iden3/cmd/relay/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	log "github.com/sirupsen/logrus"
@@ -13,13 +13,13 @@ import (
 )
 
 func loadIdService() (eth.Client, identitysrv.Service) {
-	ks, acc := cfg.LoadKeyStore()
-	client := cfg.LoadWeb3(ks, &acc)
-	storage := cfg.LoadStorage()
-	mt := cfg.LoadMerkele(storage)
-	rootservice := cfg.LoadRootsService(client)
-	claimservice := cfg.LoadClaimService(mt, rootservice, ks, acc)
-	return client, cfg.LoadIdService(client, claimservice, storage)
+	ks, acc := genericserver.LoadKeyStore()
+	client := genericserver.LoadWeb3(ks, &acc)
+	storage := genericserver.LoadStorage()
+	mt := genericserver.LoadMerkele(storage)
+	rootservice := genericserver.LoadRootsService(client)
+	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
+	return client, genericserver.LoadIdService(client, claimservice, storage)
 }
 
 var IdCommands = []cli.Command{{
@@ -52,7 +52,7 @@ var IdCommands = []cli.Command{{
 
 func cmdIdAdd(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 
@@ -64,7 +64,7 @@ func cmdIdAdd(c *cli.Context) error {
 
 	id := identitysrv.Identity{
 		Operational: common.HexToAddress(c.Args()[0]),
-		Relayer:     common.HexToAddress(cfg.C.KeyStore.Address),
+		Relayer:     common.HexToAddress(genericserver.C.KeyStore.Address),
 		Recoverer:   common.HexToAddress(c.Args()[1]),
 		Revokator:   common.HexToAddress(c.Args()[2]),
 		Impl:        *idservice.ImplAddr(),
@@ -86,7 +86,7 @@ func cmdIdAdd(c *cli.Context) error {
 
 func cmdIdDeploy(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 
@@ -129,7 +129,7 @@ type idInfo struct {
 
 func cmdIdInfo(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 
@@ -164,7 +164,7 @@ func cmdIdInfo(c *cli.Context) error {
 }
 func cmdIdList(c *cli.Context) error {
 
-	if err := cfg.MustRead(c); err != nil {
+	if err := genericserver.MustRead(c); err != nil {
 		return err
 	}
 

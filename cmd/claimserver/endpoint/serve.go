@@ -6,10 +6,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/gin-contrib/cors"
-
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3/cmd/claimserver/config"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
@@ -17,28 +15,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var claimservice claimsrv.Service
-var rootservice rootsrv.Service
-var adminservice adminsrv.Service
-
 func init() {
 	gin.SetMode(gin.ReleaseMode)
 }
 
 func serveServiceApi() *http.Server {
-	// start serviceapi
-	api := gin.Default()
-	api.Use(cors.Default())
-
-	serviceapi := api.Group("/api/unstable")
-	serviceapi.GET("/root", handleGetRoot)
-
+	api, serviceapi := genericserver.NewServiceAPI("/api/unstable")
 	serviceapi.POST("/claims", handlePostClaim)                  // Get relay claim proof
 	serviceapi.GET("/claims/:hi/proof", handleGetClaimProofByHi) // Get relay claim proof
 
-	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
+	serviceapisrv := &http.Server{Addr: genericserver.C.Server.ServiceApi, Handler: api}
 	go func() {
-		log.Info("API server at ", config.C.Server.ServiceApi)
+		log.Info("API server at ", genericserver.C.Server.ServiceApi)
 		if err := serviceapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("listen: %s\n", err)
 		}
@@ -47,25 +35,12 @@ func serveServiceApi() *http.Server {
 }
 
 func serveAdminApi(stopch chan interface{}) *http.Server {
-	api := gin.Default()
-	api.Use(cors.Default())
-	adminapi := api.Group("/api/unstable")
-
-	adminapi.POST("/stop", func(c *gin.Context) {
-		// yeah, use curl -X POST http://<adminserver>/stop
-		c.String(http.StatusOK, "got it, shutdowning server")
-		stopch <- nil
-	})
-
-	adminapi.GET("/info", handleInfo)
-	adminapi.GET("/rawdump", handleRawDump)
-	adminapi.POST("/rawimport", handleRawImport)
-	adminapi.GET("/claimsdump", handleClaimsDump)
+	api, adminapi := genericserver.NewAdminAPI("/api/unstable", stopch)
 	adminapi.POST("/claims/basic", handleAddClaimBasic)
 
-	adminapisrv := &http.Server{Addr: config.C.Server.AdminApi, Handler: api}
+	adminapisrv := &http.Server{Addr: genericserver.C.Server.AdminApi, Handler: api}
 	go func() {
-		log.Info("ADMIN server at ", config.C.Server.AdminApi)
+		log.Info("ADMIN server at ", genericserver.C.Server.AdminApi)
 		if err := adminapisrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Errorf("listen: %s\n", err)
 		}
@@ -75,9 +50,9 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 
 func Serve(rs rootsrv.Service, cs claimsrv.Service, as adminsrv.Service) {
 
-	claimservice = cs
-	rootservice = rs
-	adminservice = as
+	genericserver.Claimservice = cs
+	genericserver.Rootservice = rs
+	genericserver.Adminservice = as
 
 	stopch := make(chan interface{})
 
@@ -93,7 +68,7 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service, as adminsrv.Service) {
 	}()
 
 	// start servers
-	rootservice.Start()
+	genericserver.Rootservice.Start()
 	serviceapisrv := serveServiceApi()
 	adminapisrv := serveAdminApi(stopch)
 
