@@ -153,6 +153,17 @@ func TestSignedPacket(t *testing.T) {
 
 }
 
+func BenchmarkSignedPacket(b *testing.B) {
+	setup()
+	defer teardown()
+
+	//t.Run("SignPacketV01", testSignPacketV01)
+	b.Run("SignGenericSigV01", benchmarkSignGenericSigV01)
+	b.Run("VerifySignGenericSigV01", benchmarkVerifySignGenericSigV01)
+	//t.Run("SignIdenAssertV01", testSignIdenAssertV01)
+	//t.Run("MarshalUnmarshal", testMarshalUnmarshal)
+}
+
 func testSignPacketV01(t *testing.T) {
 	var proofKSign ProofClaim
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
@@ -191,6 +202,35 @@ func testSignGenericSigV01(t *testing.T) {
 
 	err = VerifySignedPacketGeneric(signedPacket)
 	assert.Nil(t, err)
+}
+
+func benchmarkSignGenericSigV01(b *testing.B) {
+	var proofKSign ProofClaim
+	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
+		panic(err)
+	}
+	form := map[string]string{"foo": "baz"}
+
+	for n := 0; n < b.N; n++ {
+		NewSignGenericSigV01(keyStore, idAddr, kSignPk, proofKSign, 600, form)
+	}
+}
+
+// VerifySignedPacketGeneric is a bit slow right now.  The bottleneck resides
+// in the VerifyProofClaim, in particular in the calculation of the mimc7.Hash.
+// There is room for optimization in the mimc7.Hash
+func benchmarkVerifySignGenericSigV01(b *testing.B) {
+	var proofKSign ProofClaim
+	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
+		panic(err)
+	}
+	form := map[string]string{"foo": "baz"}
+	signedPacket, err := NewSignGenericSigV01(keyStore, idAddr, kSignPk, proofKSign, 600, form)
+	assert.Nil(b, err)
+
+	for n := 0; n < b.N; n++ {
+		VerifySignedPacketGeneric(signedPacket)
+	}
 }
 
 func testSignIdenAssertV01(t *testing.T) {
