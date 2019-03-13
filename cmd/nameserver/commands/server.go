@@ -14,7 +14,10 @@ import (
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/cmd/nameserver/endpoint"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/discoverysrv"
+	"github.com/iden3/go-iden3/services/nameresolvesrv"
 	"github.com/iden3/go-iden3/services/namesrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 )
 
@@ -54,6 +57,15 @@ func cmdStart(c *cli.Context) error {
 	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
 	nameservice := LoadNameService(claimservice, ks, acc, genericserver.C.Domain, genericserver.C.Namespace)
 	adminservice := genericserver.LoadAdminService(mt, rootservice, claimservice)
+	nameresolveservice, err := nameresolvesrv.New(genericserver.C.Names.Path)
+	if err != nil {
+		return err
+	}
+	discoveryservice, err := discoverysrv.New(genericserver.C.Identitites.Path)
+	if err != nil {
+		return err
+	}
+	signedpacketservice := signedpacketsrv.New(discoveryservice, nameresolveservice)
 
 	// Check for founds
 	balance, err := client.BalanceAt(acc.Address)
@@ -68,7 +80,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the nameserver address")
 	}
 
-	endpoint.Serve(rootservice, claimservice, nameservice, adminservice)
+	endpoint.Serve(rootservice, claimservice, nameservice, *signedpacketservice, adminservice)
 
 	rootservice.StopAndJoin()
 	storage.Close()

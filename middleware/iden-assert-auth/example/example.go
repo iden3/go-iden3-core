@@ -8,6 +8,9 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/middleware/iden-assert-auth"
+	"github.com/iden3/go-iden3/services/discoverysrv"
+	"github.com/iden3/go-iden3/services/nameresolvesrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 )
 
 func handleGetHello(c *gin.Context) {
@@ -27,7 +30,17 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	authapi, err := auth.AddAuthMiddleware(&r.RouterGroup, domain, nonceDb, []byte("password"))
+	nameresolveservice, err := nameresolvesrv.New("/tmp/go-iden3/names.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	discoveryservice, err := discoverysrv.New("/tmp/go-iden3/identitites.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	signedpacketservice := signedpacketsrv.New(discoveryservice, nameresolveservice)
+	authapi, err := auth.AddAuthMiddleware(&r.RouterGroup, domain, nonceDb, []byte("password"),
+		signedpacketservice)
 	if err != nil {
 		log.Fatal(err)
 	}

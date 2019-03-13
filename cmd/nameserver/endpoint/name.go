@@ -5,16 +5,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
-	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 )
 
 func handleVinculateId(c *gin.Context) {
-	var signedPacket core.SignedPacket
+	var signedPacket signedpacketsrv.SignedPacket
 	if err := c.BindJSON(&signedPacket); err != nil {
 		genericserver.Fail(c, "BindJSON", err)
 		return
 	}
-	if err := core.VerifySignedPacketGeneric(&signedPacket); err != nil {
+	if err := signedpacketservice.VerifySignedPacketGeneric(&signedPacket); err != nil {
 		genericserver.Fail(c, "invalid signed packet", err)
 		return
 	}

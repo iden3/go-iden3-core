@@ -36,6 +36,12 @@ type Config struct {
 	}
 	Domain    string
 	Namespace string
+	Names     struct {
+		Path string
+	}
+	Identitites struct {
+		Path string
+	}
 }
 
 var C Config

@@ -15,15 +15,15 @@ import (
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var claimservice claimsrv.Service
 var rootservice rootsrv.Service
-
 var nameservice namesrv.Service
-
+var signedpacketservice signedpacketsrv.Service
 var adminservice adminsrv.Service
 
 func init() {
@@ -72,11 +72,13 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service, as adminsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service,
+	ss signedpacketsrv.Service, as adminsrv.Service) {
 
 	claimservice = cs
 	rootservice = rs
 	nameservice = ns
+	signedpacketservice = ss
 	adminservice = as
 
 	stopch := make(chan interface{})
