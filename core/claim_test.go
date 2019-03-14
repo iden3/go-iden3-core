@@ -5,6 +5,7 @@ import (
 	//"encoding/hex"
 	"bytes"
 	"crypto/ecdsa"
+
 	//"crypto/elliptic"
 	//"crypto/rand"
 	"encoding/hex"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	//common3 "github.com/iden3/go-iden3/common"
 	//"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
@@ -198,6 +200,43 @@ func TestClaimSetRootKey(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, c0, c1)
 	assert.Equal(t, c0, c2)
+}
+
+func TestClaimLinkObjectIdentity(t *testing.T) {
+	// ClaimLinkObjectIdentity
+	var hashType uint32 = 1
+	var objectType uint32 = 1
+	var indexType uint16
+	idAddr := common.BytesToAddress([]byte{
+		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
+		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
+		0x39, 0x39, 0x39, 0x3a})
+	objectHash := merkletree.Hash(merkletree.ElemBytes{
+		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c})
+	claim := NewClaimLinkObjectIdentity(hashType, objectType, indexType, idAddr, objectHash)
+	claim.Version = 1
+	entry := claim.Entry()
+	assert.Equal(t,
+		"0x0d64bf8fd783338f82a8ce0aa31768cc6c84b616f382f65d553ce7cdbf017cec",
+		entry.HIndex().Hex())
+	assert.Equal(t,
+		"0x0ad7edbf562757b1ad2282c44e2c248f95e9e6b09ba0d32809aa724fbf148e0c",
+		entry.HValue().Hex())
+	dataTestOutput(&entry.Data)
+	assert.Equal(t, ""+
+		"0000000000000000000000000000000000000000000000000000000000000000"+
+		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
+		"000000000000000000000000393939393939393939393939393939393939393a"+
+		"0000000000000000000000000000000100000001000000010000000000000005",
+		entry.Data.String())
+	c1 := NewClaimLinkObjectIdentityFromEntry(entry)
+	c2, err := NewClaimFromEntry(entry)
+	assert.Nil(t, err)
+	assert.Equal(t, claim, c1)
+	assert.Equal(t, claim, c2)
 }
 
 func dataTestOutput(d *merkletree.Data) {
