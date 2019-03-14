@@ -33,6 +33,8 @@ func setClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint3
 	SetClaimTypeVersionInData(&e.Data, claimType, version)
 }
 
+// SetClaimTypeVersionInData is a helper function to set the type and version of a
+// claim.
 func SetClaimTypeVersionInData(d *merkletree.Data, claimType ClaimType, version uint32) {
 	copyToElemBytes(&d[3], 0, claimType[:])
 	binary.BigEndian.PutUint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
@@ -44,7 +46,7 @@ func getClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
 	return GetClaimTypeVersionFromData(&e.Data)
 }
 
-// GetClaimTypeVersionFromData(
+// GetClaimTypeVersionFromData gets claims fields data and version from a given claim.
 func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
 	copyFromElemBytes(c[:], 0, &d[3])
 	v = binary.BigEndian.Uint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:])
@@ -65,6 +67,7 @@ func NewClaimType(name string) *ClaimType {
 	return t
 }
 
+// NewClaimTypeNum to set type to a claim.
 func NewClaimTypeNum(num uint64) *ClaimType {
 	ct := ClaimType{}
 	binary.BigEndian.PutUint64(ct[:], num)
@@ -82,6 +85,8 @@ var (
 	ClaimTypeAssignName = NewClaimTypeNum(3)
 	// ClaimTypeAuthorizeKSignSecp256k1 is a claim type to autorize a secp256k1 public key for signing.
 	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
+	// ClaimTypeLinkObjectIdentity is a claim type to link an object (represented by a hash) to an identity.
+	ClaimTypeLinkObjectIdentity = NewClaimTypeNum(5)
 )
 
 // ClaimVersionLen is the length in bytes of the version in a claim.
@@ -146,13 +151,14 @@ type ClaimAssignName struct {
 	IdAddr common.Address
 }
 
+// HashName takes the first 31 bytes of a hash applied to name.
 func HashName(name string) (nameHash [248 / 8]byte) {
 	hash := utils.HashBytes([]byte(name))
 	copy(nameHash[:], hash[len(hash)-248/8:])
 	return nameHash
 }
 
-// NewClaimAssignName returns a ClaimAssignName with the name and IdAddr
+// NewClaimAssignName returns a ClaimAssignName with the name and IdAddr.
 func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
@@ -204,7 +210,7 @@ func NewClaimAuthorizeKSign(sign bool, ay merkletree.ElemBytes) *ClaimAuthorizeK
 	}
 }
 
-// NewClaimAuthorizeKSign deserializes a ClaimAuthorizeKSign from an Entry.
+// NewClaimAuthorizeKSignFromEntry deserializes a ClaimAuthorizeKSign from an Entry.
 func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSign {
 	c := &ClaimAuthorizeKSign{}
 	_, c.Version = getClaimTypeVersion(e)
@@ -305,7 +311,7 @@ func NewClaimSetRootKey(idAddr common.Address, rootKey merkletree.Hash) *ClaimSe
 	}
 }
 
-// NewClaimSetRootKey deserializes a ClaimSetRootKey from an Entry.
+// NewClaimSetRootKeyFromEntry deserializes a ClaimSetRootKey from an Entry.
 func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	c := &ClaimSetRootKey{}
 	_, c.Version = getClaimTypeVersion(e)
@@ -334,6 +340,93 @@ func (c *ClaimSetRootKey) Type() ClaimType {
 	return *ClaimTypeSetRootKey
 }
 
+// ClaimLinkObjectIdentity aims to link a hash of an object to an identity.
+type ClaimLinkObjectIdentity struct {
+	// Version is the claim version.
+	Version uint32
+	// HashType is the hash used to compute objectHash.
+	HashType uint32
+	// ObjectType is the representation of the objectHash.
+	ObjectType uint32
+	// ObjectIndex is the index of this object which the identity has.
+	ObjectIndex uint16
+	// IdAddr is the Ethereum Address related to the identity.
+	IdAddr common.Address
+	// ObjectHash is the hash of the object.
+	ObjectHash merkletree.Hash
+}
+
+// NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
+func NewClaimLinkObjectIdentity(hashType uint32, objectType uint32, objectIndex uint16, idAddr common.Address,
+	objectHash merkletree.Hash) *ClaimLinkObjectIdentity {
+	return &ClaimLinkObjectIdentity{
+		Version:     0,
+		HashType:    hashType,
+		ObjectType:  objectType,
+		ObjectIndex: objectIndex,
+		IdAddr:      idAddr,
+		ObjectHash:  objectHash,
+	}
+}
+
+// NewClaimLinkObjectIdentityFromEntry deserializes a ClaimLinkObjectIdentity from an Entry.
+func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObjectIdentity {
+	claim := &ClaimLinkObjectIdentity{}
+	_, claim.Version = getClaimTypeVersion(entry)
+	var hashType [32 / 8]byte
+	var objectType [32 / 8]byte
+	var objectIndex [16 / 8]byte
+	var indexLen = ClaimTypeVersionLen
+	// hash type
+	copyFromElemBytes(hashType[:], indexLen, &entry.Data[3])
+	claim.HashType = binary.BigEndian.Uint32(hashType[:])
+	// object type
+	indexLen += len(hashType)
+	copyFromElemBytes(objectType[:], indexLen, &entry.Data[3])
+	claim.ObjectType = binary.BigEndian.Uint32(objectType[:])
+	// object index
+	indexLen += len(objectType)
+	copyFromElemBytes(objectIndex[:], indexLen, &entry.Data[3])
+	claim.ObjectIndex = binary.BigEndian.Uint16(objectIndex[:])
+	// identity address
+	copyFromElemBytes(claim.IdAddr[:], 0, &entry.Data[2])
+	// object hash
+	claim.ObjectHash = merkletree.Hash(entry.Data[1])
+	return claim
+}
+
+// Entry serializes the claim into an Entry.
+func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
+	entry := &merkletree.Entry{}
+	var indexLen = ClaimTypeVersionLen
+	// type and version
+	setClaimTypeVersion(entry, claim.Type(), claim.Version)
+	// hash type
+	var hashType [32 / 8]byte
+	binary.BigEndian.PutUint32(hashType[:], claim.HashType)
+	copyToElemBytes(&entry.Data[3], indexLen, hashType[:])
+	// object type
+	indexLen += len(hashType)
+	var objectType [32 / 8]byte
+	binary.BigEndian.PutUint32(objectType[:], claim.ObjectType)
+	copyToElemBytes(&entry.Data[3], indexLen, objectType[:])
+	// object index
+	indexLen += len(objectType)
+	var objectIndex [16 / 8]byte
+	binary.BigEndian.PutUint16(objectIndex[:], claim.ObjectIndex)
+	copyToElemBytes(&entry.Data[3], indexLen, objectIndex[:])
+	// identity address
+	copyToElemBytes(&entry.Data[2], 0, claim.IdAddr[:])
+	// object hash
+	entry.Data[1] = merkletree.ElemBytes(claim.ObjectHash)
+	return entry
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimLinkObjectIdentity) Type() ClaimType {
+	return *ClaimTypeLinkObjectIdentity
+}
+
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	claimType, _ := getClaimTypeVersion(e)
@@ -352,6 +445,9 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 		return c, nil
 	case *ClaimTypeAuthorizeKSignSecp256k1:
 		return NewClaimAuthorizeKSignSecp256k1FromEntry(e)
+	case *ClaimTypeLinkObjectIdentity:
+		c := NewClaimLinkObjectIdentityFromEntry(e)
+		return c, nil
 	default:
 		return nil, ErrInvalidClaimType
 	}
