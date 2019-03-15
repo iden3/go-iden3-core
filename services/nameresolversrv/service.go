@@ -1,4 +1,4 @@
-package nameresolvesrv
+package nameresolversrv
 
 import (
 	"encoding/json"

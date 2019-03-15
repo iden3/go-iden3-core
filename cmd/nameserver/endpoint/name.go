@@ -14,13 +14,13 @@ func handleVinculateId(c *gin.Context) {
 		genericserver.Fail(c, "BindJSON", err)
 		return
 	}
-	if err := signedpacketservice.VerifySignedPacketGeneric(&signedPacket); err != nil {
+	if err := signedPacketService.VerifySignedPacketGeneric(&signedPacket); err != nil {
 		genericserver.Fail(c, "invalid signed packet", err)
 		return
 	}
 	form := signedPacket.Payload.Form.(map[string]string)
 
-	claimAssignName, err := nameservice.VinculateId(form["assignName"], genericserver.C.Domain,
+	claimAssignName, err := nameService.VinculateId(form["assignName"], genericserver.C.Domain,
 		signedPacket.Header.Issuer)
 	if err != nil {
 		genericserver.Fail(c, "error name.VinculateId", err)
@@ -28,7 +28,7 @@ func handleVinculateId(c *gin.Context) {
 	}
 
 	// return claim with proofs
-	proofClaimAssignName, err := claimservice.GetClaimProofByHi(claimAssignName.Entry().HIndex())
+	proofClaimAssignName, err := claimService.GetClaimProofByHi(claimAssignName.Entry().HIndex())
 	if err != nil {
 		genericserver.Fail(c, "error on GetClaimByHi", err)
 		return
@@ -42,13 +42,13 @@ func handleVinculateId(c *gin.Context) {
 func handleClaimAssignNameResolv(c *gin.Context) {
 	nameid := c.Param("name")
 
-	claimAssignName, err := nameservice.ResolvClaimAssignName(nameid)
+	claimAssignName, err := nameService.ResolvClaimAssignName(nameid)
 	if err != nil {
 		genericserver.Fail(c, "nameid not found in merkletree", err)
 		return
 	}
 
-	proofClaimAssignName, err := claimservice.GetClaimProofByHi(claimAssignName.Entry().HIndex())
+	proofClaimAssignName, err := claimService.GetClaimProofByHi(claimAssignName.Entry().HIndex())
 	if err != nil {
 		genericserver.Fail(c, "error on GetClaimByHi", err)
 		return

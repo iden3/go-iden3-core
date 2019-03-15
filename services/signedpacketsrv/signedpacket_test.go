@@ -20,7 +20,7 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/discoverysrv"
-	"github.com/iden3/go-iden3/services/nameresolvesrv"
+	"github.com/iden3/go-iden3/services/nameresolversrv"
 	// "github.com/iden3/go-iden3/utils"
 )
 
@@ -89,7 +89,7 @@ const namesFileContent = `
 }
 `
 
-const identitiesFileContent = `
+const entititesFileContent = `
 {
   "0x0123456789abcdef0123456789abcdef01234567": {
     "name": "iden3-test-relay",
@@ -101,7 +101,7 @@ const identitiesFileContent = `
 `
 
 var namesFilePath string
-var identitiesFilePath string
+var entititesFilePath string
 
 var signedPacketSrv *Service
 
@@ -174,25 +174,25 @@ func setup() {
 	namesFilePath = namesFile.Name()
 	namesFile.Close()
 
-	nameResolveSrv, err := nameresolvesrv.New(namesFilePath)
+	nameResolverSrv, err := nameresolversrv.New(namesFilePath)
 	if err != nil {
 		panic(err)
 	}
 	// common3.HexDecodeInto(relayIdAddr[:], []byte(relayIdAddrHex))
 
-	// nameResolveSrv := nameresolvesrv.Service{
+	// nameResolverSrv := nameresolversrv.Service{
 	// 	Names: map[string]common.Address{"iden3.io": relayIdAddr},
 	// }
 
-	identitiesFile, err := ioutil.TempFile("", "go-iden3-test-identitiesFile")
+	entititesFile, err := ioutil.TempFile("", "go-iden3-test-entititesFile")
 	if err != nil {
 		panic(err)
 	}
-	identitiesFile.WriteString(identitiesFileContent)
-	identitiesFilePath = identitiesFile.Name()
-	identitiesFile.Close()
+	entititesFile.WriteString(entititesFileContent)
+	entititesFilePath = entititesFile.Name()
+	entititesFile.Close()
 
-	discoverySrv, err := discoverysrv.New(identitiesFilePath)
+	discoverySrv, err := discoverysrv.New(entititesFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -201,8 +201,8 @@ func setup() {
 	// var iden3TestOpAddr common.Address
 	// common3.HexDecodeInto(iden3TestOpAddr[:], []byte("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c"))
 	// discoverySrv := discoverysrv.Service{
-	// 	Identities: map[common.Address]*discoverysrv.Identity{
-	// 		relayIdAddr: &discoverysrv.Identity{
+	// 	entitites: map[common.Address]*discoverysrv.Entity{
+	// 		relayIdAddr: &discoverysrv.Entity{
 	// 			Name:            "iden3-test-relay",
 	// 			OperationalPk:   &utils.PublicKey{PublicKey: *relayPk},
 	// 			OperationalAddr: iden3TestOpAddr,
@@ -211,14 +211,14 @@ func setup() {
 	// 	},
 	// }
 
-	signedPacketSrv = New(discoverySrv, nameResolveSrv)
+	signedPacketSrv = New(discoverySrv, nameResolverSrv)
 }
 
 func teardown() {
 	os.RemoveAll(keyStoreDir)
 	os.RemoveAll(dbDir)
 	os.Remove(namesFilePath)
-	os.Remove(identitiesFilePath)
+	os.Remove(entititesFilePath)
 }
 
 func TestSignedPacket(t *testing.T) {

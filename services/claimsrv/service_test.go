@@ -105,7 +105,11 @@ func initializeEnvironment(t *testing.T) {
 		t.Error(err)
 	}
 
-	service = New(mt, &RootServiceMock{}, &SignServiceMock{})
+	var idAddr common.Address
+	if err := common3.HexDecodeInto(idAddr[:], []byte("0x0123456789abcdef0123456789abcdef01234567")); err != nil {
+		panic(err)
+	}
+	service = New(idAddr, mt, &RootServiceMock{}, &SignServiceMock{})
 
 	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
 	relaySecKey, err = crypto.HexToECDSA(secKeyHex)

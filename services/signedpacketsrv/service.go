@@ -12,17 +12,17 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/discoverysrv"
-	"github.com/iden3/go-iden3/services/nameresolvesrv"
+	"github.com/iden3/go-iden3/services/nameresolversrv"
 	"github.com/iden3/go-iden3/utils"
 )
 
 type Service struct {
-	DiscoverySrv   *discoverysrv.Service
-	NameResolveSrv *nameresolvesrv.Service
+	DiscoverySrv    *discoverysrv.Service
+	nameResolverSrv *nameresolversrv.Service
 }
 
-func New(discoverySrv *discoverysrv.Service, nameResolveSrv *nameresolvesrv.Service) *Service {
-	return &Service{DiscoverySrv: discoverySrv, NameResolveSrv: nameResolveSrv}
+func New(discoverySrv *discoverysrv.Service, nameResolverSrv *nameresolversrv.Service) *Service {
+	return &Service{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
 }
 
 // VerifySignedPacketV01 verifies a SIGV01 signed packet.
@@ -54,7 +54,7 @@ func (ss *Service) VerifySignedPacketV01(jws *SignedPacket) error {
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
-	// check that 1 <= jwsPayload.proofKSign.proofs.length <= 2
+	// X. check that 1 <= jwsPayload.proofKSign.proofs.length <= 2
 	if len(jws.Payload.ProofKSign.Proofs) < 1 {
 		return fmt.Errorf("No proofs found in payload.proofKSign")
 	} else if len(jws.Payload.ProofKSign.Proofs) > 2 {
@@ -79,11 +79,12 @@ func (ss *Service) VerifySignedPacketV01(jws *SignedPacket) error {
 		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign")
 	}
 
-	// 7. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
+	// 7a. Get the operational key from the signer and in case it's a
+	// relay, check if it's trusted.
 	signerIdAddr := jws.Payload.ProofKSign.Signer
-	signer, err := ss.DiscoverySrv.GetIdentity(signerIdAddr)
+	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
 	if err != nil {
-		return fmt.Errorf("Unable to get payload.proofKSign.signer identity data: %v", err)
+		return fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
 	if len(jws.Payload.ProofKSign.Proofs) > 1 {
 		if !signer.Trusted.Relay {
@@ -91,6 +92,7 @@ func (ss *Service) VerifySignedPacketV01(jws *SignedPacket) error {
 		}
 	}
 
+	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
 	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
@@ -156,12 +158,7 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 		return nil, fmt.Errorf("Assign Name claim idAddr doesn't match with header.iss")
 	}
 
-	if len(form.ProofAssignName.Proofs) != 1 {
-		return nil, fmt.Errorf("Assign Name claim cannot be delegated to a child identity tree")
-	}
-	signerIdAddr := form.ProofAssignName.Signer
-
-	// 4.1 Extract domain from the name
+	// 5a. Extract domain from the name
 	var domain string
 	if idx := strings.LastIndexByte(form.EthName, '@'); idx == -1 {
 		return nil, fmt.Errorf("Invalid form.ethName %v, it doesn't containt '@'", form.EthName)
@@ -169,22 +166,27 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 		domain = form.EthName[idx+1 : len(form.EthName)]
 	}
 
-	// 4.2 Resolve name to obtain name server idAddr and verify that it matches the signer idAddr
-	nameServerIdAddr, err := ss.NameResolveSrv.Resolve(domain)
+	// 5b. Resolve name to obtain name server idAddr and verify that it matches the signer idAddr
+	if len(form.ProofAssignName.Proofs) != 1 {
+		return nil, fmt.Errorf("Assign Name claim cannot be delegated to a child entity tree")
+	}
+	nameServerIdAddr, err := ss.nameResolverSrv.Resolve(domain)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve %v: %v", domain, err)
 	}
+	signerIdAddr := form.ProofAssignName.Signer
 	if *nameServerIdAddr != signerIdAddr {
 		return nil, fmt.Errorf("Resolved idAddr (%v) doesn't match signer idAddr (%v)",
 			common3.HexEncode(nameServerIdAddr[:]), common3.HexEncode(signerIdAddr[:]))
 	}
 
-	// 5. VerifyProofClaim(jwsPayload.form.proofAssignName, signerOperational)
-	signer, err := ss.DiscoverySrv.GetIdentity(signerIdAddr)
+	// 5c. Get the operational key from the signer (name server).
+	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to get payload.proofKSign.signer identity data: %v", err)
+		return nil, fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
 
+	// 5d. VerifyProofClaim(jwsPayload.form.proofAssignName, signerOperational)
 	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}

@@ -14,7 +14,7 @@ type Trusted struct {
 	Relay bool `json:"relay"`
 }
 
-type Identity struct {
+type Entity struct {
 	IdAddr          common.Address   `json:"-"`
 	Name            string           `json:"name"`
 	OperationalPk   *utils.PublicKey `json:"kOpPub"`
@@ -23,28 +23,28 @@ type Identity struct {
 }
 
 type Service struct {
-	Identities map[common.Address]*Identity
+	Entitites map[common.Address]*Entity
 }
 
-func New(identitiesFilePath string) (*Service, error) {
-	identitiesFile, err := os.Open(identitiesFilePath)
+func New(entititesFilePath string) (*Service, error) {
+	entititesFile, err := os.Open(entititesFilePath)
 	if err != nil {
 		return nil, err
 	}
 
 	var service Service
-	if err = json.NewDecoder(identitiesFile).Decode(&service.Identities); err != nil {
+	if err = json.NewDecoder(entititesFile).Decode(&service.Entitites); err != nil {
 		return nil, err
 	}
-	for idAddr, identity := range service.Identities {
+	for idAddr, identity := range service.Entitites {
 		identity.IdAddr = idAddr
 	}
 
 	return &service, nil
 }
 
-func (ds *Service) GetIdentity(idAddr common.Address) (*Identity, error) {
-	id, ok := ds.Identities[idAddr]
+func (ds *Service) GetEntity(idAddr common.Address) (*Entity, error) {
+	id, ok := ds.Entitites[idAddr]
 	if !ok {
 		return nil, fmt.Errorf("IdAddr %v not found in the internal DB", common3.HexEncode(idAddr[:]))
 	}

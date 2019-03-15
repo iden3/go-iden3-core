@@ -3,6 +3,8 @@ package genericserver
 import (
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
@@ -25,6 +27,8 @@ type Config struct {
 		Address  string
 		Password string
 	}
+	IdAddrRaw string         `mapstructure:"idaddr"`
+	IdAddr    common.Address `mapstructure:"-"`
 	Contracts struct {
 		RootCommits   ContractInfo
 		Iden3Impl     ContractInfo
@@ -39,7 +43,7 @@ type Config struct {
 	Names     struct {
 		Path string
 	}
-	Identitites struct {
+	Entitites struct {
 		Path string
 	}
 }
@@ -62,8 +66,10 @@ func MustRead(c *cli.Context) error {
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
-	err := viper.Unmarshal(&C)
-	if err != nil {
+	if err := viper.Unmarshal(&C); err != nil {
+		return err
+	}
+	if err := common3.HexDecodeInto(C.IdAddr[:], []byte(C.IdAddrRaw)); err != nil {
 		return err
 	}
 	return nil
