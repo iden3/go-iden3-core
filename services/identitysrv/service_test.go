@@ -46,7 +46,8 @@ func TestPack(t *testing.T) {
 
 var relaySecKey *ecdsa.PrivateKey
 var relayPubKey *ecdsa.PublicKey
-var relayAddr common.Address
+var relayKOpAddr common.Address
+var relayIdAddr common.Address
 
 type RootServiceMock struct {
 	mock.Mock
@@ -105,6 +106,10 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	return mt, err
 }
 func initializeIdService(t *testing.T) *ServiceImpl {
+	if err := common3.HexDecodeInto(relayIdAddr[:],
+		[]byte("0x0123456789abcdef0123456789abcdef01234567")); err != nil {
+		panic(err)
+	}
 
 	// MerkleTree leveldb
 	mt, err := newTestingMerkle(140)
@@ -114,7 +119,7 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	sto := db.NewMemoryStorage()
 	rootservicemock := &RootServiceMock{}
 	rootservicemock.On("SetRoot", mock.Anything).Return()
-	claimService := claimsrv.New(mt, rootservicemock, &SignServiceMock{})
+	claimService := claimsrv.New(relayIdAddr, mt, rootservicemock, &SignServiceMock{})
 	idService := New(nil, nil, nil, claimService, sto)
 
 	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
@@ -123,7 +128,7 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 		panic(err)
 	}
 	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
-	relayAddr = crypto.PubkeyToAddress(*relayPubKey)
+	relayKOpAddr = crypto.PubkeyToAddress(*relayPubKey)
 
 	return idService
 }
@@ -157,7 +162,7 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }
@@ -196,7 +201,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }
