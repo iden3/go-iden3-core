@@ -45,8 +45,8 @@ func cmdAddClaim(c *cli.Context) error {
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
-	rootservice := genericserver.LoadRootsService(client)
-	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
+	rootService := genericserver.LoadRootsService(client)
+	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
 
 	indexData := c.Args().Get(0)
 	outData := c.Args().Get(1)
@@ -63,7 +63,7 @@ func cmdAddClaim(c *cli.Context) error {
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 	fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
-	err := claimservice.AddDirectClaim(*claim)
+	err := claimService.AddDirectClaim(*claim)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
-	rootservice := genericserver.LoadRootsService(client)
+	rootService := genericserver.LoadRootsService(client)
 
 	fmt.Print("\n---\nimporting claims\n---\n\n")
 	// csv file will have the following structure: indexData, noindexData
@@ -160,7 +160,7 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 		fmt.Println("merkleproof: " + common3.HexEncode(mp.Bytes()) + "\n")
 	}
 	// update the root in the smart contract
-	rootservice.SetRoot(*mt.RootKey())
+	rootService.SetRoot(*mt.RootKey())
 	fmt.Println("merkletree root: " + mt.RootKey().Hex())
 
 	return nil

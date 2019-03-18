@@ -15,16 +15,16 @@ import (
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/namesrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 
 	log "github.com/sirupsen/logrus"
 )
 
-var claimservice claimsrv.Service
-var rootservice rootsrv.Service
-
-var nameservice namesrv.Service
-
-var adminservice adminsrv.Service
+var claimService claimsrv.Service
+var rootService rootsrv.Service
+var nameService namesrv.Service
+var signedPacketService signedpacketsrv.Service
+var adminService adminsrv.Service
 
 func init() {
 	gin.SetMode(gin.ReleaseMode)
@@ -33,13 +33,13 @@ func init() {
 func handleGetRoot(c *gin.Context) {
 	// get the contract data
 	contractAddress := common.HexToAddress(genericserver.C.Contracts.RootCommits.Address)
-	root, err := rootservice.GetRoot(contractAddress)
+	root, err := rootService.GetRoot(contractAddress)
 	if err != nil {
 		genericserver.Fail(c, "error contract.GetRoot(contractAddress)", err)
 		return
 	}
 	c.JSON(200, gin.H{
-		"root":         claimservice.MT().RootKey().Hex(),
+		"root":         claimService.MT().RootKey().Hex(),
 		"contractRoot": common3.HexEncode(root[:]),
 	})
 }
@@ -72,12 +72,14 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service, as adminsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service,
+	ss signedpacketsrv.Service, as adminsrv.Service) {
 
-	claimservice = cs
-	rootservice = rs
-	nameservice = ns
-	adminservice = as
+	claimService = cs
+	rootService = rs
+	nameService = ns
+	signedPacketService = ss
+	adminService = as
 
 	stopch := make(chan interface{})
 
@@ -93,7 +95,7 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service, as admin
 	}()
 
 	// start servers
-	rootservice.Start()
+	rootService.Start()
 	serviceapisrv := serveServiceApi()
 	adminapisrv := serveAdminApi(stopch)
 

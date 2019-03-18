@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 )
 
 const identityKey = "id"
@@ -31,7 +32,8 @@ func GetUser(c *gin.Context) *User {
 // gin middleware to validate a JWT session token.  The JWT contains two
 // claims: "idAddr" and "ethName", which are extracted from the idenAssert
 // signed packet.
-func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte) (*jwt.GinJWTMiddleware, error) {
+func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
+	signedpacketservice *signedpacketsrv.Service) (*jwt.GinJWTMiddleware, error) {
 	// The JWT middleware
 	return jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "iden3.iden_assert.v0_1",
@@ -64,11 +66,11 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte) (*jwt.G
 		},
 		// handler to validate login
 		Authenticator: func(c *gin.Context) (interface{}, error) {
-			var idenAssert core.SignedPacket
+			var idenAssert signedpacketsrv.SignedPacket
 			if err := c.BindJSON(&idenAssert); err != nil {
 				return nil, fmt.Errorf("invalid JWS signed packet: %v", err)
 			}
-			if res, err := core.VerifySignedPacketIdenAssert(&idenAssert, nonceDb,
+			if res, err := signedpacketservice.VerifySignedPacketIdenAssert(&idenAssert, nonceDb,
 				domain); err != nil {
 				return nil, fmt.Errorf("failed verification of JWS signed packet: %v ", err)
 			} else {
@@ -95,14 +97,14 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte) (*jwt.G
 //    - POST "/login": requires a JSON with jwt field containing a JWS
 //    signedPacket.
 func AddAuthMiddleware(r *gin.RouterGroup, domain string, nonceDb *core.NonceDb,
-	key []byte) (*gin.RouterGroup, error) {
-	authMiddleware, err := NewAuthMiddleware(domain, nonceDb, key)
+	key []byte, signedpacketservice *signedpacketsrv.Service) (*gin.RouterGroup, error) {
+	authMiddleware, err := NewAuthMiddleware(domain, nonceDb, key, signedpacketservice)
 	if err != nil {
 		return nil, fmt.Errorf("JWT auth middleware error: %v", err)
 	}
 
 	r.GET("/login", func(c *gin.Context) {
-		req := core.NewRequestIdenAssert(nonceDb, domain, 60)
+		req := signedpacketsrv.NewRequestIdenAssert(nonceDb, domain, 60)
 		c.JSON(200, gin.H{
 			"sigReq": req,
 		})

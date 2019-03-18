@@ -53,6 +53,7 @@ type ProofClaim struct {
 	Leaf      *merkletree.Data       `json:"leaf" binding:"required"`
 	Date      int64                  `json:"date" binding:"required"`
 	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // signature of the Root of the Relay
+	Signer    common.Address         `json:"signer" binding:"required"`
 }
 
 func (pc *ProofClaim) String() string {

@@ -37,13 +37,15 @@ type Service interface {
 }
 
 type ServiceImpl struct {
+	idAddr  common.Address
 	mt      *merkletree.MerkleTree
 	rootsrv rootsrv.Service
 	signer  signsrv.Service
 }
 
-func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, signer signsrv.Service) *ServiceImpl {
-	return &ServiceImpl{mt, rootsrv, signer}
+func New(idAddr common.Address, mt *merkletree.MerkleTree, rootsrv rootsrv.Service,
+	signer signsrv.Service) *ServiceImpl {
+	return &ServiceImpl{idAddr, mt, rootsrv, signer}
 }
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
@@ -570,7 +572,7 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim,
 	if err != nil {
 		return nil, err
 	}
-	proofClaim.Signature, proofClaim.Date = sig, date
+	proofClaim.Signer, proofClaim.Signature, proofClaim.Date = cs.idAddr, sig, date
 
 	return proofClaim, nil
 }

@@ -17,9 +17,9 @@ func loadIdService() (eth.Client, identitysrv.Service) {
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
-	rootservice := genericserver.LoadRootsService(client)
-	claimservice := genericserver.LoadClaimService(mt, rootservice, ks, acc)
-	return client, genericserver.LoadIdService(client, claimservice, storage)
+	rootService := genericserver.LoadRootsService(client)
+	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
+	return client, genericserver.LoadIdService(client, claimService, storage)
 }
 
 var IdCommands = []cli.Command{{
