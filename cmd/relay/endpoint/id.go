@@ -50,6 +50,36 @@ type handleForwardIdRes struct {
 	Tx common.Hash `json:"tx"`
 }
 
+type handleIdGenesis struct {
+	KOp   *utils.PublicKey
+	KRec  *utils.PublicKey
+	KRev  *utils.PublicKey
+	Relay common.Address
+}
+
+// handleCreateIdGenesis creates the identity creating a new MerkleTree that contains
+// the initial keys of that identity. The Merkle Root of that tree will be the
+// identity address
+func handleCreateIdGenesis(c *gin.Context) {
+	var idgen handleIdGenesis
+	if err := c.BindJSON(&idgen); err != nil {
+		genericserver.Fail(c, "cannot parse json body", err)
+		return
+	}
+
+	kopPub := &idgen.KOp.PublicKey
+	krecPub := &idgen.KRec.PublicKey
+	krevPub := &idgen.KRev.PublicKey
+
+	idAddr, proofKOp, err := genericserver.Idservice.CreateIdGenesis(kopPub, krecPub, krevPub)
+	if err != nil {
+		genericserver.Fail(c, "failed generating identity address ", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, handlePostIdRes{IdAddr: *idAddr, ProofClaim: proofKOp})
+}
+
 // handleCreateId handles the creation of a new user tree from the user keys.
 func handleCreateId(c *gin.Context) {
 

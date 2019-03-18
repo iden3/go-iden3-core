@@ -14,6 +14,7 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
+	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/utils"
 
@@ -34,6 +35,7 @@ type Service interface {
 	Get(idaddr common.Address) (*Identity, error)
 	DeployerAddr() *common.Address
 	ImplAddr() *common.Address
+	CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*common.Address, *core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -340,4 +342,91 @@ func packAuth(
 	writeBytes(rclaimSigRSV)
 
 	return b.Bytes()
+}
+
+func generateInitialClaimsAuthorizeKSign(kop, krec, krev *ecdsa.PublicKey) []*core.ClaimAuthorizeKSignSecp256k1 {
+	var claims []*core.ClaimAuthorizeKSignSecp256k1
+	claims = append(claims, core.NewClaimAuthorizeKSignSecp256k1(kop))
+	claims = append(claims, core.NewClaimAuthorizeKSignSecp256k1(krec))
+	claims = append(claims, core.NewClaimAuthorizeKSignSecp256k1(krev))
+
+	return claims
+}
+
+// CreateIdGenesis initializes the idAddress MerkleTree with the given the kop, krec,
+// krev public keys. Where the idAddress is calculated a MerkleTree containing
+// that initial data, calculated in the function CalculateIdGenesis()
+func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*common.Address, *core.ProofClaim, error) {
+
+	idAddr, err := CalculateIdGenesis(kop, krec, krev)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// add the claims into the storage merkletree of that identity
+	stoUserId := is.cs.MT().Storage().WithPrefix(idAddr.Bytes())
+	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// generate the Authorize KSign Claims for the given public Keys
+	claims := generateInitialClaimsAuthorizeKSign(kop, krec, krev)
+
+	for _, claim := range claims {
+		err = userMT.Add(claim.Entry())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	// create new ClaimSetRootKey
+	claimSetRootKey := core.NewClaimSetRootKey(*idAddr, *userMT.RootKey())
+
+	// add User's Id Merkle Root into the Relay's Merkle Tree
+	err = is.cs.MT().Add(claimSetRootKey.Entry())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// update Relay's Root in the Smart Contract
+	is.cs.RootSrv().SetRoot(*is.cs.MT().RootKey())
+
+	proofClaimKop, err := is.cs.GetClaimProofUserByHi(*idAddr, claims[0].Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return idAddr, proofClaimKop, nil
+}
+
+// CalculateIdGenesis calculates the idAddr given the kop, krec, krev public keys.
+// Adds the given keys into an efimeral MerkleTree to calculate the MerkleRoot.
+// The idAddr is the last 20 bytes of the keccak256 hash of the MerkleRoot, to generate
+// an ethereum address
+func CalculateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*common.Address, error) {
+	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
+	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	if err != nil {
+		return nil, err
+	}
+
+	// generate the Authorize KSign Claims for the given public Keys
+	claims := generateInitialClaimsAuthorizeKSign(kop, krec, krev)
+	for _, claim := range claims {
+		err = mt.Add(claim.Entry())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	idAddrRaw := mt.RootKey()
+
+	// get idAddr from idAddrRaw
+	// (idAddr is an ethereum address, while idAddrRaw is a MIMC7 hash)
+	h := utils.HashBytes(idAddrRaw.Bytes())
+	idAddrBytes := h[12:]
+	idAddr := common.BytesToAddress(idAddrBytes)
+
+	return &idAddr, err
 }

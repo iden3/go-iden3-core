@@ -34,6 +34,7 @@ type Service interface {
 	GetClaimProofUserByHiOld(idAddr common.Address, hi merkletree.Hash) (*ProofClaimUser, error)
 	GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim, error)
 	MT() *merkletree.MerkleTree
+	RootSrv() rootsrv.Service
 }
 
 type ServiceImpl struct {
@@ -46,6 +47,16 @@ type ServiceImpl struct {
 func New(idAddr common.Address, mt *merkletree.MerkleTree, rootsrv rootsrv.Service,
 	signer signsrv.Service) *ServiceImpl {
 	return &ServiceImpl{idAddr, mt, rootsrv, signer}
+}
+
+// MT returns the merkle tree.
+func (cs *ServiceImpl) MT() *merkletree.MerkleTree {
+	return cs.mt
+}
+
+// RootSrv returns the RootService
+func (cs *ServiceImpl) RootSrv() rootsrv.Service {
+	return cs.rootsrv
 }
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
@@ -575,11 +586,6 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim,
 	proofClaim.Signer, proofClaim.Signature, proofClaim.Date = cs.idAddr, sig, date
 
 	return proofClaim, nil
-}
-
-// MT returns the merkle tree.
-func (cs *ServiceImpl) MT() *merkletree.MerkleTree {
-	return cs.mt
 }
 
 // getNonRevocationProof returns the next version Hi (that don't exist in the tree, it's value is Empty) with merkleproof and root
