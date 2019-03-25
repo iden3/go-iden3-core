@@ -56,6 +56,7 @@ type RootServiceMock struct {
 func (m *RootServiceMock) Start() {
 
 }
+
 func (m *RootServiceMock) StopAndJoin() {
 
 }
@@ -64,6 +65,7 @@ func (m *RootServiceMock) GetRoot(addr common.Address) (merkletree.Hash, error) 
 	args := m.Called(addr)
 	return args.Get(0).(merkletree.Hash), args.Error(1)
 }
+
 func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 	m.Called(hash)
 	return
@@ -105,6 +107,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	mt, err := merkletree.NewMerkleTree(sto, numLevels)
 	return mt, err
 }
+
 func initializeIdService(t *testing.T) *ServiceImpl {
 	if err := common3.HexDecodeInto(relayIdAddr[:],
 		[]byte("0x0123456789abcdef0123456789abcdef01234567")); err != nil {
