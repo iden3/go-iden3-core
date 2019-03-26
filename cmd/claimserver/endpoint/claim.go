@@ -13,27 +13,23 @@ import (
 )
 
 type claimData struct {
-	IdAddr  	common.Address
-	Data      string
+	IdAddr  	common.Address `json:"idData" binding:"required"`
+	Data      string         `json:"data" binding:"required"`
 }
 
 // handlePostClaim handles the request to add a claim to a user tree.
 func handlePostClaim(c *gin.Context) {
 	var m claimData
-	c.BindJSON(&m)
-
-	data, err := common3.HexDecode(m.Data)
-	if err != nil {
-		genericserver.Fail(c, "error on handlePostClaim", err)
+	if err := c.BindJSON(&m); err != nil {
+		genericserver.Fail(c, "cannot parse json body", err)
 		return
 	}
 
-	var nameHash [256 / 8]byte
+	data := []byte(m.Data)
 	hash := utils.HashBytes([]byte(data))
-	copy(nameHash[:], hash[len(hash)-256/8:])
-	claim := core.NewClaimLinkObjectIdentity(0, 5, 0, m.IdAddr, nameHash)
+	claim := core.NewClaimLinkObjectIdentity(0, 6, 0, m.IdAddr, merkletree.Hash(hash))
 
-	err = genericserver.Claimservice.AddLinkObjectClaim(*claim)
+	err := genericserver.Claimservice.AddLinkObjectClaim(*claim)
 	if err != nil {
 		genericserver.Fail(c, "error on AddLinkObjectClaim", err)
 		return

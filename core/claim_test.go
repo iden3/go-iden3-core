@@ -211,26 +211,26 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x3a})
-	objectHash := merkletree.Hash(merkletree.ElemBytes{
+	objectHash := merkletree.Hash{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c})
+		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c}
 	claim := NewClaimLinkObjectIdentity(hashType, objectType, indexType, idAddr, objectHash)
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,
-		"0x0d64bf8fd783338f82a8ce0aa31768cc6c84b616f382f65d553ce7cdbf017cec",
+		"0x2180103fca164a1f4afe33b610f8573076a24de6d7ca3d20fcf62540d3c73338",
 		entry.HIndex().Hex())
 	assert.Equal(t,
-		"0x0ad7edbf562757b1ad2282c44e2c248f95e9e6b09ba0d32809aa724fbf148e0c",
+		"0x1bc5fac04887744f1831a8d881e4d68330e9f5f60a1c85265896df294329c7cc",
 		entry.HValue().Hex())
 	dataTestOutput(&entry.Data)
 	assert.Equal(t, ""+
-		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
+		"0000000000000000000000000000000000000000000000000000000000000001"+
+		"000b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
 		"000000000000000000000000393939393939393939393939393939393939393a"+
-		"0000000000000000000000000000000100000001000000010000000000000005",
+		"0000000000000000000000000000000000000001000000010000000000000005",
 		entry.Data.String())
 	c1 := NewClaimLinkObjectIdentityFromEntry(entry)
 	c2, err := NewClaimFromEntry(entry)

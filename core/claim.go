@@ -353,19 +353,21 @@ type ClaimLinkObjectIdentity struct {
 	// IdAddr is the Ethereum Address related to the identity.
 	IdAddr common.Address
 	// ObjectHash is the hash of the object.
-	ObjectHash merkletree.Hash
+	ObjectHash [248 / 8]byte
 }
 
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
 func NewClaimLinkObjectIdentity(hashType uint32, objectType uint32, objectIndex uint16, idAddr common.Address,
 	objectHash merkletree.Hash) *ClaimLinkObjectIdentity {
+	var objectHashSlice [31]byte
+	copy(objectHashSlice[:], objectHash[1:])
 	return &ClaimLinkObjectIdentity{
 		Version:     0,
 		HashType:    hashType,
 		ObjectType:  objectType,
 		ObjectIndex: objectIndex,
 		IdAddr:      idAddr,
-		ObjectHash:  objectHash,
+		ObjectHash:  objectHashSlice,
 	}
 }
 
@@ -377,11 +379,7 @@ func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObje
 	var objectType [32 / 8]byte
 	var objectIndex [16 / 8]byte
 	var indexLen = ClaimTypeVersionLen
-	// hash type
-	copyFromElemBytes(hashType[:], indexLen, &entry.Data[3])
-	claim.HashType = binary.BigEndian.Uint32(hashType[:])
 	// object type
-	indexLen += len(hashType)
 	copyFromElemBytes(objectType[:], indexLen, &entry.Data[3])
 	claim.ObjectType = binary.BigEndian.Uint32(objectType[:])
 	// object index
@@ -390,8 +388,11 @@ func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObje
 	claim.ObjectIndex = binary.BigEndian.Uint16(objectIndex[:])
 	// identity address
 	copyFromElemBytes(claim.IdAddr[:], 0, &entry.Data[2])
-	// object hash
-	claim.ObjectHash = merkletree.Hash(entry.Data[1])
+	// hash object
+	copyFromElemBytes(claim.ObjectHash[:], 0, &entry.Data[1])
+	// hash type
+	copyFromElemBytes(hashType[:], 0, &entry.Data[0])
+	claim.HashType = binary.BigEndian.Uint32(hashType[:])
 	return claim
 }
 
@@ -401,12 +402,7 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	var indexLen = ClaimTypeVersionLen
 	// type and version
 	setClaimTypeVersion(entry, claim.Type(), claim.Version)
-	// hash type
-	var hashType [32 / 8]byte
-	binary.BigEndian.PutUint32(hashType[:], claim.HashType)
-	copyToElemBytes(&entry.Data[3], indexLen, hashType[:])
 	// object type
-	indexLen += len(hashType)
 	var objectType [32 / 8]byte
 	binary.BigEndian.PutUint32(objectType[:], claim.ObjectType)
 	copyToElemBytes(&entry.Data[3], indexLen, objectType[:])
@@ -418,7 +414,11 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	// identity address
 	copyToElemBytes(&entry.Data[2], 0, claim.IdAddr[:])
 	// object hash
-	entry.Data[1] = merkletree.ElemBytes(claim.ObjectHash)
+	copyToElemBytes(&entry.Data[1], 0, claim.ObjectHash[:])
+	// hash type
+	var hashType [32 / 8]byte
+	binary.BigEndian.PutUint32(hashType[:], claim.HashType)
+	copyToElemBytes(&entry.Data[0], 0, hashType[:])
 	return entry
 }
 
