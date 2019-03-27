@@ -340,14 +340,44 @@ func (c *ClaimSetRootKey) Type() ClaimType {
 	return *ClaimTypeSetRootKey
 }
 
+// HashType defines the type of hash used in objectHash.
+type HashType uint32
+
+const (
+	// HashTypeKeccak256 indicates that hash keccak256 is used.
+	HashTypeKeccak256 HashType = 0
+	// HashTypeSha256 indicates that hash sha256 is used.
+	HashTypeSha256 HashType = 1
+)
+
+// ObjectType defines the type of object that objectHash is representing.
+type ObjectType uint32
+
+const (
+	// ObjectTypePassport indicates that hash represents a passport.
+	ObjectTypePassport ObjectType = 0
+	// ObjectTypeAddress indicates that hash represents an address.
+	ObjectTypeAddress ObjectType = 1
+	// ObjectTypePhone indicates that hash represents a phone number.
+	ObjectTypePhone ObjectType = 2
+	// ObjectTypeDob indicates that hash represents date of birth.
+	ObjectTypeDob ObjectType = 3
+	// ObjectTypeGivenName indicates that hash represents a given name.
+	ObjectTypeGivenName ObjectType = 4
+	// ObjectTypeFamilyName indicates that hash represents a family name.
+	ObjectTypeFamilyName ObjectType = 5
+	// ObjectTypeCertificate indicates that hash represents a certificate.
+	ObjectTypeCertificate ObjectType = 6
+)
+
 // ClaimLinkObjectIdentity aims to link a hash of an object to an identity.
 type ClaimLinkObjectIdentity struct {
 	// Version is the claim version.
 	Version uint32
 	// HashType is the hash used to compute objectHash.
-	HashType uint32
+	HashType HashType
 	// ObjectType is the representation of the objectHash.
-	ObjectType uint32
+	ObjectType ObjectType
 	// ObjectIndex is the index of this object which the identity has.
 	ObjectIndex uint16
 	// IdAddr is the Ethereum Address related to the identity.
@@ -356,11 +386,20 @@ type ClaimLinkObjectIdentity struct {
 	ObjectHash [248 / 8]byte
 }
 
+// minInt returns the minimum between two inputs
+func minInt(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
-func NewClaimLinkObjectIdentity(hashType uint32, objectType uint32, objectIndex uint16, idAddr common.Address,
-	objectHash merkletree.Hash) *ClaimLinkObjectIdentity {
+func NewClaimLinkObjectIdentity(hashType HashType, objectType ObjectType, objectIndex uint16, idAddr common.Address,
+	objectHash []byte) *ClaimLinkObjectIdentity {
 	var objectHashSlice [31]byte
-	copy(objectHashSlice[:], objectHash[1:])
+	minLen := minInt(len(objectHash), 32)
+	copy(objectHashSlice[:], objectHash[1:minLen])
 	return &ClaimLinkObjectIdentity{
 		Version:     0,
 		HashType:    hashType,
@@ -381,7 +420,7 @@ func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObje
 	var indexLen = ClaimTypeVersionLen
 	// object type
 	copyFromElemBytes(objectType[:], indexLen, &entry.Data[3])
-	claim.ObjectType = binary.BigEndian.Uint32(objectType[:])
+	claim.ObjectType = ObjectType(binary.BigEndian.Uint32(objectType[:]))
 	// object index
 	indexLen += len(objectType)
 	copyFromElemBytes(objectIndex[:], indexLen, &entry.Data[3])
@@ -392,7 +431,7 @@ func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObje
 	copyFromElemBytes(claim.ObjectHash[:], 0, &entry.Data[1])
 	// hash type
 	copyFromElemBytes(hashType[:], 0, &entry.Data[0])
-	claim.HashType = binary.BigEndian.Uint32(hashType[:])
+	claim.HashType = HashType(binary.BigEndian.Uint32(hashType[:]))
 	return claim
 }
 
@@ -404,7 +443,7 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	setClaimTypeVersion(entry, claim.Type(), claim.Version)
 	// object type
 	var objectType [32 / 8]byte
-	binary.BigEndian.PutUint32(objectType[:], claim.ObjectType)
+	binary.BigEndian.PutUint32(objectType[:], uint32(claim.ObjectType))
 	copyToElemBytes(&entry.Data[3], indexLen, objectType[:])
 	// object index
 	indexLen += len(objectType)
@@ -417,7 +456,7 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	copyToElemBytes(&entry.Data[1], 0, claim.ObjectHash[:])
 	// hash type
 	var hashType [32 / 8]byte
-	binary.BigEndian.PutUint32(hashType[:], claim.HashType)
+	binary.BigEndian.PutUint32(hashType[:], uint32(claim.HashType))
 	copyToElemBytes(&entry.Data[0], 0, hashType[:])
 	return entry
 }

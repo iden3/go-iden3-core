@@ -27,7 +27,11 @@ func handlePostClaim(c *gin.Context) {
 
 	data := []byte(m.Data)
 	hash := utils.HashBytes([]byte(data))
-	claim := core.NewClaimLinkObjectIdentity(0, 6, 0, m.IdAddr, merkletree.Hash(hash))
+	hashType := core.HashTypeKeccak256
+	objectType := core.ObjectTypeCertificate
+	var indexObject uint16
+	indexObject = 0
+	claim := core.NewClaimLinkObjectIdentity(hashType, objectType, indexObject, m.IdAddr, hash[:])
 
 	err := genericserver.Claimservice.AddLinkObjectClaim(*claim)
 	if err != nil {
