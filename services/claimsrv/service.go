@@ -29,6 +29,7 @@ type Service interface {
 		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
 	AddUserIdClaim(idAddr common.Address, claimValueMsg ClaimValueMsg) error
 	AddDirectClaim(claim core.ClaimBasic) error
+	AddLinkObjectClaim(claim core.ClaimLinkObjectIdentity) error
 	GetIdRoot(idAddr common.Address) (merkletree.Hash, []byte, error)
 	GetClaimProofUserByHi(idAddr common.Address, hi *merkletree.Hash) (*core.ProofClaim, error)
 	GetClaimProofUserByHiOld(idAddr common.Address, hi merkletree.Hash) (*ProofClaimUser, error)
@@ -377,6 +378,16 @@ func (cs *ServiceImpl) AddUserIdClaim(idAddr common.Address, claimValueMsg Claim
 	// update Relay Root in Smart Contract
 	cs.rootsrv.SetRoot(*cs.mt.RootKey())
 
+	return nil
+}
+
+// AddLinkObjectClaim adds a claim of a link object type to the merkletree
+func (cs *ServiceImpl) AddLinkObjectClaim(claim core.ClaimLinkObjectIdentity) error {
+	err := cs.mt.Add(claim.Entry())
+	if err != nil {
+		return err
+	}
+	cs.rootsrv.SetRoot(*cs.mt.RootKey())
 	return nil
 }
 
