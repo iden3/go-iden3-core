@@ -142,7 +142,7 @@ func (sp *SignedPacket) Marshal() (string, error) {
 	return fmt.Sprintf("%v.%v", string(sp.SignedBytes), sig64), nil
 }
 
-// MarshalJSON marshals a sined packet into a Jws JSON.
+// MarshalJSON marshals a signed packet into a Jws JSON.
 func (sp *SignedPacket) MarshalJSON() ([]byte, error) {
 	str, err := sp.Marshal()
 	if err != nil {
