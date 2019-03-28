@@ -14,10 +14,10 @@ import (
 
 const identityKey = "id"
 
-// User represents an authenticated identity with an assigned name.
+// User represents an authenticated identity with an optionally assigned name.
 type User struct {
 	IdAddr  common.Address
-	EthName string
+	EthName *string
 }
 
 // GetUser extracts the User from the gin.Context for an authenticated
@@ -61,7 +61,7 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 			}
 			return &User{
 				IdAddr:  idAddr,
-				EthName: claims["ethName"].(string),
+				EthName: claims["ethName"].(*string),
 			}
 		},
 		// handler to validate login
