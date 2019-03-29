@@ -46,7 +46,7 @@ func CmdAddClaim(c *cli.Context) error {
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 	fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
-	err := claimService.AddDirectClaim(*claim)
+	err := claimService.AddClaim(claim)
 	if err != nil {
 		return err
 	}
