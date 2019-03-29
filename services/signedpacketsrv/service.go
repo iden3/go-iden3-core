@@ -112,10 +112,11 @@ func (ss *Service) VerifySignedPacket(jws *SignedPacket) error {
 }
 
 // IdenAssertResult is the result of a successfull verification of an
-// IDENASSERTV01 payload from a signed packet.
+// IDENASSERTV01 payload from a signed packet.  EthName will be nil if no name
+// ownership was proved (the form field of the signed packet was nil).
 type IdenAssertResult struct {
 	NonceObj *core.NonceObj
-	EthName  string
+	EthName  *string
 	IdAddr   common.Address
 }
 
@@ -126,7 +127,7 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 	if !ok {
 		return nil, fmt.Errorf("Invalid payload.data")
 	}
-	form, ok := jws.Payload.Form.(IdenAssertForm)
+	form, ok := jws.Payload.Form.(*IdenAssertForm)
 	if !ok {
 		return nil, fmt.Errorf("Invalid payload.form")
 	}
@@ -140,6 +141,10 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 	nonceObj, ok := nonceDb.SearchAndDelete(data.Challenge)
 	if !ok {
 		return nil, fmt.Errorf("Invalid nonce")
+	}
+
+	if form == (*IdenAssertForm)(nil) {
+		return &IdenAssertResult{NonceObj: nonceObj, EthName: nil, IdAddr: jws.Header.Issuer}, nil
 	}
 
 	// 4. Verify that jwsHeader.iss and jwsPayload.form.ethName are in jwsPayload.form.proofAssignName.leaf
@@ -191,7 +196,7 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}
 
-	return &IdenAssertResult{NonceObj: nonceObj, EthName: form.EthName, IdAddr: jws.Header.Issuer}, nil
+	return &IdenAssertResult{NonceObj: nonceObj, EthName: &form.EthName, IdAddr: jws.Header.Issuer}, nil
 }
 
 // VerifySignedPacketIdenAssert verifies a signed packet and the

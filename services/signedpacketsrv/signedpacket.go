@@ -81,7 +81,7 @@ func (p *SigPayload) UnmarshalJSON(bs []byte) error {
 			return err
 		}
 		pRaw.Data = data
-		var form IdenAssertForm
+		var form *IdenAssertForm
 		if err := json.Unmarshal(pRaw.FormRaw, &form); err != nil {
 			return err
 		}
@@ -237,14 +237,16 @@ type IdenAssertData struct {
 // iden3.iden_assert.v0_1
 type IdenAssertForm struct {
 	EthName         string
-	ProofAssignName core.ProofClaim
+	ProofAssignName *core.ProofClaim
 }
 
-// NewSignIdenAssertV01 generates and signs a signed packet with payload type IDENASSERTV01.
-func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, ethName string,
-	proofAssignName *core.ProofClaim, ks *keystore.KeyStore, idAddr common.Address,
-	kSignPk *ecdsa.PublicKey, proofKSign core.ProofClaim, expireDelta int64) (*SignedPacket, error) {
+// NewSignIdenAssertV01 generates and signs a signed packet with payload type
+// IDENASSERTV01.  idenAssertForm may be nil if proving the ownership of a name
+// is not desired.
+func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, idenAssertForm *IdenAssertForm,
+	ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
+	proofKSign core.ProofClaim, expireDelta int64) (*SignedPacket, error) {
 	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
 		IDENASSERTV01, requestIdenAssert.Body.Data,
-		IdenAssertForm{EthName: ethName, ProofAssignName: *proofAssignName})
+		idenAssertForm)
 }

@@ -227,7 +227,8 @@ func TestSignedPacket(t *testing.T) {
 
 	t.Run("SignPacketV01", testSignPacketV01)
 	t.Run("SignGenericSigV01", testSignGenericSigV01)
-	t.Run("SignIdenAssertV01", testSignIdenAssertV01)
+	t.Run("SignIdenAssertV01Name", testSignIdenAssertV01Name)
+	t.Run("SignIdenAssertV01NoName", testSignIdenAssertV01NoName)
 	t.Run("MarshalUnmarshal", testMarshalUnmarshal)
 
 }
@@ -309,7 +310,7 @@ func benchmarkVerifySignGenericSigV01(b *testing.B) {
 	}
 }
 
-func testSignIdenAssertV01(t *testing.T) {
+func testSignIdenAssertV01Name(t *testing.T) {
 	// Login Server
 	nonceDb := core.NewNonceDb()
 	requestIdenAssert := NewRequestIdenAssert(nonceDb, "example.com", 60)
@@ -323,7 +324,35 @@ func testSignIdenAssertV01(t *testing.T) {
 	if err := json.Unmarshal([]byte(proofAssignNameJSON), &proofAssignName); err != nil {
 		panic(err)
 	}
-	signedPacket, err := NewSignIdenAssertV01(requestIdenAssert, ethName, &proofAssignName,
+	signedPacket, err := NewSignIdenAssertV01(requestIdenAssert,
+		&IdenAssertForm{EthName: ethName, ProofAssignName: &proofAssignName},
+		keyStore, idAddr, kSignPk, proofKSign, 600)
+	assert.Nil(t, err)
+	signedPacketStr, err := signedPacket.Marshal()
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(signedPacketStr)
+	}
+
+	// Login Server
+	idenAssertResult, err := signedPacketSrv.VerifySignedPacketIdenAssert(signedPacket, nonceDb, "example.com")
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(idenAssertResult)
+	}
+}
+
+func testSignIdenAssertV01NoName(t *testing.T) {
+	// Login Server
+	nonceDb := core.NewNonceDb()
+	requestIdenAssert := NewRequestIdenAssert(nonceDb, "example.com", 60)
+
+	// Client
+	var proofKSign core.ProofClaim
+	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
+		panic(err)
+	}
+	signedPacket, err := NewSignIdenAssertV01(requestIdenAssert, nil,
 		keyStore, idAddr, kSignPk, proofKSign, 600)
 	assert.Nil(t, err)
 	signedPacketStr, err := signedPacket.Marshal()
