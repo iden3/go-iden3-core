@@ -40,7 +40,7 @@ func (ns *ServiceImpl) VinculateId(name string, domain string,
 	}
 	// add ClaimAssignName to merkle tree
 	assignNameClaim := core.NewClaimAssignName(fmt.Sprintf("%v@%v", name, domain), idAddr)
-	if err := ns.claimsrv.AddClaimAssignName(*assignNameClaim); err != nil {
+	if err := ns.claimsrv.AddClaim(assignNameClaim); err != nil {
 		return nil, err
 	}
 	return assignNameClaim, nil

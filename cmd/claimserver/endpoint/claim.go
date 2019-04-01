@@ -1,20 +1,43 @@
 package endpoint
 
 import (
+	"encoding/base64"
+	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/utils"
 
 	"github.com/iden3/go-iden3/merkletree"
 )
 
+type IdData struct {
+	IdAddr      common.Address `json:"idAddr"`
+	NotifSrvUrl string         `json:"notifSrvUrl"`
+}
+
+type IdDataB64 IdData
+
+func (d *IdDataB64) UnmarshalText(text []byte) error {
+	idDataJSON, err := base64.StdEncoding.DecodeString(string(text))
+	if err != nil {
+		return err
+	}
+	var idData IdData
+	if err := json.Unmarshal(idDataJSON, &idData); err != nil {
+		return err
+	}
+	*d = IdDataB64(idData)
+	return nil
+}
+
 type claimData struct {
-	IdAddr  	common.Address `json:"idData" binding:"required"`
-	Data      string         `json:"data" binding:"required"`
+	IdData IdDataB64 `json:"idData" binding:"required"`
+	Cert   string    `json:"data" binding:"required"`
 }
 
 // handlePostClaim handles the request to add a claim to a user tree.
@@ -25,15 +48,23 @@ func handlePostClaim(c *gin.Context) {
 		return
 	}
 
-	data := []byte(m.Data)
-	hash := utils.HashBytes([]byte(data))
+	hash := utils.HashBytes([]byte(m.Cert))
 	hashType := core.HashTypeKeccak256
 	objectType := core.ObjectTypeCertificate
-	var indexObject uint16
-	indexObject = 0
-	claim := core.NewClaimLinkObjectIdentity(hashType, objectType, indexObject, m.IdAddr, hash[:])
+	indexObject := uint16(0)
+	claim := core.NewClaimLinkObjectIdentity(hashType, objectType, indexObject,
+		m.IdData.IdAddr, hash[:])
 
-	err := genericserver.Claimservice.AddLinkObjectClaim(*claim)
+	// If necessary store the claim with a version higher than an existing
+	// claim to invalidate the later.
+	version, err := claimsrv.GetNextVersion(genericserver.Claimservice.MT(), claim.Entry().HIndex())
+	if err != nil {
+		genericserver.Fail(c, "error on GetNextVersion", err)
+		return
+	}
+	claim.Version = version
+
+	err = genericserver.Claimservice.AddClaim(claim)
 	if err != nil {
 		genericserver.Fail(c, "error on AddLinkObjectClaim", err)
 		return

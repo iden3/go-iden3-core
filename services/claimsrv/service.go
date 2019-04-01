@@ -11,7 +11,6 @@ import (
 	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -20,7 +19,6 @@ var (
 
 type Service interface {
 	CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
-	AddClaimAssignName(claimAssignName core.ClaimAssignName) error
 	AddClaimAuthorizeKSign(idAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignFirst(idAddr common.Address, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
 	// TODO
@@ -28,8 +26,7 @@ type Service interface {
 	AddClaimAuthorizeKSignSecp256k1First(idAddr common.Address,
 		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
 	AddUserIdClaim(idAddr common.Address, claimValueMsg ClaimValueMsg) error
-	AddDirectClaim(claim core.ClaimBasic) error
-	AddLinkObjectClaim(claim core.ClaimLinkObjectIdentity) error
+	AddClaim(claim merkletree.Entrier) error
 	GetIdRoot(idAddr common.Address) (merkletree.Hash, []byte, error)
 	GetClaimProofUserByHi(idAddr common.Address, hi *merkletree.Hash) (*core.ProofClaim, error)
 	GetClaimProofUserByHiOld(idAddr common.Address, hi merkletree.Hash) (*ProofClaimUser, error)
@@ -116,30 +113,6 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr common.Address, kSignPk *ecdsa.Pub
 	cs.rootsrv.SetRoot(*cs.mt.RootKey())
 
 	return claimSetRootKey, nil
-}
-
-// AddClaimAssignName adds ClaimAssignName into the merkletree, updates the root in the smart contract, and returns the merkle proof of the claim in the merkletree
-func (cs *ServiceImpl) AddClaimAssignName(claimAssignName core.ClaimAssignName) error {
-	// get next version of the claim
-	entry := claimAssignName.Entry()
-	version, err := GetNextVersion(cs.mt, entry.HIndex())
-	if err != nil {
-		return err
-	}
-	claimAssignName.Version = version
-
-	// add ClaimAssignName to the Relay's merkletree
-	e := claimAssignName.Entry()
-	err = cs.mt.Add(e)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-
-	// update relay's root in smart contract
-	cs.rootsrv.SetRoot(*cs.mt.RootKey())
-
-	return nil
 }
 
 // AddClaimAuthorizeKSign adds ClaimAuthorizeKSign into the Id's merkletree, and adds the Id's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
@@ -381,18 +354,8 @@ func (cs *ServiceImpl) AddUserIdClaim(idAddr common.Address, claimValueMsg Claim
 	return nil
 }
 
-// AddLinkObjectClaim adds a claim of a link object type to the merkletree
-func (cs *ServiceImpl) AddLinkObjectClaim(claim core.ClaimLinkObjectIdentity) error {
-	err := cs.mt.Add(claim.Entry())
-	if err != nil {
-		return err
-	}
-	cs.rootsrv.SetRoot(*cs.mt.RootKey())
-	return nil
-}
-
-// AddDirectClaim adds a claim directly to the Relay merkletree
-func (cs *ServiceImpl) AddDirectClaim(claim core.ClaimBasic) error {
+// AddClaim adds a claim directly to the Relay merkletree
+func (cs *ServiceImpl) AddClaim(claim merkletree.Entrier) error {
 	err := cs.mt.Add(claim.Entry())
 	if err != nil {
 		return err
