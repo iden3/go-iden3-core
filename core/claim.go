@@ -53,6 +53,13 @@ func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
 	return c, v
 }
 
+// HashString takes the first 31 bytes of a hash applied to name.
+func HashString(s string) (stringHashed [248 / 8]byte) {
+	hash := utils.HashBytes([]byte(s))
+	copy(stringHashed[:], hash[len(hash)-248/8:])
+	return stringHashed
+}
+
 // ClaimTypeLen is the length in bytes of the type in a claim.
 const ClaimTypeLen = 64 / 8
 
@@ -87,6 +94,8 @@ var (
 	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
 	// ClaimTypeLinkObjectIdentity is a claim type to link an object (represented by a hash) to an identity.
 	ClaimTypeLinkObjectIdentity = NewClaimTypeNum(5)
+	// ClaimTypeAuthorizeService is a claim type to authorize a Service for the identity that performs the claim
+	ClaimTypeAuthorizeService = NewClaimTypeNum(6)
 )
 
 // ClaimVersionLen is the length in bytes of the version in a claim.
@@ -151,18 +160,11 @@ type ClaimAssignName struct {
 	IdAddr common.Address
 }
 
-// HashName takes the first 31 bytes of a hash applied to name.
-func HashName(name string) (nameHash [248 / 8]byte) {
-	hash := utils.HashBytes([]byte(name))
-	copy(nameHash[:], hash[len(hash)-248/8:])
-	return nameHash
-}
-
 // NewClaimAssignName returns a ClaimAssignName with the name and IdAddr.
 func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
-	c.NameHash = HashName(name)
+	c.NameHash = HashString(name)
 	c.IdAddr = idAddr
 	return c
 }
@@ -190,7 +192,7 @@ func (c *ClaimAssignName) Type() ClaimType {
 	return *ClaimTypeAssignName
 }
 
-// ClaimAuthorizeKSign is a claim to autorize a public key for signing.
+// ClaimAuthorizeKSign is a claim to authorize a public key for signing.
 type ClaimAuthorizeKSign struct {
 	// Version is the claim version.
 	Version uint32
@@ -466,6 +468,53 @@ func (c *ClaimLinkObjectIdentity) Type() ClaimType {
 	return *ClaimTypeLinkObjectIdentity
 }
 
+// ClaimAuthorizeService is a claim to authorize a Service for the identity that performs the claim
+type ClaimAuthorizeService struct {
+	// Version is the claim version.
+	Version uint32
+	// ServiceAddr is the hash of the addr
+	ServiceAddr [248 / 8]byte
+	// ServicePubK is the hash of the pubK
+	ServicePubK [248 / 8]byte
+	// ServiceDomain is the hash of the domain
+	ServiceDomain [248 / 8]byte
+}
+
+// NewClaimAuthorizeService returns a ClaimAuthorizeService with the provided data.
+func NewClaimAuthorizeService(serviceAddr, servicePubK, serviceDomain string) *ClaimAuthorizeService {
+	return &ClaimAuthorizeService{
+		Version:       0,
+		ServiceAddr:   HashString(serviceAddr),
+		ServicePubK:   HashString(servicePubK),
+		ServiceDomain: HashString(serviceDomain),
+	}
+}
+
+// NewClaimAuthorizeServiceFromEntry deserializes a ClaimAuthorizeService from an Entry.
+func NewClaimAuthorizeServiceFromEntry(e *merkletree.Entry) *ClaimAuthorizeService {
+	c := &ClaimAuthorizeService{}
+	_, c.Version = getClaimTypeVersion(e)
+	copyFromElemBytes(c.ServiceAddr[:], 0, &e.Data[2])
+	copyFromElemBytes(c.ServicePubK[:], 0, &e.Data[1])
+	copyFromElemBytes(c.ServiceDomain[:], 0, &e.Data[0])
+	return c
+}
+
+// Entry serializes the claim into an Entry.
+func (c *ClaimAuthorizeService) Entry() *merkletree.Entry {
+	e := &merkletree.Entry{}
+	setClaimTypeVersion(e, c.Type(), c.Version)
+	copyToElemBytes(&e.Data[2], 0, c.ServiceAddr[:])
+	copyToElemBytes(&e.Data[1], 0, c.ServicePubK[:])
+	copyToElemBytes(&e.Data[0], 0, c.ServiceDomain[:])
+	return e
+}
+
+// Type returns the ClaimType of the claim.
+func (c *ClaimAuthorizeService) Type() ClaimType {
+	return *ClaimTypeAuthorizeService
+}
+
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	claimType, _ := getClaimTypeVersion(e)
@@ -486,6 +535,9 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 		return NewClaimAuthorizeKSignSecp256k1FromEntry(e)
 	case *ClaimTypeLinkObjectIdentity:
 		c := NewClaimLinkObjectIdentityFromEntry(e)
+		return c, nil
+	case *ClaimTypeAuthorizeService:
+		c := NewClaimAuthorizeServiceFromEntry(e)
 		return c, nil
 	default:
 		return nil, ErrInvalidClaimType
