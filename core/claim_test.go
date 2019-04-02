@@ -246,7 +246,7 @@ func TestClaimAuthorizeService(t *testing.T) {
 		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 		0x39, 0x39, 0x39, 0x3a})
 	pubKstr := "af048ddcc131d526699d928e8b8548c5c85fb7d407fc408bb543e4e58f305347f67942a7e56d7dc90bbcecca865f2fbde3118c91516594262f62857136f71dbc"
-	c0 := NewClaimAuthorizeService(ethAddr.Hex(), pubKstr, "relay.iden3.io")
+	c0 := NewClaimAuthorizeService(ServiceTypeRelay, ethAddr.Hex(), pubKstr, "relay.iden3.io")
 	e := c0.Entry()
 	assert.Equal(t,
 		"0x134bb5a379706bc9574bee7b0d6850a5fa0a7e324a6b9377ed28ee7444f3d0ce",
@@ -266,6 +266,7 @@ func TestClaimAuthorizeService(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, c0, c1)
 	assert.Equal(t, c0, c2)
+	assert.Equal(t, c0.ServiceType, ServiceTypeRelay)
 }
 
 func dataTestOutput(d *merkletree.Data) {
