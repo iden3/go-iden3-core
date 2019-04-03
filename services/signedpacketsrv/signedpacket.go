@@ -28,6 +28,15 @@ const IDENASSERTV01 = "iden3.iden_assert.v0_1"
 // form.
 const GENERICSIGV01 = "iden3.gen_sig.v0_1"
 
+// MSGV01 is the signed packet payload type of a signed message.  The signature
+// is only used to guarantee the origin of the message.  The signature doesn't
+// say anything about the message content.  This signed packet type is used for
+// notifications.
+const MSGV01 = "iden3.msg.v0_1"
+
+const MSGPROOFCLAIMV01 = "iden3.proofclaim.v0_1"
+const MSGTXT = "txt"
+
 // SIGALGV01 is the JWS algorithm used in SIGV01.  It's ECDSA with secp256k1
 // and keccak.
 const SIGALGV01 = "EK256K1"
@@ -225,6 +234,18 @@ func NewSignGenericSigV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk 
 
 }
 
+type MsgForm struct {
+	Type string      `json:"type" binding:"required"`
+	Data interface{} `json:"data" binding:"required"`
+}
+
+func NewSignMsgV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
+	proofKSign core.ProofClaim, expireDelta int64, msgType string, msg interface{}) (*SignedPacket, error) {
+	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
+		MSGV01, nil, MsgForm{Type: msgType, Data: msg})
+
+}
+
 // IdenAssertData contains the data field of a signed packet of type
 // iden3.iden_assert.v0_1
 type IdenAssertData struct {
@@ -236,8 +257,8 @@ type IdenAssertData struct {
 // IdenAssertForm contains the form field of a signed packet of type
 // iden3.iden_assert.v0_1
 type IdenAssertForm struct {
-	EthName         string
-	ProofAssignName *core.ProofClaim
+	EthName         string           `json:"ethName" binding:"required"`
+	ProofAssignName *core.ProofClaim `json:"proofAssignName" binding:"required"`
 }
 
 // NewSignIdenAssertV01 generates and signs a signed packet with payload type

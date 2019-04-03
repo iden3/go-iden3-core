@@ -196,7 +196,6 @@ func setup() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("DBG: Checkpoint A")
 
 	// var iden3TestOpAddr common.Address
 	// common3.HexDecodeInto(iden3TestOpAddr[:], []byte("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c"))

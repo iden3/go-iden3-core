@@ -59,9 +59,14 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 				[]byte(claims["idAddr"].(string))); err != nil {
 				panic(err)
 			}
+			var ethName *string
+			switch v := claims["ethName"].(type) {
+			case string:
+				ethName = &v
+			}
 			return &User{
 				IdAddr:  idAddr,
-				EthName: claims["ethName"].(*string),
+				EthName: ethName,
 			}
 		},
 		// handler to validate login
