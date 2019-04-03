@@ -14,7 +14,7 @@ func handleVinculateId(c *gin.Context) {
 		genericserver.Fail(c, "BindJSON", err)
 		return
 	}
-	if err := signedPacketService.VerifySignedPacketGeneric(&signedPacket); err != nil {
+	if err := signedPacketVerifier.VerifySignedPacketGeneric(&signedPacket); err != nil {
 		genericserver.Fail(c, "invalid signed packet", err)
 		return
 	}

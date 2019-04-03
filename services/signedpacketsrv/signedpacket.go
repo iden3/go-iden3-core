@@ -1,19 +1,16 @@
 package signedpacketsrv
 
 import (
-	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/services/signsrv"
 	"github.com/iden3/go-iden3/utils"
 )
 
@@ -33,9 +30,6 @@ const GENERICSIGV01 = "iden3.gen_sig.v0_1"
 // say anything about the message content.  This signed packet type is used for
 // notifications.
 const MSGV01 = "iden3.msg.v0_1"
-
-const MSGPROOFCLAIMV01 = "iden3.proofclaim.v0_1"
-const MSGTXT = "txt"
 
 // SIGALGV01 is the JWS algorithm used in SIGV01.  It's ECDSA with secp256k1
 // and keccak.
@@ -123,7 +117,7 @@ type SignedPacket struct {
 }
 
 // Sign signs the signed packet with the key corresponding to addr.
-func (sp *SignedPacket) Sign(ks *keystore.KeyStore, addr common.Address) error {
+func (sp *SignedPacket) Sign(signer signsrv.Service) error {
 	headerJSON, err := json.Marshal(sp.Header)
 	if err != nil {
 		return err
@@ -134,7 +128,7 @@ func (sp *SignedPacket) Sign(ks *keystore.KeyStore, addr common.Address) error {
 	}
 	sp.SignedBytes = []byte(fmt.Sprintf("%v.%v", base64.StdEncoding.EncodeToString([]byte(headerJSON)),
 		base64.StdEncoding.EncodeToString([]byte(payloadJSON))))
-	sp.Signature, err = utils.SignEthMsg(ks, accounts.Account{Address: addr}, sp.SignedBytes)
+	sp.Signature, err = signer.SignEthMsg(sp.SignedBytes)
 	if err != nil {
 		return err
 	}
@@ -151,7 +145,7 @@ func (sp *SignedPacket) Marshal() (string, error) {
 	return fmt.Sprintf("%v.%v", string(sp.SignedBytes), sig64), nil
 }
 
-// MarshalJSON marshals a sined packet into a Jws JSON.
+// MarshalJSON marshals a signed packet into a Jws JSON.
 func (sp *SignedPacket) MarshalJSON() ([]byte, error) {
 	str, err := sp.Marshal()
 	if err != nil {
@@ -200,14 +194,32 @@ func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 	return sp.Unmarshal(jws.Jws)
 }
 
+type SignedPacketSigner struct {
+	signer     signsrv.Service
+	idAddr     common.Address
+	proofKSign core.ProofClaim
+}
+
+func NewSignedPacketSigner(signer signsrv.Service, proofKSign core.ProofClaim,
+	idAddr common.Address) *SignedPacketSigner {
+	return &SignedPacketSigner{
+		idAddr:     idAddr,
+		signer:     signer,
+		proofKSign: proofKSign,
+	}
+}
+
+func (sps *SignedPacketSigner) SetProofKSign(proofKSign core.ProofClaim) {
+	sps.proofKSign = proofKSign
+}
+
 // NewSignPacketV01 generates and signs a SIGV01 signed packet.
-func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
-	proofKSign core.ProofClaim, expireDelta int64, payloadType string,
-	data interface{}, form interface{}) (*SignedPacket, error) {
+func (sps *SignedPacketSigner) NewSignPacketV01(expireDelta int64,
+	payloadType string, data interface{}, form interface{}) (*SignedPacket, error) {
 	now := time.Now().Unix()
 	header := SigHeader{
 		Type:         SIGV01,
-		Issuer:       idAddr,
+		Issuer:       sps.idAddr,
 		IssuedAtTime: now,
 		Expiration:   now + expireDelta,
 		Algorithm:    SIGALGV01,
@@ -215,22 +227,21 @@ func NewSignPacketV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecd
 	payload := SigPayload{
 		Type:       payloadType,
 		Data:       data,
-		KSign:      &utils.PublicKey{PublicKey: *kSignPk},
-		ProofKSign: proofKSign,
+		KSign:      &utils.PublicKey{PublicKey: *sps.signer.PublicKey()},
+		ProofKSign: sps.proofKSign,
 		Form:       form,
 	}
 	jws := SignedPacket{Header: header, Payload: payload}
-	if err := jws.Sign(ks, crypto.PubkeyToAddress(*kSignPk)); err != nil {
+	if err := jws.Sign(sps.signer); err != nil {
 		return nil, err
 	}
 	return &jws, nil
 }
 
 // NewSignGenericSigV01 generates and signs a signed packet with payload type GENERICSIGV01.
-func NewSignGenericSigV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
-	proofKSign core.ProofClaim, expireDelta int64, form interface{}) (*SignedPacket, error) {
-	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
-		GENERICSIGV01, nil, form)
+func (sps *SignedPacketSigner) NewSignGenericSigV01(expireDelta int64,
+	form interface{}) (*SignedPacket, error) {
+	return sps.NewSignPacketV01(expireDelta, GENERICSIGV01, nil, form)
 
 }
 
@@ -239,10 +250,9 @@ type MsgForm struct {
 	Data interface{} `json:"data" binding:"required"`
 }
 
-func NewSignMsgV01(ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
-	proofKSign core.ProofClaim, expireDelta int64, msgType string, msg interface{}) (*SignedPacket, error) {
-	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
-		MSGV01, nil, MsgForm{Type: msgType, Data: msg})
+func (sps *SignedPacketSigner) NewSignMsgV01(expireDelta int64, msgType string,
+	msg interface{}) (*SignedPacket, error) {
+	return sps.NewSignPacketV01(expireDelta, MSGV01, nil, MsgForm{Type: msgType, Data: msg})
 
 }
 
@@ -264,10 +274,8 @@ type IdenAssertForm struct {
 // NewSignIdenAssertV01 generates and signs a signed packet with payload type
 // IDENASSERTV01.  idenAssertForm may be nil if proving the ownership of a name
 // is not desired.
-func NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert, idenAssertForm *IdenAssertForm,
-	ks *keystore.KeyStore, idAddr common.Address, kSignPk *ecdsa.PublicKey,
-	proofKSign core.ProofClaim, expireDelta int64) (*SignedPacket, error) {
-	return NewSignPacketV01(ks, idAddr, kSignPk, proofKSign, expireDelta,
-		IDENASSERTV01, requestIdenAssert.Body.Data,
-		idenAssertForm)
+func (sps *SignedPacketSigner) NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert,
+	idenAssertForm *IdenAssertForm, expireDelta int64) (*SignedPacket, error) {
+	return sps.NewSignPacketV01(expireDelta, IDENASSERTV01,
+		requestIdenAssert.Body.Data, idenAssertForm)
 }

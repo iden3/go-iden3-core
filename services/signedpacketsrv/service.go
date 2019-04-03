@@ -16,17 +16,18 @@ import (
 	"github.com/iden3/go-iden3/utils"
 )
 
-type Service struct {
+type SignedPacketVerifier struct {
 	DiscoverySrv    *discoverysrv.Service
 	nameResolverSrv *nameresolversrv.Service
 }
 
-func New(discoverySrv *discoverysrv.Service, nameResolverSrv *nameresolversrv.Service) *Service {
-	return &Service{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
+func NewSignedPacketVerifier(discoverySrv *discoverysrv.Service,
+	nameResolverSrv *nameresolversrv.Service) *SignedPacketVerifier {
+	return &SignedPacketVerifier{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
 }
 
 // VerifySignedPacketV01 verifies a SIGV01 signed packet.
-func (ss *Service) VerifySignedPacketV01(jws *SignedPacket) error {
+func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// 2. Verify jwsHeader.alg is 'ES255'
 	if jws.Header.Algorithm != SIGALGV01 {
 		return fmt.Errorf("Unsupported alg: %v", jws.Header.Algorithm)
@@ -101,7 +102,7 @@ func (ss *Service) VerifySignedPacketV01(jws *SignedPacket) error {
 }
 
 // VerifySignedPacket verifies a signed packet.
-func (ss *Service) VerifySignedPacket(jws *SignedPacket) error {
+func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 	switch jws.Header.Type {
 	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_1'
 	case SIGV01:
@@ -121,7 +122,7 @@ type IdenAssertResult struct {
 }
 
 // VerifyIdenAssertV01 verifies an IDENASSERTV01 payload of a signed packet.
-func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
+func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 	jws *SignedPacket) (*IdenAssertResult, error) {
 	data, ok := jws.Payload.Data.(IdenAssertData)
 	if !ok {
@@ -201,7 +202,7 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 
 // VerifySignedPacketIdenAssert verifies a signed packet and the
 // IDENASSERTV01 payload of the signed packet.
-func (ss *Service) VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *core.NonceDb, origin string) (*IdenAssertResult, error) {
+func (ss *SignedPacketVerifier) VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *core.NonceDb, origin string) (*IdenAssertResult, error) {
 	if jws.Payload.Type != IDENASSERTV01 {
 		return nil, fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
 	}
@@ -213,7 +214,7 @@ func (ss *Service) VerifySignedPacketIdenAssert(jws *SignedPacket, nonceDb *core
 
 // VerifySignedPacketGeneric verifies a signed packet and checks that the
 // payload type is GENERICSIGV01.
-func (ss *Service) VerifySignedPacketGeneric(jws *SignedPacket) error {
+func (ss *SignedPacketVerifier) VerifySignedPacketGeneric(jws *SignedPacket) error {
 	if jws.Payload.Type != GENERICSIGV01 {
 		return fmt.Errorf("Invalid payload.type: %v", jws.Payload.Type)
 	}

@@ -33,7 +33,7 @@ func GetUser(c *gin.Context) *User {
 // claims: "idAddr" and "ethName", which are extracted from the idenAssert
 // signed packet.
 func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
-	signedpacketservice *signedpacketsrv.Service) (*jwt.GinJWTMiddleware, error) {
+	signedPacketVerifier *signedpacketsrv.SignedPacketVerifier) (*jwt.GinJWTMiddleware, error) {
 	// The JWT middleware
 	return jwt.New(&jwt.GinJWTMiddleware{
 		Realm:       "iden3.iden_assert.v0_1",
@@ -75,7 +75,7 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 			if err := c.BindJSON(&idenAssert); err != nil {
 				return nil, fmt.Errorf("invalid JWS signed packet: %v", err)
 			}
-			if res, err := signedpacketservice.VerifySignedPacketIdenAssert(&idenAssert, nonceDb,
+			if res, err := signedPacketVerifier.VerifySignedPacketIdenAssert(&idenAssert, nonceDb,
 				domain); err != nil {
 				return nil, fmt.Errorf("failed verification of JWS signed packet: %v ", err)
 			} else {
@@ -102,8 +102,8 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 //    - POST "/login": requires a JSON with jwt field containing a JWS
 //    signedPacket.
 func AddAuthMiddleware(r *gin.RouterGroup, domain string, nonceDb *core.NonceDb,
-	key []byte, signedpacketservice *signedpacketsrv.Service) (*gin.RouterGroup, error) {
-	authMiddleware, err := NewAuthMiddleware(domain, nonceDb, key, signedpacketservice)
+	key []byte, signedPacketVerifier *signedpacketsrv.SignedPacketVerifier) (*gin.RouterGroup, error) {
+	authMiddleware, err := NewAuthMiddleware(domain, nonceDb, key, signedPacketVerifier)
 	if err != nil {
 		return nil, fmt.Errorf("JWT auth middleware error: %v", err)
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
+	"github.com/iden3/go-iden3/services/signsrv"
 	// "github.com/iden3/go-iden3/utils"
 )
 
@@ -103,7 +104,8 @@ const entititesFileContent = `
 var namesFilePath string
 var entititesFilePath string
 
-var signedPacketSrv *Service
+var signedPacketVerifier *SignedPacketVerifier
+var signedPacketSigner *SignedPacketSigner
 
 var dbDir string
 var keyStoreDir string
@@ -112,6 +114,8 @@ var relaySk *ecdsa.PrivateKey
 var relayPk *ecdsa.PublicKey
 var kSignSk *ecdsa.PrivateKey
 var kSignPk *ecdsa.PublicKey
+
+var proofKSign core.ProofClaim
 
 var relayIdAddr common.Address
 
@@ -153,18 +157,15 @@ func setup() {
 		panic(err)
 	}
 	kSignPk = kSignSk.Public().(*ecdsa.PublicKey)
-	_, err = keyStore.ImportECDSA(kSignSk, passphrase)
-	if err != nil {
+	if _, err = keyStore.ImportECDSA(kSignSk, passphrase); err != nil {
 		panic(err)
 	}
-	err = keyStore.Unlock(accounts.Account{Address: crypto.PubkeyToAddress(*kSignPk)}, passphrase)
-	if err != nil {
+	if err = keyStore.Unlock(accounts.Account{Address: crypto.PubkeyToAddress(*kSignPk)},
+		passphrase); err != nil {
 		panic(err)
 	}
 
 	common3.HexDecodeInto(idAddr[:], []byte(idAddrHex))
-
-	//relayAddr = crypto.PubkeyToAddress(*relayPk)
 
 	namesFile, err := ioutil.TempFile("", "go-iden3-test-namesFile")
 	if err != nil {
@@ -178,11 +179,6 @@ func setup() {
 	if err != nil {
 		panic(err)
 	}
-	// common3.HexDecodeInto(relayIdAddr[:], []byte(relayIdAddrHex))
-
-	// nameResolverSrv := nameresolversrv.Service{
-	// 	Names: map[string]common.Address{"iden3.io": relayIdAddr},
-	// }
 
 	entititesFile, err := ioutil.TempFile("", "go-iden3-test-entititesFile")
 	if err != nil {
@@ -197,20 +193,17 @@ func setup() {
 		panic(err)
 	}
 
-	// var iden3TestOpAddr common.Address
-	// common3.HexDecodeInto(iden3TestOpAddr[:], []byte("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c"))
-	// discoverySrv := discoverysrv.Service{
-	// 	entitites: map[common.Address]*discoverysrv.Entity{
-	// 		relayIdAddr: &discoverysrv.Entity{
-	// 			Name:            "iden3-test-relay",
-	// 			OperationalPk:   &utils.PublicKey{PublicKey: *relayPk},
-	// 			OperationalAddr: iden3TestOpAddr,
-	// 			Trusted:         discoverysrv.Trusted{Relay: true},
-	// 		},
-	// 	},
-	// }
+	signSrv, err := signsrv.New(keyStore, accounts.Account{Address: crypto.PubkeyToAddress(*kSignPk)})
+	if err != nil {
+		panic(err)
+	}
 
-	signedPacketSrv = New(discoverySrv, nameResolverSrv)
+	signedPacketVerifier = NewSignedPacketVerifier(discoverySrv, nameResolverSrv)
+
+	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
+		panic(err)
+	}
+	signedPacketSigner = NewSignedPacketSigner(signSrv, proofKSign, idAddr)
 }
 
 func teardown() {
@@ -249,8 +242,8 @@ func testSignPacketV01(t *testing.T) {
 		fmt.Println(&proofKSign)
 	}
 	form := map[string]string{"foo": "baz"}
-	signedPacket, err := NewSignPacketV01(keyStore, idAddr, kSignPk, proofKSign, 600,
-		GENERICSIGV01, nil, form)
+	signedPacket, err := signedPacketSigner.
+		NewSignPacketV01(600, GENERICSIGV01, nil, form)
 	assert.Nil(t, err)
 	signedPacketStr, err := signedPacket.Marshal()
 	assert.Nil(t, err)
@@ -258,7 +251,7 @@ func testSignPacketV01(t *testing.T) {
 		fmt.Println(signedPacketStr)
 	}
 
-	err = signedPacketSrv.VerifySignedPacket(signedPacket)
+	err = signedPacketVerifier.VerifySignedPacket(signedPacket)
 	assert.Nil(t, err)
 }
 
@@ -268,7 +261,8 @@ func testSignGenericSigV01(t *testing.T) {
 		panic(err)
 	}
 	form := map[string]string{"foo": "baz"}
-	signedPacket, err := NewSignGenericSigV01(keyStore, idAddr, kSignPk, proofKSign, 600, form)
+	signedPacket, err := signedPacketSigner.
+		NewSignGenericSigV01(600, form)
 	assert.Nil(t, err)
 	signedPacketStr, err := signedPacket.Marshal()
 	assert.Nil(t, err)
@@ -276,7 +270,7 @@ func testSignGenericSigV01(t *testing.T) {
 		fmt.Println(signedPacketStr)
 	}
 
-	err = signedPacketSrv.VerifySignedPacketGeneric(signedPacket)
+	err = signedPacketVerifier.VerifySignedPacketGeneric(signedPacket)
 	assert.Nil(t, err)
 }
 
@@ -288,7 +282,8 @@ func benchmarkSignGenericSigV01(b *testing.B) {
 	form := map[string]string{"foo": "baz"}
 
 	for n := 0; n < b.N; n++ {
-		NewSignGenericSigV01(keyStore, idAddr, kSignPk, proofKSign, 600, form)
+		signedPacketSigner.
+			NewSignGenericSigV01(600, form)
 	}
 }
 
@@ -301,11 +296,12 @@ func benchmarkVerifySignGenericSigV01(b *testing.B) {
 		panic(err)
 	}
 	form := map[string]string{"foo": "baz"}
-	signedPacket, err := NewSignGenericSigV01(keyStore, idAddr, kSignPk, proofKSign, 600, form)
+	signedPacket, err := signedPacketSigner.
+		NewSignGenericSigV01(600, form)
 	assert.Nil(b, err)
 
 	for n := 0; n < b.N; n++ {
-		signedPacketSrv.VerifySignedPacketGeneric(signedPacket)
+		signedPacketVerifier.VerifySignedPacketGeneric(signedPacket)
 	}
 }
 
@@ -323,9 +319,9 @@ func testSignIdenAssertV01Name(t *testing.T) {
 	if err := json.Unmarshal([]byte(proofAssignNameJSON), &proofAssignName); err != nil {
 		panic(err)
 	}
-	signedPacket, err := NewSignIdenAssertV01(requestIdenAssert,
-		&IdenAssertForm{EthName: ethName, ProofAssignName: &proofAssignName},
-		keyStore, idAddr, kSignPk, proofKSign, 600)
+	signedPacket, err := signedPacketSigner.
+		NewSignIdenAssertV01(requestIdenAssert,
+			&IdenAssertForm{EthName: ethName, ProofAssignName: &proofAssignName}, 600)
 	assert.Nil(t, err)
 	signedPacketStr, err := signedPacket.Marshal()
 	assert.Nil(t, err)
@@ -334,7 +330,8 @@ func testSignIdenAssertV01Name(t *testing.T) {
 	}
 
 	// Login Server
-	idenAssertResult, err := signedPacketSrv.VerifySignedPacketIdenAssert(signedPacket, nonceDb, "example.com")
+	idenAssertResult, err := signedPacketVerifier.
+		VerifySignedPacketIdenAssert(signedPacket, nonceDb, "example.com")
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println(idenAssertResult)
@@ -351,8 +348,9 @@ func testSignIdenAssertV01NoName(t *testing.T) {
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
 		panic(err)
 	}
-	signedPacket, err := NewSignIdenAssertV01(requestIdenAssert, nil,
-		keyStore, idAddr, kSignPk, proofKSign, 600)
+	signedPacket, err := signedPacketSigner.
+		NewSignIdenAssertV01(requestIdenAssert, nil,
+			600)
 	assert.Nil(t, err)
 	signedPacketStr, err := signedPacket.Marshal()
 	assert.Nil(t, err)
@@ -361,7 +359,8 @@ func testSignIdenAssertV01NoName(t *testing.T) {
 	}
 
 	// Login Server
-	idenAssertResult, err := signedPacketSrv.VerifySignedPacketIdenAssert(signedPacket, nonceDb, "example.com")
+	idenAssertResult, err := signedPacketVerifier.
+		VerifySignedPacketIdenAssert(signedPacket, nonceDb, "example.com")
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println(idenAssertResult)
@@ -375,8 +374,9 @@ func testMarshalUnmarshal(t *testing.T) {
 	}
 
 	form := map[string]string{"foo": "baz", "bar": "biz"}
-	signedPacket, err := NewSignPacketV01(keyStore, idAddr, kSignPk, proofKSign, 600,
-		GENERICSIGV01, nil, form)
+	signedPacket, err := signedPacketSigner.
+		NewSignPacketV01(600,
+			GENERICSIGV01, nil, form)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("\nSignedPacket:")
@@ -398,8 +398,8 @@ func testMarshalUnmarshal(t *testing.T) {
 		fmt.Printf("Form: %#v\n", signedPacket2.Payload.Form)
 	}
 
-	signedPacket3, err := NewSignPacketV01(keyStore, idAddr, kSignPk, proofKSign, 600,
-		"invalid", nil, nil)
+	signedPacket3, err := signedPacketSigner.
+		NewSignPacketV01(600, "invalid", nil, nil)
 	assert.Nil(t, err)
 	signedPacketStr2, err := signedPacket3.Marshal()
 	assert.Nil(t, err)
