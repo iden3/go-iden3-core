@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 
@@ -90,6 +91,22 @@ func VerifySig(addr common.Address, sig *Signature, msgHash []byte) bool {
 	pubKey, _ := crypto.UnmarshalPubkey(recoveredPub)
 	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
 	return bytes.Equal(addr.Bytes(), recoveredAddr.Bytes())
+}
+
+// GetPkFromKeyStore is a hack to obtain the public key of an addres who's
+// private key is stored in a key store.  It does this by signing an empty hash
+// and recovering the public key from the signature.
+func GetPkFromKeyStore(ks *keystore.KeyStore, addr common.Address) (*ecdsa.PublicKey, error) {
+	var h [256 / 8]byte
+	sig, err := ks.SignHash(accounts.Account{Address: addr}, h[:])
+	if err != nil {
+		return nil, err
+	}
+	pk, err := crypto.Ecrecover(h[:], sig)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.UnmarshalPubkey(pk)
 }
 
 // VerifySigBytes verifies the signature of a byte array given an ethereum address.

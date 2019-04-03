@@ -38,9 +38,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	signedpacketservice := signedpacketsrv.New(discoveryservice, nameResolverService)
+	signedPacketVerifier := signedpacketsrv.NewSignedPacketVerifier(discoveryservice, nameResolverService)
 	authapi, err := auth.AddAuthMiddleware(&r.RouterGroup, domain, nonceDb, []byte("password"),
-		signedpacketservice)
+		signedPacketVerifier)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -159,7 +159,11 @@ func LoadIdService(client *eth.Web3Client, claimservice claimsrv.Service, storag
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
 	log.WithField("idAddr", C.IdAddrRaw).Info("Running claim service")
-	return claimsrv.New(C.IdAddr, mt, rootservice, signsrv.New(ks, acc))
+	signer, err := signsrv.New(ks, acc)
+	if err != nil {
+		panic(err)
+	}
+	return claimsrv.New(C.IdAddr, mt, rootservice, signer)
 }
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {

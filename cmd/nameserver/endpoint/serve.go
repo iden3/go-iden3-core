@@ -23,7 +23,7 @@ import (
 var claimService claimsrv.Service
 var rootService rootsrv.Service
 var nameService namesrv.Service
-var signedPacketService signedpacketsrv.Service
+var signedPacketVerifier signedpacketsrv.SignedPacketVerifier
 var adminService adminsrv.Service
 
 func init() {
@@ -73,12 +73,12 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 }
 
 func Serve(rs rootsrv.Service, cs claimsrv.Service, ns namesrv.Service,
-	ss signedpacketsrv.Service, as adminsrv.Service) {
+	spv signedpacketsrv.SignedPacketVerifier, as adminsrv.Service) {
 
 	claimService = cs
 	rootService = rs
 	nameService = ns
-	signedPacketService = ss
+	signedPacketVerifier = spv
 	adminService = as
 
 	stopch := make(chan interface{})

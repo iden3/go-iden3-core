@@ -94,6 +94,10 @@ func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, in
 	return sig, dateInt64, err
 }
 
+func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
+	return relayPubKey
+}
+
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
 	if err != nil {

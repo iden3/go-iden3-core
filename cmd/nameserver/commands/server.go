@@ -65,7 +65,7 @@ func cmdStart(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	signedPacketService := signedpacketsrv.New(discoveryService, nameResolveService)
+	signedPacketVerifier := signedpacketsrv.NewSignedPacketVerifier(discoveryService, nameResolveService)
 
 	// Check for founds
 	balance, err := client.BalanceAt(acc.Address)
@@ -80,7 +80,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the nameserver address")
 	}
 
-	endpoint.Serve(rootService, claimService, nameService, *signedPacketService, adminService)
+	endpoint.Serve(rootService, claimService, nameService, *signedPacketVerifier, adminService)
 
 	rootService.StopAndJoin()
 	storage.Close()
@@ -134,5 +134,9 @@ func cmdInfo(c *cli.Context) error {
 }
 
 func LoadNameService(claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
-	return namesrv.New(claimservice, signsrv.New(ks, acc), domain)
+	signer, err := signsrv.New(ks, acc)
+	if err != nil {
+		panic(err)
+	}
+	return namesrv.New(claimservice, signer, domain)
 }
