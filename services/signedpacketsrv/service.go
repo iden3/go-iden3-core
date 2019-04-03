@@ -156,7 +156,7 @@ func (ss *Service) VerifyIdenAssertV01(nonceDb *core.NonceDb, origin string,
 	if !ok {
 		return nil, fmt.Errorf("Invalid claim type in form.proofAssignName.leaf")
 	}
-	if core.HashName(form.EthName) != claimAssignName.NameHash {
+	if core.HashString(form.EthName) != claimAssignName.NameHash {
 		return nil, fmt.Errorf("Assign Name claim name doesn't match with form.ethName")
 	}
 	if jws.Header.Issuer != claimAssignName.IdAddr {
