@@ -11,7 +11,8 @@ import (
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/utils"
-
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
+	"github.com/iden3/go-iden3/services/notificationsrv"
 	"github.com/iden3/go-iden3/merkletree"
 )
 
@@ -67,6 +68,23 @@ func handlePostClaim(c *gin.Context) {
 	err = genericserver.Claimservice.AddClaim(claim)
 	if err != nil {
 		genericserver.Fail(c, "error on AddLinkObjectClaim", err)
+		return
+	}
+
+	// return claim with proofs
+	proofClaim, err := genericserver.Claimservice.GetClaimProofByHi(claim.Entry().HIndex())
+	if err != nil {
+		genericserver.Fail(c, "error on GetClaimProofByHi", err)
+		return
+	}
+	// Send proofClaim to notification server
+	signedPacketSigner := signedpacketsrv.NewSignedPacketSigner(signer, proofKSign, idAddr)
+	service := notificationsrv.New(m.IdData.NotifSrvUrl, signedPacketSigner)
+	// Send packet
+	notification := notificationsrv.NewMsgProofClaim(proofClaim)
+	err = service.SendNotification(notification, m.IdData.IdAddr)
+	if err != nil {
+		genericserver.Fail(c, "error at sending notification", err)
 		return
 	}
 
