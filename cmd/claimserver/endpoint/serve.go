@@ -11,6 +11,7 @@ import (
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,6 +20,7 @@ func init() {
 	gin.SetMode(gin.ReleaseMode)
 }
 
+// serveServiceApi start service api calls.
 func serveServiceApi() *http.Server {
 	api, serviceapi := genericserver.NewServiceAPI("/api/unstable")
 	serviceapi.POST("/claims", handlePostClaim)                  // Get relay claim proof
@@ -34,6 +36,7 @@ func serveServiceApi() *http.Server {
 	return serviceapisrv
 }
 
+// serveAdminApi start admin api calls.
 func serveAdminApi(stopch chan interface{}) *http.Server {
 	api, adminapi := genericserver.NewAdminAPI("/api/unstable", stopch)
 	adminapi.POST("/claims/basic", handleAddClaimBasic)
@@ -48,11 +51,13 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, as adminsrv.Service) {
+// Serve initilization all services and its corresponding api calls.
+func Serve(rs rootsrv.Service, cs claimsrv.Service, as adminsrv.Service, sp *signedpacketsrv.SignedPacketSigner) {
 
 	genericserver.Claimservice = cs
 	genericserver.Rootservice = rs
 	genericserver.Adminservice = as
+	genericserver.SignedPacketService = *sp
 
 	stopch := make(chan interface{})
 
@@ -67,12 +72,12 @@ func Serve(rs rootsrv.Service, cs claimsrv.Service, as adminsrv.Service) {
 		}
 	}()
 
-	// start servers
+	// start servers.
 	genericserver.Rootservice.Start()
 	serviceapisrv := serveServiceApi()
 	adminapisrv := serveAdminApi(stopch)
 
-	// wait until shutdown signal
+	// wait until shutdown signal.
 	<-stopch
 	log.Info("Shutdown Server ...")
 

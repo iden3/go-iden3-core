@@ -25,7 +25,7 @@ type HttpError struct {
 	Body       string
 }
 
-func NewHttpError(response *http.Response) (*HttpError, error) {
+func NewHttpError(response *http.Response) (error, error) {
 	if response.StatusCode == 200 {
 		return nil, nil
 	}
