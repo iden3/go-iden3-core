@@ -62,12 +62,14 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 		return fmt.Errorf("Authorize KSign claim proofs of depth > 2 not allowed yet")
 	}
 
-	// 5. Verify that jwsHeader.iss is in jwsPayload.proofKSign.
-	if jws.Payload.ProofKSign.Proofs[0].Aux == nil {
-		return fmt.Errorf("payload.proofksign.proofs[0].aux is nil")
-	}
-	if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.IdAddr {
-		return fmt.Errorf("header.iss doesn't match with idaddr in proofksign set root claim")
+	if len(jws.Payload.ProofKSign.Proofs) > 1 {
+		// 5. Verify that jwsHeader.iss is in jwsPayload.proofKSign.
+		if jws.Payload.ProofKSign.Proofs[0].Aux == nil {
+			return fmt.Errorf("payload.proofksign.proofs[0].aux is nil")
+		}
+		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.IdAddr {
+			return fmt.Errorf("header.iss doesn't match with idaddr in proofksign set root claim")
+		}
 	}
 
 	// 6. Verify that signature of JWS(jwsHeader, jwsPayload) is by jwsPayload.ksign
@@ -92,6 +94,14 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 			return fmt.Errorf("payload.proofKSign.signer is not a trusted relay")
 		}
 	}
+
+	// NOTE: For now we accept self signed auth ksign claims (the signer
+	// has the claim in its own merkle tree) as long as the signer identity
+	// details are found via the discovery, which we considered trusted for
+	// now.  In the future the claims will be verified by checking the
+	// proof from the entry to the root of a tree that's on the blockchain,
+	// so no signature verification will be necessary and signing entities
+	// won't be able to sign contradicting claims.
 
 	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
 	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
