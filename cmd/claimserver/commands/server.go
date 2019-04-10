@@ -49,6 +49,9 @@ func cmdStart(c *cli.Context) error {
 	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
 	adminService := genericserver.LoadAdminService(mt, rootService, claimService)
 
+	// Load signedpacketsigner service
+	signedPacketSigner := genericserver.LoadSignedPacketSigner(ks, acc, claimService)
+
 	// Check for funds
 	balance, err := client.BalanceAt(acc.Address)
 	if err != nil {
@@ -62,7 +65,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the relay address")
 	}
 
-	endpoint.Serve(rootService, claimService, adminService)
+	endpoint.Serve(rootService, claimService, adminService, signedPacketSigner)
 
 	rootService.StopAndJoin()
 	storage.Close()

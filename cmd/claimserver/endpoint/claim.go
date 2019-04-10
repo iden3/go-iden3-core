@@ -9,12 +9,13 @@ import (
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/utils"
-
 	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/notificationsrv"
+	"github.com/iden3/go-iden3/utils"
 )
 
+// IdData struct representing user data that claim server will manage afterwards.
 type IdData struct {
 	IdAddr      common.Address `json:"idAddr"`
 	NotifSrvUrl string         `json:"notifSrvUrl"`
@@ -22,8 +23,10 @@ type IdData struct {
 
 type IdDataB64 IdData
 
+// UnmarshalText retrieve data from an array of bytes.
 func (d *IdDataB64) UnmarshalText(text []byte) error {
-	idDataJSON, err := base64.StdEncoding.DecodeString(string(text))
+	idDataJSON, err := base64.URLEncoding.WithPadding(base64.NoPadding).
+		DecodeString(string(text))
 	if err != nil {
 		return err
 	}
@@ -35,6 +38,7 @@ func (d *IdDataB64) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// claimData struct representing data needed in order to be accepted by handlePostClaim function.
 type claimData struct {
 	IdData IdDataB64 `json:"idData" binding:"required"`
 	Cert   string    `json:"data" binding:"required"`
@@ -64,9 +68,28 @@ func handlePostClaim(c *gin.Context) {
 	}
 	claim.Version = version
 
+	// Add claim to claim server merke tree.
 	err = genericserver.Claimservice.AddClaim(claim)
 	if err != nil {
 		genericserver.Fail(c, "error on AddLinkObjectClaim", err)
+		return
+	}
+
+	// return claim with proofs.
+	proofClaim, err := genericserver.Claimservice.GetClaimProofByHi(claim.Entry().HIndex())
+	if err != nil {
+		genericserver.Fail(c, "error on GetClaimProofByHi", err)
+		return
+	}
+
+	// Send proofClaim to notification server.
+	service := notificationsrv.New(m.IdData.NotifSrvUrl, &genericserver.SignedPacketService)
+
+	// Send packet.
+	notification := notificationsrv.NewMsgProofClaim(proofClaim)
+	err = service.SendNotification(notification, m.IdData.IdAddr)
+	if err != nil {
+		genericserver.Fail(c, "error at sending notification", err)
 		return
 	}
 

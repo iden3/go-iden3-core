@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	"github.com/iden3/go-iden3/merkletree"
@@ -15,6 +16,7 @@ import (
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
+	"github.com/iden3/go-iden3/services/signedpacketsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
 	log "github.com/sirupsen/logrus"
 )
@@ -38,10 +40,10 @@ func Assert(msg string, err error) {
 
 var Claimservice claimsrv.Service
 var Rootservice rootsrv.Service
-
 var Idservice identitysrv.Service
-
 var Adminservice adminsrv.Service
+
+var SignedPacketService signedpacketsrv.SignedPacketSigner
 
 func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 
@@ -168,4 +170,26 @@ func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {
 	return adminsrv.New(mt, rootservice, claimservice)
+}
+
+// LoadSignedPacketSigner Adds new claim authorizing a secp256ks key. Returns SignedPacketSigner to sign with key sign.
+func LoadSignedPacketSigner(ks *keystore.KeyStore, acc accounts.Account, claimservice claimsrv.Service) *signedpacketsrv.SignedPacketSigner {
+	// Create signer object
+	signer, err := signsrv.New(ks, acc)
+	if err != nil {
+		panic(err)
+	}
+	// Claim authorizing public key secp256k1 and get its proofKsign
+	claim := core.NewClaimAuthorizeKSignSecp256k1(signer.PublicKey())
+	// Add claim
+	err = claimservice.AddClaim(claim)
+	if (err != nil) && (err != merkletree.ErrEntryIndexAlreadyExists) {
+		panic(err)
+	}
+	// return claim with proofs
+	proofKSign, err := claimservice.GetClaimProofByHi(claim.Entry().HIndex())
+	if err != nil {
+		panic(err)
+	}
+	return signedpacketsrv.NewSignedPacketSigner(signer, *proofKSign, C.IdAddr)
 }
