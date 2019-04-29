@@ -281,6 +281,27 @@ func dataTestOutput(d *merkletree.Data) {
 	fmt.Println(s.String())
 }
 
+func TestClaimEthId(t *testing.T) {
+	ethId := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	identityFactoryAddr := common.HexToAddress("0x66D0c2F85F1B717168cbB508AfD1c46e07227130")
+
+	c0 := NewClaimEthId(ethId, identityFactoryAddr)
+
+	c1 := NewClaimEthIdFromEntry(c0.Entry())
+	c2, err := NewClaimFromEntry(c0.Entry())
+	assert.Nil(t, err)
+	assert.Equal(t, c0, c1)
+	assert.Equal(t, c0, c2)
+
+	assert.Equal(t, c0.Address, ethId)
+	assert.Equal(t, c0.IdentityFactory, identityFactoryAddr)
+	assert.Equal(t, c0.Address, c1.Address)
+	assert.Equal(t, c0.IdentityFactory, c1.IdentityFactory)
+
+	assert.Equal(t, c0.Entry().Bytes(), c1.Entry().Bytes())
+	assert.Equal(t, c0.Entry().Bytes(), c2.Entry().Bytes())
+}
+
 // TODO: Update to new claim spec.
 //func TestForwardingInterop(t *testing.T) {
 //
