@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
+	"strings"
 	//"strconv"
 	"testing"
 	//"time"
@@ -39,6 +40,47 @@ func TestNewMT(t *testing.T) {
 	assert.Equal(t,
 		"0x0000000000000000000000000000000000000000000000000000000000000000",
 		mt.RootKey().Hex())
+}
+
+func HexDecode(h string) ([]byte, error) {
+	if strings.HasPrefix(h, "0x") {
+		h = h[2:]
+	}
+	return hex.DecodeString(h)
+}
+func NewEntryFromHexs(a, b, c, d string) (e Entry, err error) {
+	e.Data, err = HexsToData(a, b, c, d)
+	if err != nil {
+		return e, err
+	}
+	return e, nil
+}
+func HexsToData(_a, _b, _c, _d string) (Data, error) {
+	aBytes, err := HexDecode(_a)
+	if err != nil {
+		return Data{}, err
+	}
+	a := new(big.Int).SetBytes(aBytes)
+
+	bBytes, err := HexDecode(_b)
+	if err != nil {
+		return Data{}, err
+	}
+	b := new(big.Int).SetBytes(bBytes)
+
+	cBytes, err := HexDecode(_c)
+	if err != nil {
+		return Data{}, err
+	}
+	c := new(big.Int).SetBytes(cBytes)
+
+	dBytes, err := HexDecode(_d)
+	if err != nil {
+		return Data{}, err
+	}
+	d := new(big.Int).SetBytes(dBytes)
+
+	return BigIntsToData(a, b, c, d), nil
 }
 
 func NewEntryFromInts(a, b, c, d int64) (e Entry) {
@@ -667,4 +709,40 @@ func TestMTWalkDumpLeafs(t *testing.T) {
 	if debug {
 		fmt.Println(w)
 	}
+}
+
+func TestAddRepeatedClaim(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	e := NewEntryFromInts(12, 45, 78, 41)
+
+	err := mt.Add(&e)
+	assert.Nil(t, err)
+	err = mt.Add(&e)
+	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
+	err = mt.Add(&e)
+	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
+
+	assert.Equal(t,
+		"0x112bae1c89a7a51a9a09e88c2f095bfe8a7d94d7c0cf5ba017a491c3e0b95c8f",
+		mt.RootKey().Hex())
+}
+
+func TestAddBigIntEntries(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	e, err := NewEntryFromHexs("0x0000000000000000000000000000000000000000000000000000000000000000",
+		"0x0000000000000000000000000000000000000000000000000000000000000000",
+		"0x00036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806bd",
+		"0x0000000000000000000000000000000000004d59000000000000000000000004")
+	assert.Nil(t, err)
+
+	err = mt.Add(&e)
+	assert.Nil(t, err)
+
+	assert.Equal(t,
+		"0x04591a7d93486a28bbc3c25a1c22f2d7729ae0c417773dda600a7470a434e0d8",
+		mt.RootKey().Hex())
 }
