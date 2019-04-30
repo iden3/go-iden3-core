@@ -5,6 +5,7 @@ require (
 	github.com/appleboy/gin-jwt v0.0.0-20190216100112-ca1084e5d5a2
 	github.com/aristanetworks/goarista v0.0.0-20190219163901-728bce664cf5 // indirect
 	github.com/arnaucube/go-snark v0.0.0-20190101215735-a7454213a0f2
+	github.com/btcsuite/btcutil v0.0.0-20190207003914-4c204d697803
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.8.23
 	github.com/fatih/color v1.7.0

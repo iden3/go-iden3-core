@@ -165,7 +165,7 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub, krecPub, krevPub)
 	assert.Nil(t, err)
 
-	idAddr2, err := CalculateIdGenesis(kopPub, krecPub, krevPub)
+	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 
@@ -202,9 +202,9 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "0xfC681EBF000EbBAA4EbE287f2bA1BC151249aB11", idAddr.String())
+	assert.Equal(t, "1QKnwF3oaDd1g4KDkYTqoqTJbpNVhyo2acfSysnnqnXvPP2x", idAddr.String())
 
-	idAddr2, err := CalculateIdGenesis(kopPub, krecPub, krevPub)
+	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 

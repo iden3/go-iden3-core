@@ -77,7 +77,9 @@ func handleCreateIdGenesis(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, handlePostIdRes{IdAddr: *idAddr, ProofClaim: proofKOp})
+	// TODO the idAddr will be changed to instead of a common.Address, use a core.ID
+	// TODO the common.BytesToAddress(idAddr[:32]) is a tmp wrapper
+	c.JSON(http.StatusOK, handlePostIdRes{IdAddr: common.BytesToAddress(idAddr[:32]), ProofClaim: proofKOp})
 }
 
 // handleCreateId handles the creation of a new user tree from the user keys.

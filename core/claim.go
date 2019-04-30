@@ -549,9 +549,9 @@ func (c *ClaimAuthorizeService) Type() ClaimType {
 	return *ClaimTypeAuthorizeService
 }
 
-// ClaimEthId is a claim to authorize a public key for signing.
+// ClaimEthId is a claim to authorize an ethereum address for the identity. The address can be of a counterfactual smart contract, or a direct address from a private key
 type ClaimEthId struct {
-	// Version is the claim version.
+	// Version is the claim version
 	Version uint32
 
 	// Addr is the EthId that will use this identity in the ethereum blockchain
