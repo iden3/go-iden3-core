@@ -12,31 +12,32 @@ import (
 )
 
 var (
-	// TypeBJM7140 specifies the BJ-M7-140
+	// TypeBJM7 specifies the BJ-M7
 	// - first 2 bytes: `00000000 00000000`
-	// - max depth tree: 140 levels
 	// - curve of k_op$: babyjub
 	// - hash function: `MIMC7`
-	TypeBJM7140 = [2]byte{0x00, 0x00}
+	TypeBJM7 = [2]byte{0x00, 0x00}
 
-	// TypeS2M7140 specifies the S2-M7-140
-	// - first 2 bytes: `00000000 00000100`
-	// - max depth tree: 140 levels
+	// TypeS2M7 specifies the S2-M7
+	// - first 2 bytes: `00000000 00000010`
 	// - curve of k_op: secp256k1
 	// - hash function: `MIMC7`
-	TypeS2M7140 = [2]byte{0x00, 0x04}
+	TypeS2M7 = [2]byte{0x00, 0x04}
 )
 
-// ID is a byte array with [ type | root_genesis | checksum ]
-type ID [36]byte
+// ID is a byte array with
+// [  type  | root_genesis | checksum ]
+// [2 bytes |   28 bytes   | 2 bytes  ]
+// where the root_genesis are the first 28 bytes from the hash root_genesis
+type ID [32]byte
 
 // NewID creates a new ID from a type and genesis
-func NewID(typ [2]byte, genesis [32]byte) ID {
+func NewID(typ [2]byte, genesis [28]byte) ID {
 	checksum := CalculateChecksum(typ, genesis)
-	var b [36]byte
+	var b [32]byte
 	copy(b[:2], typ[:])
 	copy(b[2:], genesis[:])
-	copy(b[34:], checksum[:])
+	copy(b[30:], checksum[:])
 	return ID(b)
 }
 
@@ -58,10 +59,10 @@ func IDFromString(s string) (*ID, error) {
 
 // IDFromBytes returns the ID from a given byte array
 func IDFromBytes(b []byte) (*ID, error) {
-	if len(b) != 36 {
+	if len(b) != 32 {
 		return nil, errors.New("byte array incorrect")
 	}
-	var bId [36]byte
+	var bId [32]byte
 	copy(bId[:], b[:])
 	id := ID(bId)
 	if !CheckChecksum(id) {
@@ -71,9 +72,9 @@ func IDFromBytes(b []byte) (*ID, error) {
 }
 
 // DecomposeID returns
-func DecomposeID(id ID) ([2]byte, [32]byte, [2]byte, error) {
+func DecomposeID(id ID) ([2]byte, [28]byte, [2]byte, error) {
 	var typ [2]byte
-	var genesis [32]byte
+	var genesis [28]byte
 	var checksum [2]byte
 	copy(typ[:], id[:2])
 	copy(genesis[:], id[2:len(id)-2])
@@ -83,8 +84,8 @@ func DecomposeID(id ID) ([2]byte, [32]byte, [2]byte, error) {
 
 // CalculateChecksum, returns the checksum for a given type and genesis_root,
 // where checksum: hash( [type | root_genesis ] )
-func CalculateChecksum(typ [2]byte, genesis [32]byte) [2]byte {
-	var toHash [34]byte
+func CalculateChecksum(typ [2]byte, genesis [28]byte) [2]byte {
+	var toHash [32]byte
 	copy(toHash[:], typ[:])
 	copy(toHash[2:], genesis[:])
 	h := utils.HashBytes(toHash[:])
@@ -134,8 +135,8 @@ func CalculateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*ID, error) {
 
 	idGenesis := mt.RootKey()
 
-	var idGenesisBytes [32]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes())
-	id := NewID(TypeS2M7140, idGenesisBytes)
+	var idGenesisBytes [28]byte
+	copy(idGenesisBytes[:], idGenesis.Bytes()[:28])
+	id := NewID(TypeS2M7, idGenesisBytes)
 	return &id, nil
 }

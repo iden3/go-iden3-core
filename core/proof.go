@@ -40,9 +40,9 @@ func (pcp *ProofClaimPartial) String() string {
 // SetRootAux is the auxiliary data to build the set root claim from a root in
 // a partial proof of claim.
 type SetRootAux struct {
-	Version uint32         `json:"version" binding:"required"`
-	Era     uint32         `json:"era" binding:"required"`
-	IdAddr  common.Address `json:"idAddr" binding:"required"`
+	Version uint32 `json:"version" binding:"required"`
+	Era     uint32 `json:"era" binding:"required"`
+	IdAddr  ID     `json:"idAddr" binding:"required"`
 }
 
 // ProofClaim is a complete proof of a claim that includes all the proofs of

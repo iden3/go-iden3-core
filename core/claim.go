@@ -88,7 +88,7 @@ var (
 	ClaimTypeAuthorizeKSign = NewClaimTypeNum(1)
 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
-	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
+	// ClaimTypeAssignName is a claim type to assign a name to an ID
 	ClaimTypeAssignName = NewClaimTypeNum(3)
 	// ClaimTypeAuthorizeKSignSecp256k1 is a claim type to autorize a secp256k1 public key for signing.
 	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
@@ -98,7 +98,7 @@ var (
 	ClaimTypeAuthorizeService = NewClaimTypeNum(6)
 	// ClaimTypeNonce is a claim used to increment the tree nonce to modify the root hash
 	ClaimTypeNonce = NewClaimTypeNum(7)
-	// ClaimTypeEthId is a claim type to autorize an Eth Address to be used as Id
+	// ClaimTypeEthId is a claim type to autorize an Eth Address to be used as Id inside Ethereum
 	ClaimTypeEthId = NewClaimTypeNum(8)
 )
 
@@ -160,12 +160,12 @@ type ClaimAssignName struct {
 	Version uint32
 	// NameHash is the hash of the name.
 	NameHash [248 / 8]byte
-	// IdAddr is the assigned Ethereum Address.
-	IdAddr common.Address
+	// IdAddr is the assigned ID
+	IdAddr ID
 }
 
 // NewClaimAssignName returns a ClaimAssignName with the name and IdAddr.
-func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
+func NewClaimAssignName(name string, idAddr ID) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
 	c.NameHash = HashString(name)
@@ -187,7 +187,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:])
+	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:32]) // TODO decide if the core.ID is 36 bytes or 32, being 32, this line would be c.IdAddr[:]
 	return e
 }
 
@@ -300,15 +300,15 @@ type ClaimSetRootKey struct {
 	Version uint32
 	// Era is used for labeling epochs.
 	Era uint32
-	// IdAddr is the Ethereum Address related to the root key.
-	IdAddr common.Address
+	// IdAddr is the ID related to the root key.
+	IdAddr ID
 	// RootKey is the root of the mekrlee tree.
 	RootKey merkletree.Hash
 }
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(idAddr common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(idAddr ID, rootKey merkletree.Hash) *ClaimSetRootKey {
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
