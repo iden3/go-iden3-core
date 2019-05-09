@@ -53,12 +53,14 @@ type ProofClaim struct {
 	Leaf      *merkletree.Data       `json:"leaf" binding:"required"`
 	Date      int64                  `json:"date" binding:"required"`
 	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // signature of the Root of the Relay
-	Signer    common.Address         `json:"signer" binding:"required"`
+	Signer    ID                     `json:"signer" binding:"required"`
 }
 
 func (pc *ProofClaim) String() string {
 	buf := bytes.NewBufferString("ProofClaim:\n")
-	fmt.Fprintf(buf, "signature: %v\n", common3.HexEncode(pc.Signature[:]))
+	if pc.Signature != nil {
+		fmt.Fprintf(buf, "signature: %v\n", common3.HexEncode(pc.Signature[:]))
+	}
 	fmt.Fprintf(buf, "date: %v\n", time.Unix(pc.Date, 0))
 	fmt.Fprintf(buf, "leaf: %v\n", pc.Leaf)
 	fmt.Fprintf(buf, "proofs:\n")
@@ -69,16 +71,28 @@ func (pc *ProofClaim) String() string {
 }
 
 // CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
+// WARNING TODO currently the Root signature verification is disabled, see comment in line 82
 func VerifyProofClaim(relayAddr common.Address, pc *ProofClaim) (bool, error) {
 	// For now we only allow proof verification of Nameserver (one level) and
 	// Relay (two levels: relay + user)
 	if len(pc.Proofs) > 2 || len(pc.Proofs) < 1 {
 		return false, fmt.Errorf("Invalid number of partial proofs")
 	}
-	// Top root signature (by Relay) verification
-	if !utils.VerifySigEthMsgDate(relayAddr, pc.Signature, pc.Proofs[len(pc.Proofs)-1].Root[:], pc.Date) {
-		return false, fmt.Errorf("Invalid signature")
-	}
+
+	// TODO currently this is verifying with relayAddr, that comes directly from privateKey
+	// in next iteration needs to verify that the signature is performed
+	// by a private key authorized in a claim under the ID merkle tree
+	// or even not verify the signature in this function, and check that the Root is in the blockchain for the relayID, if is there will mean that is made by that relay (as the relay needs to sign it to perform the transaction)
+	// if is this last option, somewhere need to check that 'relayAddr' is equal to the ProofClaim emiter address, or remove that input as is checked outside this function
+	/*
+		if pc.Signature == nil {
+			return false, fmt.Errorf("No signature in the ProofClaim")
+		}
+		// Top root signature (by Relay) verification
+			if !utils.VerifySigEthMsgDate(relayAddr, pc.Signature, pc.Proofs[len(pc.Proofs)-1].Root[:], pc.Date) {
+				return false, fmt.Errorf("Invalid signature")
+			}
+	*/
 
 	leaf := &merkletree.Entry{Data: *pc.Leaf}
 	leafNext := &merkletree.Entry{}
