@@ -118,3 +118,19 @@ func TestMIMC7(t *testing.T) {
 	// same hash value than the iden3js and circomlib tests:
 	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h4).Bytes()), "0x10e02cc6c8fc40cda121602903df911f6398d65f84ff1f27c680d0b7d85b7418")
 }
+
+func BenchmarkMIMC7(b *testing.B) {
+	b12 := big.NewInt(int64(12))
+	b45 := big.NewInt(int64(45))
+	b78 := big.NewInt(int64(78))
+	b41 := big.NewInt(int64(41))
+	bigArray4 := []*big.Int{b12, b45, b78, b41}
+	elementsArray4, err := BigIntsToRElems(bigArray4)
+	assert.Nil(b, err)
+
+	var h4 RElem
+	for i := 0; i < b.N; i++ {
+		h4 = Hash(elementsArray4)
+	}
+	println(h4)
+}
