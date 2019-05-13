@@ -12,7 +12,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
@@ -84,8 +83,8 @@ const keySignSkHex = "0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075d
 var proofKSign core.ProofClaim
 var keyStoreDir string
 var keyStore *keystore.KeyStore
-var idAddr common.Address
-var sendIdAddr common.Address
+var idAddr core.ID
+var sendIdAddr core.ID
 
 var service *Service
 

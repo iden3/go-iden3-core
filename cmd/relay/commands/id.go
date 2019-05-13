@@ -7,19 +7,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/eth"
+	"github.com/iden3/go-iden3/services/counterfactualsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-func loadIdService() (eth.Client, identitysrv.Service) {
+func loadIdService() (eth.Client, identitysrv.Service, counterfactualsrv.Service) {
 	ks, acc := genericserver.LoadKeyStore()
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
-	return client, genericserver.LoadIdService(client, claimService, storage)
+	return client, genericserver.LoadIdentityService(claimService), genericserver.LoadCounterfactualService(client, claimService, storage)
 }
 
 var IdCommands = []cli.Command{{
@@ -50,37 +51,38 @@ var IdCommands = []cli.Command{{
 	},
 }}
 
+// TODO this will be create a new ID, not a new counterfactual address
 func cmdIdAdd(c *cli.Context) error {
+	/*
+		if err := genericserver.MustRead(c); err != nil {
+			return err
+		}
 
-	if err := genericserver.MustRead(c); err != nil {
-		return err
-	}
+		_, idservice, counterfactualservice := loadIdService()
 
-	_, idservice := loadIdService()
+		if len(c.Args()) != 3 {
+			return fmt.Errorf("usage: <0xoperational> <0xrecovery> <0xrevocation>")
+		}
 
-	if len(c.Args()) != 3 {
-		return fmt.Errorf("usage: <0xoperational> <0xrecovery> <0xrevocation>")
-	}
+		id := counterfactualsrv.Counterfactual{
+			Operational: common.HexToAddress(c.Args()[0]),
+			Relayer:     common.HexToAddress(genericserver.C.KeyStore.Address),
+			Recoverer:   common.HexToAddress(c.Args()[1]),
+			Revokator:   common.HexToAddress(c.Args()[2]),
+			Impl:        *counterfactualservice.ImplAddr(),
+		}
 
-	id := identitysrv.Identity{
-		Operational: common.HexToAddress(c.Args()[0]),
-		Relayer:     common.HexToAddress(genericserver.C.KeyStore.Address),
-		Recoverer:   common.HexToAddress(c.Args()[1]),
-		Revokator:   common.HexToAddress(c.Args()[2]),
-		Impl:        *idservice.ImplAddr(),
-	}
+		idaddr, err := counterfactualservice.AddressOf(&id)
+		if err != nil {
+			return err
+		}
 
-	idaddr, err := idservice.AddressOf(&id)
-	if err != nil {
-		return err
-	}
+		if _, err = counterfactualservice.Add(&id); err != nil {
+			return err
+		}
 
-	if _, err = idservice.Add(&id); err != nil {
-		return err
-	}
-
-	log.Info("New identity stored: ", idaddr.Hex())
-
+		log.Info("New identity stored: ", idaddr.Hex())
+	*/
 	return nil
 }
 
@@ -90,27 +92,27 @@ func cmdIdDeploy(c *cli.Context) error {
 		return err
 	}
 
-	client, idservice := loadIdService()
+	client, _, counterfactualservice := loadIdService()
 
 	if len(c.Args()) != 1 {
-		return fmt.Errorf("usage: <0xidaddr>")
+		return fmt.Errorf("usage: <0xethAddr>")
 	}
-	idaddr := common.HexToAddress(c.Args()[0])
-	id, err := idservice.Get(idaddr)
+	ethAddr := common.HexToAddress(c.Args()[0])
+	id, err := counterfactualservice.Get(ethAddr)
 	if err != nil {
 		return err
 	}
 
-	isDeployed, err := idservice.IsDeployed(idaddr)
+	isDeployed, err := counterfactualservice.IsDeployed(ethAddr)
 	if err != nil {
 		return err
 	}
 	if isDeployed {
-		log.Warn("Identity already deployed at ", idaddr.Hex())
+		log.Warn("Counterfactual already deployed at ", ethAddr.Hex())
 		return nil
 	}
 
-	addr, tx, err := idservice.Deploy(id)
+	addr, tx, err := counterfactualservice.Deploy(id)
 	if err != nil {
 		_, err = client.WaitReceipt(tx.Hash())
 	}
@@ -123,8 +125,8 @@ func cmdIdDeploy(c *cli.Context) error {
 
 type idInfo struct {
 	IdAddr  common.Address
-	LocalDb *identitysrv.Identity
-	Onchain *identitysrv.Info
+	LocalDb *counterfactualsrv.Counterfactual
+	Onchain *counterfactualsrv.Info
 }
 
 func cmdIdInfo(c *cli.Context) error {
@@ -137,18 +139,18 @@ func cmdIdInfo(c *cli.Context) error {
 		return fmt.Errorf("usage: <0xidaddr>")
 	}
 
-	_, idservice := loadIdService()
+	_, _, counterfactualservice := loadIdService()
 
 	var idi idInfo
 
 	idi.IdAddr = common.HexToAddress(c.Args()[0])
-	info, err := idservice.Info(idi.IdAddr)
+	info, err := counterfactualservice.Info(idi.IdAddr)
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		idi.Onchain = info
 	}
-	id, err := idservice.Get(idi.IdAddr)
+	id, err := counterfactualservice.Get(idi.IdAddr)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -168,8 +170,8 @@ func cmdIdList(c *cli.Context) error {
 		return err
 	}
 
-	_, idservice := loadIdService()
-	addrs, err := idservice.List(1024)
+	_, _, counterfactualservice := loadIdService()
+	addrs, err := counterfactualservice.List(1024)
 	if err != nil {
 		return err
 	}

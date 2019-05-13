@@ -88,7 +88,7 @@ var (
 	ClaimTypeAuthorizeKSign = NewClaimTypeNum(1)
 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
-	// ClaimTypeAssignName is a claim type to assign a name to an Eth address.
+	// ClaimTypeAssignName is a claim type to assign a name to an ID
 	ClaimTypeAssignName = NewClaimTypeNum(3)
 	// ClaimTypeAuthorizeKSignSecp256k1 is a claim type to autorize a secp256k1 public key for signing.
 	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
@@ -98,7 +98,7 @@ var (
 	ClaimTypeAuthorizeService = NewClaimTypeNum(6)
 	// ClaimTypeNonce is a claim used to increment the tree nonce to modify the root hash
 	ClaimTypeNonce = NewClaimTypeNum(7)
-	// ClaimTypeEthId is a claim type to autorize an Eth Address to be used as Id
+	// ClaimTypeEthId is a claim type to autorize an Eth Address to be used as Id inside Ethereum
 	ClaimTypeEthId = NewClaimTypeNum(8)
 )
 
@@ -160,12 +160,12 @@ type ClaimAssignName struct {
 	Version uint32
 	// NameHash is the hash of the name.
 	NameHash [248 / 8]byte
-	// IdAddr is the assigned Ethereum Address.
-	IdAddr common.Address
+	// IdAddr is the assigned ID
+	IdAddr ID
 }
 
 // NewClaimAssignName returns a ClaimAssignName with the name and IdAddr.
-func NewClaimAssignName(name string, idAddr common.Address) *ClaimAssignName {
+func NewClaimAssignName(name string, idAddr ID) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
 	c.NameHash = HashString(name)
@@ -187,7 +187,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:])
+	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:31])
 	return e
 }
 
@@ -300,15 +300,15 @@ type ClaimSetRootKey struct {
 	Version uint32
 	// Era is used for labeling epochs.
 	Era uint32
-	// IdAddr is the Ethereum Address related to the root key.
-	IdAddr common.Address
+	// IdAddr is the ID related to the root key.
+	IdAddr ID
 	// RootKey is the root of the mekrlee tree.
 	RootKey merkletree.Hash
 }
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(idAddr common.Address, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(idAddr ID, rootKey merkletree.Hash) *ClaimSetRootKey {
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
@@ -386,8 +386,8 @@ type ClaimLinkObjectIdentity struct {
 	ObjectType ObjectType
 	// ObjectIndex is the index of this object which the identity has.
 	ObjectIndex uint16
-	// IdAddr is the Ethereum Address related to the identity.
-	IdAddr common.Address
+	// IdAddr is the ID.
+	IdAddr ID
 	// ObjectHash is the hash of the object.
 	ObjectHash [248 / 8]byte
 }
@@ -401,7 +401,7 @@ func minInt(a int, b int) int {
 }
 
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
-func NewClaimLinkObjectIdentity(hashType HashType, objectType ObjectType, objectIndex uint16, idAddr common.Address,
+func NewClaimLinkObjectIdentity(hashType HashType, objectType ObjectType, objectIndex uint16, idAddr ID,
 	objectHash []byte) *ClaimLinkObjectIdentity {
 	var objectHashSlice [31]byte
 	minLen := minInt(len(objectHash), 32)
@@ -549,9 +549,9 @@ func (c *ClaimAuthorizeService) Type() ClaimType {
 	return *ClaimTypeAuthorizeService
 }
 
-// ClaimEthId is a claim to authorize a public key for signing.
+// ClaimEthId is a claim to authorize an ethereum address for the identity. The address can be of a counterfactual smart contract, or a direct address from a private key
 type ClaimEthId struct {
-	// Version is the claim version.
+	// Version is the claim version
 	Version uint32
 
 	// Addr is the EthId that will use this identity in the ethereum blockchain

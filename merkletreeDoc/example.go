@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
@@ -24,13 +23,19 @@ func main() {
 	defer mt.Storage().Close()
 
 	name0 := "alice@iden3.io"
-	ethAddr0 := common.HexToAddress("0x7b471a1bdbd3b8ac98f3715507449f3a8e1f3b22")
-	claim0 := core.NewClaimAssignName(name0, ethAddr0)
+	idAddr0, err := core.IDFromString("14ZjYvqmB4sNQG5o1orKUWinDt1Zk13iVvs4zPCPmvE")
+	if err != nil {
+		panic(err)
+	}
+	claim0 := core.NewClaimAssignName(name0, idAddr0)
 	claimEntry0 := claim0.Entry()
 
 	name1 := "bob@iden3.io"
-	ethAddr1 := common.HexToAddress("0x28f8267fb21e8ce0cdd9888a6e532764eb8d52dd")
-	claim1 := core.NewClaimAssignName(name1, ethAddr1)
+	idAddr1, err := core.IDFromString("11iu5zg52EFoKcKcE6ChPiChftxBdidpxzh4vsmzf6F")
+	if err != nil {
+		panic(err)
+	}
+	claim1 := core.NewClaimAssignName(name1, idAddr1)
 	claimEntry1 := claim1.Entry()
 
 	fmt.Println("adding claim0")
@@ -66,8 +71,11 @@ func main() {
 		bytes.Equal(claimEntry0.Bytes(), claimEntryInPos.Bytes()))
 
 	name2 := "eve@iden3.io"
-	ethAddr2 := common.HexToAddress("0x29a6a240e2d8f8bf39b5338b9664d414c5d793f4")
-	claim2 := core.NewClaimAssignName(name2, ethAddr2)
+	idAddr2, err := core.IDFromString("12cCE371biv2KzYyBiHZDGmc4nHPaJsQBCYS7Zwxkyk")
+	if err != nil {
+		panic(err)
+	}
+	claim2 := core.NewClaimAssignName(name2, idAddr2)
 	claimEntry2 := claim2.Entry()
 
 	mp, err = mt.GenerateProof(claimEntry2.HIndex(), nil)
@@ -94,8 +102,11 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		name := fmt.Sprintf("%v@iden3.io", i)
-		ethAddr := common.HexToAddress("0x28f8267fb21e8ce0cdd9888a6e532764eb8d52dd")
-		claim := core.NewClaimAssignName(name, ethAddr)
+		idAddr, err := core.IDFromString("12cCE371biv2KzYyBiHZDGmc4nHPaJsQBCYS7Zwxkyk")
+		if err != nil {
+			panic(err)
+		}
+		claim := core.NewClaimAssignName(name, idAddr)
 		err = mt2.Add(claim.Entry())
 		if err != nil {
 			panic(err)

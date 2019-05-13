@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/utils"
 )
 
@@ -15,7 +16,7 @@ type Trusted struct {
 }
 
 type Entity struct {
-	IdAddr          common.Address   `json:"-"`
+	IdAddr          core.ID          `json:"-"`
 	Name            string           `json:"name"`
 	OperationalPk   *utils.PublicKey `json:"kOpPub"`
 	OperationalAddr common.Address   `json:"kOpAddr"`
@@ -23,7 +24,7 @@ type Entity struct {
 }
 
 type Service struct {
-	Entitites map[common.Address]*Entity
+	Entitites map[core.ID]*Entity
 }
 
 func New(entititesFilePath string) (*Service, error) {
@@ -43,7 +44,7 @@ func New(entititesFilePath string) (*Service, error) {
 	return &service, nil
 }
 
-func (ds *Service) GetEntity(idAddr common.Address) (*Entity, error) {
+func (ds *Service) GetEntity(idAddr core.ID) (*Entity, error) {
 	id, ok := ds.Entitites[idAddr]
 	if !ok {
 		return nil, fmt.Errorf("IdAddr %v not found in the internal DB", common3.HexEncode(idAddr[:]))

@@ -5,10 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
 )
 
 // PoWData is the interface for the data that have the Nonce parameter to calculate the Proof-of-Work
@@ -81,15 +77,4 @@ func EthBytesToUint32(b []byte) uint32 {
 // EthBytesToUint64 converts bytes as big endian to uint64.
 func EthBytesToUint64(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
-}
-
-// NewMerkleTreeUser creates a new user merkle tree by using an storage with
-// the user addres prefix.
-func NewMerkleTreeUser(ethAddr common.Address, storage db.Storage, levels int) (*merkletree.MerkleTree, error) {
-	stoUserId := storage.WithPrefix(ethAddr.Bytes())
-	if userMT, err := merkletree.NewMerkleTree(stoUserId, levels); err != nil {
-		return nil, err
-	} else {
-		return userMT, nil
-	}
 }

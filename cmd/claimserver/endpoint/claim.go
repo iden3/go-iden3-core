@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	common3 "github.com/iden3/go-iden3/common"
@@ -17,8 +16,8 @@ import (
 
 // IdData struct representing user data that claim server will manage afterwards.
 type IdData struct {
-	IdAddr      common.Address `json:"idAddr"`
-	NotifSrvUrl string         `json:"notifSrvUrl"`
+	IdAddr      core.ID `json:"idAddr"`
+	NotifSrvUrl string  `json:"notifSrvUrl"`
 }
 
 type IdDataB64 IdData

@@ -10,6 +10,7 @@ import (
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/counterfactualsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 
@@ -25,11 +26,11 @@ func serveServiceApi() *http.Server {
 
 	serviceapi.GET("/claims/:hi/proof", handleGetClaimProofByHi) // Get relay claim proof
 
-	serviceapi.POST("/ids", handleCreateId)
-	serviceapi.POST("/idgenesis", handleCreateIdGenesis)
-	serviceapi.GET("/ids/:idaddr", handleGetId)
-	serviceapi.POST("/ids/:idaddr/deploy", handleDeployId)
-	serviceapi.POST("/ids/:idaddr/forward", handleForwardId)
+	serviceapi.POST("/id", handleCreateIdGenesis)
+	serviceapi.POST("/counterfactual", handleCreateCounterfactual)
+	serviceapi.GET("/ids/:idaddr", handleGetCounterfactual)
+	serviceapi.POST("/ids/:idaddr/deploy", handleDeployCounterfactual)
+	serviceapi.POST("/ids/:idaddr/forward", handleForwardCounterfactual)
 	serviceapi.GET("/ids/:idaddr/root", handleGetIdRoot)
 	serviceapi.POST("/ids/:idaddr/root", handleCommitNewIdRoot)
 	serviceapi.POST("/ids/:idaddr/claims", handlePostClaim)
@@ -60,9 +61,10 @@ func serveAdminApi(stopch chan interface{}) *http.Server {
 	return adminapisrv
 }
 
-func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, as adminsrv.Service) {
+func Serve(rs rootsrv.Service, cs claimsrv.Service, ids identitysrv.Service, counterfs counterfactualsrv.Service, as adminsrv.Service) {
 
 	genericserver.Idservice = ids
+	genericserver.Counterfactualservice = counterfs
 	genericserver.Claimservice = cs
 	genericserver.Rootservice = rs
 	genericserver.Adminservice = as
