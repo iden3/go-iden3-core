@@ -187,7 +187,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:32]) // TODO decide if the core.ID is 36 bytes or 32, being 32, this line would be c.IdAddr[:]
+	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:31])
 	return e
 }
 
@@ -386,8 +386,8 @@ type ClaimLinkObjectIdentity struct {
 	ObjectType ObjectType
 	// ObjectIndex is the index of this object which the identity has.
 	ObjectIndex uint16
-	// IdAddr is the Ethereum Address related to the identity.
-	IdAddr common.Address
+	// IdAddr is the ID.
+	IdAddr ID
 	// ObjectHash is the hash of the object.
 	ObjectHash [248 / 8]byte
 }
@@ -401,7 +401,7 @@ func minInt(a int, b int) int {
 }
 
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
-func NewClaimLinkObjectIdentity(hashType HashType, objectType ObjectType, objectIndex uint16, idAddr common.Address,
+func NewClaimLinkObjectIdentity(hashType HashType, objectType ObjectType, objectIndex uint16, idAddr ID,
 	objectHash []byte) *ClaimLinkObjectIdentity {
 	var objectHashSlice [31]byte
 	minLen := minInt(len(objectHash), 32)

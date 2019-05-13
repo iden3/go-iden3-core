@@ -3,9 +3,9 @@ package endpoint
 import (
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	//"github.com/iden3/go-iden3/services/backupsrv"
+	"github.com/iden3/go-iden3/core"
 )
 
 func handleInfo(c *gin.Context) {
@@ -37,9 +37,13 @@ func handleInfo(c *gin.Context) {
 
 func handleRecover(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
-	idaddr := common.HexToAddress(idaddrhex)
+	idAddr, err := core.IDFromString(idaddrhex)
+	if err != nil {
+		fail(c, "error on idAddr", err)
+		return
+	}
 
-	data, err := backupservice.RecoverAll(idaddr) // + proofs for authentication
+	data, err := backupservice.RecoverAll(idAddr) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on RecoverAll", err)
 		return
@@ -51,7 +55,11 @@ func handleRecover(c *gin.Context) {
 
 func handleRecoverSinceVersion(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
-	idaddr := common.HexToAddress(idaddrhex)
+	idaddr, err := core.IDFromString(idaddrhex)
+	if err != nil {
+		fail(c, "error on idAddr", err)
+		return
+	}
 	versionstr := c.Param("version")
 	version, err := strconv.ParseUint(versionstr, 10, 64)
 	if err != nil {
@@ -72,7 +80,11 @@ func handleRecoverSinceVersion(c *gin.Context) {
 
 func handleRecoverByType(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
-	idaddr := common.HexToAddress(idaddrhex)
+	idaddr, err := core.IDFromString(idaddrhex)
+	if err != nil {
+		fail(c, "error on idAddr", err)
+		return
+	}
 	dataType := c.Param("type")
 
 	data, err := backupservice.RecoverByType(idaddr, dataType) // + proofs for authentication
@@ -88,7 +100,11 @@ func handleRecoverByType(c *gin.Context) {
 
 func handleRecoverSinceVersionByType(c *gin.Context) {
 	idaddrhex := c.Param("idaddr")
-	idaddr := common.HexToAddress(idaddrhex)
+	idaddr, err := core.IDFromString(idaddrhex)
+	if err != nil {
+		fail(c, "error on idAddr", err)
+		return
+	}
 	versionstr := c.Param("version")
 	version, err := strconv.ParseUint(versionstr, 10, 64)
 	if err != nil {

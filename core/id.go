@@ -29,15 +29,15 @@ var (
 // [  type  | root_genesis | checksum ]
 // [2 bytes |   28 bytes   | 2 bytes  ]
 // where the root_genesis are the first 28 bytes from the hash root_genesis
-type ID [32]byte
+type ID [31]byte
 
 // NewID creates a new ID from a type and genesis
-func NewID(typ [2]byte, genesis [28]byte) ID {
+func NewID(typ [2]byte, genesis [27]byte) ID {
 	checksum := CalculateChecksum(typ, genesis)
-	var b [32]byte
+	var b [31]byte
 	copy(b[:2], typ[:])
 	copy(b[2:], genesis[:])
-	copy(b[30:], checksum[:])
+	copy(b[29:], checksum[:])
 	return ID(b)
 }
 
@@ -51,30 +51,48 @@ func (id *ID) Bytes() []byte {
 	return id[:]
 }
 
+// func (id ID) MarshalJSON() ([]byte, error) {
+//         fmt.Println(id.String())
+//         return json.Marshal(id.String())
+// }
+
+func (id ID) MarshalText() ([]byte, error) {
+	// return json.Marshal(id.String())
+	return []byte(id.String()), nil
+}
+
+func (id *ID) UnmarshalText(b []byte) error {
+	var err error
+	var idFromString ID
+	idFromString, err = IDFromString(string(b))
+	copy(id[:], idFromString[:])
+	return err
+}
+
 // IDFromString returns the ID from a given string
-func IDFromString(s string) (*ID, error) {
+func IDFromString(s string) (ID, error) {
 	b := base58.Decode(s)
 	return IDFromBytes(b)
 }
 
 // IDFromBytes returns the ID from a given byte array
-func IDFromBytes(b []byte) (*ID, error) {
-	if len(b) != 32 {
-		return nil, errors.New("byte array incorrect")
+func IDFromBytes(b []byte) (ID, error) {
+	if len(b) != 31 {
+		return ID{}, errors.New("IDFromBytes error: byte array incorrect length")
 	}
-	var bId [32]byte
+	var bId [31]byte
 	copy(bId[:], b[:])
 	id := ID(bId)
 	if !CheckChecksum(id) {
-		return nil, errors.New("checksum error")
+		return ID{}, errors.New("IDFromBytes error: checksum error")
 	}
-	return &id, nil
+	return id, nil
 }
 
 // DecomposeID returns
-func DecomposeID(id ID) ([2]byte, [28]byte, [2]byte, error) {
+func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 	var typ [2]byte
-	var genesis [28]byte
+	var genesis [27]byte
 	var checksum [2]byte
 	copy(typ[:], id[:2])
 	copy(genesis[:], id[2:len(id)-2])
@@ -84,7 +102,7 @@ func DecomposeID(id ID) ([2]byte, [28]byte, [2]byte, error) {
 
 // CalculateChecksum, returns the checksum for a given type and genesis_root,
 // where checksum: hash( [type | root_genesis ] )
-func CalculateChecksum(typ [2]byte, genesis [28]byte) [2]byte {
+func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 	var toHash [32]byte
 	copy(toHash[:], typ[:])
 	copy(toHash[2:], genesis[:])
@@ -135,8 +153,8 @@ func CalculateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*ID, error) {
 
 	idGenesis := mt.RootKey()
 
-	var idGenesisBytes [28]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes()[:28])
+	var idGenesisBytes [27]byte
+	copy(idGenesisBytes[:], idGenesis.Bytes()[:27])
 	id := NewID(TypeS2M7, idGenesisBytes)
 	return &id, nil
 }

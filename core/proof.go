@@ -109,6 +109,7 @@ func VerifyProofClaim(relayAddr common.Address, pc *ProofClaim) (bool, error) {
 			return false, fmt.Errorf("Mtp0 at lvl %v is a non-existence proof", i)
 		}
 		if !merkletree.VerifyProof(rootKey, mtpEx, leaf.HIndex(), leaf.HValue()) {
+			fmt.Println("d", rootKey.Hex())
 			return false, fmt.Errorf("Mtp0 at lvl %v doesn't match with the root", i)
 		}
 

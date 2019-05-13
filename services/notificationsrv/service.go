@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signedpacketsrv"
 )
@@ -142,7 +142,7 @@ func New(urlService string, signedPacketSigner *signedpacketsrv.SignedPacketSign
 // 		return err
 // 	}
 // 	client := &http.Client{}
-// 	req, err := http.NewRequest("POST", ns.URL+"/auth/notifications/"+ns.IDAddr.Hex(), bytes.NewBuffer(bytesNot))
+// 	req, err := http.NewRequest("POST", ns.URL+"/auth/notifications/"+ns.IDAddr.String(), bytes.NewBuffer(bytesNot))
 // 	if err != nil {
 // 		return err
 // 	}
@@ -169,7 +169,7 @@ func NewMsgProofClaim(proofClaim *core.ProofClaim) Notification {
 }
 
 // SendNotification send notification to service
-func (ns *Service) SendNotification(notif Notification, idAddr common.Address) error {
+func (ns *Service) SendNotification(notif Notification, idAddr core.ID) error {
 	signedPacket, err := ns.signedPacketSigner.
 		NewSignMsgV01(0xdeadbeef, notif.Type, notif.Data)
 	if err != nil {
@@ -179,7 +179,7 @@ func (ns *Service) SendNotification(notif Notification, idAddr common.Address) e
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(fmt.Sprintf("%s/notifications/%s", ns.URL, idAddr.Hex()),
+	resp, err := http.Post(fmt.Sprintf("%s/notifications/%s", ns.URL, idAddr.String()),
 		"application/json", bytes.NewBuffer(signedPacketJSON))
 	if err != nil {
 		return err

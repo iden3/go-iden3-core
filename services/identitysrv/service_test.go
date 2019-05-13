@@ -38,7 +38,7 @@ func (m *RootServiceMock) StopAndJoin() {
 
 }
 
-func (m *RootServiceMock) GetRoot(addr core.ID) (merkletree.Hash, error) {
+func (m *RootServiceMock) GetRoot(addr common.Address) (merkletree.Hash, error) {
 	args := m.Called(addr)
 	return args.Get(0).(merkletree.Hash), args.Error(1)
 }
@@ -99,11 +99,11 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	if err != nil {
 		t.Error(err)
 	}
-	sto := db.NewMemoryStorage()
+	// sto := db.NewMemoryStorage()
 	rootservicemock := &RootServiceMock{}
 	rootservicemock.On("SetRoot", mock.Anything).Return()
 	claimService := claimsrv.New(relayIdAddr, mt, rootservicemock, &SignServiceMock{})
-	idService := New(claimService, sto)
+	idService := New(claimService)
 
 	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
 	relaySecKey, err = crypto.HexToECDSA(secKeyHex)

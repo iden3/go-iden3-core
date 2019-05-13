@@ -14,6 +14,7 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3/services/counterfactualsrv"
 	"github.com/iden3/go-iden3/services/identitysrv"
 	"github.com/iden3/go-iden3/services/rootsrv"
 	"github.com/iden3/go-iden3/services/signedpacketsrv"
@@ -22,8 +23,8 @@ import (
 )
 
 var (
-	dbMerkletreePrefix = []byte{0}
-	dbIdentityPrefix   = []byte{1}
+	dbMerkletreePrefix     = []byte{0}
+	dbCounterfactualPrefix = []byte{1}
 )
 
 const (
@@ -41,6 +42,7 @@ func Assert(msg string, err error) {
 var Claimservice claimsrv.Service
 var Rootservice rootsrv.Service
 var Idservice identitysrv.Service
+var Counterfactualservice counterfactualsrv.Service
 var Adminservice adminsrv.Service
 
 var SignedPacketService signedpacketsrv.SignedPacketSigner
@@ -137,9 +139,13 @@ func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
 	))
 }
 
-func LoadIdService(client *eth.Web3Client, claimservice claimsrv.Service, storage db.Storage) identitysrv.Service {
+func LoadIdentityService(claimservice claimsrv.Service) identitysrv.Service {
+	return identitysrv.New(claimservice)
+}
 
-	idstorage := storage.WithPrefix(dbIdentityPrefix)
+func LoadCounterfactualService(client *eth.Web3Client, claimservice claimsrv.Service, storage db.Storage) counterfactualsrv.Service {
+
+	counterfactualstorage := storage.WithPrefix(dbCounterfactualPrefix)
 
 	deployerContract := LoadContract(
 		client,
@@ -156,7 +162,7 @@ func LoadIdService(client *eth.Web3Client, claimservice claimsrv.Service, storag
 		C.Contracts.Iden3Proxy.JsonABI,
 		nil)
 
-	return identitysrv.New(deployerContract, implContract, proxyContract, claimservice, idstorage)
+	return counterfactualsrv.New(deployerContract, implContract, proxyContract, claimservice, counterfactualstorage)
 }
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {

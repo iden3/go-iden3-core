@@ -73,21 +73,21 @@ func TestClaimAssignName(t *testing.T) {
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x3a})
-	idAddr, err := IDFromString("14ZjYvqmB4sNQG5o1orKUWinDt1Zk13iVvs4zPCPmvE")
+	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	assert.Nil(t, err)
-	c0 := NewClaimAssignName(name, *idAddr)
+	c0 := NewClaimAssignName(name, idAddr)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
 		"0x1b90afca6decbbbeb9422a441731f7c9a666b3ce15307d327f43b2c4506fe29c",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x0b2f8562a3797a125ae40836c1198e7fccd89b0d3136556b77c9a05218148843",
+		"0x18caf8b9261ff81da8539e9003c7e7e173a2658a3f11d9133ab59b73b605afe5",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6e348df"+
+		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
 		"00d67b05d8e2d1ace8f3e84b8451dd2e9da151578c3c6be23e7af11add5a807a"+
 		"0000000000000000000000000000000000000000000000010000000000000003",
 		e.Data.String())
@@ -171,7 +171,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 
 func TestClaimSetRootKey(t *testing.T) {
 	// ClaimSetRootKey
-	idAddr, err := IDFromString("14ZjYvqmB4sNQG5o1orKUWinDt1Zk13iVvs4zPCPmvE")
+	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	assert.Nil(t, err)
 
 	rootKey := merkletree.Hash(merkletree.ElemBytes{
@@ -179,12 +179,12 @@ func TestClaimSetRootKey(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c})
-	c0 := NewClaimSetRootKey(*idAddr, rootKey)
+	c0 := NewClaimSetRootKey(idAddr, rootKey)
 	c0.Version = 1
 	c0.Era = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x09977106891e616d84273be66b6a125b08fe17f487428247631ad97d98787a70",
+		"0x15e5f107b97a0eb563f5d98f8626d950ea97ae782d475e5da7846ec7492c0a7a",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x0ad7edbf562757b1ad2282c44e2c248f95e9e6b09ba0d32809aa724fbf148e0c",
@@ -193,7 +193,7 @@ func TestClaimSetRootKey(t *testing.T) {
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6e348df"+
+		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
 		"0000000000000000000000000000000000000001000000010000000000000002",
 		e.Data.String())
 	c1 := NewClaimSetRootKeyFromEntry(e)
@@ -208,10 +208,9 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	const hashType = HashTypeSha256
 	const objectType = ObjectTypeAddress
 	var indexType uint16
-	idAddr := common.BytesToAddress([]byte{
-		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
-		0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
-		0x39, 0x39, 0x39, 0x3a})
+	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	assert.Nil(t, err)
+
 	objectHash := []byte{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -221,7 +220,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,
-		"0x2180103fca164a1f4afe33b610f8573076a24de6d7ca3d20fcf62540d3c73338",
+		"0x251b51d96be51d213320704c921302008934494314baa515ff1adb57b725e43c",
 		entry.HIndex().Hex())
 	assert.Equal(t,
 		"0x1bc5fac04887744f1831a8d881e4d68330e9f5f60a1c85265896df294329c7cc",
@@ -230,7 +229,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000001"+
 		"000b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"000000000000000000000000393939393939393939393939393939393939393a"+
+		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
 		"0000000000000000000000000000000000000001000000010000000000000005",
 		entry.Data.String())
 	c1 := NewClaimLinkObjectIdentityFromEntry(entry)

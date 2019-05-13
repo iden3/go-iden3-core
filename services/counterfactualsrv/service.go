@@ -28,8 +28,8 @@ type Service interface {
 	Deploy(counterfactual *Counterfactual) (common.Address, *types.Transaction, error)
 	IsDeployed(ethAddr common.Address) (bool, error)
 	Info(ethAddr common.Address) (*Info, error)
-	Forward(ethAddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
-	Add(counterfactual *Counterfactual) (*core.ProofClaim, error)
+	Forward(id core.ID, ethAddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
+	Add(id core.ID, counterfactual *Counterfactual) (*core.ProofClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(ethAddr common.Address) (*Counterfactual, error)
 	DeployerAddr() *common.Address

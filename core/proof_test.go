@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"testing"
 
@@ -45,8 +44,8 @@ func TestProof(t *testing.T) {
 	mtp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	j, err := json.Marshal(mtp)
-	assert.Nil(t, err)
+	// j, err := json.Marshal(mtp)
+	// assert.Nil(t, err)
 
 	relayAddr := common.Address{}
 	verified, err := VerifyProofClaim(relayAddr, mtp)

@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/appleboy/gin-jwt"
-	"github.com/ethereum/go-ethereum/common"
+	jwt "github.com/appleboy/gin-jwt"
 	"github.com/gin-gonic/gin"
-	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signedpacketsrv"
 )
@@ -16,7 +14,7 @@ const identityKey = "id"
 
 // User represents an authenticated identity with an optionally assigned name.
 type User struct {
-	IdAddr  common.Address
+	IdAddr  core.ID
 	EthName *string
 }
 
@@ -54,11 +52,17 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 		// Generate identity (idAddr) from JWT claims
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
-			var idAddr common.Address
-			if err := common3.HexDecodeInto(idAddr[:],
-				[]byte(claims["idAddr"].(string))); err != nil {
+
+			idAddr, err := core.IDFromString(claims["idAddr"].(string))
+			if err != nil {
 				panic(err)
 			}
+
+			// var idAddr common.Address
+			// if err := common3.HexDecodeInto(idAddr[:],
+			//         []byte(claims["idAddr"].(string))); err != nil {
+			//         panic(err)
+			// }
 			var ethName *string
 			switch v := claims["ethName"].(type) {
 			case string:

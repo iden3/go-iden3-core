@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signsrv"
@@ -37,11 +36,11 @@ const SIGALGV01 = "EK256K1"
 
 // SigHeader is the JSON Web Signature Header of a signed packet.
 type SigHeader struct {
-	Type         string         `json:"typ" binding:"required"`
-	Issuer       common.Address `json:"iss" binding:"required"`
-	IssuedAtTime int64          `json:"iat" binding:"required"`
-	Expiration   int64          `json:"exp" binding:"required"`
-	Algorithm    string         `json:"alg" binding:"required"`
+	Type         string  `json:"typ" binding:"required"`
+	Issuer       core.ID `json:"iss" binding:"required"`
+	IssuedAtTime int64   `json:"iat" binding:"required"`
+	Expiration   int64   `json:"exp" binding:"required"`
+	Algorithm    string  `json:"alg" binding:"required"`
 }
 
 // SigPayload is the JSON Web Signature Payload of a signed packet.
@@ -196,12 +195,12 @@ func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 
 type SignedPacketSigner struct {
 	signer     signsrv.Service
-	idAddr     common.Address
+	idAddr     core.ID
 	proofKSign core.ProofClaim
 }
 
 func NewSignedPacketSigner(signer signsrv.Service, proofKSign core.ProofClaim,
-	idAddr common.Address) *SignedPacketSigner {
+	idAddr core.ID) *SignedPacketSigner {
 	return &SignedPacketSigner{
 		idAddr:     idAddr,
 		signer:     signer,

@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 )
@@ -14,14 +13,12 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	cs  claimsrv.Service
-	sto db.Storage
+	cs claimsrv.Service
 }
 
-func New(cs claimsrv.Service, sto db.Storage) *ServiceImpl {
+func New(cs claimsrv.Service) *ServiceImpl {
 	return &ServiceImpl{
-		cs:  cs,
-		sto: sto,
+		cs: cs,
 	}
 }
 
@@ -35,10 +32,7 @@ func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.
 		return nil, nil, err
 	}
 
-	// TODO the ClaimSetRootKey will be changed to instead of a common.Address, use a core.ID
-	// TODO the common.BytesToAddress(idAddr[:32]) is a tmp wrapper
 	// add the claims into the storage merkletree of that identity
-	// stoUserId := is.cs.MT().Storage().WithPrefix(common.BytesToAddress(idAddr[:32]).Bytes())
 	stoUserId := is.cs.MT().Storage().WithPrefix(idAddr.Bytes())
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
 	if err != nil {
@@ -56,9 +50,6 @@ func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.
 	}
 
 	// create new ClaimSetRootKey
-	// TODO the ClaimSetRootKey will be changed to instead of a common.Address, use a core.ID
-	// TODO the common.BytesToAddress(idAddr[:32]) is a tmp wrapper
-	// claimSetRootKey := core.NewClaimSetRootKey(*idAddr, *userMT.RootKey())
 	claimSetRootKey := core.NewClaimSetRootKey(*idAddr, *userMT.RootKey())
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
@@ -70,9 +61,6 @@ func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.
 	// update Relay's Root in the Smart Contract
 	is.cs.RootSrv().SetRoot(*is.cs.MT().RootKey())
 
-	// TODO the ClaimSetRootKey will be changed to instead of a common.Address, use a core.ID
-	// TODO the common.BytesToAddress(idAddr[:32]) is a tmp wrapper
-	// proofClaimKop, err := is.cs.GetClaimProofUserByHi(*idAddr, claims[0].Entry().HIndex())
 	proofClaimKop, err := is.cs.GetClaimProofUserByHi(*idAddr, claims[0].Entry().HIndex())
 	if err != nil {
 		return nil, nil, err

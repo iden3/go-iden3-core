@@ -47,7 +47,8 @@ func cmdStart(c *cli.Context) error {
 
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
-	idService := genericserver.LoadIdService(client, claimService, storage)
+	idService := genericserver.LoadIdentityService(claimService)
+	counterfactualService := genericserver.LoadCounterfactualService(client, claimService, storage)
 	adminService := genericserver.LoadAdminService(mt, rootService, claimService)
 
 	// Check for funds
@@ -63,7 +64,7 @@ func cmdStart(c *cli.Context) error {
 		log.Panic("Not enough funds in the relay address")
 	}
 
-	endpoint.Serve(rootService, claimService, idService, adminService)
+	endpoint.Serve(rootService, claimService, idService, counterfactualService, adminService)
 
 	rootService.StopAndJoin()
 	storage.Close()

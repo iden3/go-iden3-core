@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
@@ -105,6 +104,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 
 	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
 	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
+		fmt.Println("proof[0].root", jws.Payload.ProofKSign.Proofs[0].Root.Hex())
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
 
@@ -128,7 +128,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 type IdenAssertResult struct {
 	NonceObj *core.NonceObj
 	EthName  *string
-	IdAddr   common.Address
+	IdAddr   core.ID
 }
 
 // VerifyIdenAssertV01 verifies an IDENASSERTV01 payload of a signed packet.

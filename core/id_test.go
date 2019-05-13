@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -13,47 +14,70 @@ import (
 
 func TestIDparsers(t *testing.T) {
 	typ0 := [2]byte{0x00, 0x00}
-	var genesis0 [28]byte
+	var genesis0 [27]byte
 	genesis032bytes := utils.HashBytes([]byte("genesistest"))
 	copy(genesis0[:], genesis032bytes[:])
 
 	id0 := NewID(typ0, genesis0)
-	assert.Equal(t, id0.String(), "11iu5zg52EFoKcKcE6ChPiChftxBdidpxzh4vsmzf6F")
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0.String())
 
 	typ1 := [2]byte{0x00, 0x01}
-	var genesis1 [28]byte
+	var genesis1 [27]byte
 	genesis132bytes := utils.HashBytes([]byte("genesistest"))
 	copy(genesis1[:], genesis132bytes[:])
 
 	id1 := NewID(typ1, genesis1)
-	assert.Equal(t, id1.String(), "12cCE371biv2KzYyBiHZDGmc4nHPaJsQBCYS7Zwxkyk")
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2pTZ", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
-	assert.True(t, !bytes.Equal(emptyChecksum, id0[30:]))
-	assert.True(t, !bytes.Equal(emptyChecksum, id1[30:]))
+	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
+	assert.True(t, !bytes.Equal(emptyChecksum, id1[29:]))
 
 	id0FromBytes, err := IDFromBytes(id0.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	assert.Equal(t, id0FromBytes.String(), "11iu5zg52EFoKcKcE6ChPiChftxBdidpxzh4vsmzf6F")
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	assert.Equal(t, id1FromBytes.String(), "12cCE371biv2KzYyBiHZDGmc4nHPaJsQBCYS7Zwxkyk")
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2pTZ", id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	assert.Equal(t, id0FromString.String(), "11iu5zg52EFoKcKcE6ChPiChftxBdidpxzh4vsmzf6F")
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0FromString.String())
+}
+
+func TestIDjsonParser(t *testing.T) {
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu")
+	assert.Nil(t, err)
+	idj, err := json.Marshal(&id)
+	assert.Nil(t, err)
+	assert.Equal(t, `"11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu"`, string(idj))
+
+	var idp ID
+	err = json.Unmarshal(idj, &idp)
+	assert.Nil(t, err)
+
+	assert.Equal(t, id, idp)
+
+	idsMap := make(map[ID]string)
+	idsMap[id] = "first"
+	idsMapJSON, err := json.Marshal(idsMap)
+	assert.Nil(t, err)
+
+	var idsMapUnmarshaled map[ID]string
+	err = json.Unmarshal(idsMapJSON, &idsMapUnmarshaled)
+	assert.Nil(t, err)
 }
 
 func TestCheckChecksum(t *testing.T) {
 	typ := TypeS2M7
-	var genesis [28]byte
+	var genesis [27]byte
 	genesis32bytes := utils.HashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
 
@@ -67,7 +91,7 @@ func TestCheckChecksum(t *testing.T) {
 
 	// check that if we change the checksum, returns false on CheckChecksum
 	id = NewID(typ, genesis)
-	copy(id[30:], []byte{0x00, 0x00})
+	copy(id[29:], []byte{0x00, 0x00})
 	assert.True(t, !CheckChecksum(id))
 
 	// check that if we change the type, returns false on CheckChecksum
@@ -78,11 +102,11 @@ func TestCheckChecksum(t *testing.T) {
 	// check that if we change the genesis, returns false on CheckChecksum
 	id = NewID(typ, genesis)
 	// changedGenesis := utils.HashBytes([]byte("changedgenesis"))
-	var changedGenesis [28]byte
+	var changedGenesis [27]byte
 	changedGenesis32bytes := utils.HashBytes([]byte("changedgenesis"))
-	copy(changedGenesis[:], changedGenesis32bytes[:28])
+	copy(changedGenesis[:], changedGenesis32bytes[:27])
 
-	copy(id[2:28], changedGenesis[:])
+	copy(id[2:27], changedGenesis[:])
 	assert.True(t, !CheckChecksum(id))
 }
 
@@ -112,5 +136,5 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, idAddr.String(), "14ZjYvqmB4sNQG5o1orKUWinDt1Zk13iVvs4zPCPmvE")
+	assert.Equal(t, "1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY", idAddr.String())
 }

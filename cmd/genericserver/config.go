@@ -3,8 +3,8 @@ package genericserver
 import (
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/core"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
@@ -27,8 +27,8 @@ type Config struct {
 		Address  string
 		Password string
 	}
-	IdAddrRaw string         `mapstructure:"idaddr"`
-	IdAddr    common.Address `mapstructure:"-"`
+	IdAddrRaw string  `mapstructure:"idaddr"`
+	IdAddr    core.ID `mapstructure:"-"`
 	Contracts struct {
 		RootCommits   ContractInfo
 		Iden3Impl     ContractInfo

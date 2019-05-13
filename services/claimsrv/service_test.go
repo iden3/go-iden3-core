@@ -109,10 +109,8 @@ func initializeEnvironment(t *testing.T) {
 		t.Error(err)
 	}
 
-	var idAddr common.Address
-	if err := common3.HexDecodeInto(idAddr[:], []byte("0x0123456789abcdef0123456789abcdef01234567")); err != nil {
-		panic(err)
-	}
+	idAddr, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	assert.Nil(t, err)
 	service = New(idAddr, mt, &RootServiceMock{}, &SignServiceMock{})
 
 	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
@@ -208,7 +206,8 @@ func TestGetNonRevocationProof(t *testing.T) {
 func TestGetClaimProof(t *testing.T) {
 	initializeEnvironment(t)
 
-	ethAddr := common.HexToAddress("0x970E8128AB834E8EAC17Ab8E3812F010678CF791")
+	idAddr, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	assert.Nil(t, err)
 
 	// Basic Claim
 	indexData := []byte("index01")
@@ -228,7 +227,7 @@ func TestGetClaimProof(t *testing.T) {
 	claimAuthKSign := core.NewClaimAuthorizeKSignSecp256k1(pk)
 
 	// open the MerkleTree of the user
-	userMT, err := utils.NewMerkleTreeUser(ethAddr, mt.Storage(), 140)
+	userMT, err := NewMerkleTreeUser(idAddr, mt.Storage(), 140)
 	assert.Nil(t, err)
 
 	// add claimBasic in User ID Merkle Tree
@@ -240,7 +239,7 @@ func TestGetClaimProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
-	setRootClaim := core.NewClaimSetRootKey(ethAddr, *userMT.RootKey())
+	setRootClaim := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim.Entry())
@@ -260,7 +259,7 @@ func TestGetClaimProof(t *testing.T) {
 		panic(err)
 	}
 
-	proofClaimUser, err := service.GetClaimProofUserByHi(ethAddr, claimBasic.Entry().HIndex())
+	proofClaimUser, err := service.GetClaimProofUserByHi(idAddr, claimBasic.Entry().HIndex())
 	assert.Nil(t, err)
 	p, err = json.Marshal(proofClaimUser)
 	if debug {
@@ -272,11 +271,13 @@ func TestGetClaimProof(t *testing.T) {
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	proofClaimUser2, err := service.GetClaimProofUserByHi(ethAddr, claimAuthKSign.Entry().HIndex())
+	proofClaimUser2, err := service.GetClaimProofUserByHi(idAddr, claimAuthKSign.Entry().HIndex())
 	assert.Nil(t, err)
 	p, err = json.Marshal(proofClaimUser2)
 	if debug {
 		fmt.Printf("\n\tclaim authorize ksign secp256k1 claim proof\n\n")
+		fmt.Println("idAddr", idAddr.String())
+		fmt.Println("pk", common3.HexEncode(crypto.CompressPubkey(pk)))
 		fmt.Println(string(p))
 	}
 
@@ -287,6 +288,21 @@ func TestGetClaimProof(t *testing.T) {
 	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
+
+	// ClaimAssignName
+	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	// assert.Nil(t, err)
+	claimAssignName := core.NewClaimAssignName("testName@iden3.io", idAddr)
+	// add assignNameClaim in User ID Merkle Tree
+	err = mt.Add(claimAssignName.Entry())
+	assert.Nil(t, err)
+	proofClaimAssignName, err := service.GetClaimProofByHi(claimAssignName.Entry().HIndex())
+	assert.Nil(t, err)
+	p, err = json.Marshal(proofClaimAssignName)
+	if debug {
+		fmt.Printf("\n\tclaim assign name claim proof\n\n")
+		fmt.Println(string(p))
+	}
 
 	//proofClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
 	//assert.Nil(t, err)
