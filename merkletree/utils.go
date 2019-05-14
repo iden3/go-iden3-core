@@ -69,7 +69,14 @@ func RElemToHash(relem mimc7.RElem) (h Hash) {
 // HashElems performs a mimc7 hash over the array of ElemBytes.
 func HashElems(elems ...ElemBytes) *Hash {
 	relems := ElemsBytesToRElemsPanic(elems...)
-	h := RElemToHash(mimc7.Hash(relems))
+	h := RElemToHash(mimc7.Hash(relems, nil))
+	return &h
+}
+
+// HashElemsKey performs a mimc7 hash over the array of ElemBytes.
+func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
+	relems := ElemsBytesToRElemsPanic(elems...)
+	h := RElemToHash(mimc7.Hash(relems, key))
 	return &h
 }
 

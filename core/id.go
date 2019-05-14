@@ -103,7 +103,7 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 // CalculateChecksum, returns the checksum for a given type and genesis_root,
 // where checksum: hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
-	var toHash [32]byte
+	var toHash [29]byte
 	copy(toHash[:], typ[:])
 	copy(toHash[2:], genesis[:])
 	h := utils.HashBytes(toHash[:])

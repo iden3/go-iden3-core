@@ -89,7 +89,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	return mt, err
 }
 func initializeIdService(t *testing.T) *ServiceImpl {
-	relayIdAddr, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	relayIdAddr, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	if err != nil {
 		t.Error(err)
 	}
@@ -178,7 +178,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY", idAddr.String())
+	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
 
 	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
 	assert.Nil(t, err)

@@ -19,7 +19,7 @@ func TestProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	idAddr0, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	idAddr0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -30,7 +30,7 @@ func TestProof(t *testing.T) {
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 
-	idAddr1, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu")
+	idAddr1, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
 	assert.Nil(t, err)
 	rootKey1 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,

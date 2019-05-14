@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -19,7 +20,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis0[:], genesis032bytes[:])
 
 	id0 := NewID(typ0, genesis0)
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij", id0.String())
 
 	typ1 := [2]byte{0x00, 0x01}
 	var genesis1 [27]byte
@@ -27,7 +28,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis1[:], genesis132bytes[:])
 
 	id1 := NewID(typ1, genesis1)
-	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2pTZ", id1.String())
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
 	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
@@ -37,27 +38,27 @@ func TestIDparsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0FromBytes.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij", id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2pTZ", id1FromBytes.String())
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps", id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu", id0FromString.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij", id0FromString.String())
 }
 
 func TestIDjsonParser(t *testing.T) {
-	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu")
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
 	assert.Nil(t, err)
 	idj, err := json.Marshal(&id)
 	assert.Nil(t, err)
-	assert.Equal(t, `"11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZohfu"`, string(idj))
+	assert.Equal(t, `"11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij"`, string(idj))
 
 	var idp ID
 	err = json.Unmarshal(idj, &idp)
@@ -136,5 +137,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY", idAddr.String())
+	fmt.Println("idAddr", hex.EncodeToString(idAddr.Bytes()))
+	fmt.Println("idAddr (hex)", idAddr.String())
+	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
 }

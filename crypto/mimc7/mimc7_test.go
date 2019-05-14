@@ -75,10 +75,10 @@ func TestMIMC7(t *testing.T) {
 	elementsArray1, err := BigIntsToRElems(bigArray1)
 	assert.Nil(t, err)
 
-	h1 := Hash(elementsArray1)
+	h1 := Hash(elementsArray1, nil)
 	assert.Nil(t, err)
 	// same hash value than the iden3js and circomlib tests:
-	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h1).Bytes()), "0x04252a243a23848a29fa5783336905f6394585fb38d0d89f16d36084c53cb73c")
+	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h1).Bytes()), "0x237c92644dbddb86d8a259e0e923aaab65a93f1ec5758b8799988894ac0958fd")
 
 	// h2a, hash of 2 elements
 	bigArray2a := []*big.Int{b78, b41}
@@ -89,10 +89,10 @@ func TestMIMC7(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(mh2a).Bytes()), "0x2ba7ebad3c6b6f5a20bdecba2333c63173ca1a5f2f49d958081d9fa7179c44e4")
 
-	h2a := Hash(elementsArray2a)
+	h2a := Hash(elementsArray2a, nil)
 	assert.Nil(t, err)
 	// same hash value than the iden3js and circomlib tests:
-	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h2a).Bytes()), "0x1fd4bc970a697084ec1f83ecf81936d4a047e27c654752ddbc89f9ed1728e0ab")
+	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h2a).Bytes()), "0x067f3202335ea256ae6e6aadcd2d5f7f4b06a00b2d1e0de903980d5ab552dc70")
 
 	// h2b, hash of 2 elements
 	bigArray2b := []*big.Int{b12, b45}
@@ -103,20 +103,20 @@ func TestMIMC7(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(mh2b).Bytes()), "0x2ba7ebad3c6b6f5a20bdecba2333c63173ca1a5f2f49d958081d9fa7179c44e4")
 
-	h2b := Hash(elementsArray2b)
+	h2b := Hash(elementsArray2b, nil)
 	assert.Nil(t, err)
 	// same hash value than the iden3js and circomlib tests:
-	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h2b).Bytes()), "0x263924eb9ae730cea9ce31bb9ada695ec3525536b4c058813552b074db36ba9a")
+	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h2b).Bytes()), "0x15ff7fe9793346a17c3150804bcb36d161c8662b110c50f55ccb7113948d8879")
 
 	// h4, hash of 4 elements
 	bigArray4 := []*big.Int{b12, b45, b78, b41}
 	elementsArray4, err := BigIntsToRElems(bigArray4)
 	assert.Nil(t, err)
 
-	h4 := Hash(elementsArray4)
+	h4 := Hash(elementsArray4, nil)
 	assert.Nil(t, err)
 	// same hash value than the iden3js and circomlib tests:
-	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h4).Bytes()), "0x10e02cc6c8fc40cda121602903df911f6398d65f84ff1f27c680d0b7d85b7418")
+	assert.Equal(t, "0x"+hex.EncodeToString((*big.Int)(h4).Bytes()), "0x284bc1f34f335933a23a433b6ff3ee179d682cd5e5e2fcdd2d964afa85104beb")
 }
 
 func BenchmarkMIMC7(b *testing.B) {
@@ -130,7 +130,7 @@ func BenchmarkMIMC7(b *testing.B) {
 
 	var h4 RElem
 	for i := 0; i < b.N; i++ {
-		h4 = Hash(elementsArray4)
+		h4 = Hash(elementsArray4, nil)
 	}
 	println(h4)
 }

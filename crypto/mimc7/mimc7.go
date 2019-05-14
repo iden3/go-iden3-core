@@ -149,12 +149,22 @@ func MIMC7Hash(xIn, k *big.Int) *big.Int {
 }
 
 // Hash performs the MIMC7 hash over a RElem array
-func Hash(arrEl []RElem) RElem {
+func Hash(arrEl []RElem, key *big.Int) RElem {
 	arr := RElemsToBigInts(arrEl)
-	// r := constants.fqR.Zero()
-	r := constants.iv
+	var r *big.Int
+	if key == nil {
+		r = constants.fqR.Zero()
+	} else {
+		r = key
+	}
+	// r := constants.iv
 	for i := 0; i < len(arr); i++ {
-		r = MIMC7Hash(r, arr[i])
+		r = constants.fqR.Add(
+			constants.fqR.Add(
+				r,
+				arr[i],
+			),
+			MIMC7Hash(arr[i], r))
 	}
 	return RElem(r)
 }
