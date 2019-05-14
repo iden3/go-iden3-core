@@ -178,7 +178,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY", idAddr.String())
+	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZupst", idAddr.String())
 
 	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
 	assert.Nil(t, err)
