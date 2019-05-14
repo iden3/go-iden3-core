@@ -47,10 +47,10 @@ func TestClaimBasic(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x10dae586534145cf6bf10cb0f7dc7f0a343b6fb32c04501e85cace56c9381f73",
+		"0x1d4d6c81f3cd8bd286affa0d5ac3b677d86fea34ba88d450081d703bcf712e6a",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x00fa98173f610358b765b4ff593ed7bae0db326d287eec86b1782da9bea45748",
+		"0x03c4686d099ffd137b83ba22b57dc954ac1e6c0e2b1e0ef972a936992b8788ff",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -73,21 +73,21 @@ func TestClaimAssignName(t *testing.T) {
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x3a})
-	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	c0 := NewClaimAssignName(name, idAddr)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x1b90afca6decbbbeb9422a441731f7c9a666b3ce15307d327f43b2c4506fe29c",
+		"0x106d1a898d4503f4cb20be6ce9aeb2ac1e65d522579805e3633408a4b9ffcb53",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x18caf8b9261ff81da8539e9003c7e7e173a2658a3f11d9133ab59b73b605afe5",
+		"0x25867e06233f276f39e298775245bad077eb0852b4eaac8dbf646a95bd3f8625",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
+		"0000041c980d8faa54be797337fa55dbe62a7675e0c83ce5383b78a04b26b9f4"+
 		"00d67b05d8e2d1ace8f3e84b8451dd2e9da151578c3c6be23e7af11add5a807a"+
 		"0000000000000000000000000000000000000000000000010000000000000003",
 		e.Data.String())
@@ -113,10 +113,10 @@ func TestClaimAuthorizeKSign(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x2933b00c626c11d1dacadc6bbfbbdd7d008efb3db3565fbadc9dadfc8ac57eff",
+		"0x00a812462a3dbb7e6592587a242616ab61fd53236b470f0c143cd63ee59249b3",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
+		"0x06d4571fb9634e4bed32e265f91a373a852c476656c5c13b09bc133ac61bc5a6",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -147,10 +147,10 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x2f04e25bb5c9e01946aca5c80307d73bace3c3f1496175451db4495dd5a6c423",
+		"0x25aacb66cedd3be6248f68d61e8648ba163333070a4da17d35c424b798248440",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x1541a6b5aa9bf7d9be3d5cb0bcc7cacbca26242016a0feebfc19c90f2224baed",
+		"0x06d4571fb9634e4bed32e265f91a373a852c476656c5c13b09bc133ac61bc5a6",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
@@ -171,7 +171,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 
 func TestClaimSetRootKey(t *testing.T) {
 	// ClaimSetRootKey
-	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 
 	rootKey := merkletree.Hash(merkletree.ElemBytes{
@@ -184,16 +184,16 @@ func TestClaimSetRootKey(t *testing.T) {
 	c0.Era = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x15e5f107b97a0eb563f5d98f8626d950ea97ae782d475e5da7846ec7492c0a7a",
+		"0x12bf59ff4171debe81321c04a52298e62650ca8514e9a7a8a64c23cb55eeaa2e",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x0ad7edbf562757b1ad2282c44e2c248f95e9e6b09ba0d32809aa724fbf148e0c",
+		"0x01705b25f2cf7cda34d836f09e9b0dd1777bdc16752657cd9d1ae5f6286525ba",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
+		"0000041c980d8faa54be797337fa55dbe62a7675e0c83ce5383b78a04b26b9f4"+
 		"0000000000000000000000000000000000000001000000010000000000000002",
 		e.Data.String())
 	c1 := NewClaimSetRootKeyFromEntry(e)
@@ -208,7 +208,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	const hashType = HashTypeSha256
 	const objectType = ObjectTypeAddress
 	var indexType uint16
-	idAddr, err := IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
+	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 
 	objectHash := []byte{
@@ -220,16 +220,16 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,
-		"0x251b51d96be51d213320704c921302008934494314baa515ff1adb57b725e43c",
+		"0x2dc73c37e603a15f8f028aa5c3f668d1210c86008577188ce279ead60a9afec4",
 		entry.HIndex().Hex())
 	assert.Equal(t,
-		"0x1bc5fac04887744f1831a8d881e4d68330e9f5f60a1c85265896df294329c7cc",
+		"0x2b26f24ff8ffd67b98742c8e4c8f34b778ed32c9ab5fe97babe3ec4b5d7e80a5",
 		entry.HValue().Hex())
 	dataTestOutput(&entry.Data)
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000001"+
 		"000b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"00000407be6b1c3fe8ca2e03bf7ed1f29917b8e2cd56e8dcd401d65ea0e6796f"+
+		"0000041c980d8faa54be797337fa55dbe62a7675e0c83ce5383b78a04b26b9f4"+
 		"0000000000000000000000000000000000000001000000010000000000000005",
 		entry.Data.String())
 	c1 := NewClaimLinkObjectIdentityFromEntry(entry)
@@ -249,10 +249,10 @@ func TestClaimAuthorizeService(t *testing.T) {
 	c0 := NewClaimAuthorizeService(ServiceTypeRelay, ethAddr.Hex(), pubKstr, "relay.iden3.io")
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x134bb5a379706bc9574bee7b0d6850a5fa0a7e324a6b9377ed28ee7444f3d0ce",
+		"0x0ee7fb1c970abca8667607eca3974704783f8812bc7f745c1c7ee49a2faf7927",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x14db3569b8a287c5142c99f697428addd607b52c2a470a96aff6ac98e4a445e8",
+		"0x2ac15c5d5a255d7d92d84580c9a19b2e6beed42cfd26978b448d6b4abfa6d017",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+

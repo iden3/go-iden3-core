@@ -2,6 +2,7 @@ package merkletree
 
 import (
 	"fmt"
+	"math/big"
 )
 
 // NodeType defines the type of node in the MT.
@@ -83,7 +84,8 @@ func NewNodeFromBytes(b []byte) (*Node, error) {
 // LeafKey computes the key of a leaf node given the hIndex and hValue of the
 // entry of the leaf.
 func LeafKey(hIndex, hValue *Hash) *Hash {
-	return HashElems(ElemBytesOne, ElemBytes(*hIndex), ElemBytes(*hValue))
+	// return HashElems(ElemBytesOne, ElemBytes(*hIndex), ElemBytes(*hValue))
+	return HashElemsKey(big.NewInt(1), ElemBytes(*hIndex), ElemBytes(*hValue))
 }
 
 // Key computes the key of the node by hashing the content in a specific way

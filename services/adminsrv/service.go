@@ -102,7 +102,7 @@ func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
 	if err != nil {
 		return &big.Int{}, err
 	}
-	helement := mimc7.Hash(ielements)
+	helement := mimc7.Hash(ielements, nil)
 	return (*big.Int)(helement), nil
 
 }
