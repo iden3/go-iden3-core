@@ -109,7 +109,6 @@ func VerifyProofClaim(relayAddr common.Address, pc *ProofClaim) (bool, error) {
 			return false, fmt.Errorf("Mtp0 at lvl %v is a non-existence proof", i)
 		}
 		if !merkletree.VerifyProof(rootKey, mtpEx, leaf.HIndex(), leaf.HValue()) {
-			fmt.Println("d", rootKey.Hex())
 			return false, fmt.Errorf("Mtp0 at lvl %v doesn't match with the root", i)
 		}
 
@@ -199,4 +198,196 @@ func GetClaimProofByHi(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*ProofCl
 	}
 
 	return &proofClaim, nil
+}
+
+type PredicateProof struct {
+	LeafEntry               *merkletree.Entry
+	MtpNonExistInOldRoot    *merkletree.Proof
+	MtpExist                *merkletree.Proof
+	MtpNonExistNextVersion  *merkletree.Proof
+	MtpExistPreviousVersion *merkletree.Proof
+	OldRoot                 *merkletree.Hash
+	Root                    *merkletree.Hash
+}
+
+func GetPreviousVersionEntry(entry *merkletree.Entry) (*merkletree.Entry, error) {
+	claimType, claimVer := GetClaimTypeVersionFromData(&entry.Data)
+	if claimVer == 0 {
+		return nil, errors.New("claim is in version 0, can not exist a previous version")
+	}
+	leafDataCpy := &merkletree.Data{}
+	copy(leafDataCpy[:], entry.Data[:])
+	SetClaimTypeVersionInData(leafDataCpy, claimType, claimVer-1)
+	entry1 := merkletree.Entry{
+		Data: *leafDataCpy,
+	}
+	return &entry1, nil
+}
+func GetNextVersionEntry(entry *merkletree.Entry) *merkletree.Entry {
+	claimType, claimVer := GetClaimTypeVersionFromData(&entry.Data)
+	leafDataCpy := &merkletree.Data{}
+	copy(leafDataCpy[:], entry.Data[:])
+	SetClaimTypeVersionInData(leafDataCpy, claimType, claimVer+1)
+	entry1 := merkletree.Entry{
+		Data: *leafDataCpy,
+	}
+	return &entry1
+}
+
+// GetPredicateProof, ϕ_min
+// checks that:
+// - 0: tree is updated incrementally
+// 	- claim position was empty in oldRoot
+// - 1: claim is added correctly
+// 	- claim position contains the claim in currentRoot
+// - 2: claim is not revocated
+// 	- claim (version+1) is empty in currentRoot
+// in case that the claim version != 0:
+// - 3: claim is at the expected version
+//	- claim (version-1) exist in oldRoot
+// - 4: current version is incremental from the last one
+//	- siblings of check_0 are inside siblings of check_1
+//
+// *TODO The output format will depend on the zkSnark inputs format (not specified yet)
+func GetPredicateProof(mt *merkletree.MerkleTree, oldRoot, hi *merkletree.Hash) (*PredicateProof, error) {
+	// proof_0: that claim position was empty in oldRoot
+	mtpNonExistInOldRoot, err := mt.GenerateProof(hi, oldRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// proof_1: that claim position contains the claim in newRoot
+	mtpExist, err := mt.GenerateProof(hi, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// proof_2: that claim (version+1) is empty in newRoot
+	// get the value in the hi position
+	leafData, err := mt.GetDataByIndex(hi)
+	if err != nil {
+		return nil, err
+	}
+	mtpNonExistNextVersion, err := GetNonRevocationMTProof(mt, leafData, hi)
+	if err != nil {
+		return nil, err
+	}
+
+	leafDataCpy := &merkletree.Data{}
+	copy(leafDataCpy[:], leafData[:])
+	entry := merkletree.Entry{
+		Data: *leafDataCpy,
+	}
+
+	// checks 3 and 4 are necessary if the claim.Version != 0
+	var mtpExistPrevVersion *merkletree.Proof
+	_, v := getClaimTypeVersion(&entry)
+	if v != 0 {
+		// version is not 0 (v!=0), so we need to provide proof_3 and proof_4
+
+		// proof_3: that claim (version-1) is not empty in oldRoot
+		entryPrevVersion, err := GetPreviousVersionEntry(&entry)
+		if err != nil {
+			return nil, err
+		}
+		mtpExistPrevVersion, err = mt.GenerateProof(entryPrevVersion.HIndex(), oldRoot)
+		if err != nil {
+			return nil, err
+		}
+
+		// proof_4: that siblings of check_0 are inside of siblings of check_1
+		// this proof don't needs more additional data
+		// is something that the verifier needs to verify with the data from the other proofs
+	}
+
+	predicateProof := &PredicateProof{
+		LeafEntry:               &entry,
+		MtpNonExistInOldRoot:    mtpNonExistInOldRoot,   // proof_0
+		MtpExist:                mtpExist,               // proof_1
+		MtpNonExistNextVersion:  mtpNonExistNextVersion, // proof_2
+		MtpExistPreviousVersion: mtpExistPrevVersion,    // proof_3
+		OldRoot:                 oldRoot,
+		Root:                    mt.RootKey(),
+	}
+	return predicateProof, nil
+}
+
+// VerifyPredicateProof, ϕ_min
+// checks that:
+// - 0: tree is updated incrementally
+// 	- claim position was empty in oldRoot
+// - 1: claim is added correctly
+// 	- claim position contains the claim in currentRoot
+// - 2: claim is not revocated
+// 	- claim (version+1) is empty in currentRoot
+// in case that the claim version != 0:
+// - 3: claim is at the expected version
+//	- claim (version-1) exist in oldRoot
+// - 4: current version is incremental from the last one
+//	- siblings of check_0 are inside of check_1
+//
+// *TODO The input format will depend on the zkSnark inputs format (not specified yet)
+func VerifyPredicateProof(p *PredicateProof) bool {
+	if bytes.Equal(p.Root.Bytes(), p.OldRoot.Bytes()) {
+		return false
+	}
+
+	// check_0: that claim position was empty in oldRoot
+	if p.MtpNonExistInOldRoot.Existence {
+		// should be a proof of non existence, if not, verification fails
+		return false
+	}
+	if !merkletree.VerifyProof(p.OldRoot, p.MtpNonExistInOldRoot, p.LeafEntry.HIndex(), p.LeafEntry.HValue()) {
+		return false
+	}
+
+	// check_1: that claim position contains the claim in currentRoot
+	if !p.MtpExist.Existence {
+		// should be a proof of existence, if not, verification fails
+		return false
+	}
+	if !merkletree.VerifyProof(p.Root, p.MtpExist, p.LeafEntry.HIndex(), p.LeafEntry.HValue()) {
+		return false
+	}
+
+	// check_2: that claim (version+1) is empty in currentRoot
+	if p.MtpNonExistNextVersion.Existence {
+		// should be a proof of non existence, if not, verification fails
+		return false
+	}
+	entry1 := GetNextVersionEntry(p.LeafEntry)
+	if !merkletree.VerifyProof(p.Root, p.MtpNonExistNextVersion, entry1.HIndex(), entry1.HValue()) {
+		return false
+	}
+
+	// checks 3 and 4 are necessary if the claim.Version != 0
+	_, v := getClaimTypeVersion(p.LeafEntry)
+	if v == 0 {
+		// if version == 0, return true expected checks have passed
+		return true
+	}
+
+	// check_3: that claim (version-1) is not empty in oldRoot
+	if !p.MtpExistPreviousVersion.Existence {
+		// should be a proof of existence, if not, verification fails
+		return false
+	}
+	entryPrevVersion, err := GetPreviousVersionEntry(p.LeafEntry)
+	if err != nil {
+		// if err!=nil means that there is no previous version possible, as the current version is 0
+		return false
+	}
+	if !merkletree.VerifyProof(p.OldRoot, p.MtpExistPreviousVersion, entryPrevVersion.HIndex(), entryPrevVersion.HValue()) {
+		return false
+	}
+
+	// check_4: check that siblings of check_0 are inside the siblings of check_1
+	// p.MtpNonExistInOldRoot.Siblings == p.MtpExist.Siblings[:len(p.MtpNonExistInOldRoot.Siblings)]
+	for i := 0; i < len(p.MtpNonExistInOldRoot.Siblings); i++ {
+		if !bytes.Equal(p.MtpNonExistInOldRoot.Siblings[i].Bytes(), p.MtpExist.Siblings[i].Bytes()) {
+			return false
+		}
+	}
+
+	return true
 }

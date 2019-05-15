@@ -470,10 +470,10 @@ type Proof struct {
 	Existence bool
 	// depth indicates how deep in the tree the proof goes.
 	depth uint
-	// notempties is a bitmap of non-empty siblings found in siblings.
+	// notempties is a bitmap of non-empty Siblings found in Siblings.
 	notempties [ElemBytesLen - proofFlagsLen]byte
-	// siblings is a list of non-empty sibling keys.
-	siblings []*Hash
+	// Siblings is a list of non-empty sibling keys.
+	Siblings []*Hash
 	nodeAux  *nodeAux
 }
 
@@ -497,14 +497,14 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 			}
 			var sib Hash
 			copy(sib[:], siblingBytes[sibIdx*ElemBytesLen:(sibIdx+1)*ElemBytesLen])
-			p.siblings = append(p.siblings, &sib)
+			p.Siblings = append(p.Siblings, &sib)
 			sibIdx++
 		}
 	}
 
 	if !p.Existence && ((bs[0] & 0x02) != 0) {
 		p.nodeAux = &nodeAux{hIndex: &Hash{}, hValue: &Hash{}}
-		nodeAuxBytes := siblingBytes[len(p.siblings)*ElemBytesLen:]
+		nodeAuxBytes := siblingBytes[len(p.Siblings)*ElemBytesLen:]
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
 			return nil, ErrInvalidProofBytes
 		}
@@ -516,7 +516,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 
 // Bytes serializes a Proof into a byte array.
 func (p *Proof) Bytes() []byte {
-	bsLen := proofFlagsLen + len(p.notempties) + ElemBytesLen*len(p.siblings)
+	bsLen := proofFlagsLen + len(p.notempties) + ElemBytesLen*len(p.Siblings)
 	if p.nodeAux != nil {
 		bsLen += 2 * ElemBytesLen
 	}
@@ -528,7 +528,7 @@ func (p *Proof) Bytes() []byte {
 	bs[1] = byte(p.depth)
 	copy(bs[proofFlagsLen:len(p.notempties)+proofFlagsLen], p.notempties[:])
 	siblingsBytes := bs[len(p.notempties)+proofFlagsLen:]
-	for i, k := range p.siblings {
+	for i, k := range p.Siblings {
 		copy(siblingsBytes[i*ElemBytesLen:(i+1)*ElemBytesLen], k[:])
 	}
 	if p.nodeAux != nil {
@@ -574,7 +574,7 @@ func (p *Proof) String() string {
 	sibIdx := 0
 	for i := uint(0); i < p.depth; i++ {
 		if testBitBigEndian(p.notempties[:], i) {
-			fmt.Fprintf(buf, "%v ", p.siblings[sibIdx])
+			fmt.Fprintf(buf, "%v ", p.Siblings[sibIdx])
 			sibIdx++
 		} else {
 			fmt.Fprintf(buf, "0 ")
@@ -629,7 +629,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		}
 		if !bytes.Equal(siblingKey[:], HashZero[:]) {
 			setBitBigEndian(p.notempties[:], uint(p.depth))
-			p.siblings = append(p.siblings, siblingKey)
+			p.Siblings = append(p.Siblings, siblingKey)
 		}
 	}
 	return nil, ErrEntryIndexNotFound
@@ -637,7 +637,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 
 // VerifyProof verifies the Merkle Proof for the entry and root.
 func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
-	sibIdx := len(proof.siblings) - 1
+	sibIdx := len(proof.Siblings) - 1
 	var midKey *Hash
 	if proof.Existence {
 		midKey = LeafKey(hIndex, hValue)
@@ -655,7 +655,7 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 	var siblingKey *Hash
 	for lvl := int(proof.depth) - 1; lvl >= 0; lvl-- {
 		if testBitBigEndian(proof.notempties[:], uint(lvl)) {
-			siblingKey = proof.siblings[sibIdx]
+			siblingKey = proof.Siblings[sibIdx]
 			sibIdx--
 		} else {
 			siblingKey = &HashZero

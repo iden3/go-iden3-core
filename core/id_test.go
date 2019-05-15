@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -137,7 +136,5 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	fmt.Println("idAddr", hex.EncodeToString(idAddr.Bytes()))
-	fmt.Println("idAddr (hex)", idAddr.String())
 	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
 }

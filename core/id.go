@@ -19,7 +19,7 @@ var (
 	TypeBJM7 = [2]byte{0x00, 0x00}
 
 	// TypeS2M7 specifies the S2-M7
-	// - first 2 bytes: `00000000 00000010`
+	// - first 2 bytes: `00000000 00000100`
 	// - curve of k_op: secp256k1
 	// - hash function: `MIMC7`
 	TypeS2M7 = [2]byte{0x00, 0x04}
@@ -89,7 +89,7 @@ func IDFromBytes(b []byte) (ID, error) {
 	return id, nil
 }
 
-// DecomposeID returns
+// DecomposeID returns type, genesis and checksum from an ID
 func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 	var typ [2]byte
 	var genesis [27]byte
