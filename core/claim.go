@@ -4,9 +4,11 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
 )
@@ -84,8 +86,8 @@ func NewClaimTypeNum(num uint64) *ClaimType {
 var (
 	// ClaimTypeBasic is a simple claim type that can be used for anything.
 	ClaimTypeBasic = NewClaimTypeNum(0)
-	// ClaimTypeAuthorizeKSign is a claim type to autorize a public key for signing.
-	ClaimTypeAuthorizeKSign = NewClaimTypeNum(1)
+	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
+	ClaimTypeAuthorizeKSignBabyJub = NewClaimTypeNum(1)
 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
 	// ClaimTypeAssignName is a claim type to assign a name to an ID
@@ -196,41 +198,44 @@ func (c *ClaimAssignName) Type() ClaimType {
 	return *ClaimTypeAssignName
 }
 
-// ClaimAuthorizeKSign is a claim to authorize a public key for signing.
-type ClaimAuthorizeKSign struct {
+// ClaimAuthorizeKSignBabyJub is a claim to authorize a baby jub public key for
+// signing.
+type ClaimAuthorizeKSignBabyJub struct {
 	// Version is the claim version.
 	Version uint32
 	// Sign means positive if false, negative if true.
 	Sign bool
-	// Ay is the y coordinate of the elliptic curve public key.
-	Ay merkletree.ElemBytes
+	// Ay is the y coordinate of the baby jub curve point which corresponds
+	// to the public key.
+	Ay *big.Int
 }
 
-// NewClaimAuthorizeKSign returns a ClaimAuthorizeKSign with the given elliptic
-// public key parameters.
-func NewClaimAuthorizeKSign(sign bool, ay merkletree.ElemBytes) *ClaimAuthorizeKSign {
-	return &ClaimAuthorizeKSign{
+// NewClaimAuthorizeKSignBabyJub returns a ClaimAuthorizeKSignBabyJub with the
+// given elliptic public key parameters.
+func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PubKey) *ClaimAuthorizeKSignBabyJub {
+	return &ClaimAuthorizeKSignBabyJub{
 		Version: 0,
-		Sign:    sign,
-		Ay:      ay,
+		Sign:    babyjub.PointCoordSign(pk.X),
+		Ay:      pk.Y,
 	}
 }
 
-// NewClaimAuthorizeKSignFromEntry deserializes a ClaimAuthorizeKSign from an Entry.
-func NewClaimAuthorizeKSignFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSign {
-	c := &ClaimAuthorizeKSign{}
+// NewClaimAuthorizeKSignBabyJubFromEntry deserializes a
+// ClaimAuthorizeKSignBabyJubFrom from an Entry.
+func NewClaimAuthorizeKSignBabyJubFromEntry(e *merkletree.Entry) *ClaimAuthorizeKSignBabyJub {
+	c := &ClaimAuthorizeKSignBabyJub{}
 	_, c.Version = getClaimTypeVersion(e)
 	sign := []byte{0}
 	copyFromElemBytes(sign, ClaimTypeVersionLen, &e.Data[3])
 	if sign[0] == 1 {
 		c.Sign = true
 	}
-	c.Ay = e.Data[2]
+	c.Ay = new(big.Int).SetBytes(e.Data[2][:])
 	return c
 }
 
 // Entry serializes the claim into an Entry.
-func (c *ClaimAuthorizeKSign) Entry() *merkletree.Entry {
+func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	sign := []byte{0}
@@ -238,13 +243,13 @@ func (c *ClaimAuthorizeKSign) Entry() *merkletree.Entry {
 		sign = []byte{1}
 	}
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, sign)
-	e.Data[2] = c.Ay
+	copy(e.Data[2][:], c.Ay.Bytes())
 	return e
 }
 
 // Type returns the ClaimType of the claim.
-func (c *ClaimAuthorizeKSign) Type() ClaimType {
-	return *ClaimTypeAuthorizeKSign
+func (c *ClaimAuthorizeKSignBabyJub) Type() ClaimType {
+	return *ClaimTypeAuthorizeKSignBabyJub
 }
 
 // ClaimAuthorizeKSignSecp256k1 is a claim to autorize a public key for signing.
@@ -605,8 +610,8 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	case *ClaimTypeAssignName:
 		c := NewClaimAssignNameFromEntry(e)
 		return c, nil
-	case *ClaimTypeAuthorizeKSign:
-		c := NewClaimAuthorizeKSignFromEntry(e)
+	case *ClaimTypeAuthorizeKSignBabyJub:
+		c := NewClaimAuthorizeKSignBabyJubFromEntry(e)
 		return c, nil
 	case *ClaimTypeSetRootKey:
 		c := NewClaimSetRootKeyFromEntry(e)

@@ -175,11 +175,20 @@ func (p *Point) InSubGroup() bool {
 	return (res.X.Cmp(Zero) == 0) && (res.Y.Cmp(One) == 0)
 }
 
+// PointCoordSign returns the sign of the curve point coordinate.  It returns
+// false if the sign is positive and false if the sign is negative.
+func PointCoordSign(c *big.Int) bool {
+	if c.Cmp(new(big.Int).Rsh(Q, 1)) == 1 {
+		return true
+	}
+	return false
+}
+
 // Compress the point into a 32 byte array that contains the y coordinate in
 // little endian and the sign of the x coordinate.
 func (p *Point) Compress() [32]byte {
 	leBuf := BigIntLEBytes(p.Y)
-	if p.X.Cmp(new(big.Int).Rsh(Q, 1)) == 1 {
+	if PointCoordSign(p.X) {
 		leBuf[31] = leBuf[31] | 0x80
 	}
 	pc := [32]byte{}
