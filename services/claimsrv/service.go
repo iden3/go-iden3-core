@@ -19,10 +19,6 @@ var (
 
 type Service interface {
 	CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
-	AddClaimAuthorizeKSign(idAddr core.ID, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
-	AddClaimAuthorizeKSignFirst(idAddr core.ID, claimAuthorizeKSign core.ClaimAuthorizeKSign) error
-	// TODO
-	//AddClaimAuthorizeKSignSecp256k1(idAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error
 	AddClaimAuthorizeKSignSecp256k1First(idAddr core.ID,
 		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
 	AddUserIdClaim(idAddr core.ID, claimValueMsg ClaimValueMsg) error
@@ -113,97 +109,6 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 	cs.rootsrv.SetRoot(*cs.mt.RootKey())
 
 	return claimSetRootKey, nil
-}
-
-// AddClaimAuthorizeKSign adds ClaimAuthorizeKSign into the Id's merkletree, and adds the Id's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddClaimAuthorizeKSign(idAddr core.ID, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
-
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
-
-	// open the MerkleTree of the user
-	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
-	if err != nil {
-		return err
-	}
-
-	// verify that the KSign is authorized
-	if !CheckKSignInIddb(userMT, &claimAuthorizeKSignMsg.KSignPk.PublicKey) {
-		return errors.New("can not verify the KSign")
-	}
-
-	// verify signature of the ClaimAuthorizeKSign
-	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(claimAuthorizeKSignMsg.KSignPk.PublicKey),
-		claimAuthorizeKSignMsg.Signature, claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry().Bytes()) {
-		return errors.New("signature can not be verified")
-	}
-
-	// add ClaimAuthorizeKSign into the User's Id Merkle Tree
-	err = userMT.Add(claimAuthorizeKSignMsg.ClaimAuthorizeKSign.Entry())
-	if err != nil {
-		return err
-	}
-
-	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
-
-	// get next version of the claim
-	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
-	if err != nil {
-		return err
-	}
-	claimSetRootKey.Version = version
-
-	// add User's Id Merkle Root into the Relay's Merkle Tree
-	err = cs.mt.Add(claimSetRootKey.Entry())
-	if err != nil {
-		return err
-	}
-
-	// update Relay's Root in the Smart Contract
-	cs.rootsrv.SetRoot(*cs.mt.RootKey())
-
-	return nil
-}
-
-// AddClaimAuthorizeKSign adds ClaimAuthorizeKSign into the Id's merkletree, and adds the Id's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddClaimAuthorizeKSignFirst(idAddr core.ID, claimAuthorizeKSign core.ClaimAuthorizeKSign) error {
-
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
-
-	// open the MerkleTree of the user
-	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
-	if err != nil {
-		return err
-	}
-
-	// add ClaimAuthorizeKSign into the User's Id Merkle Tree
-	err = userMT.Add(claimAuthorizeKSign.Entry())
-	if err != nil {
-		return err
-	}
-
-	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
-
-	// get next version of the claim
-	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
-	if err != nil {
-		return err
-	}
-	claimSetRootKey.Version = version
-
-	// add User's Id Merkle Root into the Relay's Merkle Tree
-	err = cs.mt.Add(claimSetRootKey.Entry())
-	if err != nil {
-		return err
-	}
-
-	// update Relay's Root in the Smart Contract
-	cs.rootsrv.SetRoot(*cs.mt.RootKey())
-
-	return nil
 }
 
 // TODO
