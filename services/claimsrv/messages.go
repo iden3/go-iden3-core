@@ -28,13 +28,6 @@ type ClaimAssignNameMsg struct {
 	Signature       *utils.SignatureEthMsg `binding:"required"`
 }
 
-// ClaimAuthorizeKSignMsg contains a core.AuthorizeKSignClaim with its signature in Hex
-type ClaimAuthorizeKSignMsg struct {
-	ClaimAuthorizeKSign core.ClaimAuthorizeKSign `binding:"required"`
-	Signature           *utils.SignatureEthMsg   `binding:"required"`
-	KSignPk             *utils.PublicKey         `binding:"required"`
-}
-
 // ClaimAuthorizeKSignSecp256k1Msg contains a core.ClaimAuthorizeKSignP256 with its signature in Hex
 type ClaimAuthorizeKSignSecp256k1Msg struct {
 	ClaimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1 `binding:"required"`
