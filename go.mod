@@ -6,6 +6,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190219163901-728bce664cf5 // indirect
 	github.com/arnaucube/go-snark v0.0.0-20190101215735-a7454213a0f2
 	github.com/btcsuite/btcutil v0.0.0-20190207003914-4c204d697803
+	github.com/dchest/blake512 v1.0.0
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.8.22-0.20190513125017-07d2d83c315a
 	github.com/fatih/color v1.7.0
@@ -37,7 +38,7 @@ require (
 	github.com/ugorji/go v1.1.2-0.20180831062425-e253f1f20942 // indirect
 	github.com/urfave/cli v1.20.0
 	github.com/whyrusleeping/tar-utils v0.0.0-20180509141711-8c6c8ba81d5c // indirect
-	golang.org/x/crypto v0.0.0-20190228050851-31a38585487a
+	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 	gopkg.in/dgrijalva/jwt-go.v3 v3.2.0 // indirect
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )
