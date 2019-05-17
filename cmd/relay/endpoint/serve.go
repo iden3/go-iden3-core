@@ -26,7 +26,7 @@ func serveServiceApi() *http.Server {
 
 	serviceapi.GET("/claims/:hi/proof", handleGetClaimProofByHi) // Get relay claim proof
 
-	serviceapi.POST("/id", handleCreateIdGenesis)
+	serviceapi.POST("/ids", handleCreateIdGenesis)
 	serviceapi.POST("/counterfactual", handleCreateCounterfactual)
 	serviceapi.GET("/ids/:idaddr", handleGetCounterfactual)
 	serviceapi.POST("/ids/:idaddr/deploy", handleDeployCounterfactual)

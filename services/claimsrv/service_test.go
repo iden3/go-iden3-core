@@ -2,6 +2,7 @@ package claimsrv
 
 import (
 	"crypto/ecdsa"
+	// "encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -109,7 +110,7 @@ func initializeEnvironment(t *testing.T) {
 		t.Error(err)
 	}
 
-	idAddr, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	idAddr, err := core.IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
 	assert.Nil(t, err)
 	service = New(idAddr, mt, &RootServiceMock{}, &SignServiceMock{})
 
@@ -219,7 +220,7 @@ func TestGetClaimProof(t *testing.T) {
 	claimBasic := core.NewClaimBasic(indexSlot, dataSlot)
 
 	// KSign Claim
-	sk, err := crypto.HexToECDSA("7517685f1693593d3263460200ed903370c2318e8ba4b9bb5727acae55c32b3d")
+	sk, err := crypto.HexToECDSA("0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075dc1fcb4")
 	if err != nil {
 		panic(err)
 	}
@@ -292,7 +293,7 @@ func TestGetClaimProof(t *testing.T) {
 	// ClaimAssignName
 	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	// assert.Nil(t, err)
-	claimAssignName := core.NewClaimAssignName("testName@iden3.io", idAddr)
+	claimAssignName := core.NewClaimAssignName("testName@iden3.eth", idAddr)
 	// add assignNameClaim in User ID Merkle Tree
 	err = mt.Add(claimAssignName.Entry())
 	assert.Nil(t, err)
