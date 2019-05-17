@@ -3,7 +3,7 @@ package genericserver
 import (
 	"strings"
 
-	common3 "github.com/iden3/go-iden3/common"
+	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
@@ -69,7 +69,8 @@ func MustRead(c *cli.Context) error {
 	if err := viper.Unmarshal(&C); err != nil {
 		return err
 	}
-	if err := common3.HexDecodeInto(C.IdAddr[:], []byte(C.IdAddrRaw)); err != nil {
+	var err error
+	if C.IdAddr, err = core.IDFromString(C.IdAddrRaw); err != nil {
 		return err
 	}
 	return nil
