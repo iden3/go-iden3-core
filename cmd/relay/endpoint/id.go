@@ -3,7 +3,7 @@ package endpoint
 import (
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/core"
@@ -11,10 +11,10 @@ import (
 )
 
 type handleIdGenesis struct {
-	KOp   *utils.PublicKey
-	KRec  *utils.PublicKey
-	KRev  *utils.PublicKey
-	Relay common.Address
+	KOp  *utils.PublicKey `json:"operationalPk" binding:"required"`
+	KRec *utils.PublicKey `json:"recoveryPk" binding:"required"`
+	KRev *utils.PublicKey `json:"revokePk" binding:"required"`
+	// Relay common.Address   `json:"relayAddr" binding:"required"`
 }
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
