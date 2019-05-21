@@ -199,9 +199,9 @@ func (p *Point) Compress() [32]byte {
 // Decompress a compressed Point into p, and also returns the decompressed
 // Point.  Returns error if the compressed Point is invalid.
 func (p *Point) Decompress(leBuf [32]byte) (*Point, error) {
-	sign := One
+	sign := false
 	if (leBuf[31] & 0x80) != 0x00 {
-		sign = MinusOne
+		sign = true
 		leBuf[31] = leBuf[31] & 0x7F
 	}
 	SetBigIntFromLEBytes(p.Y, leBuf[:])
@@ -225,7 +225,9 @@ func (p *Point) Decompress(leBuf [32]byte) (*Point, error) {
 	p.X.Mul(xa, xb) // xa / xb
 	p.X.Mod(p.X, Q)
 	p.X.ModSqrt(p.X, Q)
-	p.X.Mul(p.X, sign)
+	if (sign && !PointCoordSign(p.X)) || (!sign && PointCoordSign(p.X)) {
+		p.X.Mul(p.X, MinusOne)
+	}
 	p.X.Mod(p.X, Q)
 
 	return p, nil

@@ -13,6 +13,7 @@ require (
 	github.com/gin-contrib/cors v0.0.0-20190226021855-50921afdc5c1
 	github.com/gin-gonic/gin v1.3.0
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/gofrs/flock v0.7.1
 	github.com/ipfs/go-ipfs-api v0.0.0-20190227013953-fc4b441cfe34
 	github.com/ipfs/go-ipfs-files v0.0.0-20190211184658-b9ab59872849 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
