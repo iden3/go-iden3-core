@@ -220,3 +220,13 @@ func TestCompressDecompress2(t *testing.T) {
 	assert.Equal(t, p.X.String(), p2.X.String())
 	assert.Equal(t, p.Y.String(), p2.Y.String())
 }
+
+func TestCompressDecompressRnd(t *testing.T) {
+	for i := 0; i < 64; i++ {
+		p1 := NewPoint().Mul(big.NewInt(int64(i)), B8)
+		buf := p1.Compress()
+		p2, err := NewPoint().Decompress(buf)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, p1, p2)
+	}
+}
