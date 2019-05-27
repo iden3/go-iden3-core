@@ -1,6 +1,8 @@
 package genericserver
 
 import (
+	"encoding/hex"
+	"fmt"
 	"strings"
 
 	// common3 "github.com/iden3/go-iden3/common"
@@ -26,6 +28,12 @@ type Config struct {
 		Path     string
 		Address  string
 		Password string
+	}
+	KeyStoreBaby struct {
+		Path      string
+		PubKeyRaw string   `mapstructure:"pubkey"`
+		PubKey    [32]byte `mapstructure:"-"`
+		Password  string
 	}
 	IdAddrRaw string  `mapstructure:"idaddr"`
 	IdAddr    core.ID `mapstructure:"-"`
@@ -72,6 +80,11 @@ func MustRead(c *cli.Context) error {
 	var err error
 	if C.IdAddr, err = core.IDFromString(C.IdAddrRaw); err != nil {
 		return err
+	}
+	if n, err := hex.Decode(C.KeyStoreBaby.PubKey[:], []byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
+		return err
+	} else if n != 32 {
+		return fmt.Errorf("Public key must be 32 bytes")
 	}
 	return nil
 }

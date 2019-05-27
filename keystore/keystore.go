@@ -235,7 +235,9 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		return nil, err
 	}
 	encryptedKeysJSON, err := storage.Read()
-	if err != nil {
+	if os.IsNotExist(err) {
+		encryptedKeysJSON = []byte{}
+	} else if err != nil {
 		storage.Unlock()
 		return nil, err
 	}
@@ -302,6 +304,13 @@ func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*[32]byte, error
 		return nil, err
 	}
 	return &pubCompressed, nil
+}
+
+func (ks *KeyStore) ExportKey(pk *[32]byte, pass []byte) (*babyjub.PrivKey, error) {
+	if err := ks.UnlockKey(pk, pass); err != nil {
+		return nil, err
+	}
+	return ks.cache[hex32(*pk)], nil
 }
 
 // UnlockKey decrypts the key corresponding to the public key pk and loads it
