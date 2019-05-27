@@ -27,9 +27,9 @@ func New(namesFilePath string) (*Service, error) {
 }
 
 func (ns *Service) Resolve(name string) (*core.ID, error) {
-	idAddr, ok := ns.Names[name]
+	id, ok := ns.Names[name]
 	if !ok {
 		return nil, fmt.Errorf("Name %v not found in the internal DB", name)
 	}
-	return &idAddr, nil
+	return &id, nil
 }

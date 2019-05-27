@@ -31,8 +31,8 @@ func (pcp *ProofClaimPartial) String() string {
 	fmt.Fprintf(buf, "mtp0: %v\n", pcp.Mtp1)
 	fmt.Fprintf(buf, "root: %v\n", pcp.Root)
 	if pcp.Aux != nil {
-		fmt.Fprintf(buf, "aux: Version:%v Era:%v IdAddr:%v\n", pcp.Aux.Version, pcp.Aux.Era,
-			common3.HexEncode(pcp.Aux.IdAddr[:]))
+		fmt.Fprintf(buf, "aux: Version:%v Era:%v Id:%v\n", pcp.Aux.Version, pcp.Aux.Era,
+			common3.HexEncode(pcp.Aux.Id[:]))
 	}
 	return buf.String()
 }
@@ -42,7 +42,7 @@ func (pcp *ProofClaimPartial) String() string {
 type SetRootAux struct {
 	Version uint32 `json:"version" binding:"required"`
 	Era     uint32 `json:"era" binding:"required"`
-	IdAddr  ID     `json:"idAddr" binding:"required"`
+	Id      ID     `json:"id" binding:"required"`
 }
 
 // ProofClaim is a complete proof of a claim that includes all the proofs of
@@ -129,7 +129,7 @@ func VerifyProofClaim(relayAddr common.Address, pc *ProofClaim) (bool, error) {
 		}
 
 		// Create the set root key claim for the next level
-		claim := NewClaimSetRootKey(proof.Aux.IdAddr, *rootKey)
+		claim := NewClaimSetRootKey(proof.Aux.Id, *rootKey)
 		claim.Version = proof.Aux.Version
 		claim.Era = proof.Aux.Era
 		leaf = claim.Entry()
@@ -159,7 +159,7 @@ func GetNonRevocationMTProof(mt *merkletree.MerkleTree, leafData *merkletree.Dat
 	return proof, nil
 }
 
-// GetClaimProofByHi given a Hash(index) (Hi) and an idAddr, returns the Claim
+// GetClaimProofByHi given a Hash(index) (Hi) and an id, returns the Claim
 // in that Hi position inside the User merkletree, it's proof of existence and
 // of non-revocation, and the proof of existence and of non-revocation for the
 // set root claim in the relay tree, all in the form of a ProofClaim.  The

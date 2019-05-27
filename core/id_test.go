@@ -132,11 +132,11 @@ func TestCalculateIdGenesis(t *testing.T) {
 	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
 	// assert.Nil(t, err)
 
-	idAddr, _, err := CalculateIdGenesis(kopPub)
+	id, _, err := CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
-		fmt.Println("idAddr", idAddr)
-		fmt.Println("idAddr (hex)", idAddr.String())
+		fmt.Println("id", id)
+		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", idAddr.String())
+	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", id.String())
 }

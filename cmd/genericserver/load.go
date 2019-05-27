@@ -181,12 +181,12 @@ func LoadCounterfactualService(client *eth.Web3Client, claimservice claimsrv.Ser
 }
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *ethkeystore.KeyStore, acc accounts.Account) claimsrv.Service {
-	log.WithField("idAddr", C.IdAddrRaw).Info("Running claim service")
+	log.WithField("id", C.IdRaw).Info("Running claim service")
 	signer, err := signsrv.New(ks, acc)
 	if err != nil {
 		panic(err)
 	}
-	return claimsrv.New(C.IdAddr, mt, rootservice, signer)
+	return claimsrv.New(C.Id, mt, rootservice, signer)
 }
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {
@@ -212,5 +212,5 @@ func LoadSignedPacketSigner(ks *ethkeystore.KeyStore, acc accounts.Account, clai
 	if err != nil {
 		panic(err)
 	}
-	return signedpacketsrv.NewSignedPacketSigner(signer, *proofKSign, C.IdAddr)
+	return signedpacketsrv.NewSignedPacketSigner(signer, *proofKSign, C.Id)
 }

@@ -17,13 +17,13 @@ func handleInfo(c *gin.Context) {
 
 // TODO: Redo
 //func handleSave(c *gin.Context) {
-//	idaddrhex := c.Param("idaddr")
-//	idaddr := common.HexToAddress(idaddrhex)
+//	idHex := c.Param("id")
+//	id := common.HexToAddress(idHex)
 //
 //	var saveBackupMsg backupsrv.BackupData
 //	c.BindJSON(&saveBackupMsg)
 //
-//	version, err := backupservice.Save(idaddr, saveBackupMsg)
+//	version, err := backupservice.Save(id, saveBackupMsg)
 //	if err != nil {
 //		fail(c, "error on SaveBackup", err)
 //		return
@@ -36,14 +36,14 @@ func handleInfo(c *gin.Context) {
 //}
 
 func handleRecover(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idAddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		fail(c, "error on idAddr", err)
+		fail(c, "error on id", err)
 		return
 	}
 
-	data, err := backupservice.RecoverAll(idAddr) // + proofs for authentication
+	data, err := backupservice.RecoverAll(id) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on RecoverAll", err)
 		return
@@ -54,10 +54,10 @@ func handleRecover(c *gin.Context) {
 }
 
 func handleRecoverSinceVersion(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		fail(c, "error on idAddr", err)
+		fail(c, "error on id", err)
 		return
 	}
 	versionstr := c.Param("version")
@@ -67,7 +67,7 @@ func handleRecoverSinceVersion(c *gin.Context) {
 		return
 	}
 
-	data, err := backupservice.RecoverSinceVersion(idaddr, version) // + proofs for authentication
+	data, err := backupservice.RecoverSinceVersion(id, version) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on RecoverSinceVersion", err)
 		return
@@ -79,15 +79,15 @@ func handleRecoverSinceVersion(c *gin.Context) {
 }
 
 func handleRecoverByType(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		fail(c, "error on idAddr", err)
+		fail(c, "error on id", err)
 		return
 	}
 	dataType := c.Param("type")
 
-	data, err := backupservice.RecoverByType(idaddr, dataType) // + proofs for authentication
+	data, err := backupservice.RecoverByType(id, dataType) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on RecoverByType", err)
 		return
@@ -99,10 +99,10 @@ func handleRecoverByType(c *gin.Context) {
 }
 
 func handleRecoverSinceVersionByType(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		fail(c, "error on idAddr", err)
+		fail(c, "error on id", err)
 		return
 	}
 	versionstr := c.Param("version")
@@ -113,7 +113,7 @@ func handleRecoverSinceVersionByType(c *gin.Context) {
 	}
 	dataType := c.Param("type")
 
-	data, err := backupservice.RecoverSinceVersionByType(idaddr, version, dataType) // + proofs for authentication
+	data, err := backupservice.RecoverSinceVersionByType(id, version, dataType) // + proofs for authentication
 	if err != nil {
 		fail(c, "error on RecoverSinceVersionByType", err)
 		return

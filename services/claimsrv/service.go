@@ -18,29 +18,29 @@ var (
 )
 
 type Service interface {
-	CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
-	AddClaimAuthorizeKSignSecp256k1First(idAddr core.ID,
+	CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error)
+	AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
-	AddUserIdClaim(idAddr core.ID, claimValueMsg ClaimValueMsg) error
+	AddUserIdClaim(id core.ID, claimValueMsg ClaimValueMsg) error
 	AddClaim(claim merkletree.Entrier) error
-	GetIdRoot(idAddr core.ID) (merkletree.Hash, []byte, error)
-	GetClaimProofUserByHi(idAddr core.ID, hi *merkletree.Hash) (*core.ProofClaim, error)
-	GetClaimProofUserByHiOld(idAddr core.ID, hi merkletree.Hash) (*ProofClaimUser, error)
+	GetIdRoot(id core.ID) (merkletree.Hash, []byte, error)
+	GetClaimProofUserByHi(id core.ID, hi *merkletree.Hash) (*core.ProofClaim, error)
+	GetClaimProofUserByHiOld(id core.ID, hi merkletree.Hash) (*ProofClaimUser, error)
 	GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim, error)
 	MT() *merkletree.MerkleTree
 	RootSrv() rootsrv.Service
 }
 
 type ServiceImpl struct {
-	idAddr  core.ID
+	id      core.ID
 	mt      *merkletree.MerkleTree
 	rootsrv rootsrv.Service
 	signer  signsrv.Service
 }
 
-func New(idAddr core.ID, mt *merkletree.MerkleTree, rootsrv rootsrv.Service,
+func New(id core.ID, mt *merkletree.MerkleTree, rootsrv rootsrv.Service,
 	signer signsrv.Service) *ServiceImpl {
-	return &ServiceImpl{idAddr, mt, rootsrv, signer}
+	return &ServiceImpl{id, mt, rootsrv, signer}
 }
 
 // MT returns the merkle tree.
@@ -54,9 +54,9 @@ func (cs *ServiceImpl) RootSrv() rootsrv.Service {
 }
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
-func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idaddr.Bytes())
+func (cs *ServiceImpl) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
+	// get the user's id storage, using the user id prefix (the id itself)
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -75,12 +75,12 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 	if !verified {
 		return &core.ClaimSetRootKey{}, errors.New("timestamp too old")
 	}
-	// check signature with idaddr
-	// whee data signed is idaddr+root+timestamp
+	// check signature with id
+	// whee data signed is id+root+timestamp
 	timestampBytes := utils.Uint64ToEthBytes(uint64(timestamp))
-	// signature of idaddr+root+timestamp, only valid if is from last X seconds
+	// signature of id+root+timestamp, only valid if is from last X seconds
 	var msg []byte
-	msg = append(msg, idaddr.Bytes()...)
+	msg = append(msg, id.Bytes()...)
 	msg = append(msg, root.Bytes()...)
 	msg = append(msg, timestampBytes...)
 	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(*kSignPk), signature, msg) {
@@ -89,7 +89,7 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idaddr, root)
+	claimSetRootKey := core.NewClaimSetRootKey(id, root)
 	// entry := claimSetRootKey.Entry()
 	// version, err := GetNextVersion(cs.mt, entry.HIndex())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -113,10 +113,10 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 
 // TODO
 // AddClaimAuthorizeKSignSecp256k1 adds ClaimAuthorizeKSignSecp256k1 into the Id's merkletree, and adds the Id's merkle root into the Relay's merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-//func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1(idAddr common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
+//func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1(id common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
 //
-//	// get the user's id storage, using the user id prefix (the idaddress itself)
-//	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
+//	// get the user's id storage, using the user id prefix (the id itself)
+//	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 //
 //	// open the MerkleTree of the user
 //	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -146,7 +146,7 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 //	}
 //
 //	// create new ClaimSetRootKey
-//	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+//	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 //
 //	// get next version of the claim
 //	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -170,11 +170,11 @@ func (cs *ServiceImpl) CommitNewIdRoot(idaddr core.ID, kSignPk *ecdsa.PublicKey,
 // AddClaimAuthorizeKSignSecp256k1First adds ClaimAuthorizeKSignSecp256k1 into
 // the Id's merkletree, and adds the Id's merkle root into the Relay's
 // merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
-func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(idAddr core.ID,
+func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error {
 
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
+	// get the user's id storage, using the user id prefix (the id itself)
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -189,7 +189,7 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(idAddr core.ID,
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -211,9 +211,9 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(idAddr core.ID,
 }
 
 // AddUserIdClaim adds a claim into the Id's merkle tree, and with the Id's root, creates a new ClaimSetRootKey and adds it to the Relay's merkletree
-func (cs *ServiceImpl) AddUserIdClaim(idAddr core.ID, claimValueMsg ClaimValueMsg) error {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
+func (cs *ServiceImpl) AddUserIdClaim(id core.ID, claimValueMsg ClaimValueMsg) error {
+	// get the user's id storage, using the user id prefix (the id itself)
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -240,7 +240,7 @@ func (cs *ServiceImpl) AddUserIdClaim(idAddr core.ID, claimValueMsg ClaimValueMs
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return err
@@ -270,9 +270,9 @@ func (cs *ServiceImpl) AddClaim(claim merkletree.Entrier) error {
 }
 
 // GetIdRoot returns the root of an Id tree, and the proof of that Root Id tree in the Relay Merkle Tree
-func (cs *ServiceImpl) GetIdRoot(idAddr core.ID) (merkletree.Hash, []byte, error) {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
+func (cs *ServiceImpl) GetIdRoot(id core.ID) (merkletree.Hash, []byte, error) {
+	// get the user's id storage, using the user id prefix (the id itself)
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -281,7 +281,7 @@ func (cs *ServiceImpl) GetIdRoot(idAddr core.ID) (merkletree.Hash, []byte, error
 	}
 
 	// build ClaimSetRootKey of the user id
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
@@ -298,9 +298,9 @@ func (cs *ServiceImpl) GetIdRoot(idAddr core.ID) (merkletree.Hash, []byte, error
 
 // TODO: Remove this
 // GetClaimProofUserByHiOld given a Hash(index) (Hi) and an Id, returns the Claim in that Hi position inside the Id's merkletree, and the ClaimSetRootKey with the Id's root in the Relay's merkletree
-func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr core.ID, hi merkletree.Hash) (*ProofClaimUser, error) {
-	// get the user's id storage, using the user id prefix (the idaddress itself)
-	stoUserId := cs.mt.Storage().WithPrefix(idAddr.Bytes())
+func (cs *ServiceImpl) GetClaimProofUserByHiOld(id core.ID, hi merkletree.Hash) (*ProofClaimUser, error) {
+	// get the user's id storage, using the user id prefix (the id itself)
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -338,7 +338,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr core.ID, hi merkletree.Ha
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return nil, err
@@ -383,14 +383,14 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(idAddr core.ID, hi merkletree.Ha
 	return &proofClaim, nil
 }
 
-// GetClaimProofUserByHi given a Hash(index) (Hi) and an idAddr, returns the Claim
+// GetClaimProofUserByHi given a Hash(index) (Hi) and an id, returns the Claim
 // in that Hi position inside the User merkletree, it's proof of existence and
 // of non-revocation, and the proof of existence and of non-revocation for the
 // set root claim in the relay tree, all in the form of a ProofClaim.
-func (cs *ServiceImpl) GetClaimProofUserByHi(idAddr core.ID,
+func (cs *ServiceImpl) GetClaimProofUserByHi(id core.ID,
 	hi *merkletree.Hash) (*core.ProofClaim, error) {
 	// open the MerkleTree of the user
-	userMT, err := NewMerkleTreeUser(idAddr, cs.mt.Storage(), 140)
+	userMT, err := NewMerkleTreeUser(id, cs.mt.Storage(), 140)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +413,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(idAddr core.ID,
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
 	// TODO in a future iteration: make an efficient implementation of GetNextVersion
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
@@ -435,7 +435,7 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(idAddr core.ID,
 		Aux: &core.SetRootAux{
 			Version: claimSetRootKey.Version,
 			Era:     0, // NOTE: For the login milestone we don't support Era
-			IdAddr:  idAddr,
+			Id:      id,
 		},
 	}
 	proofClaim.Proofs = []core.ProofClaimPartial{proofClaimUserPartial, proofClaim.Proofs[0]}
@@ -462,7 +462,7 @@ func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim,
 	if err != nil {
 		return nil, err
 	}
-	proofClaim.Signer, proofClaim.Signature, proofClaim.Date = cs.idAddr, sig, date
+	proofClaim.Signer, proofClaim.Signature, proofClaim.Date = cs.id, sig, date
 
 	return proofClaim, nil
 }
@@ -528,8 +528,8 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi *merkletree.Hash) (uint32, err
 
 // NewMerkleTreeUser creates a new user merkle tree by using an storage with
 // the user addres prefix.
-func NewMerkleTreeUser(idAddr core.ID, storage db.Storage, levels int) (*merkletree.MerkleTree, error) {
-	stoUserId := storage.WithPrefix(idAddr.Bytes())
+func NewMerkleTreeUser(id core.ID, storage db.Storage, levels int) (*merkletree.MerkleTree, error) {
+	stoUserId := storage.WithPrefix(id.Bytes())
 	if userMT, err := merkletree.NewMerkleTree(stoUserId, levels); err != nil {
 		return nil, err
 	} else {

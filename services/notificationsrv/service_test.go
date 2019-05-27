@@ -39,7 +39,7 @@ const proofKSignJSON = `
       "aux": {
         "version": 0,
         "era": 0,
-        "idAddr": "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+        "id": "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
       }
     },
     {
@@ -85,11 +85,11 @@ const passphrase = "secret"
 
 // const relaySkHex = "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
 
-// const idAddrHex = "0x308eff1357e7b5881c00ae22463b0f69a0d58adb"
-const idAddrB58 = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+// const idHex = "0x308eff1357e7b5881c00ae22463b0f69a0d58adb"
+const idB58 = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
 
-// const sendIdAddrHex = "0xdcde41e52633bcf03c68248b54fc48875acc978f"
-const sendIdAddrB58 = "1pquYVpccuB491VyD3rEwhqJXUiKGJonbdxcWorpz"
+// const sendIdHex = "0xdcde41e52633bcf03c68248b54fc48875acc978f"
+const sendIdB58 = "1pquYVpccuB491VyD3rEwhqJXUiKGJonbdxcWorpz"
 
 // const keySignSkHex = "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
 const keySignSkHex = "0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075dc1fcb4"
@@ -97,8 +97,8 @@ const keySignSkHex = "0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075d
 var proofKSign core.ProofClaim
 var keyStoreDir string
 var keyStore *keystore.KeyStore
-var idAddr core.ID
-var sendIdAddr core.ID
+var id core.ID
+var sendId core.ID
 
 var service *Service
 
@@ -125,18 +125,18 @@ func setup() {
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
 		panic(err)
 	}
-	if idAddr, err = core.IDFromString(idAddrB58); err != nil {
+	if id, err = core.IDFromString(idB58); err != nil {
 		panic(err)
 	}
 
-	if sendIdAddr, err = core.IDFromString(sendIdAddrB58); err != nil {
+	if sendId, err = core.IDFromString(sendIdB58); err != nil {
 		panic(err)
 	}
 	signer, err := signsrv.New(keyStore, account)
 	if err != nil {
 		panic(err)
 	}
-	signedPacketSigner := signedpacketsrv.NewSignedPacketSigner(signer, proofKSign, idAddr)
+	signedPacketSigner := signedpacketsrv.NewSignedPacketSigner(signer, proofKSign, id)
 	service = New(urlNotificationService, signedPacketSigner)
 }
 
@@ -157,10 +157,10 @@ func TestIntNotificationService(t *testing.T) {
 func testSendNotification(t *testing.T) {
 	// Send notification with proofClaim
 	notification := NewMsgProofClaim(&proofKSign)
-	err := service.SendNotification(notification, sendIdAddr)
+	err := service.SendNotification(notification, sendId)
 	assert.Nil(t, err)
 	// Send notification with text
 	notification = NewMsgTxt("notificationText")
-	err = service.SendNotification(notification, sendIdAddr)
+	err = service.SendNotification(notification, sendId)
 	assert.Nil(t, err)
 }

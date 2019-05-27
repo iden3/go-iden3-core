@@ -66,8 +66,8 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 		if jws.Payload.ProofKSign.Proofs[0].Aux == nil {
 			return fmt.Errorf("payload.proofksign.proofs[0].aux is nil")
 		}
-		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.IdAddr {
-			return fmt.Errorf("header.iss doesn't match with idaddr in proofksign set root claim")
+		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.Id {
+			return fmt.Errorf("header.iss doesn't match with id in proofksign set root claim")
 		}
 	}
 
@@ -83,8 +83,8 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 
 	// 7a. Get the operational key from the signer and in case it's a
 	// relay, check if it's trusted.
-	signerIdAddr := jws.Payload.ProofKSign.Signer
-	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
+	signerId := jws.Payload.ProofKSign.Signer
+	signer, err := ss.DiscoverySrv.GetEntity(signerId)
 	if err != nil {
 		return fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
@@ -128,7 +128,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 type IdenAssertResult struct {
 	NonceObj *core.NonceObj
 	EthName  *string
-	IdAddr   core.ID
+	Id       core.ID
 }
 
 // VerifyIdenAssertV01 verifies an IDENASSERTV01 payload of a signed packet.
@@ -155,7 +155,7 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	}
 
 	if form == (*IdenAssertForm)(nil) {
-		return &IdenAssertResult{NonceObj: nonceObj, EthName: nil, IdAddr: jws.Header.Issuer}, nil
+		return &IdenAssertResult{NonceObj: nonceObj, EthName: nil, Id: jws.Header.Issuer}, nil
 	}
 
 	// 4. Verify that jwsHeader.iss and jwsPayload.form.ethName are in jwsPayload.form.proofAssignName.leaf
@@ -170,8 +170,8 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	if core.HashString(form.EthName) != claimAssignName.NameHash {
 		return nil, fmt.Errorf("Assign Name claim name doesn't match with form.ethName")
 	}
-	if jws.Header.Issuer != claimAssignName.IdAddr {
-		return nil, fmt.Errorf("Assign Name claim idAddr doesn't match with header.iss")
+	if jws.Header.Issuer != claimAssignName.Id {
+		return nil, fmt.Errorf("Assign Name claim id doesn't match with header.iss")
 	}
 
 	// 5a. Extract domain from the name
@@ -182,22 +182,22 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 		domain = form.EthName[idx+1 : len(form.EthName)]
 	}
 
-	// 5b. Resolve name to obtain name server idAddr and verify that it matches the signer idAddr
+	// 5b. Resolve name to obtain name server id and verify that it matches the signer id
 	if len(form.ProofAssignName.Proofs) != 1 {
 		return nil, fmt.Errorf("Assign Name claim cannot be delegated to a child entity tree")
 	}
-	nameServerIdAddr, err := ss.nameResolverSrv.Resolve(domain)
+	nameServerId, err := ss.nameResolverSrv.Resolve(domain)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve %v: %v", domain, err)
 	}
-	signerIdAddr := form.ProofAssignName.Signer
-	if *nameServerIdAddr != signerIdAddr {
-		return nil, fmt.Errorf("Resolved idAddr (%v) doesn't match signer idAddr (%v)",
-			common3.HexEncode(nameServerIdAddr[:]), common3.HexEncode(signerIdAddr[:]))
+	signerId := form.ProofAssignName.Signer
+	if *nameServerId != signerId {
+		return nil, fmt.Errorf("Resolved id (%v) doesn't match signer id (%v)",
+			common3.HexEncode(nameServerId[:]), common3.HexEncode(signerId[:]))
 	}
 
 	// 5c. Get the operational key from the signer (name server).
-	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
+	signer, err := ss.DiscoverySrv.GetEntity(signerId)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
@@ -207,7 +207,7 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}
 
-	return &IdenAssertResult{NonceObj: nonceObj, EthName: &form.EthName, IdAddr: jws.Header.Issuer}, nil
+	return &IdenAssertResult{NonceObj: nonceObj, EthName: &form.EthName, Id: jws.Header.Issuer}, nil
 }
 
 // VerifySignedPacketIdenAssert verifies a signed packet and the

@@ -19,25 +19,25 @@ func TestProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	idAddr0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0 := NewClaimSetRootKey(idAddr0, rootKey0)
+	claim0 := NewClaimSetRootKey(id0, rootKey0)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 
-	idAddr1, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
+	id1, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
 	assert.Nil(t, err)
 	rootKey1 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b})
-	claim1 := NewClaimSetRootKey(idAddr1, rootKey1)
+	claim1 := NewClaimSetRootKey(id1, rootKey1)
 	err = mt.Add(claim1.Entry())
 	assert.Nil(t, err)
 
@@ -62,14 +62,14 @@ func TestGetPredicateProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	idAddr0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0 := NewClaimSetRootKey(idAddr0, rootKey0)
+	claim0 := NewClaimSetRootKey(id0, rootKey0)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 	oldRoot := mt.RootKey()
@@ -102,14 +102,14 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	idAddr0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0 := NewClaimSetRootKey(idAddr0, rootKey0)
+	claim0 := NewClaimSetRootKey(id0, rootKey0)
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
 	oldRoot := mt.RootKey()
 	err = mt.Add(claim0.Entry())
@@ -135,14 +135,14 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	idAddr0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0 := NewClaimSetRootKey(idAddr0, rootKey0)
+	claim0 := NewClaimSetRootKey(id0, rootKey0)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 
@@ -150,7 +150,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	claim1 := &ClaimSetRootKey{
 		Version: claim0.Version + 1,
 		Era:     0,
-		IdAddr:  claim0.IdAddr,
+		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
 	err = mt.Add(claim1.Entry())
@@ -159,7 +159,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	claim2 := &ClaimSetRootKey{
 		Version: claim1.Version + 1,
 		Era:     0,
-		IdAddr:  claim0.IdAddr,
+		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
 	err = mt.Add(claim2.Entry())
@@ -172,7 +172,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	claim3 := &ClaimSetRootKey{
 		Version: claim2.Version + 1,
 		Era:     0,
-		IdAddr:  claim0.IdAddr,
+		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
 	err = mt.Add(claim3.Entry())

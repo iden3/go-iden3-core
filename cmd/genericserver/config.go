@@ -35,8 +35,8 @@ type Config struct {
 		PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
 		Password   string
 	}
-	IdAddrRaw string  `mapstructure:"idaddr"`
-	IdAddr    core.ID `mapstructure:"-"`
+	IdRaw     string  `mapstructure:"id"`
+	Id        core.ID `mapstructure:"-"`
 	Contracts struct {
 		RootCommits   ContractInfo
 		Iden3Impl     ContractInfo
@@ -78,7 +78,7 @@ func MustRead(c *cli.Context) error {
 		return err
 	}
 	var err error
-	if C.IdAddr, err = core.IDFromString(C.IdAddrRaw); err != nil {
+	if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
 		return err
 	}
 	if err := C.KeyStoreBaby.PubKey.UnmarshalText([]byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {

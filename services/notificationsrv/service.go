@@ -169,7 +169,7 @@ func NewMsgProofClaim(proofClaim *core.ProofClaim) Notification {
 }
 
 // SendNotification send notification to service
-func (ns *Service) SendNotification(notif Notification, idAddr core.ID) error {
+func (ns *Service) SendNotification(notif Notification, id core.ID) error {
 	signedPacket, err := ns.signedPacketSigner.
 		NewSignMsgV01(0xdeadbeef, notif.Type, notif.Data)
 	if err != nil {
@@ -179,7 +179,7 @@ func (ns *Service) SendNotification(notif Notification, idAddr core.ID) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(fmt.Sprintf("%s/notifications/%s", ns.URL, idAddr.String()),
+	resp, err := http.Post(fmt.Sprintf("%s/notifications/%s", ns.URL, id.String()),
 		"application/json", bytes.NewBuffer(signedPacketJSON))
 	if err != nil {
 		return err

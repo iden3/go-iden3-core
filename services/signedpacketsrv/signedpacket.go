@@ -195,14 +195,14 @@ func (sp *SignedPacket) UnmarshalJSON(bs []byte) error {
 
 type SignedPacketSigner struct {
 	signer     signsrv.Service
-	idAddr     core.ID
+	id         core.ID
 	proofKSign core.ProofClaim
 }
 
 func NewSignedPacketSigner(signer signsrv.Service, proofKSign core.ProofClaim,
-	idAddr core.ID) *SignedPacketSigner {
+	id core.ID) *SignedPacketSigner {
 	return &SignedPacketSigner{
-		idAddr:     idAddr,
+		id:         id,
 		signer:     signer,
 		proofKSign: proofKSign,
 	}
@@ -218,7 +218,7 @@ func (sps *SignedPacketSigner) NewSignPacketV01(expireDelta int64,
 	now := time.Now().Unix()
 	header := SigHeader{
 		Type:         SIGV01,
-		Issuer:       sps.idAddr,
+		Issuer:       sps.id,
 		IssuedAtTime: now,
 		Expiration:   now + expireDelta,
 		Algorithm:    SIGALGV01,

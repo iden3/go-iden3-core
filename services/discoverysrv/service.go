@@ -16,7 +16,7 @@ type Trusted struct {
 }
 
 type Entity struct {
-	IdAddr          core.ID          `json:"-"`
+	Id              core.ID          `json:"-"`
 	Name            string           `json:"name"`
 	OperationalPk   *utils.PublicKey `json:"kOpPub"`
 	OperationalAddr common.Address   `json:"kOpAddr"`
@@ -37,17 +37,17 @@ func New(entititesFilePath string) (*Service, error) {
 	if err = json.NewDecoder(entititesFile).Decode(&service.Entitites); err != nil {
 		return nil, err
 	}
-	for idAddr, identity := range service.Entitites {
-		identity.IdAddr = idAddr
+	for id, identity := range service.Entitites {
+		identity.Id = id
 	}
 
 	return &service, nil
 }
 
-func (ds *Service) GetEntity(idAddr core.ID) (*Entity, error) {
-	id, ok := ds.Entitites[idAddr]
+func (ds *Service) GetEntity(id core.ID) (*Entity, error) {
+	entity, ok := ds.Entitites[id]
 	if !ok {
-		return nil, fmt.Errorf("IdAddr %v not found in the internal DB", common3.HexEncode(idAddr[:]))
+		return nil, fmt.Errorf("Id %v not found in the internal DB", common3.HexEncode(id[:]))
 	}
-	return id, nil
+	return entity, nil
 }

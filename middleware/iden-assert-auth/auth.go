@@ -14,7 +14,7 @@ const identityKey = "id"
 
 // User represents an authenticated identity with an optionally assigned name.
 type User struct {
-	IdAddr  core.ID
+	Id      core.ID
 	EthName *string
 }
 
@@ -28,7 +28,7 @@ func GetUser(c *gin.Context) *User {
 // NewAuthMiddleware creates a JWT middleware struct that contains an endpoint
 // for authenticatin a user through an idenAssert signed packet as well as a
 // gin middleware to validate a JWT session token.  The JWT contains two
-// claims: "idAddr" and "ethName", which are extracted from the idenAssert
+// claims: "id" and "ethName", which are extracted from the idenAssert
 // signed packet.
 func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 	signedPacketVerifier *signedpacketsrv.SignedPacketVerifier) (*jwt.GinJWTMiddleware, error) {
@@ -39,37 +39,32 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 		Timeout:     24 * time.Hour,
 		MaxRefresh:  0,
 		IdentityKey: identityKey,
-		// Add idAddr JWT claim to the token
+		// Add id JWT claim to the token
 		PayloadFunc: func(data interface{}) jwt.MapClaims {
 			if user, ok := data.(*User); ok {
 				return jwt.MapClaims{
-					"idAddr":  user.IdAddr,
+					"id":      user.Id,
 					"ethName": user.EthName,
 				}
 			}
 			return jwt.MapClaims{}
 		},
-		// Generate identity (idAddr) from JWT claims
+		// Generate identity (id) from JWT claims
 		IdentityHandler: func(c *gin.Context) interface{} {
 			claims := jwt.ExtractClaims(c)
 
-			idAddr, err := core.IDFromString(claims["idAddr"].(string))
+			id, err := core.IDFromString(claims["id"].(string))
 			if err != nil {
 				panic(err)
 			}
 
-			// var idAddr common.Address
-			// if err := common3.HexDecodeInto(idAddr[:],
-			//         []byte(claims["idAddr"].(string))); err != nil {
-			//         panic(err)
-			// }
 			var ethName *string
 			switch v := claims["ethName"].(type) {
 			case string:
 				ethName = &v
 			}
 			return &User{
-				IdAddr:  idAddr,
+				Id:      id,
 				EthName: ethName,
 			}
 		},
@@ -83,7 +78,7 @@ func NewAuthMiddleware(domain string, nonceDb *core.NonceDb, key []byte,
 				domain); err != nil {
 				return nil, fmt.Errorf("failed verification of JWS signed packet: %v ", err)
 			} else {
-				return &User{IdAddr: res.IdAddr, EthName: res.EthName}, nil
+				return &User{Id: res.Id, EthName: res.EthName}, nil
 			}
 		},
 		// handler for failed authentication (when Authenticator returns error)

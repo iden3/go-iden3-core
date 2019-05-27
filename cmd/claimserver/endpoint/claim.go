@@ -16,7 +16,7 @@ import (
 
 // IdData struct representing user data that claim server will manage afterwards.
 type IdData struct {
-	IdAddr      core.ID `json:"idAddr"`
+	Id          core.ID `json:"id"`
 	NotifSrvUrl string  `json:"notifSrvUrl"`
 }
 
@@ -57,7 +57,7 @@ func handlePostClaim(c *gin.Context) {
 	objectType := core.ObjectTypeCertificate
 	indexObject := uint16(0)
 	claim := core.NewClaimLinkObjectIdentity(objectType, indexObject,
-		m.IdData.IdAddr, hash[:], auxData[:])
+		m.IdData.Id, hash[:], auxData[:])
 
 	// If necessary store the claim with a version higher than an existing
 	// claim to invalidate the later.
@@ -87,7 +87,7 @@ func handlePostClaim(c *gin.Context) {
 
 	// Send packet.
 	notification := notificationsrv.NewMsgProofClaim(proofClaim)
-	err = service.SendNotification(notification, m.IdData.IdAddr)
+	err = service.SendNotification(notification, m.IdData.Id)
 	if err != nil {
 		genericserver.Fail(c, "error at sending notification", err)
 		return

@@ -20,7 +20,7 @@ type handleIdGenesis struct {
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
 type handlePostIdRes struct {
-	IdAddr     core.ID          `json:"idAddr"`
+	Id         core.ID          `json:"id"`
 	ProofClaim *core.ProofClaim `json:"proofClaim"`
 }
 
@@ -37,11 +37,11 @@ func handleCreateIdGenesis(c *gin.Context) {
 	// krecPub := &idgen.KRec.PublicKey
 	// krevPub := &idgen.KRev.PublicKey
 
-	idAddr, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp)
+	id, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp)
 	if err != nil {
 		genericserver.Fail(c, "failed generating identity address ", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, handlePostIdRes{IdAddr: *idAddr, ProofClaim: proofKOp})
+	c.JSON(http.StatusOK, handlePostIdRes{Id: *id, ProofClaim: proofKOp})
 }

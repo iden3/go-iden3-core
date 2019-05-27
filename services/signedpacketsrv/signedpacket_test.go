@@ -37,7 +37,7 @@ const kSignSkHex = "7517685f1693593d3263460200ed903370c2318e8ba4b9bb5727acae55c3
 
 //const idAddrHex = "0x970e8128ab834e8eac17ab8e3812f010678cf791"
 // const idAddrHex = "0x308eff1357e7b5881c00ae22463b0f69a0d58adb"
-const idAddrHex = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+const idHex = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
 
 // root 0x1d9d41171c4b621ff279e2acb84d8ab45612fef53e37225bdf67e8ad761c3922
 const proofKSignJSON = `
@@ -49,7 +49,7 @@ const proofKSignJSON = `
     "aux": {
       "version": 0,
       "era": 0,
-      "idAddr": "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+      "id": "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
     }
   }, {
     "mtp0": "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -92,7 +92,7 @@ const entititesFileContent = `
 {
   "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z": {
     "name": "iden3-test-relay",
-    "kOpAddr": "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c",
+    "kOp": "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c",
     "kOpPub": "0x036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806bd4d59",
     "trusted": { "relay": true }
   }
@@ -115,9 +115,9 @@ var kSignPk *ecdsa.PublicKey
 
 var proofKSign core.ProofClaim
 
-var relayIdAddr core.ID
+var relayId core.ID
 
-var idAddr core.ID
+var id core.ID
 
 func genPrivateKey() {
 	privateKeyECDSA, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
@@ -164,7 +164,7 @@ func setup() {
 	}
 
 	// common3.HexDecodeInto(idAddr[:], []byte(idAddrHex))
-	idAddr, err = core.IDFromString(idAddrHex)
+	id, err = core.IDFromString(idHex)
 	if err != nil {
 		panic(err)
 	}
@@ -205,7 +205,7 @@ func setup() {
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
 		panic(err)
 	}
-	signedPacketSigner = NewSignedPacketSigner(signSrv, proofKSign, idAddr)
+	signedPacketSigner = NewSignedPacketSigner(signSrv, proofKSign, id)
 }
 
 func teardown() {

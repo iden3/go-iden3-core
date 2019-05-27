@@ -20,12 +20,12 @@ type Service interface {
 
 	// SYNCHRONIZATION SERVICE
 	GetPoWDifficulty() int
-	GetLastVersion(idaddr core.ID) (uint64, error)
+	GetLastVersion(id core.ID) (uint64, error)
 	//Save(idaddr common.Address, saveBackupMsg BackupDataMsg) (uint64, error)
-	RecoverAll(idaddr core.ID) ([]BackupDataMsg, error)
-	RecoverSinceVersion(idaddr core.ID, version uint64) ([]BackupDataMsg, error)
-	RecoverByType(idaddr core.ID, dataType string) ([]BackupDataMsg, error)
-	RecoverSinceVersionByType(idaddr core.ID, version uint64, dataType string) ([]BackupDataMsg, error)
+	RecoverAll(id core.ID) ([]BackupDataMsg, error)
+	RecoverSinceVersion(id core.ID, version uint64) ([]BackupDataMsg, error)
+	RecoverByType(id core.ID, dataType string) ([]BackupDataMsg, error)
+	RecoverSinceVersionByType(id core.ID, version uint64, dataType string) ([]BackupDataMsg, error)
 }
 
 type ServiceImpl struct {
@@ -116,9 +116,9 @@ func (bs *ServiceImpl) GetPoWDifficulty() int {
 	return bs.powDifficulty
 }
 
-func (bs *ServiceImpl) GetLastVersion(idaddr core.ID) (uint64, error) {
+func (bs *ServiceImpl) GetLastVersion(id core.ID) (uint64, error) {
 	var currVer BackupDataMsg
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.String()), "ksign": "currentversion"}).One(&currVer)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idhex": strings.ToLower(id.String()), "ksign": "currentversion"}).One(&currVer)
 	return currVer.Version, err
 }
 
@@ -198,22 +198,22 @@ func (bs *ServiceImpl) GetLastVersion(idaddr core.ID) (uint64, error) {
 //}
 
 // RecoverAll returns all the data packets stored by an idaddr
-func (bs *ServiceImpl) RecoverAll(idaddr core.ID) ([]BackupDataMsg, error) {
+func (bs *ServiceImpl) RecoverAll(id core.ID) ([]BackupDataMsg, error) {
 
 	// TODO auth verifications
 	// check ksignClaim proof (in user identity tree and in the relay tree)
 
 	// get from database
 	var dataBackups []BackupDataMsg
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.String())}).Limit(100).All(&dataBackups)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idhex": strings.ToLower(id.String())}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}
 	return dataBackups, nil
 }
 
-// RecoverSinceVersion returns all the data packets stored by an idaddr since after the version specified in the parameter
-func (bs *ServiceImpl) RecoverSinceVersion(idaddr core.ID, version uint64) ([]BackupDataMsg, error) {
+// RecoverSinceVersion returns all the data packets stored by an id since after the version specified in the parameter
+func (bs *ServiceImpl) RecoverSinceVersion(id core.ID, version uint64) ([]BackupDataMsg, error) {
 	color.Blue("version")
 	fmt.Println(version)
 
@@ -222,37 +222,37 @@ func (bs *ServiceImpl) RecoverSinceVersion(idaddr core.ID, version uint64) ([]Ba
 	// get from database
 	var dataBackups []BackupDataMsg
 	// get data with version greather or equal to 'version'
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.String()), "version": bson.M{"$gt": version}}).Limit(100).All(&dataBackups)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idhex": strings.ToLower(id.String()), "version": bson.M{"$gt": version}}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}
 	return dataBackups, nil
 }
 
-// RecoverByType returns all the data packets stored by an idaddr with the requested type
-func (bs *ServiceImpl) RecoverByType(idaddr core.ID, dataType string) ([]BackupDataMsg, error) {
+// RecoverByType returns all the data packets stored by an id with the requested type
+func (bs *ServiceImpl) RecoverByType(id core.ID, dataType string) ([]BackupDataMsg, error) {
 
 	// TODO auth verifications
 
 	// get from database
 	var dataBackups []BackupDataMsg
 	// get data by type
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.String()), "type": dataType}).Limit(100).All(&dataBackups)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idhex": strings.ToLower(id.String()), "type": dataType}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}
 	return dataBackups, nil
 }
 
-// RecoverSinceVersionByType returns all the data packets stored by an idaddr with the requested type since after the version specified in the parameter
-func (bs *ServiceImpl) RecoverSinceVersionByType(idaddr core.ID, version uint64, dataType string) ([]BackupDataMsg, error) {
+// RecoverSinceVersionByType returns all the data packets stored by an id with the requested type since after the version specified in the parameter
+func (bs *ServiceImpl) RecoverSinceVersionByType(id core.ID, version uint64, dataType string) ([]BackupDataMsg, error) {
 
 	// TODO auth verifications
 
 	// get from database
 	var dataBackups []BackupDataMsg
 	// get data by type
-	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idaddrhex": strings.ToLower(idaddr.String()), "version": bson.M{"$gt": version}, "type": dataType}).Limit(100).All(&dataBackups)
+	err := bs.mongodb.GetCollections()["data"].Find(bson.M{"idhex": strings.ToLower(id.String()), "version": bson.M{"$gt": version}, "type": dataType}).Limit(100).All(&dataBackups)
 	if err != nil {
 		return dataBackups, err
 	}

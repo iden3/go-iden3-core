@@ -25,7 +25,7 @@ var debug = false
 var relaySecKey *ecdsa.PrivateKey
 var relayPubKey *ecdsa.PublicKey
 var relayKOpAddr common.Address
-var relayIdAddr core.ID
+var relayId core.ID
 
 type RootServiceMock struct {
 	mock.Mock
@@ -90,7 +90,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	return mt, err
 }
 func initializeIdService(t *testing.T) *ServiceImpl {
-	relayIdAddr, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	relayId, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	if err != nil {
 		t.Error(err)
 	}
@@ -103,7 +103,7 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	// sto := db.NewMemoryStorage()
 	rootservicemock := &RootServiceMock{}
 	rootservicemock.On("SetRoot", mock.Anything).Return()
-	claimService := claimsrv.New(relayIdAddr, mt, rootservicemock, &SignServiceMock{})
+	claimService := claimsrv.New(relayId, mt, rootservicemock, &SignServiceMock{})
 	idService := New(claimService)
 
 	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
@@ -126,12 +126,12 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 		fmt.Println("kop", kop)
 	}
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kop)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kop)
 	assert.Nil(t, err)
 
-	idAddr2, _, err := core.CalculateIdGenesis(kop)
+	id2, _, err := core.CalculateIdGenesis(kop)
 	assert.Nil(t, err)
-	assert.Equal(t, idAddr, idAddr2)
+	assert.Equal(t, id, id2)
 
 	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
 	assert.Nil(t, err)
@@ -161,17 +161,17 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
 	// assert.Nil(t, err)
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
-		fmt.Println("idAddr", idAddr)
-		fmt.Println("idAddr (hex)", idAddr.String())
+		fmt.Println("id", id)
+		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", idAddr.String())
+	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", id.String())
 
-	idAddr2, _, err := core.CalculateIdGenesis(kopPub)
+	id2, _, err := core.CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
-	assert.Equal(t, idAddr, idAddr2)
+	assert.Equal(t, id, id2)
 
 	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
 	assert.Nil(t, err)
