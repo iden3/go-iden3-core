@@ -32,7 +32,7 @@ func TestSignVerify1(t *testing.T) {
 	}
 	msg := SetBigIntFromLEBytes(new(big.Int), msgBuf)
 
-	pk := k.Pub()
+	pk := k.Public()
 	assert.Equal(t,
 		"2610057752638682202795145288373380503107623443963127956230801721756904484787",
 		pk.X.String())

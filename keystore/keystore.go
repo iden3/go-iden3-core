@@ -118,7 +118,7 @@ func DecryptData(encData *EncryptedData, pass []byte) ([]byte, error) {
 }
 
 // KeysStored is the datastructure of stored keys in the storage.
-type KeysStored map[babyjub.PubKeyComp]EncryptedData
+type KeysStored map[babyjub.PublicKeyComp]EncryptedData
 
 // Storage is an interface for a storage container.
 type Storage interface {
@@ -187,7 +187,7 @@ type KeyStore struct {
 	storage       Storage
 	params        KeyStoreParams
 	encryptedKeys KeysStored
-	cache         map[babyjub.PubKeyComp]*babyjub.PrivKey
+	cache         map[babyjub.PublicKeyComp]*babyjub.PrivKey
 	rw            sync.RWMutex
 }
 
@@ -205,7 +205,7 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 	}
 	var encryptedKeys KeysStored
 	if len(encryptedKeysJSON) == 0 {
-		encryptedKeys = make(map[babyjub.PubKeyComp]EncryptedData)
+		encryptedKeys = make(map[babyjub.PublicKeyComp]EncryptedData)
 	} else {
 		if err := json.Unmarshal(encryptedKeysJSON, &encryptedKeys); err != nil {
 			storage.Unlock()
@@ -216,7 +216,7 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		storage:       storage,
 		params:        params,
 		encryptedKeys: encryptedKeys,
-		cache:         make(map[babyjub.PubKeyComp]*babyjub.PrivKey),
+		cache:         make(map[babyjub.PublicKeyComp]*babyjub.PrivKey),
 	}
 	runtime.SetFinalizer(ks, func(ks *KeyStore) {
 		// When there are no more references to the key store, clear
@@ -231,10 +231,10 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 }
 
 // Keys returns the compressed public keys of the key storage.
-func (ks *KeyStore) Keys() [][32]byte {
+func (ks *KeyStore) Keys() []babyjub.PublicKeyComp {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
-	keys := make([][32]byte, 0, len(ks.encryptedKeys))
+	keys := make([]babyjub.PublicKeyComp, 0, len(ks.encryptedKeys))
 	for pk, _ := range ks.encryptedKeys {
 		keys = append(keys, pk)
 	}
@@ -242,20 +242,20 @@ func (ks *KeyStore) Keys() [][32]byte {
 }
 
 // NewKey creates a new key in the key store encrypted with pass.
-func (ks *KeyStore) NewKey(pass []byte) (*babyjub.PubKeyComp, error) {
+func (ks *KeyStore) NewKey(pass []byte) (*babyjub.PublicKeyComp, error) {
 	sk := babyjub.NewRandPrivKey()
 	return ks.ImportKey(sk, pass)
 }
 
 // ImportKey imports a secret key into the storage and encrypts it with pass.
-func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*babyjub.PubKeyComp, error) {
+func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*babyjub.PublicKeyComp, error) {
 	ks.rw.Lock()
 	defer ks.rw.Unlock()
 	encryptedKey, err := EncryptData(sk[:], pass, ks.params.ScryptN, ks.params.ScryptP)
 	if err != nil {
 		return nil, err
 	}
-	pk := sk.Pub()
+	pk := sk.Public()
 	pubComp := pk.Compress()
 	ks.encryptedKeys[pubComp] = *encryptedKey
 	encryptedKeysJSON, err := json.Marshal(ks.encryptedKeys)
@@ -268,7 +268,7 @@ func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*babyjub.PubKeyC
 	return &pubComp, nil
 }
 
-func (ks *KeyStore) ExportKey(pk *babyjub.PubKeyComp, pass []byte) (*babyjub.PrivKey, error) {
+func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp, pass []byte) (*babyjub.PrivKey, error) {
 	if err := ks.UnlockKey(pk, pass); err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func (ks *KeyStore) ExportKey(pk *babyjub.PubKeyComp, pass []byte) (*babyjub.Pri
 
 // UnlockKey decrypts the key corresponding to the public key pk and loads it
 // into the cache.
-func (ks *KeyStore) UnlockKey(pk *babyjub.PubKeyComp, pass []byte) error {
+func (ks *KeyStore) UnlockKey(pk *babyjub.PublicKeyComp, pass []byte) error {
 	ks.rw.Lock()
 	defer ks.rw.Unlock()
 	encryptedKey, ok := ks.encryptedKeys[*pk]
@@ -296,7 +296,7 @@ func (ks *KeyStore) UnlockKey(pk *babyjub.PubKeyComp, pass []byte) error {
 
 // SignElem uses the key corresponding to the public key pk to sign the field
 // element msg.
-func (ks *KeyStore) SignElem(pk *babyjub.PubKeyComp, msg mimc7.RElem) (*babyjub.SignatureComp, error) {
+func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg mimc7.RElem) (*babyjub.SignatureComp, error) {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
 	sk, ok := ks.cache[*pk]
@@ -328,14 +328,14 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 
 // Sign uses the key corresponding to the public key pk to sign the mimc7 hash
 // of the msg byte slice.
-func (ks *KeyStore) Sign(pk *babyjub.PubKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
+func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
 	h := mimc7HashBytes(msg)
 	return ks.SignElem(pk, h)
 }
 
 // VerifySignatureElem verifies that the signature sigComp of the field element
 // msg was signed with the public key pkComp.
-func VerifySignatureElem(pkComp *babyjub.PubKeyComp, msg mimc7.RElem, sigComp *babyjub.SignatureComp) (bool, error) {
+func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg mimc7.RElem, sigComp *babyjub.SignatureComp) (bool, error) {
 	pkPoint, err := babyjub.NewPoint().Decompress(*pkComp)
 	if err != nil {
 		return false, err
@@ -344,13 +344,13 @@ func VerifySignatureElem(pkComp *babyjub.PubKeyComp, msg mimc7.RElem, sigComp *b
 	if err != nil {
 		return false, err
 	}
-	pk := babyjub.PubKey(*pkPoint)
+	pk := babyjub.PublicKey(*pkPoint)
 	return pk.VerifyMimc7(msg, sig), nil
 }
 
 // VerifySignatureElem verifies that the signature sigComp of the mimc7 hash of
 // the msg byte slice was signed with the public key pkComp.
-func VerifySignature(pkComp *babyjub.PubKeyComp, msg []byte, sigComp *babyjub.SignatureComp) (bool, error) {
+func VerifySignature(pkComp *babyjub.PublicKeyComp, msg []byte, sigComp *babyjub.SignatureComp) (bool, error) {
 	h := mimc7HashBytes(msg)
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

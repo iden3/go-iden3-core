@@ -137,11 +137,11 @@ func CheckChecksum(id ID) bool {
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(kop *babyjub.PubKey) (*ID, error) {
+func CalculateIdGenesis(kop *babyjub.PublicKey) (*ID, []merkletree.Entrier, error) {
 	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// generate the Authorize KSign Claims for the given public Keys
 	// claims := GenerateArrayClaimAuthorizeKSignFromPublicKeys(kop, krec, krev)
@@ -154,7 +154,7 @@ func CalculateIdGenesis(kop *babyjub.PubKey) (*ID, error) {
 	claim0 := NewClaimAuthorizeKSignBabyJub(kop)
 	err = mt.Add(claim0.Entry())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	idGenesis := mt.RootKey()
@@ -162,5 +162,5 @@ func CalculateIdGenesis(kop *babyjub.PubKey) (*ID, error) {
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[:27])
 	id := NewID(TypeBJM7, idGenesisBytes)
-	return &id, nil
+	return &id, []merkletree.Entrier{claim0}, nil
 }

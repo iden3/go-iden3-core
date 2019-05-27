@@ -9,8 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
+	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -119,29 +120,16 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 func TestCreateIdGenesisRandom(t *testing.T) {
 	idsrv := initializeIdService(t)
 
-	kop, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	kopPub := kop.Public().(*ecdsa.PublicKey)
+	kOpSk := babyjub.NewRandPrivKey()
+	kop := kOpSk.Public()
 	if debug {
-		fmt.Println("kop", common3.HexEncode(crypto.CompressPubkey(kopPub)))
-	}
-	krec, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	krecPub := krec.Public().(*ecdsa.PublicKey)
-	if debug {
-		fmt.Println("krec", common3.HexEncode(crypto.CompressPubkey(krecPub)))
-	}
-	krev, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	krevPub := krev.Public().(*ecdsa.PublicKey)
-	if debug {
-		fmt.Println("krev", common3.HexEncode(crypto.CompressPubkey(krevPub)))
+		fmt.Println("kop", kop)
 	}
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub, krecPub, krevPub)
+	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kop)
 	assert.Nil(t, err)
 
-	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
+	idAddr2, _, err := core.CalculateIdGenesis(kop)
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 
@@ -153,34 +141,35 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 func TestCreateIdGenesisHardcoded(t *testing.T) {
 	idsrv := initializeIdService(t)
 
-	kopStr := "0x037e211781efef4687e78be4fb008768acca8101b6f1f7ea099599f02a8813f386"
-	krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
-	krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
+	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
 
-	kopBytes, err := common3.HexDecode(kopStr)
+	var kopComp babyjub.PublicKeyComp
+	err := kopComp.UnmarshalText([]byte(kopStr))
 	assert.Nil(t, err)
-	kopPub, err := crypto.DecompressPubkey(kopBytes[:])
-	assert.Nil(t, err)
-
-	krecBytes, err := common3.HexDecode(krecStr)
-	assert.Nil(t, err)
-	krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
 
-	krevBytes, err := common3.HexDecode(krevStr)
-	assert.Nil(t, err)
-	krevPub, err := crypto.DecompressPubkey(krevBytes[:])
-	assert.Nil(t, err)
+	// krecBytes, err := common3.HexDecode(krecStr)
+	// assert.Nil(t, err)
+	// krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	// assert.Nil(t, err)
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub, krecPub, krevPub)
+	// krevBytes, err := common3.HexDecode(krevStr)
+	// assert.Nil(t, err)
+	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
+	// assert.Nil(t, err)
+
+	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
+	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", idAddr.String())
 
-	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
+	idAddr2, _, err := core.CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	assert.Equal(t, idAddr, idAddr2)
 

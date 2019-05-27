@@ -47,8 +47,8 @@ func (k *PrivKey) Scalar() *PrivKeyScalar {
 }
 
 // Pub returns the public key corresponding to a private key.
-func (k *PrivKey) Pub() *PubKey {
-	return k.Scalar().Pub()
+func (k *PrivKey) Public() *PublicKey {
+	return k.Scalar().Public()
 }
 
 // PrivKeyScalar represents the scalar s output of a private key
@@ -62,9 +62,9 @@ func NewPrivKeyScalar(s *big.Int) *PrivKeyScalar {
 
 // Pub returns the public key corresponding to the scalar value s of a private
 // key.
-func (s *PrivKeyScalar) Pub() *PubKey {
+func (s *PrivKeyScalar) Public() *PublicKey {
 	p := NewPoint().Mul((*big.Int)(s), B8)
-	pk := PubKey(*p)
+	pk := PublicKey(*p)
 	return &pk
 }
 
@@ -73,32 +73,53 @@ func (s *PrivKeyScalar) BigInt() *big.Int {
 	return (*big.Int)(s)
 }
 
-// PubKey represents an EdDSA public key, which is a curve point.
-type PubKey Point
+// PublicKey represents an EdDSA public key, which is a curve point.
+type PublicKey Point
 
-// Point returns the Point corresponding to a PubKey.
-func (p *PubKey) Point() *Point {
+func (pk PublicKey) MarshalText() ([]byte, error) {
+	pkc := pk.Compress()
+	return common3.Hex(pkc[:]).MarshalText()
+}
+
+func (pk PublicKey) String() string {
+	pkc := pk.Compress()
+	return common3.Hex(pkc[:]).String()
+}
+
+func (pk *PublicKey) UnmarshalText(h []byte) error {
+	var pkc PublicKeyComp
+	if err := common3.HexDecodeInto(pkc[:], h); err != nil {
+		return err
+	}
+	if _, err := pkc.Decompress(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Point returns the Point corresponding to a PublicKey.
+func (p *PublicKey) Point() *Point {
 	return (*Point)(p)
 }
 
-// PubKeyComp represents a compressed EdDSA Public key; it's a compressed curve
+// PublicKeyComp represents a compressed EdDSA Public key; it's a compressed curve
 // point.
-type PubKeyComp [32]byte
+type PublicKeyComp [32]byte
 
-func (buf PubKeyComp) MarshalText() ([]byte, error)  { return common3.Hex(buf[:]).MarshalText() }
-func (buf PubKeyComp) String() string                { return common3.Hex(buf[:]).String() }
-func (buf *PubKeyComp) UnmarshalText(h []byte) error { return common3.HexDecodeInto(buf[:], h) }
+func (buf PublicKeyComp) MarshalText() ([]byte, error)  { return common3.Hex(buf[:]).MarshalText() }
+func (buf PublicKeyComp) String() string                { return common3.Hex(buf[:]).String() }
+func (buf *PublicKeyComp) UnmarshalText(h []byte) error { return common3.HexDecodeInto(buf[:], h) }
 
-func (p *PubKey) Compress() PubKeyComp {
-	return PubKeyComp((*Point)(p).Compress())
+func (p *PublicKey) Compress() PublicKeyComp {
+	return PublicKeyComp((*Point)(p).Compress())
 }
 
-func (p *PubKeyComp) Decompress() (*PubKey, error) {
+func (p *PublicKeyComp) Decompress() (*PublicKey, error) {
 	point, err := NewPoint().Decompress(*p)
 	if err != nil {
 		return nil, err
 	}
-	pk := PubKey(*point)
+	pk := PublicKey(*point)
 	return &pk, nil
 }
 
@@ -139,6 +160,12 @@ func (s *Signature) Decompress(buf [64]byte) (*Signature, error) {
 	return s, nil
 }
 
+// Decompress a compressed signature.  Returns error if the Point decompression
+// fails.
+func (s *SignatureComp) Decompress() (*Signature, error) {
+	return new(Signature).Decompress(*s)
+}
+
 // SignMimc7 signs a message encoded as a big.Int in Zq using blake-512 hash
 // for buffer hashing and mimc7 for big.Int hashing.
 func (k *PrivKey) SignMimc7(msg *big.Int) *Signature {
@@ -150,7 +177,7 @@ func (k *PrivKey) SignMimc7(msg *big.Int) *Signature {
 	r := SetBigIntFromLEBytes(new(big.Int), rBuf) // r = H(H_{32..63}(k), msg)
 	r.Mod(r, SubOrder)
 	R8 := NewPoint().Mul(r, B8) // R8 = r * 8 * B
-	A := k.Pub().Point()
+	A := k.Public().Point()
 	hmInput, err := mimc7.BigIntsToRElems([]*big.Int{R8.X, R8.Y, A.X, A.Y, msg})
 	if err != nil {
 		panic(err)
@@ -166,7 +193,7 @@ func (k *PrivKey) SignMimc7(msg *big.Int) *Signature {
 
 // VerifyMimc7 verifies the signature of a message encoded as a big.Int in Zq
 // using blake-512 hash for buffer hashing and mimc7 for big.Int hashing.
-func (p *PubKey) VerifyMimc7(msg *big.Int, sig *Signature) bool {
+func (p *PublicKey) VerifyMimc7(msg *big.Int, sig *Signature) bool {
 	hmInput, err := mimc7.BigIntsToRElems([]*big.Int{sig.R8.X, sig.R8.Y, p.X, p.Y, msg})
 	if err != nil {
 		panic(err)

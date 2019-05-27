@@ -1,15 +1,16 @@
 package identitysrv
 
 import (
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 )
 
 type Service interface {
-	CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.ID, *core.ProofClaim, error)
+	CreateIdGenesis(kop *babyjub.PublicKey) (*core.ID, *core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -25,9 +26,9 @@ func New(cs claimsrv.Service) *ServiceImpl {
 // CreateIdGenesis initializes the idAddress MerkleTree with the given the kop, krec,
 // krev public keys. Where the idAddress is calculated a MerkleTree containing
 // that initial data, calculated in the function CalculateIdGenesis()
-func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.ID, *core.ProofClaim, error) {
+func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey) (*core.ID, *core.ProofClaim, error) {
 
-	idAddr, err := core.CalculateIdGenesis(kop, krec, krev)
+	idAddr, claims, err := core.CalculateIdGenesis(kop)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -38,9 +39,6 @@ func (is *ServiceImpl) CreateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*core.
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// generate the Authorize KSign Claims for the given public Keys
-	claims := core.GenerateArrayClaimAuthorizeKSignFromPublicKeys(kop, krec, krev)
 
 	for _, claim := range claims {
 		err = userMT.Add(claim.Entry())

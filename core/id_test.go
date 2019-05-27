@@ -116,7 +116,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
 	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
 
-	var kopComp babyjub.PubKeyComp
+	var kopComp babyjub.PublicKeyComp
 	err := kopComp.UnmarshalText([]byte(kopStr))
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
@@ -132,7 +132,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
 	// assert.Nil(t, err)
 
-	idAddr, err := CalculateIdGenesis(kopPub)
+	idAddr, _, err := CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("idAddr", idAddr)

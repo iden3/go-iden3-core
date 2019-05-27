@@ -1,12 +1,11 @@
 package genericserver
 
 import (
-	"encoding/hex"
-	"fmt"
 	"strings"
 
 	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
@@ -30,10 +29,11 @@ type Config struct {
 		Password string
 	}
 	KeyStoreBaby struct {
-		Path      string
-		PubKeyRaw string   `mapstructure:"pubkey"`
-		PubKey    [32]byte `mapstructure:"-"`
-		Password  string
+		Path       string
+		PubKeyRaw  string                `mapstructure:"pubkey"`
+		PubKey     babyjub.PublicKey     `mapstructure:"-"`
+		PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
+		Password   string
 	}
 	IdAddrRaw string  `mapstructure:"idaddr"`
 	IdAddr    core.ID `mapstructure:"-"`
@@ -81,10 +81,9 @@ func MustRead(c *cli.Context) error {
 	if C.IdAddr, err = core.IDFromString(C.IdAddrRaw); err != nil {
 		return err
 	}
-	if n, err := hex.Decode(C.KeyStoreBaby.PubKey[:], []byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
+	if err := C.KeyStoreBaby.PubKey.UnmarshalText([]byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
 		return err
-	} else if n != 32 {
-		return fmt.Errorf("Public key must be 32 bytes")
 	}
+	C.KeyStoreBaby.PubKeyComp = C.KeyStoreBaby.PubKey.Compress()
 	return nil
 }

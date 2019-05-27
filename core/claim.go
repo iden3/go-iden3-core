@@ -212,7 +212,7 @@ type ClaimAuthorizeKSignBabyJub struct {
 
 // NewClaimAuthorizeKSignBabyJub returns a ClaimAuthorizeKSignBabyJub with the
 // given elliptic public key parameters.
-func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PubKey) *ClaimAuthorizeKSignBabyJub {
+func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PublicKey) *ClaimAuthorizeKSignBabyJub {
 	return &ClaimAuthorizeKSignBabyJub{
 		Version: 0,
 		Sign:    babyjub.PointCoordSign(pk.X),

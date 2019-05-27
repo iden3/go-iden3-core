@@ -9,6 +9,7 @@ import (
 	ethkeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
 	babykeystore "github.com/iden3/go-iden3/keystore"
@@ -83,13 +84,13 @@ func LoadKeyStore() (*ethkeystore.KeyStore, accounts.Account) {
 	return ks, acc
 }
 
-func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *[32]byte) {
+func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *babyjub.PublicKeyComp) {
 	storage := babykeystore.NewFileStorage(C.KeyStoreBaby.Path)
 	ks, err := babykeystore.NewKeyStore(storage, babykeystore.StandardKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	pk := &C.KeyStoreBaby.PubKey
+	pk := &C.KeyStoreBaby.PubKeyComp
 	if err := ks.UnlockKey(pk, []byte(C.KeyStoreBaby.Password)); err != nil {
 		panic(err)
 	}
