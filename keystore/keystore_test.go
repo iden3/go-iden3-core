@@ -3,6 +3,7 @@ package keystore
 import (
 	"encoding/hex"
 	"fmt"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -24,10 +25,10 @@ func TestKeyStore(t *testing.T) {
 	assert.Equal(t, nil, err)
 	pk, err := ks.NewKey(pass)
 	assert.Equal(t, nil, err)
-	fmt.Println("pk", Hex(pk[:]))
+	fmt.Println("pk", common3.Hex(pk[:]))
 	fmt.Printf("encryptedKeys %+v\n", ks.encryptedKeys)
 	fmt.Println("storage", string(storage))
-	fmt.Println("keys", Hex(ks.Keys()[0][:]))
+	fmt.Println("keys", common3.Hex(ks.Keys()[0][:]))
 
 	// Unlock key
 	err = ks.UnlockKey(pk, pass)
@@ -42,7 +43,7 @@ func TestKeyStore(t *testing.T) {
 	storage2 := MemStorage([]byte{})
 	ks2, err := NewKeyStore(&storage2, LightKeyStoreParams)
 	assert.Equal(t, nil, err)
-	_, err = ks2.ImportKey(*ks.cache[hex32(*pk)], pass)
+	_, err = ks2.ImportKey(*ks.cache[*pk], pass)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, ks.Keys(), ks2.Keys())
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	// "encoding/hex"
 	// "fmt"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/crypto/mimc7"
 	// "golang.org/x/crypto/blake2b"
 	"math/big"
@@ -80,21 +81,49 @@ func (p *PubKey) Point() *Point {
 	return (*Point)(p)
 }
 
+// PubKeyComp represents a compressed EdDSA Public key; it's a compressed curve
+// point.
+type PubKeyComp [32]byte
+
+func (buf PubKeyComp) MarshalText() ([]byte, error)  { return common3.Hex(buf[:]).MarshalText() }
+func (buf PubKeyComp) String() string                { return common3.Hex(buf[:]).String() }
+func (buf *PubKeyComp) UnmarshalText(h []byte) error { return common3.HexDecodeInto(buf[:], h) }
+
+func (p *PubKey) Compress() PubKeyComp {
+	return PubKeyComp((*Point)(p).Compress())
+}
+
+func (p *PubKeyComp) Decompress() (*PubKey, error) {
+	point, err := NewPoint().Decompress(*p)
+	if err != nil {
+		return nil, err
+	}
+	pk := PubKey(*point)
+	return &pk, nil
+}
+
 // Signature represents an EdDSA uncompressed signature.
 type Signature struct {
 	R8 *Point
 	S  *big.Int
 }
 
+// SignatureComp represents a compressed EdDSA signature.
+type SignatureComp [64]byte
+
+func (buf SignatureComp) MarshalText() ([]byte, error)  { return common3.Hex(buf[:]).MarshalText() }
+func (buf SignatureComp) String() string                { return common3.Hex(buf[:]).String() }
+func (buf *SignatureComp) UnmarshalText(h []byte) error { return common3.HexDecodeInto(buf[:], h) }
+
 // Compress an EdDSA signature by concatenating the compression of
 // the point R8 and the Little-Endian encoding of S.
-func (s *Signature) Compress() [64]byte {
+func (s *Signature) Compress() SignatureComp {
 	R8p := s.R8.Compress()
 	Sp := BigIntLEBytes(s.S)
 	buf := [64]byte{}
 	copy(buf[:32], R8p[:])
 	copy(buf[32:], Sp)
-	return buf
+	return SignatureComp(buf)
 }
 
 // Decompress a compressed signature into s, and also returns the decompressed

@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
+	// "github.com/ethereum/go-ethereum/crypto"
+	// common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -111,30 +112,31 @@ func TestCheckChecksum(t *testing.T) {
 }
 
 func TestCalculateIdGenesis(t *testing.T) {
-	kopStr := "0x037e211781efef4687e78be4fb008768acca8101b6f1f7ea099599f02a8813f386"
-	krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
-	krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
+	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
 
-	kopBytes, err := common3.HexDecode(kopStr)
+	var kopComp babyjub.PubKeyComp
+	err := kopComp.UnmarshalText([]byte(kopStr))
 	assert.Nil(t, err)
-	kopPub, err := crypto.DecompressPubkey(kopBytes[:])
-	assert.Nil(t, err)
-
-	krecBytes, err := common3.HexDecode(krecStr)
-	assert.Nil(t, err)
-	krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
 
-	krevBytes, err := common3.HexDecode(krevStr)
-	assert.Nil(t, err)
-	krevPub, err := crypto.DecompressPubkey(krevBytes[:])
-	assert.Nil(t, err)
+	// krecBytes, err := common3.HexDecode(krecStr)
+	// assert.Nil(t, err)
+	// krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	// assert.Nil(t, err)
 
-	idAddr, err := CalculateIdGenesis(kopPub, krecPub, krevPub)
+	// krevBytes, err := common3.HexDecode(krevStr)
+	// assert.Nil(t, err)
+	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
+	// assert.Nil(t, err)
+
+	idAddr, err := CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("idAddr", idAddr)
 		fmt.Println("idAddr (hex)", idAddr.String())
 	}
-	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
+	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", idAddr.String())
 }

@@ -2,10 +2,11 @@ package core
 
 import (
 	"bytes"
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/utils"
@@ -14,7 +15,7 @@ import (
 var (
 	// TypeBJM7 specifies the BJ-M7
 	// - first 2 bytes: `00000000 00000000`
-	// - curve of k_op$: babyjub
+	// - curve of k_op: babyjub
 	// - hash function: `MIMC7`
 	TypeBJM7 = [2]byte{0x00, 0x00}
 
@@ -123,38 +124,43 @@ func CheckChecksum(id ID) bool {
 }
 
 // GenerateArrayClaimAuthorizeKSignFromPublicKeys returns an array of ClaimAuthorizeKSignSecp256k1 from the given public keys
-func GenerateArrayClaimAuthorizeKSignFromPublicKeys(keys ...*ecdsa.PublicKey) []*ClaimAuthorizeKSignSecp256k1 {
-	var claims []*ClaimAuthorizeKSignSecp256k1
-	for _, key := range keys {
-		claims = append(claims, NewClaimAuthorizeKSignSecp256k1(key))
-	}
-	return claims
-}
+// func GenerateArrayClaimAuthorizeKSignFromPublicKeys(keys ...*ecdsa.PublicKey) []*ClaimAuthorizeKSignSecp256k1 {
+// 	var claims []*ClaimAuthorizeKSignSecp256k1
+// 	for _, key := range keys {
+// 		claims = append(claims, NewClaimAuthorizeKSignSecp256k1(key))
+// 	}
+// 	return claims
+// }
 
 // CalculateIdGenesis calculates the ID given the input parameters.
-// Adds the given parameters into an efimeral MerkleTree to calculate the MerkleRoot.
+// Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(kop, krec, krev *ecdsa.PublicKey) (*ID, error) {
+func CalculateIdGenesis(kop *babyjub.PubKey) (*ID, error) {
 	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, err
 	}
 	// generate the Authorize KSign Claims for the given public Keys
-	claims := GenerateArrayClaimAuthorizeKSignFromPublicKeys(kop, krec, krev)
-	for _, claim := range claims {
-		err = mt.Add(claim.Entry())
-		if err != nil {
-			return nil, err
-		}
+	// claims := GenerateArrayClaimAuthorizeKSignFromPublicKeys(kop, krec, krev)
+	// for _, claim := range claims {
+	// 	err = mt.Add(claim.Entry())
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
+	claim0 := NewClaimAuthorizeKSignBabyJub(kop)
+	err = mt.Add(claim0.Entry())
+	if err != nil {
+		return nil, err
 	}
 
 	idGenesis := mt.RootKey()
 
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[:27])
-	id := NewID(TypeS2M7, idGenesisBytes)
+	id := NewID(TypeBJM7, idGenesisBytes)
 	return &id, nil
 }

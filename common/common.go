@@ -36,6 +36,28 @@ func BytesToBase64(bytesArray []byte) string {
 	return h
 }
 
+// Hex is a byte slice type that can be marshalled and unmarshaled in hex
+type Hex []byte
+
+// MarshalText encodes buf as hex
+func (buf Hex) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(buf)), nil
+}
+
+// String encodes buf as hex
+func (buf Hex) String() string {
+	return hex.EncodeToString(buf)
+}
+
+// UnmarshalText decodes a hex into buf
+func (buf *Hex) UnmarshalText(h []byte) error {
+	*buf = make([]byte, hex.DecodedLen(len(h)))
+	if _, err := hex.Decode(*buf, h); err != nil {
+		return err
+	}
+	return nil
+}
+
 // HexEncode encodes an array of bytes into a string in hex.
 func HexEncode(bs []byte) string {
 	return fmt.Sprintf("0x%s", hex.EncodeToString(bs))
