@@ -10,7 +10,8 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signsrv"
-	"github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 )
 
 // SIGV01 is the JWS type of an iden3 signed packet.
@@ -45,13 +46,13 @@ type SigHeader struct {
 
 // SigPayload is the JSON Web Signature Payload of a signed packet.
 type SigPayload struct {
-	Type       string           `json:"type" binding:"required"`
-	KSign      *utils.PublicKey `json:"ksign" binding:"required"`
-	ProofKSign core.ProofClaim  `json:"proofKSign" binding:"required"`
-	DataRaw    json.RawMessage  `json:"data" binding:"required"`
-	Data       interface{}      `json:"-"`
-	FormRaw    json.RawMessage  `json:"form" binding:"required"`
-	Form       interface{}      `json:"-"`
+	Type       string             `json:"type" binding:"required"`
+	KSign      *babyjub.PublicKey `json:"ksign" binding:"required"`
+	ProofKSign core.ProofClaim    `json:"proofKSign" binding:"required"`
+	DataRaw    json.RawMessage    `json:"data" binding:"required"`
+	Data       interface{}        `json:"-"`
+	FormRaw    json.RawMessage    `json:"form" binding:"required"`
+	Form       interface{}        `json:"-"`
 }
 
 // MarshalJSON marshals the signed packet payload into JSON.
@@ -112,7 +113,7 @@ type SignedPacket struct {
 	Header      SigHeader
 	Payload     SigPayload
 	SignedBytes []byte
-	Signature   *utils.SignatureEthMsg
+	Signature   *babyjub.SignatureComp
 }
 
 // Sign signs the signed packet with the key corresponding to addr.
@@ -178,7 +179,7 @@ func (sp *SignedPacket) Unmarshal(s string) error {
 	if err != nil {
 		return err
 	}
-	sp.Signature = &utils.SignatureEthMsg{}
+	sp.Signature = &babyjub.SignatureComp{}
 	copy(sp.Signature[:], signature)
 	sp.SignedBytes = []byte(s[:strings.LastIndex(s, ".")])
 	return nil
@@ -226,7 +227,7 @@ func (sps *SignedPacketSigner) NewSignPacketV01(expireDelta int64,
 	payload := SigPayload{
 		Type:       payloadType,
 		Data:       data,
-		KSign:      &utils.PublicKey{PublicKey: *sps.signer.PublicKey()},
+		KSign:      sps.signer.PublicKey(),
 		ProofKSign: sps.proofKSign,
 		Form:       form,
 	}

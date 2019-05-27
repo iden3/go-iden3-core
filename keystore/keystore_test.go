@@ -64,7 +64,7 @@ func TestSignVerify(t *testing.T) {
 	ks.UnlockKey(pk, pass)
 	sig, err := ks.Sign(pk, msg)
 	assert.Equal(t, nil, err)
-	ok, err := VerifySignature(pk, msg, sig)
+	ok, err := VerifySignature(pk, sig, msg)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, ok)
 }

@@ -123,15 +123,6 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-// GenerateArrayClaimAuthorizeKSignFromPublicKeys returns an array of ClaimAuthorizeKSignSecp256k1 from the given public keys
-// func GenerateArrayClaimAuthorizeKSignFromPublicKeys(keys ...*ecdsa.PublicKey) []*ClaimAuthorizeKSignSecp256k1 {
-// 	var claims []*ClaimAuthorizeKSignSecp256k1
-// 	for _, key := range keys {
-// 		claims = append(claims, NewClaimAuthorizeKSignSecp256k1(key))
-// 	}
-// 	return claims
-// }
-
 // CalculateIdGenesis calculates the ID given the input parameters.
 // Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
 // ID: base58 ( [ type | root_genesis | checksum ] )
@@ -143,14 +134,7 @@ func CalculateIdGenesis(kop *babyjub.PublicKey) (*ID, []merkletree.Entrier, erro
 	if err != nil {
 		return nil, nil, err
 	}
-	// generate the Authorize KSign Claims for the given public Keys
-	// claims := GenerateArrayClaimAuthorizeKSignFromPublicKeys(kop, krec, krev)
-	// for _, claim := range claims {
-	// 	err = mt.Add(claim.Entry())
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+
 	claim0 := NewClaimAuthorizeKSignBabyJub(kop)
 	err = mt.Add(claim0.Entry())
 	if err != nil {

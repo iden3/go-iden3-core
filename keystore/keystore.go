@@ -187,7 +187,7 @@ type KeyStore struct {
 	storage       Storage
 	params        KeyStoreParams
 	encryptedKeys KeysStored
-	cache         map[babyjub.PublicKeyComp]*babyjub.PrivKey
+	cache         map[babyjub.PublicKeyComp]*babyjub.PrivateKey
 	rw            sync.RWMutex
 }
 
@@ -216,7 +216,7 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		storage:       storage,
 		params:        params,
 		encryptedKeys: encryptedKeys,
-		cache:         make(map[babyjub.PublicKeyComp]*babyjub.PrivKey),
+		cache:         make(map[babyjub.PublicKeyComp]*babyjub.PrivateKey),
 	}
 	runtime.SetFinalizer(ks, func(ks *KeyStore) {
 		// When there are no more references to the key store, clear
@@ -248,7 +248,7 @@ func (ks *KeyStore) NewKey(pass []byte) (*babyjub.PublicKeyComp, error) {
 }
 
 // ImportKey imports a secret key into the storage and encrypts it with pass.
-func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*babyjub.PublicKeyComp, error) {
+func (ks *KeyStore) ImportKey(sk babyjub.PrivateKey, pass []byte) (*babyjub.PublicKeyComp, error) {
 	ks.rw.Lock()
 	defer ks.rw.Unlock()
 	encryptedKey, err := EncryptData(sk[:], pass, ks.params.ScryptN, ks.params.ScryptP)
@@ -268,7 +268,7 @@ func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*babyjub.PublicK
 	return &pubComp, nil
 }
 
-func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp, pass []byte) (*babyjub.PrivKey, error) {
+func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp, pass []byte) (*babyjub.PrivateKey, error) {
 	if err := ks.UnlockKey(pk, pass); err != nil {
 		return nil, err
 	}
@@ -288,7 +288,7 @@ func (ks *KeyStore) UnlockKey(pk *babyjub.PublicKeyComp, pass []byte) error {
 	if err != nil {
 		return err
 	}
-	var sk babyjub.PrivKey
+	var sk babyjub.PrivateKey
 	copy(sk[:], skBuf)
 	ks.cache[*pk] = &sk
 	return nil
@@ -350,7 +350,7 @@ func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg mimc7.RElem, sigComp
 
 // VerifySignatureElem verifies that the signature sigComp of the mimc7 hash of
 // the msg byte slice was signed with the public key pkComp.
-func VerifySignature(pkComp *babyjub.PublicKeyComp, msg []byte, sigComp *babyjub.SignatureComp) (bool, error) {
+func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
 	h := mimc7HashBytes(msg)
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

@@ -77,6 +77,9 @@ func HexDecodeInto(dst []byte, h []byte) error {
 	if bytes.HasPrefix(h, []byte("0x")) {
 		h = h[2:]
 	}
+	if len(h)/2 != len(dst) {
+		return fmt.Errorf("expected %v bytes in hex string, got %v", len(dst), len(h)/2)
+	}
 	n, err := hex.Decode(dst, h)
 	if err != nil {
 		return err

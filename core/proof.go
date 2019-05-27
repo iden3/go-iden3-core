@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
 )
 
 var (
@@ -52,7 +52,7 @@ type ProofClaim struct {
 	Proofs    []ProofClaimPartial    `json:"proofs" binding:"required"`
 	Leaf      *merkletree.Data       `json:"leaf" binding:"required"`
 	Date      int64                  `json:"date" binding:"required"`
-	Signature *utils.SignatureEthMsg `json:"signature" binding:"required"` // signature of the Root of the Relay
+	Signature *babyjub.SignatureComp `json:"signature" binding:"required"` // signature of the Root of the Relay
 	Signer    ID                     `json:"signer" binding:"required"`
 }
 
@@ -72,7 +72,7 @@ func (pc *ProofClaim) String() string {
 
 // CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
 // WARNING TODO currently the Root signature verification is disabled, see comment in line 82
-func VerifyProofClaim(relayAddr common.Address, pc *ProofClaim) (bool, error) {
+func VerifyProofClaim(id ID, pc *ProofClaim) (bool, error) {
 	// For now we only allow proof verification of Nameserver (one level) and
 	// Relay (two levels: relay + user)
 	if len(pc.Proofs) > 2 || len(pc.Proofs) < 1 {

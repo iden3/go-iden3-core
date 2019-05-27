@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/stretchr/testify/assert"
@@ -47,8 +47,8 @@ func TestProof(t *testing.T) {
 	// j, err := json.Marshal(mtp)
 	// assert.Nil(t, err)
 
-	relayAddr := common.Address{}
-	verified, err := VerifyProofClaim(relayAddr, mtp)
+	id := ID{}
+	verified, err := VerifyProofClaim(id, mtp)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 }
@@ -77,8 +77,8 @@ func TestGetPredicateProof(t *testing.T) {
 	mtp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	relayAddr := common.Address{}
-	verified, err := VerifyProofClaim(relayAddr, mtp)
+	id := ID{}
+	verified, err := VerifyProofClaim(id, mtp)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 

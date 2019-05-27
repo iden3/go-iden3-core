@@ -2,20 +2,23 @@ package claimsrv
 
 import (
 	"crypto/ecdsa"
-	// "encoding/hex"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
+	// "time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/services/signsrv"
+	// "github.com/iden3/go-iden3/utils"
 	"github.com/ipfsconsortium/go-ipfsc/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -27,9 +30,14 @@ var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
 
-var relaySecKey *ecdsa.PrivateKey
-var relayPubKey *ecdsa.PublicKey
-var relayAddr common.Address
+const relayIdHex = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
+
+var relayID core.ID
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
 
 type RootServiceMock struct {
 	mock.Mock
@@ -50,32 +58,32 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 	m.Called(hash)
 }
 
-type SignServiceMock struct {
-	mock.Mock
-}
-
-func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-	h := utils.EthHash(msg)
-	sig, err := crypto.Sign(h[:], relaySecKey)
-	if err != nil {
-		return nil, err
-	}
-	sig[64] += 27
-	sigEthMsg := &utils.SignatureEthMsg{}
-	copy(sigEthMsg[:], sig)
-	return sigEthMsg, nil
-}
-
-func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
-	dateInt64 := time.Now().Unix()
-	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
-	sig, err := m.SignEthMsg(append(msg, dateBytes...))
-	return sig, dateInt64, err
-}
-
-func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
-	return relayPubKey
-}
+// type SignServiceMock struct {
+// 	mock.Mock
+// }
+//
+// func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
+// 	h := utils.EthHash(msg)
+// 	sig, err := crypto.Sign(h[:], relaySecKey)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	sig[64] += 27
+// 	sigEthMsg := &utils.SignatureEthMsg{}
+// 	copy(sigEthMsg[:], sig)
+// 	return sigEthMsg, nil
+// }
+//
+// func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+// 	dateInt64 := time.Now().Unix()
+// 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+// 	sig, err := m.SignEthMsg(append(msg, dateBytes...))
+// 	return sig, dateInt64, err
+// }
+//
+// func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
+// 	return relayPubKey
+// }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -112,15 +120,34 @@ func initializeEnvironment(t *testing.T) {
 
 	id, err := core.IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
 	assert.Nil(t, err)
-	service = New(id, mt, &RootServiceMock{}, &SignServiceMock{})
 
-	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-	relaySecKey, err = crypto.HexToECDSA(secKeyHex)
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
-	relayAddr = crypto.PubkeyToAddress(*relayPubKey)
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signSrv := signsrv.New(keyStore, *relayPk)
+	service = New(id, mt, &RootServiceMock{}, *signSrv)
+
+	relayID, err = core.IDFromString(relayIdHex)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func TestGetNextVersion(t *testing.T) {
@@ -255,7 +282,7 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err := core.VerifyProofClaim(relayAddr, proofClaim)
+	ok, err := core.VerifyProofClaim(relayID, proofClaim)
 	if !ok || err != nil {
 		panic(err)
 	}
@@ -268,7 +295,7 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayID, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
@@ -282,11 +309,11 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser2)
+	ok, err = core.VerifyProofClaim(relayID, proofClaimUser2)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayID, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 

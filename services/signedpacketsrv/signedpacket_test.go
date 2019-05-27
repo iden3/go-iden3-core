@@ -11,9 +11,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	// "github.com/ethereum/go-ethereum/accounts"
+	//"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/crypto/babyjub"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/stretchr/testify/assert"
 	//"github.com/iden3/go-iden3/merkletree"
 
@@ -28,12 +30,9 @@ const debug = false
 
 const passphrase = "secret"
 
-const relaySkHex = "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-const relayIdAddrHex = "0x0123456789abcdef0123456789abcdef01234567"
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
 
-//const kSignSkHex = "7517685f1693593d3263460200ed903370c2318e8ba4b9bb5727acae55c32b3d"
-// const kSignSkHex = "0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075dc1fcb4"
-const kSignSkHex = "7517685f1693593d3263460200ed903370c2318e8ba4b9bb5727acae55c32b3d"
+const kSignSkHex = "4be5471a938bdf3606888472878baace4a6a64e14a153adf9a1333969e4e573c"
 
 //const idAddrHex = "0x970e8128ab834e8eac17ab8e3812f010678cf791"
 // const idAddrHex = "0x308eff1357e7b5881c00ae22463b0f69a0d58adb"
@@ -106,12 +105,16 @@ var signedPacketVerifier *SignedPacketVerifier
 var signedPacketSigner *SignedPacketSigner
 
 var dbDir string
-var keyStoreDir string
-var keyStore *keystore.KeyStore
-var relaySk *ecdsa.PrivateKey
-var relayPk *ecdsa.PublicKey
-var kSignSk *ecdsa.PrivateKey
-var kSignPk *ecdsa.PublicKey
+
+// var keyStoreDir string
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
+
+var kSignSk babyjub.PrivateKey
+var kSignPkComp *babyjub.PublicKeyComp
+var kSignPk *babyjub.PublicKey
 
 var proofKSign core.ProofClaim
 
@@ -129,37 +132,37 @@ func genPrivateKey() {
 
 func setup() {
 	//genPrivateKey()
-	var err error
-	keyStoreDir, err = ioutil.TempDir("", "go-iden3-test-keystore")
-	if err != nil {
-		panic(err)
-	}
-	keyStore = keystore.NewKeyStore(keyStoreDir, 2, 1)
-	relaySk, err = crypto.HexToECDSA(relaySkHex)
-	if err != nil {
-		panic(err)
-	}
-	relayPk = relaySk.Public().(*ecdsa.PublicKey)
-	// _, err = keyStore.ImportECDSA(relaySk, passphrase)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// keyStore.Unlock(accounts.Account{Address: crypto.PubkeyToAddress(*relayPk)}, passphrase)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("relayPk:", common3.HexEncode(crypto.CompressPubkey(relayPk)))
 
-	kSignSk, err = crypto.HexToECDSA(kSignSkHex)
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	kSignPk = kSignSk.Public().(*ecdsa.PublicKey)
-	if _, err = keyStore.ImportECDSA(kSignSk, passphrase); err != nil {
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
 		panic(err)
 	}
-	if err = keyStore.Unlock(accounts.Account{Address: crypto.PubkeyToAddress(*kSignPk)},
-		passphrase); err != nil {
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	if _, err := hex.Decode(kSignSk[:], []byte(kSignSkHex)); err != nil {
+		panic(err)
+	}
+	if kSignPkComp, err = keyStore.ImportKey(kSignSk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(kSignPkComp, pass); err != nil {
+		panic(err)
+	}
+	if kSignPk, err = kSignPkComp.Decompress(); err != nil {
 		panic(err)
 	}
 
@@ -195,21 +198,17 @@ func setup() {
 		panic(err)
 	}
 
-	signSrv, err := signsrv.New(keyStore, accounts.Account{Address: crypto.PubkeyToAddress(*kSignPk)})
-	if err != nil {
-		panic(err)
-	}
+	signSrv := signsrv.New(keyStore, *kSignPk)
 
 	signedPacketVerifier = NewSignedPacketVerifier(discoverySrv, nameResolverSrv)
 
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
 		panic(err)
 	}
-	signedPacketSigner = NewSignedPacketSigner(signSrv, proofKSign, id)
+	signedPacketSigner = NewSignedPacketSigner(*signSrv, proofKSign, id)
 }
 
 func teardown() {
-	os.RemoveAll(keyStoreDir)
 	os.RemoveAll(dbDir)
 	os.Remove(namesFilePath)
 	os.Remove(entititesFilePath)

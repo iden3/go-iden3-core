@@ -1,44 +1,34 @@
 package signsrv
 
 import (
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/iden3/go-iden3/crypto/babyjub"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/utils"
 )
 
-type Service interface {
-	SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error)
-	SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error)
-	PublicKey() *ecdsa.PublicKey
-}
-
-type ServiceImpl struct {
-	ks  *keystore.KeyStore
-	acc accounts.Account
-	pk  *ecdsa.PublicKey
+type Service struct {
+	ks     *babykeystore.KeyStore
+	pk     babyjub.PublicKey
+	pkComp babyjub.PublicKeyComp
 }
 
 // New creates a new signsrv service.
-func New(ks *keystore.KeyStore, acc accounts.Account) (*ServiceImpl, error) {
-	pk, err := utils.GetPkFromKeyStore(ks, acc.Address)
-	if err != nil {
-		return nil, err
-	}
-	return &ServiceImpl{ks, acc, pk}, nil
+func New(ks *babykeystore.KeyStore, pk babyjub.PublicKey) *Service {
+	return &Service{ks, pk, pk.Compress()}
 }
 
-func (s *ServiceImpl) PublicKey() *ecdsa.PublicKey {
-	return s.pk
+func (s *Service) PublicKey() *babyjub.PublicKey {
+	return &s.pk
 }
 
-func (s *ServiceImpl) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-	return utils.SignEthMsg(s.ks, s.acc, msg)
+func (s *Service) SignEthMsg(msg []byte) (*babyjub.SignatureComp, error) {
+	return s.ks.Sign(&s.pkComp, msg)
 }
 
-func (s *ServiceImpl) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+func (s *Service) SignEthMsgDate(msg []byte) (*babyjub.SignatureComp, int64, error) {
 	dateInt64 := time.Now().Unix()
 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
 	sig, err := s.SignEthMsg(append(msg, dateBytes...))

@@ -19,13 +19,13 @@ func pruneBuffer(buf *[32]byte) *[32]byte {
 	return buf
 }
 
-// PrivKey is an EdDSA private key, which is a 32byte buffer.
-type PrivKey [32]byte
+// PrivateKey is an EdDSA private key, which is a 32byte buffer.
+type PrivateKey [32]byte
 
 // NewRandPrivKey generates a new random private key (using cryptographically
 // secure randomness).
-func NewRandPrivKey() PrivKey {
-	var k PrivKey
+func NewRandPrivKey() PrivateKey {
+	var k PrivateKey
 	_, err := rand.Read(k[:])
 	if err != nil {
 		panic(err)
@@ -35,7 +35,7 @@ func NewRandPrivKey() PrivKey {
 
 // Scalar converts a private key into the scalar value s following the EdDSA
 // standard, and using blake-512 hash.
-func (k *PrivKey) Scalar() *PrivKeyScalar {
+func (k *PrivateKey) Scalar() *PrivKeyScalar {
 	sBuf := Blake512(k[:])
 	sBuf32 := [32]byte{}
 	copy(sBuf32[:], sBuf[:32])
@@ -47,7 +47,7 @@ func (k *PrivKey) Scalar() *PrivKeyScalar {
 }
 
 // Pub returns the public key corresponding to a private key.
-func (k *PrivKey) Public() *PublicKey {
+func (k *PrivateKey) Public() *PublicKey {
 	return k.Scalar().Public()
 }
 
@@ -168,7 +168,7 @@ func (s *SignatureComp) Decompress() (*Signature, error) {
 
 // SignMimc7 signs a message encoded as a big.Int in Zq using blake-512 hash
 // for buffer hashing and mimc7 for big.Int hashing.
-func (k *PrivKey) SignMimc7(msg *big.Int) *Signature {
+func (k *PrivateKey) SignMimc7(msg *big.Int) *Signature {
 	h1 := Blake512(k[:])
 	msgBuf := BigIntLEBytes(msg)
 	msgBuf32 := [32]byte{}

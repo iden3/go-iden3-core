@@ -6,13 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	// "github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
-	"github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3/utils"
 )
 
 type SignedPacketVerifier struct {
@@ -50,7 +51,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 		return fmt.Errorf("Invalid claim type in payload.proofksign.leaf," +
 			"expected ClaimAuthorizeKSignSecp256k1")
 	}
-	if !reflect.DeepEqual(jws.Payload.KSign.PublicKey, *claimAuthorizeKSign.PubKey) {
+	if !reflect.DeepEqual(jws.Payload.KSign, *claimAuthorizeKSign.PubKey) {
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
@@ -76,9 +77,10 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// As verifying a signature is cheaper than verifying a merkle tree
 	// proof, first we verify signature with ksign, and then we verify the
 	// merkle tree proofs.
-	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(jws.Payload.KSign.PublicKey),
-		jws.Signature, jws.SignedBytes) {
-		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign")
+	kSignComp := jws.Payload.KSign.Compress()
+	if ok, err := babykeystore.VerifySignature(&kSignComp,
+		jws.Signature, jws.SignedBytes); !ok {
+		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign: %v", err)
 	}
 
 	// 7a. Get the operational key from the signer and in case it's a

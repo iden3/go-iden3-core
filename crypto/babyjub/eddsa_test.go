@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func genInputs() (*PrivKey, *big.Int) {
+func genInputs() (*PrivateKey, *big.Int) {
 	k := NewRandPrivKey()
 	fmt.Println("k", hex.EncodeToString(k[:]))
 
@@ -24,7 +24,7 @@ func genInputs() (*PrivKey, *big.Int) {
 }
 
 func TestSignVerify1(t *testing.T) {
-	var k PrivKey
+	var k PrivateKey
 	hex.Decode(k[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
 	msgBuf, err := hex.DecodeString("00010203040506070809")
 	if err != nil {

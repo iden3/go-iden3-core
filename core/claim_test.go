@@ -101,7 +101,7 @@ func TestClaimAssignName(t *testing.T) {
 
 func TestClaimAuthorizeKSignBabyJub(t *testing.T) {
 	// ClaimAuthorizeKSignBabyJub
-	var k babyjub.PrivKey
+	var k babyjub.PrivateKey
 	hex.Decode(k[:], []byte("28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"))
 	pk := k.Public()
 
