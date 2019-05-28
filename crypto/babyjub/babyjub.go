@@ -184,16 +184,24 @@ func PointCoordSign(c *big.Int) bool {
 	return false
 }
 
-// Compress the point into a 32 byte array that contains the y coordinate in
-// little endian and the sign of the x coordinate.
-func (p *Point) Compress() [32]byte {
-	leBuf := BigIntLEBytes(p.Y)
-	if PointCoordSign(p.X) {
+func PackPoint(ay *big.Int, sign bool) [32]byte {
+	leBuf := BigIntLEBytes(ay)
+	if sign {
 		leBuf[31] = leBuf[31] | 0x80
 	}
 	pc := [32]byte{}
 	copy(pc[:], leBuf)
 	return pc
+}
+
+// Compress the point into a 32 byte array that contains the y coordinate in
+// little endian and the sign of the x coordinate.
+func (p *Point) Compress() [32]byte {
+	sign := false
+	if PointCoordSign(p.X) {
+		sign = true
+	}
+	return PackPoint(p.Y, sign)
 }
 
 // Decompress a compressed Point into p, and also returns the decompressed

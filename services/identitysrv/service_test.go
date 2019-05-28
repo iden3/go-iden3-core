@@ -1,30 +1,36 @@
 package identitysrv
 
 import (
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
+	// "time"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	babykeystore "github.com/iden3/go-iden3/keystore"
+	// "github.com/ethereum/go-ethereum/crypto"
 	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/services/signsrv"
+	// "github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 var debug = false
 
-var relaySecKey *ecdsa.PrivateKey
-var relayPubKey *ecdsa.PublicKey
-var relayKOpAddr common.Address
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
+
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
 var relayId core.ID
 
 type RootServiceMock struct {
@@ -49,32 +55,32 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 	return
 }
 
-type SignServiceMock struct {
-	mock.Mock
-}
-
-func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-	h := utils.EthHash(msg)
-	sig, err := crypto.Sign(h[:], relaySecKey)
-	if err != nil {
-		return nil, err
-	}
-	sig[64] += 27
-	sigEthMsg := &utils.SignatureEthMsg{}
-	copy(sigEthMsg[:], sig)
-	return sigEthMsg, nil
-}
-
-func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
-	dateInt64 := time.Now().Unix()
-	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
-	sig, err := m.SignEthMsg(append(msg, dateBytes...))
-	return sig, dateInt64, err
-}
-
-func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
-	return relayPubKey
-}
+// type SignServiceMock struct {
+// 	mock.Mock
+// }
+//
+// func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
+// 	h := utils.EthHash(msg)
+// 	sig, err := crypto.Sign(h[:], relaySecKey)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	sig[64] += 27
+// 	sigEthMsg := &utils.SignatureEthMsg{}
+// 	copy(sigEthMsg[:], sig)
+// 	return sigEthMsg, nil
+// }
+//
+// func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+// 	dateInt64 := time.Now().Unix()
+// 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+// 	sig, err := m.SignEthMsg(append(msg, dateBytes...))
+// 	return sig, dateInt64, err
+// }
+//
+// func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
+// 	return relayPubKey
+// }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -103,16 +109,31 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	// sto := db.NewMemoryStorage()
 	rootservicemock := &RootServiceMock{}
 	rootservicemock.On("SetRoot", mock.Anything).Return()
-	claimService := claimsrv.New(relayId, mt, rootservicemock, &SignServiceMock{})
-	idService := New(claimService)
 
-	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-	relaySecKey, err = crypto.HexToECDSA(secKeyHex)
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
-	relayKOpAddr = crypto.PubkeyToAddress(*relayPubKey)
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signSrv := signsrv.New(keyStore, *relayPk)
+
+	claimService := claimsrv.New(relayId, mt, rootservicemock, *signSrv)
+	idService := New(claimService)
 
 	return idService
 }
@@ -133,7 +154,7 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }
@@ -173,7 +194,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }

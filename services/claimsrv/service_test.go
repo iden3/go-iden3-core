@@ -30,7 +30,7 @@ var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
 
-const relayIdHex = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
+const relayIdHex = "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps"
 const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
 
 var relayID core.ID
@@ -118,7 +118,7 @@ func initializeEnvironment(t *testing.T) {
 		t.Error(err)
 	}
 
-	id, err := core.IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
+	id, err := core.IDFromString(relayIdHex)
 	assert.Nil(t, err)
 
 	pass := []byte("my passphrase")
@@ -254,6 +254,13 @@ func TestGetClaimProof(t *testing.T) {
 	pk := sk.Public().(*ecdsa.PublicKey)
 	claimAuthKSign := core.NewClaimAuthorizeKSignSecp256k1(pk)
 
+	var kSignSk babyjub.PrivateKey
+	if _, err := hex.Decode(kSignSk[:], []byte("9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")); err != nil {
+		panic(err)
+	}
+	kSignPk := kSignSk.Public()
+	claimAuthKSignBabyJub := core.NewClaimAuthorizeKSignBabyJub(kSignPk)
+
 	// open the MerkleTree of the user
 	userMT, err := NewMerkleTreeUser(id, mt.Storage(), 140)
 	assert.Nil(t, err)
@@ -264,6 +271,10 @@ func TestGetClaimProof(t *testing.T) {
 
 	// add claimAuthKSign in User ID Merkle Tree
 	err = userMT.Add(claimAuthKSign.Entry())
+	assert.Nil(t, err)
+
+	// add claimAuthKSignBabyJub in User ID Merkle Tree
+	err = userMT.Add(claimAuthKSignBabyJub.Entry())
 	assert.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
@@ -282,7 +293,7 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err := core.VerifyProofClaim(relayID, proofClaim)
+	ok, err := core.VerifyProofClaim(relayPk, proofClaim)
 	if !ok || err != nil {
 		panic(err)
 	}
@@ -295,7 +306,7 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayID, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
@@ -309,13 +320,23 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayID, proofClaimUser2)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser2)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	ok, err = core.VerifyProofClaim(relayID, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
+
+	proofClaimUser3, err := service.GetClaimProofUserByHi(id, claimAuthKSignBabyJub.Entry().HIndex())
+	assert.Nil(t, err)
+	p, err = json.Marshal(proofClaimUser3)
+	if debug {
+		fmt.Printf("\n\tclaim authorize ksign babyjub claim proof\n\n")
+		fmt.Println("id", id.String())
+		fmt.Println("pk", kSignPk)
+		fmt.Println(string(p))
+	}
 
 	// ClaimAssignName
 	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")

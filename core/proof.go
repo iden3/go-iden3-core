@@ -72,7 +72,7 @@ func (pc *ProofClaim) String() string {
 
 // CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
 // WARNING TODO currently the Root signature verification is disabled, see comment in line 82
-func VerifyProofClaim(id ID, pc *ProofClaim) (bool, error) {
+func VerifyProofClaim(operationalPk *babyjub.PublicKey, pc *ProofClaim) (bool, error) {
 	// For now we only allow proof verification of Nameserver (one level) and
 	// Relay (two levels: relay + user)
 	if len(pc.Proofs) > 2 || len(pc.Proofs) < 1 {

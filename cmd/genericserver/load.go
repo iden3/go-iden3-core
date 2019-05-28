@@ -180,13 +180,10 @@ func LoadCounterfactualService(client *eth.Web3Client, claimservice claimsrv.Ser
 	return counterfactualsrv.New(deployerContract, implContract, proxyContract, claimservice, counterfactualstorage)
 }
 
-func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *ethkeystore.KeyStore, acc accounts.Account) claimsrv.Service {
+func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *babykeystore.KeyStore, pk *babyjub.PublicKey) claimsrv.Service {
 	log.WithField("id", C.IdRaw).Info("Running claim service")
-	signer, err := signsrv.New(ks, acc)
-	if err != nil {
-		panic(err)
-	}
-	return claimsrv.New(C.Id, mt, rootservice, signer)
+	signer := signsrv.New(ks, *pk)
+	return claimsrv.New(C.Id, mt, rootservice, *signer)
 }
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {
@@ -194,16 +191,13 @@ func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, cl
 }
 
 // LoadSignedPacketSigner Adds new claim authorizing a secp256ks key. Returns SignedPacketSigner to sign with key sign.
-func LoadSignedPacketSigner(ks *ethkeystore.KeyStore, acc accounts.Account, claimservice claimsrv.Service) *signedpacketsrv.SignedPacketSigner {
+func LoadSignedPacketSigner(ks *babykeystore.KeyStore, pk *babyjub.PublicKey, claimservice claimsrv.Service) *signedpacketsrv.SignedPacketSigner {
 	// Create signer object
-	signer, err := signsrv.New(ks, acc)
-	if err != nil {
-		panic(err)
-	}
-	// Claim authorizing public key secp256k1 and get its proofKsign
-	claim := core.NewClaimAuthorizeKSignSecp256k1(signer.PublicKey())
+	signer := signsrv.New(ks, *pk)
+	// Claim authorizing public key baby jub and get its proofKsign
+	claim := core.NewClaimAuthorizeKSignBabyJub(pk)
 	// Add claim
-	err = claimservice.AddClaim(claim)
+	err := claimservice.AddClaim(claim)
 	if (err != nil) && (err != merkletree.ErrEntryIndexAlreadyExists) {
 		panic(err)
 	}
@@ -212,5 +206,5 @@ func LoadSignedPacketSigner(ks *ethkeystore.KeyStore, acc accounts.Account, clai
 	if err != nil {
 		panic(err)
 	}
-	return signedpacketsrv.NewSignedPacketSigner(signer, *proofKSign, C.Id)
+	return signedpacketsrv.NewSignedPacketSigner(*signer, *proofKSign, C.Id)
 }

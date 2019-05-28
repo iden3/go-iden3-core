@@ -15,11 +15,16 @@ import (
 
 func loadIdService() (eth.Client, identitysrv.Service, counterfactualsrv.Service) {
 	ks, acc := genericserver.LoadKeyStore()
+	ksBaby, pkc := genericserver.LoadKeyStoreBabyJub()
+	pk, err := pkc.Decompress()
+	if err != nil {
+		panic(err)
+	}
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 	rootService := genericserver.LoadRootsService(client)
-	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
+	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 	return client, genericserver.LoadIdentityService(claimService), genericserver.LoadCounterfactualService(client, claimService, storage)
 }
 

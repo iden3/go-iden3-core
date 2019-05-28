@@ -4,16 +4,19 @@
 package notificationsrv
 
 import (
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"encoding/json"
 	// "fmt"
-	"io/ioutil"
+	// "io/ioutil"
+	"encoding/hex"
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/crypto/babyjub"
+	babykeystore "github.com/iden3/go-iden3/keystore"
+	// "github.com/ethereum/go-ethereum/accounts"
+	// "github.com/ethereum/go-ethereum/accounts/keystore"
+	// "github.com/ethereum/go-ethereum/crypto"
 	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signedpacketsrv"
@@ -83,7 +86,7 @@ const urlNotificationService = "http://127.0.0.1:10000/api/unstable"
 
 const passphrase = "secret"
 
-// const relaySkHex = "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
 
 // const idHex = "0x308eff1357e7b5881c00ae22463b0f69a0d58adb"
 const idB58 = "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z"
@@ -95,33 +98,17 @@ const sendIdB58 = "1pquYVpccuB491VyD3rEwhqJXUiKGJonbdxcWorpz"
 const keySignSkHex = "0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075dc1fcb4"
 
 var proofKSign core.ProofClaim
-var keyStoreDir string
-var keyStore *keystore.KeyStore
 var id core.ID
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
 var sendId core.ID
 
 var service *Service
 
 func setup() {
 	var err error
-	keyStoreDir, err = ioutil.TempDir("", "go-iden3-test-keystore")
-	if err != nil {
-		panic(err)
-	}
-	keyStore = keystore.NewKeyStore(keyStoreDir, 2, 1)
-
-	keySignSk, err := crypto.HexToECDSA(keySignSkHex)
-	if err != nil {
-		panic(err)
-	}
-	keySignPk := keySignSk.Public().(*ecdsa.PublicKey)
-	if _, err = keyStore.ImportECDSA(keySignSk, passphrase); err != nil {
-		panic(err)
-	}
-	account := accounts.Account{Address: crypto.PubkeyToAddress(*keySignPk)}
-	if err = keyStore.Unlock(account, passphrase); err != nil {
-		panic(err)
-	}
 	if err := json.Unmarshal([]byte(proofKSignJSON), &proofKSign); err != nil {
 		panic(err)
 	}
@@ -132,16 +119,34 @@ func setup() {
 	if sendId, err = core.IDFromString(sendIdB58); err != nil {
 		panic(err)
 	}
-	signer, err := signsrv.New(keyStore, account)
+
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	signedPacketSigner := signedpacketsrv.NewSignedPacketSigner(signer, proofKSign, id)
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signSrv := signsrv.New(keyStore, *relayPk)
+
+	signedPacketSigner := signedpacketsrv.NewSignedPacketSigner(*signSrv, proofKSign, id)
 	service = New(urlNotificationService, signedPacketSigner)
 }
 
 func teardown() {
-	os.RemoveAll(keyStoreDir)
 }
 
 func TestIntNotificationService(t *testing.T) {

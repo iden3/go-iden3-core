@@ -47,8 +47,8 @@ func TestProof(t *testing.T) {
 	// j, err := json.Marshal(mtp)
 	// assert.Nil(t, err)
 
-	id := ID{}
-	verified, err := VerifyProofClaim(id, mtp)
+	// id := ID{}
+	verified, err := VerifyProofClaim(nil, mtp)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 }
@@ -77,8 +77,8 @@ func TestGetPredicateProof(t *testing.T) {
 	mtp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	id := ID{}
-	verified, err := VerifyProofClaim(id, mtp)
+	// id := ID{}
+	verified, err := VerifyProofClaim(nil, mtp)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 

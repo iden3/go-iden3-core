@@ -51,7 +51,7 @@ func main() {
 			usage()
 			return
 		}
-		var sk babyjub.PrivKey
+		var sk babyjub.PrivateKey
 		if _, err := hex.Decode(sk[:], []byte(*skHex)); err != nil {
 			panic(err)
 		}

@@ -24,12 +24,18 @@ func CmdAddClaim(c *cli.Context) error {
 	}
 
 	ks, acc := LoadKeyStore()
+	ksBaby, pkc := LoadKeyStoreBabyJub()
+	pk, err := pkc.Decompress()
+	if err != nil {
+		return err
+	}
 	client := LoadWeb3(ks, &acc)
 	storage := LoadStorage()
 	mt := LoadMerkele(storage)
 
 	rootService := LoadRootsService(client)
-	claimService := LoadClaimService(mt, rootService, ks, acc)
+
+	claimService := LoadClaimService(mt, rootService, ksBaby, pk)
 
 	indexData := c.Args().Get(0)
 	outData := c.Args().Get(1)
@@ -46,7 +52,7 @@ func CmdAddClaim(c *cli.Context) error {
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 	fmt.Println("clam: " + common3.HexEncode(claim.Entry().Bytes()))
 
-	err := claimService.AddClaim(claim)
+	err = claimService.AddClaim(claim)
 	if err != nil {
 		return err
 	}

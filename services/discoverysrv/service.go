@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ethereum/go-ethereum/common"
-	common3 "github.com/iden3/go-iden3/common"
+	// "github.com/ethereum/go-ethereum/common"
+	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/crypto/babyjub"
+	// "github.com/iden3/go-iden3/utils"
 )
 
 type Trusted struct {
@@ -16,11 +17,11 @@ type Trusted struct {
 }
 
 type Entity struct {
-	Id              core.ID          `json:"-"`
-	Name            string           `json:"name"`
-	OperationalPk   *utils.PublicKey `json:"kOpPub"`
-	OperationalAddr common.Address   `json:"kOpAddr"`
-	Trusted         Trusted          `json:"trusted"`
+	Id            core.ID            `json:"-"`
+	Name          string             `json:"name"`
+	OperationalPk *babyjub.PublicKey `json:"kOpPub"`
+	// OperationalAddr common.Address   `json:"kOpAddr"`
+	Trusted Trusted `json:"trusted"`
 }
 
 type Service struct {
@@ -47,7 +48,7 @@ func New(entititesFilePath string) (*Service, error) {
 func (ds *Service) GetEntity(id core.ID) (*Entity, error) {
 	entity, ok := ds.Entitites[id]
 	if !ok {
-		return nil, fmt.Errorf("Id %v not found in the internal DB", common3.HexEncode(id[:]))
+		return nil, fmt.Errorf("Id %v not found in the internal DB", &id)
 	}
 	return entity, nil
 }

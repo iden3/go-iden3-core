@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	// "github.com/ethereum/go-ethereum/accounts"
+	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/cmd/nameserver/endpoint"
+	"github.com/iden3/go-iden3/crypto/babyjub"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
@@ -49,13 +51,18 @@ func cmdStart(c *cli.Context) error {
 	}
 
 	ks, acc := genericserver.LoadKeyStore()
+	ksBaby, pkc := genericserver.LoadKeyStoreBabyJub()
+	pk, err := pkc.Decompress()
+	if err != nil {
+		return err
+	}
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
 	rootService := genericserver.LoadRootsService(client)
-	claimService := genericserver.LoadClaimService(mt, rootService, ks, acc)
-	nameService := LoadNameService(claimService, ks, acc, genericserver.C.Domain, genericserver.C.Namespace)
+	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
+	nameService := LoadNameService(claimService, ksBaby, *pk, genericserver.C.Domain, genericserver.C.Namespace)
 	adminService := genericserver.LoadAdminService(mt, rootService, claimService)
 	nameResolveService, err := nameresolversrv.New(genericserver.C.Names.Path)
 	if err != nil {
@@ -133,10 +140,7 @@ func cmdInfo(c *cli.Context) error {
 	return err
 }
 
-func LoadNameService(claimservice claimsrv.Service, ks *keystore.KeyStore, acc accounts.Account, domain string, namespace string) namesrv.Service {
-	signer, err := signsrv.New(ks, acc)
-	if err != nil {
-		panic(err)
-	}
-	return namesrv.New(claimservice, signer, domain)
+func LoadNameService(claimservice claimsrv.Service, ks *babykeystore.KeyStore, pk babyjub.PublicKey, domain string, namespace string) namesrv.Service {
+	signer := signsrv.New(ks, pk)
+	return namesrv.New(claimservice, *signer, domain)
 }

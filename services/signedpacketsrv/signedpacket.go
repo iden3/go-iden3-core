@@ -15,7 +15,8 @@ import (
 )
 
 // SIGV01 is the JWS type of an iden3 signed packet.
-const SIGV01 = "iden3.sig.v0_1"
+const SIGV01 = "iden3.sig.v0_1" // V01 uses SIGALGV01 = "EK256K1"
+const SIGV02 = "iden3.sig.v0_2" // V02 uses SIGALGV02 = "ED256BJ"
 
 // IDENASSERTV01 is the signed packet payload type for an identity assertion.
 const IDENASSERTV01 = "iden3.iden_assert.v0_1"
@@ -34,6 +35,7 @@ const MSGV01 = "iden3.msg.v0_1"
 // SIGALGV01 is the JWS algorithm used in SIGV01.  It's ECDSA with secp256k1
 // and keccak.
 const SIGALGV01 = "EK256K1"
+const SIGALGV02 = "ED256BJ"
 
 // SigHeader is the JSON Web Signature Header of a signed packet.
 type SigHeader struct {
@@ -213,16 +215,16 @@ func (sps *SignedPacketSigner) SetProofKSign(proofKSign core.ProofClaim) {
 	sps.proofKSign = proofKSign
 }
 
-// NewSignPacketV01 generates and signs a SIGV01 signed packet.
-func (sps *SignedPacketSigner) NewSignPacketV01(expireDelta int64,
+// NewSignPacketV02 generates and signs a SIGV02 signed packet.
+func (sps *SignedPacketSigner) NewSignPacketV02(expireDelta int64,
 	payloadType string, data interface{}, form interface{}) (*SignedPacket, error) {
 	now := time.Now().Unix()
 	header := SigHeader{
-		Type:         SIGV01,
+		Type:         SIGV02,
 		Issuer:       sps.id,
 		IssuedAtTime: now,
 		Expiration:   now + expireDelta,
-		Algorithm:    SIGALGV01,
+		Algorithm:    SIGALGV02,
 	}
 	payload := SigPayload{
 		Type:       payloadType,
@@ -241,7 +243,7 @@ func (sps *SignedPacketSigner) NewSignPacketV01(expireDelta int64,
 // NewSignGenericSigV01 generates and signs a signed packet with payload type GENERICSIGV01.
 func (sps *SignedPacketSigner) NewSignGenericSigV01(expireDelta int64,
 	form interface{}) (*SignedPacket, error) {
-	return sps.NewSignPacketV01(expireDelta, GENERICSIGV01, nil, form)
+	return sps.NewSignPacketV02(expireDelta, GENERICSIGV01, nil, form)
 
 }
 
@@ -252,7 +254,7 @@ type MsgForm struct {
 
 func (sps *SignedPacketSigner) NewSignMsgV01(expireDelta int64, msgType string,
 	msg interface{}) (*SignedPacket, error) {
-	return sps.NewSignPacketV01(expireDelta, MSGV01, nil, MsgForm{Type: msgType, Data: msg})
+	return sps.NewSignPacketV02(expireDelta, MSGV01, nil, MsgForm{Type: msgType, Data: msg})
 
 }
 
@@ -276,6 +278,6 @@ type IdenAssertForm struct {
 // is not desired.
 func (sps *SignedPacketSigner) NewSignIdenAssertV01(requestIdenAssert *RequestIdenAssert,
 	idenAssertForm *IdenAssertForm, expireDelta int64) (*SignedPacket, error) {
-	return sps.NewSignPacketV01(expireDelta, IDENASSERTV01,
+	return sps.NewSignPacketV02(expireDelta, IDENASSERTV01,
 		requestIdenAssert.Body.Data, idenAssertForm)
 }

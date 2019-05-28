@@ -1,6 +1,7 @@
 package signedpacketsrv
 
 import (
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
 	// "github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 )
 
 type SignedPacketVerifier struct {
@@ -26,10 +28,10 @@ func NewSignedPacketVerifier(discoverySrv *discoverysrv.Service,
 	return &SignedPacketVerifier{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
 }
 
-// VerifySignedPacketV01 verifies a SIGV01 signed packet.
-func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
-	// 2. Verify jwsHeader.alg is 'ES255'
-	if jws.Header.Algorithm != SIGALGV01 {
+// VerifySignedPacketV02 verifies a SIGV02 signed packet.
+func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
+	// 2. Verify jwsHeader.alg is 'ED256BJ'
+	if jws.Header.Algorithm != SIGALGV02 {
 		return fmt.Errorf("Unsupported alg: %v", jws.Header.Algorithm)
 	}
 
@@ -46,12 +48,16 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	if err != nil {
 		return err
 	}
-	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignSecp256k1)
+	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
 	if !ok {
 		return fmt.Errorf("Invalid claim type in payload.proofksign.leaf," +
 			"expected ClaimAuthorizeKSignSecp256k1")
 	}
-	if !reflect.DeepEqual(jws.Payload.KSign, *claimAuthorizeKSign.PubKey) {
+	claimAuthorizeKSignPkComp := babyjub.PublicKeyComp(
+		babyjub.PackPoint(claimAuthorizeKSign.Ay, claimAuthorizeKSign.Sign))
+	if !reflect.DeepEqual(jws.Payload.KSign.Compress(), claimAuthorizeKSignPkComp) {
+		fmt.Println("jws.Payload.KSign", jws.Payload.KSign.Compress())
+		fmt.Println("claimAuthorizeKSign", hex.EncodeToString(claimAuthorizeKSignPkComp[:]))
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
@@ -78,8 +84,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// proof, first we verify signature with ksign, and then we verify the
 	// merkle tree proofs.
 	kSignComp := jws.Payload.KSign.Compress()
-	if ok, err := babykeystore.VerifySignature(&kSignComp,
-		jws.Signature, jws.SignedBytes); !ok {
+	if ok, err := babykeystore.VerifySignature(&kSignComp, jws.Signature, jws.SignedBytes); !ok {
 		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign: %v", err)
 	}
 
@@ -105,7 +110,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// won't be able to sign contradicting claims.
 
 	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
+	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
 		fmt.Println("proof[0].root", jws.Payload.ProofKSign.Proofs[0].Root.Hex())
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
@@ -118,7 +123,11 @@ func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 	switch jws.Header.Type {
 	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_1'
 	case SIGV01:
-		return ss.VerifySignedPacketV01(jws)
+		// return ss.VerifySignedPacketV01(jws)
+		return fmt.Errorf("Deprecated signature packet typ: %v", jws.Header.Type)
+	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_2'
+	case SIGV02:
+		return ss.VerifySignedPacketV02(jws)
 	default:
 		return fmt.Errorf("Unsupported signature packet typ: %v", jws.Header.Type)
 	}
@@ -205,7 +214,7 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	}
 
 	// 5d. VerifyProofClaim(jwsPayload.form.proofAssignName, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
+	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}
 
