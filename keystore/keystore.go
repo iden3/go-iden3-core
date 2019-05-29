@@ -320,7 +320,7 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 	}
 	if len(msg)%n != 0 {
 		v := new(big.Int)
-		babyjub.SetBigIntFromLEBytes(v, msg[len(msg)/n:])
+		babyjub.SetBigIntFromLEBytes(v, msg[(len(msg)/n)*n:])
 		msgElems = append(msgElems, v)
 	}
 	return mimc7.Hash(msgElems, nil)
