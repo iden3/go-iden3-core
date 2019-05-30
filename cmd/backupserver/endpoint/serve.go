@@ -40,12 +40,12 @@ func serveServiceApi() *http.Server {
 	serviceapi.POST("/backup/download", handleBackupDownload)
 
 	// SYNCHRONIZATION SERVICE
-	//serviceapi.POST("/:idaddr/save", handleSave) // TODO: Redo
-	serviceapi.POST("/folder/:idaddr/recover", handleRecover)
+	//serviceapi.POST("/:id/save", handleSave) // TODO: Redo
+	serviceapi.POST("/folder/:id/recover", handleRecover)
 	//TODO get with specific version
-	serviceapi.POST("/folder/:idaddr/recover/version/:version", handleRecoverSinceVersion)
-	serviceapi.POST("/folder/:idaddr/recover/type/:type", handleRecoverByType)
-	serviceapi.POST("/folder/:idaddr/recover/version/:version/type/:type", handleRecoverSinceVersionByType)
+	serviceapi.POST("/folder/:id/recover/version/:version", handleRecoverSinceVersion)
+	serviceapi.POST("/folder/:id/recover/type/:type", handleRecoverByType)
+	serviceapi.POST("/folder/:id/recover/version/:version/type/:type", handleRecoverSinceVersionByType)
 
 	serviceapisrv := &http.Server{Addr: config.C.Server.ServiceApi, Handler: api}
 	go func() {

@@ -2,20 +2,23 @@ package claimsrv
 
 import (
 	"crypto/ecdsa"
-	// "encoding/hex"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
+	// "time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/services/signsrv"
+	// "github.com/iden3/go-iden3/utils"
 	"github.com/ipfsconsortium/go-ipfsc/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -27,9 +30,14 @@ var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
 
-var relaySecKey *ecdsa.PrivateKey
-var relayPubKey *ecdsa.PublicKey
-var relayAddr common.Address
+const relayIdHex = "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps"
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
+
+var relayID core.ID
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
 
 type RootServiceMock struct {
 	mock.Mock
@@ -50,32 +58,32 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 	m.Called(hash)
 }
 
-type SignServiceMock struct {
-	mock.Mock
-}
-
-func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-	h := utils.EthHash(msg)
-	sig, err := crypto.Sign(h[:], relaySecKey)
-	if err != nil {
-		return nil, err
-	}
-	sig[64] += 27
-	sigEthMsg := &utils.SignatureEthMsg{}
-	copy(sigEthMsg[:], sig)
-	return sigEthMsg, nil
-}
-
-func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
-	dateInt64 := time.Now().Unix()
-	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
-	sig, err := m.SignEthMsg(append(msg, dateBytes...))
-	return sig, dateInt64, err
-}
-
-func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
-	return relayPubKey
-}
+// type SignServiceMock struct {
+// 	mock.Mock
+// }
+//
+// func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
+// 	h := utils.EthHash(msg)
+// 	sig, err := crypto.Sign(h[:], relaySecKey)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	sig[64] += 27
+// 	sigEthMsg := &utils.SignatureEthMsg{}
+// 	copy(sigEthMsg[:], sig)
+// 	return sigEthMsg, nil
+// }
+//
+// func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+// 	dateInt64 := time.Now().Unix()
+// 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+// 	sig, err := m.SignEthMsg(append(msg, dateBytes...))
+// 	return sig, dateInt64, err
+// }
+//
+// func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
+// 	return relayPubKey
+// }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -110,17 +118,36 @@ func initializeEnvironment(t *testing.T) {
 		t.Error(err)
 	}
 
-	idAddr, err := core.IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
+	id, err := core.IDFromString(relayIdHex)
 	assert.Nil(t, err)
-	service = New(idAddr, mt, &RootServiceMock{}, &SignServiceMock{})
 
-	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-	relaySecKey, err = crypto.HexToECDSA(secKeyHex)
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
-	relayAddr = crypto.PubkeyToAddress(*relayPubKey)
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signSrv := signsrv.New(keyStore, *relayPk)
+	service = New(id, mt, &RootServiceMock{}, *signSrv)
+
+	relayID, err = core.IDFromString(relayIdHex)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func TestGetNextVersion(t *testing.T) {
@@ -207,7 +234,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 func TestGetClaimProof(t *testing.T) {
 	initializeEnvironment(t)
 
-	idAddr, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 
 	// Basic Claim
@@ -227,8 +254,15 @@ func TestGetClaimProof(t *testing.T) {
 	pk := sk.Public().(*ecdsa.PublicKey)
 	claimAuthKSign := core.NewClaimAuthorizeKSignSecp256k1(pk)
 
+	var kSignSk babyjub.PrivateKey
+	if _, err := hex.Decode(kSignSk[:], []byte("9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")); err != nil {
+		panic(err)
+	}
+	kSignPk := kSignSk.Public()
+	claimAuthKSignBabyJub := core.NewClaimAuthorizeKSignBabyJub(kSignPk)
+
 	// open the MerkleTree of the user
-	userMT, err := NewMerkleTreeUser(idAddr, mt.Storage(), 140)
+	userMT, err := NewMerkleTreeUser(id, mt.Storage(), 140)
 	assert.Nil(t, err)
 
 	// add claimBasic in User ID Merkle Tree
@@ -239,8 +273,12 @@ func TestGetClaimProof(t *testing.T) {
 	err = userMT.Add(claimAuthKSign.Entry())
 	assert.Nil(t, err)
 
+	// add claimAuthKSignBabyJub in User ID Merkle Tree
+	err = userMT.Add(claimAuthKSignBabyJub.Entry())
+	assert.Nil(t, err)
+
 	// setRootClaim of the user in the Relay Merkle Tree
-	setRootClaim := core.NewClaimSetRootKey(idAddr, *userMT.RootKey())
+	setRootClaim := core.NewClaimSetRootKey(id, *userMT.RootKey())
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim.Entry())
@@ -255,12 +293,12 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err := core.VerifyProofClaim(relayAddr, proofClaim)
+	ok, err := core.VerifyProofClaim(relayPk, proofClaim)
 	if !ok || err != nil {
 		panic(err)
 	}
 
-	proofClaimUser, err := service.GetClaimProofUserByHi(idAddr, claimBasic.Entry().HIndex())
+	proofClaimUser, err := service.GetClaimProofUserByHi(id, claimBasic.Entry().HIndex())
 	assert.Nil(t, err)
 	p, err = json.Marshal(proofClaimUser)
 	if debug {
@@ -268,32 +306,42 @@ func TestGetClaimProof(t *testing.T) {
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	proofClaimUser2, err := service.GetClaimProofUserByHi(idAddr, claimAuthKSign.Entry().HIndex())
+	proofClaimUser2, err := service.GetClaimProofUserByHi(id, claimAuthKSign.Entry().HIndex())
 	assert.Nil(t, err)
 	p, err = json.Marshal(proofClaimUser2)
 	if debug {
 		fmt.Printf("\n\tclaim authorize ksign secp256k1 claim proof\n\n")
-		fmt.Println("idAddr", idAddr.String())
+		fmt.Println("id", id.String())
 		fmt.Println("pk", common3.HexEncode(crypto.CompressPubkey(pk)))
 		fmt.Println(string(p))
 	}
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser2)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser2)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
 
-	ok, err = core.VerifyProofClaim(relayAddr, proofClaimUser)
+	ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
 	assert.Equal(t, ok, true)
 	assert.Nil(t, err)
+
+	proofClaimUser3, err := service.GetClaimProofUserByHi(id, claimAuthKSignBabyJub.Entry().HIndex())
+	assert.Nil(t, err)
+	p, err = json.Marshal(proofClaimUser3)
+	if debug {
+		fmt.Printf("\n\tclaim authorize ksign babyjub claim proof\n\n")
+		fmt.Println("id", id.String())
+		fmt.Println("pk", kSignPk)
+		fmt.Println(string(p))
+	}
 
 	// ClaimAssignName
 	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	// assert.Nil(t, err)
-	claimAssignName := core.NewClaimAssignName("testName@iden3.eth", idAddr)
+	claimAssignName := core.NewClaimAssignName("testName@iden3.eth", id)
 	// add assignNameClaim in User ID Merkle Tree
 	err = mt.Add(claimAssignName.Entry())
 	assert.Nil(t, err)

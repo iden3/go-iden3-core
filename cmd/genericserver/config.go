@@ -5,6 +5,7 @@ import (
 
 	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
@@ -27,8 +28,15 @@ type Config struct {
 		Address  string
 		Password string
 	}
-	IdAddrRaw string  `mapstructure:"idaddr"`
-	IdAddr    core.ID `mapstructure:"-"`
+	KeyStoreBaby struct {
+		Path       string
+		PubKeyRaw  string                `mapstructure:"pubkey"`
+		PubKey     babyjub.PublicKey     `mapstructure:"-"`
+		PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
+		Password   string
+	}
+	IdRaw     string  `mapstructure:"id"`
+	Id        core.ID `mapstructure:"-"`
 	Contracts struct {
 		RootCommits   ContractInfo
 		Iden3Impl     ContractInfo
@@ -70,8 +78,12 @@ func MustRead(c *cli.Context) error {
 		return err
 	}
 	var err error
-	if C.IdAddr, err = core.IDFromString(C.IdAddrRaw); err != nil {
+	if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
 		return err
 	}
+	if err := C.KeyStoreBaby.PubKey.UnmarshalText([]byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
+		return err
+	}
+	C.KeyStoreBaby.PubKeyComp = C.KeyStoreBaby.PubKey.Compress()
 	return nil
 }

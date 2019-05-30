@@ -14,7 +14,7 @@ import (
 )
 
 type Service interface {
-	VinculateId(name string, domain string, idAddr core.ID) (*core.ClaimAssignName, error)
+	VinculateId(name string, domain string, id core.ID) (*core.ClaimAssignName, error)
 	ResolvClaimAssignName(name string) (*core.ClaimAssignName, error)
 }
 
@@ -28,9 +28,9 @@ func New(claimsrv claimsrv.Service, signer signsrv.Service, domain string) *Serv
 	return &ServiceImpl{claimsrv, signer, domain}
 }
 
-// VinculateId creates an adds a ClaimAssignName vinculating a name and an address, into the merkletree
+// VinculateId creates an adds a ClaimAssignName vinculating a name and an id, into the merkletree
 func (ns *ServiceImpl) VinculateId(name string, domain string,
-	idAddr core.ID) (*core.ClaimAssignName, error) {
+	id core.ID) (*core.ClaimAssignName, error) {
 	if name == "" {
 		return nil, fmt.Errorf("Name is empty")
 	}
@@ -38,7 +38,7 @@ func (ns *ServiceImpl) VinculateId(name string, domain string,
 		return nil, fmt.Errorf("Name contains a '@' character")
 	}
 	// add ClaimAssignName to merkle tree
-	assignNameClaim := core.NewClaimAssignName(fmt.Sprintf("%v@%v", name, domain), idAddr)
+	assignNameClaim := core.NewClaimAssignName(fmt.Sprintf("%v@%v", name, domain), id)
 	if err := ns.claimsrv.AddClaim(assignNameClaim); err != nil {
 		return nil, err
 	}

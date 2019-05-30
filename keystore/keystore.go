@@ -2,10 +2,11 @@ package keystore
 
 import (
 	"crypto/rand"
-	"encoding/hex"
+	// "encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gofrs/flock"
+	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/crypto/mimc7"
 	"golang.org/x/crypto/nacl/secretbox"
@@ -59,53 +60,14 @@ var StandardKeyStoreParams = KeyStoreParams{
 	ScryptP: StandardScryptP,
 }
 
-// Hex is a byte slice type that can be marshalled and unmarshaled in hex
-type Hex []byte
-
-// MarshalText encodes buf as hex
-func (buf Hex) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeToString(buf)), nil
-}
-
-// String encodes buf as hex
-func (buf Hex) String() string {
-	return hex.EncodeToString(buf)
-}
-
-// UnmarshalText decodes a hex into buf
-func (buf *Hex) UnmarshalText(h []byte) error {
-	*buf = make([]byte, hex.DecodedLen(len(h)))
-	if _, err := hex.Decode(*buf, h); err != nil {
-		return err
-	}
-	return nil
-}
-
-type hex32 [32]byte
-
-func (buf hex32) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeToString(buf[:])), nil
-}
-
-func (buf hex32) String() string {
-	return hex.EncodeToString(buf[:])
-}
-
-func (buf *hex32) UnmarshalText(h []byte) error {
-	if _, err := hex.Decode(buf[:], h); err != nil {
-		return err
-	}
-	return nil
-}
-
 // EncryptedData contains the key derivation parameters and encryption
 // parameters with the encrypted data.
 type EncryptedData struct {
-	Salt          Hex
+	Salt          common3.Hex
 	ScryptN       int
 	ScryptP       int
-	Nonce         Hex
-	EncryptedData Hex
+	Nonce         common3.Hex
+	EncryptedData common3.Hex
 }
 
 // EncryptedData encrypts data with a key derived from pass
@@ -128,11 +90,11 @@ func EncryptData(data, pass []byte, scryptN, scryptP int) (*EncryptedData, error
 	encryptedData = secretbox.Seal(encryptedData, data, &nonce, &key)
 
 	return &EncryptedData{
-		Salt:          Hex(salt[:]),
+		Salt:          common3.Hex(salt[:]),
 		ScryptN:       scryptN,
 		ScryptP:       scryptP,
-		Nonce:         Hex(nonce[:]),
-		EncryptedData: Hex(encryptedData),
+		Nonce:         common3.Hex(nonce[:]),
+		EncryptedData: common3.Hex(encryptedData),
 	}, nil
 }
 
@@ -156,7 +118,7 @@ func DecryptData(encData *EncryptedData, pass []byte) ([]byte, error) {
 }
 
 // KeysStored is the datastructure of stored keys in the storage.
-type KeysStored map[hex32]EncryptedData
+type KeysStored map[babyjub.PublicKeyComp]EncryptedData
 
 // Storage is an interface for a storage container.
 type Storage interface {
@@ -225,7 +187,7 @@ type KeyStore struct {
 	storage       Storage
 	params        KeyStoreParams
 	encryptedKeys KeysStored
-	cache         map[hex32]*babyjub.PrivKey
+	cache         map[babyjub.PublicKeyComp]*babyjub.PrivateKey
 	rw            sync.RWMutex
 }
 
@@ -235,13 +197,15 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		return nil, err
 	}
 	encryptedKeysJSON, err := storage.Read()
-	if err != nil {
+	if os.IsNotExist(err) {
+		encryptedKeysJSON = []byte{}
+	} else if err != nil {
 		storage.Unlock()
 		return nil, err
 	}
 	var encryptedKeys KeysStored
 	if len(encryptedKeysJSON) == 0 {
-		encryptedKeys = make(map[hex32]EncryptedData)
+		encryptedKeys = make(map[babyjub.PublicKeyComp]EncryptedData)
 	} else {
 		if err := json.Unmarshal(encryptedKeysJSON, &encryptedKeys); err != nil {
 			storage.Unlock()
@@ -252,7 +216,7 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		storage:       storage,
 		params:        params,
 		encryptedKeys: encryptedKeys,
-		cache:         make(map[hex32]*babyjub.PrivKey),
+		cache:         make(map[babyjub.PublicKeyComp]*babyjub.PrivateKey),
 	}
 	runtime.SetFinalizer(ks, func(ks *KeyStore) {
 		// When there are no more references to the key store, clear
@@ -267,10 +231,10 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 }
 
 // Keys returns the compressed public keys of the key storage.
-func (ks *KeyStore) Keys() [][32]byte {
+func (ks *KeyStore) Keys() []babyjub.PublicKeyComp {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
-	keys := make([][32]byte, 0, len(ks.encryptedKeys))
+	keys := make([]babyjub.PublicKeyComp, 0, len(ks.encryptedKeys))
 	for pk, _ := range ks.encryptedKeys {
 		keys = append(keys, pk)
 	}
@@ -278,22 +242,22 @@ func (ks *KeyStore) Keys() [][32]byte {
 }
 
 // NewKey creates a new key in the key store encrypted with pass.
-func (ks *KeyStore) NewKey(pass []byte) (*[32]byte, error) {
+func (ks *KeyStore) NewKey(pass []byte) (*babyjub.PublicKeyComp, error) {
 	sk := babyjub.NewRandPrivKey()
 	return ks.ImportKey(sk, pass)
 }
 
 // ImportKey imports a secret key into the storage and encrypts it with pass.
-func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*[32]byte, error) {
+func (ks *KeyStore) ImportKey(sk babyjub.PrivateKey, pass []byte) (*babyjub.PublicKeyComp, error) {
 	ks.rw.Lock()
 	defer ks.rw.Unlock()
 	encryptedKey, err := EncryptData(sk[:], pass, ks.params.ScryptN, ks.params.ScryptP)
 	if err != nil {
 		return nil, err
 	}
-	pk := sk.Pub()
-	pubCompressed := (*babyjub.Point)(pk).Compress()
-	ks.encryptedKeys[pubCompressed] = *encryptedKey
+	pk := sk.Public()
+	pubComp := pk.Compress()
+	ks.encryptedKeys[pubComp] = *encryptedKey
 	encryptedKeysJSON, err := json.Marshal(ks.encryptedKeys)
 	if err != nil {
 		return nil, err
@@ -301,16 +265,22 @@ func (ks *KeyStore) ImportKey(sk babyjub.PrivKey, pass []byte) (*[32]byte, error
 	if err := ks.storage.Write(encryptedKeysJSON); err != nil {
 		return nil, err
 	}
-	return &pubCompressed, nil
+	return &pubComp, nil
+}
+
+func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp, pass []byte) (*babyjub.PrivateKey, error) {
+	if err := ks.UnlockKey(pk, pass); err != nil {
+		return nil, err
+	}
+	return ks.cache[*pk], nil
 }
 
 // UnlockKey decrypts the key corresponding to the public key pk and loads it
 // into the cache.
-func (ks *KeyStore) UnlockKey(pk *[32]byte, pass []byte) error {
+func (ks *KeyStore) UnlockKey(pk *babyjub.PublicKeyComp, pass []byte) error {
 	ks.rw.Lock()
 	defer ks.rw.Unlock()
-	hexPk := hex32(*pk)
-	encryptedKey, ok := ks.encryptedKeys[hexPk]
+	encryptedKey, ok := ks.encryptedKeys[*pk]
 	if !ok {
 		return fmt.Errorf("Public key not found in the key store")
 	}
@@ -318,19 +288,18 @@ func (ks *KeyStore) UnlockKey(pk *[32]byte, pass []byte) error {
 	if err != nil {
 		return err
 	}
-	var sk babyjub.PrivKey
+	var sk babyjub.PrivateKey
 	copy(sk[:], skBuf)
-	ks.cache[hexPk] = &sk
+	ks.cache[*pk] = &sk
 	return nil
 }
 
 // SignElem uses the key corresponding to the public key pk to sign the field
 // element msg.
-func (ks *KeyStore) SignElem(pk *[32]byte, msg mimc7.RElem) (*[64]byte, error) {
+func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg mimc7.RElem) (*babyjub.SignatureComp, error) {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
-	hexPk := hex32(*pk)
-	sk, ok := ks.cache[hexPk]
+	sk, ok := ks.cache[*pk]
 	if !ok {
 		return nil, fmt.Errorf("Public key not found in the cache.  Is it unlocked?")
 	}
@@ -351,7 +320,7 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 	}
 	if len(msg)%n != 0 {
 		v := new(big.Int)
-		babyjub.SetBigIntFromLEBytes(v, msg[len(msg)/n:])
+		babyjub.SetBigIntFromLEBytes(v, msg[(len(msg)/n)*n:])
 		msgElems = append(msgElems, v)
 	}
 	return mimc7.Hash(msgElems, nil)
@@ -359,14 +328,14 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 
 // Sign uses the key corresponding to the public key pk to sign the mimc7 hash
 // of the msg byte slice.
-func (ks *KeyStore) Sign(pk *[32]byte, msg []byte) (*[64]byte, error) {
+func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
 	h := mimc7HashBytes(msg)
 	return ks.SignElem(pk, h)
 }
 
 // VerifySignatureElem verifies that the signature sigComp of the field element
 // msg was signed with the public key pkComp.
-func VerifySignatureElem(pkComp *[32]byte, msg mimc7.RElem, sigComp *[64]byte) (bool, error) {
+func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg mimc7.RElem, sigComp *babyjub.SignatureComp) (bool, error) {
 	pkPoint, err := babyjub.NewPoint().Decompress(*pkComp)
 	if err != nil {
 		return false, err
@@ -375,13 +344,13 @@ func VerifySignatureElem(pkComp *[32]byte, msg mimc7.RElem, sigComp *[64]byte) (
 	if err != nil {
 		return false, err
 	}
-	pk := babyjub.PubKey(*pkPoint)
+	pk := babyjub.PublicKey(*pkPoint)
 	return pk.VerifyMimc7(msg, sig), nil
 }
 
 // VerifySignatureElem verifies that the signature sigComp of the mimc7 hash of
 // the msg byte slice was signed with the public key pkComp.
-func VerifySignature(pkComp *[32]byte, msg []byte, sigComp *[64]byte) (bool, error) {
+func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
 	h := mimc7HashBytes(msg)
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

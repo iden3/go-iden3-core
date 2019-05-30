@@ -16,25 +16,25 @@ import (
 // handleCommitNewIdRoot handles a request to set the root key of a user tree
 // though a set root claim.
 func handleCommitNewIdRoot(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		genericserver.Fail(c, "error on parse idaddr", err)
+		genericserver.Fail(c, "error on parse id", err)
 		return
 	}
 
 	var setRootMsg claimsrv.SetRootMsg
 	c.BindJSON(&setRootMsg)
 
-	idaddrMsg, err := core.IDFromString(setRootMsg.IdAddr)
+	idMsg, err := core.IDFromString(setRootMsg.Id)
 	if err != nil {
-		genericserver.Fail(c, "error on parse setRootMsg.IdAddr", err)
+		genericserver.Fail(c, "error on parse setRootMsg.Id", err)
 		return
 	}
 
-	// make sure that the given idaddr from the post url matches with the idaddr from the post data
-	if !bytes.Equal(idaddr.Bytes(), idaddrMsg.Bytes()) {
-		genericserver.Fail(c, "error on PostNewRoot, idaddr not match", errors.New("PostNewRoot idaddr not match"))
+	// make sure that the given id from the post url matches with the id from the post data
+	if !bytes.Equal(id.Bytes(), idMsg.Bytes()) {
+		genericserver.Fail(c, "error on PostNewRoot, id not match", errors.New("PostNewRoot id not match"))
 		return
 	}
 	rootBytes, err := common3.HexDecode(setRootMsg.Root)
@@ -46,7 +46,7 @@ func handleCommitNewIdRoot(c *gin.Context) {
 	copy(root[:], rootBytes[:32])
 
 	// add the root through genericserver.Claimservice
-	setRootClaim, err := genericserver.Claimservice.CommitNewIdRoot(idaddr, &setRootMsg.KSignPk.PublicKey,
+	setRootClaim, err := genericserver.Claimservice.CommitNewIdRoot(id, &setRootMsg.KSignPk.PublicKey,
 		root, setRootMsg.Timestamp, setRootMsg.Signature)
 	if err != nil {
 		genericserver.Fail(c, "error on AddAuthorizeKSignClaim", err)
@@ -66,10 +66,10 @@ func handleCommitNewIdRoot(c *gin.Context) {
 
 // handlePostClaim handles the request to add a claim to a user tree.
 func handlePostClaim(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		genericserver.Fail(c, "error on parse idaddr", err)
+		genericserver.Fail(c, "error on parse id", err)
 		return
 	}
 	var bytesSignedMsg claimsrv.BytesSignedMsg
@@ -94,13 +94,13 @@ func handlePostClaim(c *gin.Context) {
 		Signature:  bytesSignedMsg.Signature,
 		KSignPk:    bytesSignedMsg.KSignPk,
 	}
-	err = genericserver.Claimservice.AddUserIdClaim(idaddr, claimValueMsg)
+	err = genericserver.Claimservice.AddUserIdClaim(id, claimValueMsg)
 	if err != nil {
 		genericserver.Fail(c, "error on AddUserIdClaim", err)
 		return
 	}
 	// return claim with proofs
-	proofClaim, err := genericserver.Claimservice.GetClaimProofUserByHi(idaddr, entry.HIndex())
+	proofClaim, err := genericserver.Claimservice.GetClaimProofUserByHi(id, entry.HIndex())
 	if err != nil {
 		genericserver.Fail(c, "error on GetClaimByHi", err)
 		return
@@ -114,13 +114,13 @@ func handlePostClaim(c *gin.Context) {
 
 // handleGetIdRoot handles a request to query the root key of a user tree.
 func handleGetIdRoot(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	idaddr, err := core.IDFromString(idaddrhex)
+	idHex := c.Param("id")
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		genericserver.Fail(c, "error on parse idaddr", err)
+		genericserver.Fail(c, "error on parse id", err)
 		return
 	}
-	idRoot, idRootProof, err := genericserver.Claimservice.GetIdRoot(idaddr)
+	idRoot, idRootProof, err := genericserver.Claimservice.GetIdRoot(id)
 	if err != nil {
 		genericserver.Fail(c, "error on GetIdRoot", err)
 		return
@@ -136,21 +136,21 @@ func handleGetIdRoot(c *gin.Context) {
 // handleGetClaimProofUserByHi handles the request to query the claim proof of
 // a user claim (by hIndex).
 func handleGetClaimProofUserByHi(c *gin.Context) {
-	idaddrhex := c.Param("idaddr")
-	hihex := c.Param("hi")
-	hiBytes, err := common3.HexDecode(hihex)
+	idHex := c.Param("id")
+	hiHex := c.Param("hi")
+	hiBytes, err := common3.HexDecode(hiHex)
 	if err != nil {
 		genericserver.Fail(c, "error on HexDecode of Hi", err)
 		return
 	}
 	hi := &merkletree.Hash{}
 	copy(hi[:], hiBytes)
-	idaddr, err := core.IDFromString(idaddrhex)
+	id, err := core.IDFromString(idHex)
 	if err != nil {
-		genericserver.Fail(c, "error on parse idaddr", err)
+		genericserver.Fail(c, "error on parse id", err)
 		return
 	}
-	proofClaim, err := genericserver.Claimservice.GetClaimProofUserByHi(idaddr, hi)
+	proofClaim, err := genericserver.Claimservice.GetClaimProofUserByHi(id, hi)
 	if err != nil {
 		genericserver.Fail(c, "error on GetClaimByHi", err)
 		return

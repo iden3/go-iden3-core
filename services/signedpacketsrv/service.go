@@ -1,18 +1,21 @@
 package signedpacketsrv
 
 import (
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	// "github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
-	"github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 )
 
 type SignedPacketVerifier struct {
@@ -25,10 +28,10 @@ func NewSignedPacketVerifier(discoverySrv *discoverysrv.Service,
 	return &SignedPacketVerifier{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
 }
 
-// VerifySignedPacketV01 verifies a SIGV01 signed packet.
-func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
-	// 2. Verify jwsHeader.alg is 'ES255'
-	if jws.Header.Algorithm != SIGALGV01 {
+// VerifySignedPacketV02 verifies a SIGV02 signed packet.
+func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
+	// 2. Verify jwsHeader.alg is 'ED256BJ'
+	if jws.Header.Algorithm != SIGALGV02 {
 		return fmt.Errorf("Unsupported alg: %v", jws.Header.Algorithm)
 	}
 
@@ -45,12 +48,16 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	if err != nil {
 		return err
 	}
-	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignSecp256k1)
+	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
 	if !ok {
 		return fmt.Errorf("Invalid claim type in payload.proofksign.leaf," +
 			"expected ClaimAuthorizeKSignSecp256k1")
 	}
-	if !reflect.DeepEqual(jws.Payload.KSign.PublicKey, *claimAuthorizeKSign.PubKey) {
+	claimAuthorizeKSignPkComp := babyjub.PublicKeyComp(
+		babyjub.PackPoint(claimAuthorizeKSign.Ay, claimAuthorizeKSign.Sign))
+	if !reflect.DeepEqual(jws.Payload.KSign.Compress(), claimAuthorizeKSignPkComp) {
+		fmt.Println("jws.Payload.KSign", jws.Payload.KSign.Compress())
+		fmt.Println("claimAuthorizeKSign", hex.EncodeToString(claimAuthorizeKSignPkComp[:]))
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
@@ -66,8 +73,8 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 		if jws.Payload.ProofKSign.Proofs[0].Aux == nil {
 			return fmt.Errorf("payload.proofksign.proofs[0].aux is nil")
 		}
-		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.IdAddr {
-			return fmt.Errorf("header.iss doesn't match with idaddr in proofksign set root claim")
+		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.Id {
+			return fmt.Errorf("header.iss doesn't match with id in proofksign set root claim")
 		}
 	}
 
@@ -76,15 +83,15 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// As verifying a signature is cheaper than verifying a merkle tree
 	// proof, first we verify signature with ksign, and then we verify the
 	// merkle tree proofs.
-	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(jws.Payload.KSign.PublicKey),
-		jws.Signature, jws.SignedBytes) {
-		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign")
+	kSignComp := jws.Payload.KSign.Compress()
+	if ok, err := babykeystore.VerifySignature(&kSignComp, jws.Signature, jws.SignedBytes); !ok {
+		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign: %v", err)
 	}
 
 	// 7a. Get the operational key from the signer and in case it's a
 	// relay, check if it's trusted.
-	signerIdAddr := jws.Payload.ProofKSign.Signer
-	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
+	signerId := jws.Payload.ProofKSign.Signer
+	signer, err := ss.DiscoverySrv.GetEntity(signerId)
 	if err != nil {
 		return fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
@@ -103,7 +110,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV01(jws *SignedPacket) error {
 	// won't be able to sign contradicting claims.
 
 	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
+	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
 		fmt.Println("proof[0].root", jws.Payload.ProofKSign.Proofs[0].Root.Hex())
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
@@ -116,7 +123,11 @@ func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 	switch jws.Header.Type {
 	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_1'
 	case SIGV01:
-		return ss.VerifySignedPacketV01(jws)
+		// return ss.VerifySignedPacketV01(jws)
+		return fmt.Errorf("Deprecated signature packet typ: %v", jws.Header.Type)
+	// 1. Verify jwsHeader.typ is 'iden3.sig.v0_2'
+	case SIGV02:
+		return ss.VerifySignedPacketV02(jws)
 	default:
 		return fmt.Errorf("Unsupported signature packet typ: %v", jws.Header.Type)
 	}
@@ -128,7 +139,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacket(jws *SignedPacket) error {
 type IdenAssertResult struct {
 	NonceObj *core.NonceObj
 	EthName  *string
-	IdAddr   core.ID
+	Id       core.ID
 }
 
 // VerifyIdenAssertV01 verifies an IDENASSERTV01 payload of a signed packet.
@@ -155,7 +166,7 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	}
 
 	if form == (*IdenAssertForm)(nil) {
-		return &IdenAssertResult{NonceObj: nonceObj, EthName: nil, IdAddr: jws.Header.Issuer}, nil
+		return &IdenAssertResult{NonceObj: nonceObj, EthName: nil, Id: jws.Header.Issuer}, nil
 	}
 
 	// 4. Verify that jwsHeader.iss and jwsPayload.form.ethName are in jwsPayload.form.proofAssignName.leaf
@@ -170,8 +181,8 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	if core.HashString(form.EthName) != claimAssignName.NameHash {
 		return nil, fmt.Errorf("Assign Name claim name doesn't match with form.ethName")
 	}
-	if jws.Header.Issuer != claimAssignName.IdAddr {
-		return nil, fmt.Errorf("Assign Name claim idAddr doesn't match with header.iss")
+	if jws.Header.Issuer != claimAssignName.Id {
+		return nil, fmt.Errorf("Assign Name claim id doesn't match with header.iss")
 	}
 
 	// 5a. Extract domain from the name
@@ -182,32 +193,32 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 		domain = form.EthName[idx+1 : len(form.EthName)]
 	}
 
-	// 5b. Resolve name to obtain name server idAddr and verify that it matches the signer idAddr
+	// 5b. Resolve name to obtain name server id and verify that it matches the signer id
 	if len(form.ProofAssignName.Proofs) != 1 {
 		return nil, fmt.Errorf("Assign Name claim cannot be delegated to a child entity tree")
 	}
-	nameServerIdAddr, err := ss.nameResolverSrv.Resolve(domain)
+	nameServerId, err := ss.nameResolverSrv.Resolve(domain)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve %v: %v", domain, err)
 	}
-	signerIdAddr := form.ProofAssignName.Signer
-	if *nameServerIdAddr != signerIdAddr {
-		return nil, fmt.Errorf("Resolved idAddr (%v) doesn't match signer idAddr (%v)",
-			common3.HexEncode(nameServerIdAddr[:]), common3.HexEncode(signerIdAddr[:]))
+	signerId := form.ProofAssignName.Signer
+	if *nameServerId != signerId {
+		return nil, fmt.Errorf("Resolved id (%v) doesn't match signer id (%v)",
+			common3.HexEncode(nameServerId[:]), common3.HexEncode(signerId[:]))
 	}
 
 	// 5c. Get the operational key from the signer (name server).
-	signer, err := ss.DiscoverySrv.GetEntity(signerIdAddr)
+	signer, err := ss.DiscoverySrv.GetEntity(signerId)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
 	}
 
 	// 5d. VerifyProofClaim(jwsPayload.form.proofAssignName, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalAddr, &jws.Payload.ProofKSign); !ok {
+	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}
 
-	return &IdenAssertResult{NonceObj: nonceObj, EthName: &form.EthName, IdAddr: jws.Header.Issuer}, nil
+	return &IdenAssertResult{NonceObj: nonceObj, EthName: &form.EthName, Id: jws.Header.Issuer}, nil
 }
 
 // VerifySignedPacketIdenAssert verifies a signed packet and the

@@ -1,0 +1,23 @@
+# Relay / Name Server
+id: 1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps
+pk: 117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796
+sk: 4be5471a938bdf3606888472878baace4a6a64e14a153adf9a1333969e4e573c
+
+# User
+name: testName@iden3.eth
+id: 1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z
+pk: 1cbb679f29fb298efd6e9e2d52405dd324ff9e75025e662683062b3db0dc06a9
+sk: 9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe
+
+# Name Server
+id: 
+pk: 4716e8aa82f17cd7b57bc51978dd62e6e037938f69cd9e60ddcc8d9eac5ef0a6
+sk: 4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5
+
+# Extra1
+pk: adba460b14117032dc5cb913aaf98a5efe71c834255179cef4f0028300eb1281
+sk: dfbb271be7335b4dca52cacfdbac20f95b76bc8333044ad05fb2531aeb9ddb5d
+
+# Extra2
+pk: b2c1575ed4f8e46346ea1bcfbb1569780d62bec6a06ee0e9d5357071bca20102
+sk: e5db1ac9309f4a919fb9f651210cba4b411fd977c33ace4a9323b33ee467be84

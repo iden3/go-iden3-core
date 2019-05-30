@@ -16,7 +16,7 @@ import (
 func handleGetHello(c *gin.Context) {
 	user := auth.GetUser(c)
 	c.JSON(200, gin.H{
-		"idAddr":  common3.HexEncode(user.IdAddr[:]),
+		"id":      common3.HexEncode(user.Id[:]),
 		"ethName": user.EthName,
 		"text":    "Hello World.",
 	})

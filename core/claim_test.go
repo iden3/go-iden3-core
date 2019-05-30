@@ -74,9 +74,9 @@ func TestClaimAssignName(t *testing.T) {
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39, 0x39,
 	//         0x39, 0x39, 0x39, 0x3a})
-	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
-	c0 := NewClaimAssignName(name, idAddr)
+	c0 := NewClaimAssignName(name, id)
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
@@ -101,9 +101,9 @@ func TestClaimAssignName(t *testing.T) {
 
 func TestClaimAuthorizeKSignBabyJub(t *testing.T) {
 	// ClaimAuthorizeKSignBabyJub
-	var k babyjub.PrivKey
+	var k babyjub.PrivateKey
 	hex.Decode(k[:], []byte("28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"))
-	pk := k.Pub()
+	pk := k.Public()
 
 	c0 := NewClaimAuthorizeKSignBabyJub(pk)
 	c0.Version = 1
@@ -167,7 +167,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 
 func TestClaimSetRootKey(t *testing.T) {
 	// ClaimSetRootKey
-	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 
 	rootKey := merkletree.Hash(merkletree.ElemBytes{
@@ -175,7 +175,7 @@ func TestClaimSetRootKey(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c})
-	c0 := NewClaimSetRootKey(idAddr, rootKey)
+	c0 := NewClaimSetRootKey(id, rootKey)
 	c0.Version = 1
 	c0.Era = 1
 	e := c0.Entry()
@@ -203,7 +203,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	// ClaimLinkObjectIdentity
 	const objectType = ObjectTypeAddress
 	var indexType uint16
-	idAddr, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	assert.Nil(t, err)
 
 	objectHash := []byte{
@@ -218,7 +218,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x09,
 		0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x01, 0x02}
 
-	claim := NewClaimLinkObjectIdentity(objectType, indexType, idAddr, objectHash, auxData)
+	claim := NewClaimLinkObjectIdentity(objectType, indexType, id, objectHash, auxData)
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,

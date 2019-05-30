@@ -156,22 +156,22 @@ func (c *ClaimBasic) Type() ClaimType {
 	return *ClaimTypeBasic
 }
 
-// ClaimAssignName is a claim to assign a name to an Eth address.
+// ClaimAssignName is a claim to assign a name to an id.
 type ClaimAssignName struct {
 	// Version is the claim version.
 	Version uint32
 	// NameHash is the hash of the name.
 	NameHash [248 / 8]byte
-	// IdAddr is the assigned ID
-	IdAddr ID
+	// Id is the assigned ID
+	Id ID
 }
 
-// NewClaimAssignName returns a ClaimAssignName with the name and IdAddr.
-func NewClaimAssignName(name string, idAddr ID) *ClaimAssignName {
+// NewClaimAssignName returns a ClaimAssignName with the name and Id.
+func NewClaimAssignName(name string, id ID) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	c.Version = 0
 	c.NameHash = HashString(name)
-	c.IdAddr = idAddr
+	c.Id = id
 	return c
 }
 
@@ -180,7 +180,7 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 	c := &ClaimAssignName{}
 	_, c.Version = getClaimTypeVersion(e)
 	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
-	copyFromElemBytes(c.IdAddr[:], 0, &e.Data[1])
+	copyFromElemBytes(c.Id[:], 0, &e.Data[1])
 	return c
 }
 
@@ -189,7 +189,7 @@ func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	setClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
-	copyToElemBytes(&e.Data[1], 0, c.IdAddr[:31])
+	copyToElemBytes(&e.Data[1], 0, c.Id[:31])
 	return e
 }
 
@@ -212,7 +212,7 @@ type ClaimAuthorizeKSignBabyJub struct {
 
 // NewClaimAuthorizeKSignBabyJub returns a ClaimAuthorizeKSignBabyJub with the
 // given elliptic public key parameters.
-func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PubKey) *ClaimAuthorizeKSignBabyJub {
+func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PublicKey) *ClaimAuthorizeKSignBabyJub {
 	return &ClaimAuthorizeKSignBabyJub{
 		Version: 0,
 		Sign:    babyjub.PointCoordSign(pk.X),
@@ -305,19 +305,19 @@ type ClaimSetRootKey struct {
 	Version uint32
 	// Era is used for labeling epochs.
 	Era uint32
-	// IdAddr is the ID related to the root key.
-	IdAddr ID
+	// Id is the ID related to the root key.
+	Id ID
 	// RootKey is the root of the mekrlee tree.
 	RootKey merkletree.Hash
 }
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(idAddr ID, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(id ID, rootKey merkletree.Hash) *ClaimSetRootKey {
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
-		IdAddr:  idAddr,
+		Id:      id,
 		RootKey: rootKey,
 	}
 }
@@ -329,7 +329,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	var era [32 / 8]byte
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
 	c.Era = binary.BigEndian.Uint32(era[:])
-	copyFromElemBytes(c.IdAddr[:], 0, &e.Data[2])
+	copyFromElemBytes(c.Id[:], 0, &e.Data[2])
 	c.RootKey = merkletree.Hash(e.Data[1])
 	return c
 }
@@ -341,7 +341,7 @@ func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	var era [32 / 8]byte
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])
-	copyToElemBytes(&e.Data[2], 0, c.IdAddr[:])
+	copyToElemBytes(&e.Data[2], 0, c.Id[:])
 	e.Data[1] = merkletree.ElemBytes(c.RootKey)
 	return e
 }
@@ -389,8 +389,8 @@ type ClaimLinkObjectIdentity struct {
 	ObjectType ObjectType
 	// ObjectIndex is the index of this object which the identity has.
 	ObjectIndex uint16
-	// IdAddr is the ID.
-	IdAddr ID
+	// Id is the ID.
+	Id ID
 	// ObjectHash is the hash of the object.
 	ObjectHash [248 / 8]byte
 	// Auxiliary data to complement claim information.
@@ -406,7 +406,7 @@ func minInt(a int, b int) int {
 }
 
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
-func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, idAddr ID,
+func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, id ID,
 	objectHash []byte, auxData []byte) *ClaimLinkObjectIdentity {
 	var objectHashSlice [31]byte
 	minLen := minInt(len(objectHash), 32)
@@ -418,7 +418,7 @@ func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, idAdd
 		Version:     0,
 		ObjectType:  objectType,
 		ObjectIndex: objectIndex,
-		IdAddr:      idAddr,
+		Id:          id,
 		ObjectHash:  objectHashSlice,
 		AuxData:     auxDataSlice,
 	}
@@ -439,7 +439,7 @@ func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObje
 	copyFromElemBytes(objectIndex[:], indexLen, &entry.Data[3])
 	claim.ObjectIndex = binary.BigEndian.Uint16(objectIndex[:])
 	// identity address
-	copyFromElemBytes(claim.IdAddr[:], 0, &entry.Data[2])
+	copyFromElemBytes(claim.Id[:], 0, &entry.Data[2])
 	// hash object
 	copyFromElemBytes(claim.ObjectHash[:], 0, &entry.Data[1])
 	// hash type
@@ -463,7 +463,7 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	binary.BigEndian.PutUint16(objectIndex[:], claim.ObjectIndex)
 	copyToElemBytes(&entry.Data[3], indexLen, objectIndex[:])
 	// identity address
-	copyToElemBytes(&entry.Data[2], 0, claim.IdAddr[:])
+	copyToElemBytes(&entry.Data[2], 0, claim.Id[:])
 	// object hash
 	copyToElemBytes(&entry.Data[1], 0, claim.ObjectHash[:])
 	// aux data

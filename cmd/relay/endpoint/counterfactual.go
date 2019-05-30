@@ -28,7 +28,7 @@ type handlePostCounterfactualReq struct {
 
 // handlePostCounterfactualRes is the response of a creation of a new counterfactual
 type handlePostCounterfactualRes struct {
-	IdAddr     core.ID          `json:"idAddr"`
+	Id         core.ID          `json:"id"`
 	EthAddr    common.Address   `json:"ethAddr"`
 	ProofClaim *core.ProofClaim `json:"proofClaim"`
 }
@@ -87,21 +87,21 @@ func handleCreateCounterfactual(c *gin.Context) {
 		genericserver.Fail(c, "failed adding identity ", err)
 		return
 	} else {
-		c.JSON(http.StatusOK, handlePostCounterfactualRes{IdAddr: idreq.Id, EthAddr: ethAddr, ProofClaim: proofClaim})
+		c.JSON(http.StatusOK, handlePostCounterfactualRes{Id: idreq.Id, EthAddr: ethAddr, ProofClaim: proofClaim})
 	}
 }
 
 // handleDeployCounterfactual handles the deploying of the user contract in the blockchain.
 func handleDeployCounterfactual(c *gin.Context) {
 
-	idaddr := common.HexToAddress(c.Param("idaddr"))
-	id, err := genericserver.Counterfactualservice.Get(idaddr)
+	idAddr := common.HexToAddress(c.Param("idaddr"))
+	id, err := genericserver.Counterfactualservice.Get(idAddr)
 	if err != nil {
-		genericserver.Fail(c, "cannot retrieve idaddr", err)
+		genericserver.Fail(c, "cannot retrieve id", err)
 		return
 	}
 
-	isDeployed, err := genericserver.Counterfactualservice.IsDeployed(idaddr)
+	isDeployed, err := genericserver.Counterfactualservice.IsDeployed(idAddr)
 	if err != nil {
 		genericserver.Fail(c, "cannot retrieve deployment status", err)
 		return
@@ -182,10 +182,10 @@ func handleForwardCounterfactual(c *gin.Context) {
 	astxt, _ := json.MarshalIndent(req, "", "   ")
 	fmt.Println(string(astxt))
 
-	// idaddr := common.HexToAddress(c.Param("idaddr"))
-	idAddr, err := core.IDFromString(c.Param("idaddr"))
+	// idaddr := common.HexToAddress(c.Param("id"))
+	id, err := core.IDFromString(c.Param("id"))
 	if err := c.BindJSON(&req); err != nil {
-		genericserver.Fail(c, "cannot parse idAddr", err)
+		genericserver.Fail(c, "cannot parse id", err)
 		return
 	}
 
@@ -203,7 +203,7 @@ func handleForwardCounterfactual(c *gin.Context) {
 		return
 	}
 
-	tx, err := genericserver.Counterfactualservice.Forward(idAddr, req.CounterfactualAddr,
+	tx, err := genericserver.Counterfactualservice.Forward(id, req.CounterfactualAddr,
 		&req.KSignPk.PublicKey,
 		req.To, data, value, req.Gas, sig)
 

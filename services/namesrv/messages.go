@@ -18,7 +18,7 @@ type RawIdentityTx struct {
 // ethereum address to a name.
 type VinculateIdMsg struct {
 	// This kind of message does not need the caducity
-	IdAddr     core.ID                `json:"idAddr" binding:"required"` // temp, will be calculated directly from RawIdentityTx
+	Id         core.ID                `json:"id" binding:"required"` // temp, will be calculated directly from RawIdentityTx
 	Name       string                 `json:"name" binding:"required"`
 	Signature  *utils.SignatureEthMsg `json:"signature" binding:"required"` // hex format
 	KSignPk    *utils.PublicKey       `json:"kSignPk" binding:"required"`
@@ -28,7 +28,7 @@ type VinculateIdMsg struct {
 // Bytes returns the byte array serialization of VinculateIdMsg
 func (m *VinculateIdMsg) Bytes() []byte {
 	var b []byte
-	b = append(b, m.IdAddr.Bytes()...)
+	b = append(b, m.Id.Bytes()...)
 	b = append(b, []byte(m.Name)...)
 	return b
 }

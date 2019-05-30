@@ -44,7 +44,7 @@ func TestPack(t *testing.T) {
 var relaySecKey *ecdsa.PrivateKey
 var relayPubKey *ecdsa.PublicKey
 var relayKOpAddr common.Address
-var relayIdAddr core.ID
+var relayId core.ID
 
 type RootServiceMock struct {
 	mock.Mock

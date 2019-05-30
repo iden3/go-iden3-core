@@ -28,13 +28,13 @@ func serveServiceApi() *http.Server {
 
 	serviceapi.POST("/ids", handleCreateIdGenesis)
 	serviceapi.POST("/counterfactual", handleCreateCounterfactual)
-	serviceapi.GET("/ids/:idaddr", handleGetCounterfactual)
+	serviceapi.GET("/ids/:id", handleGetCounterfactual)
 	serviceapi.POST("/ids/:idaddr/deploy", handleDeployCounterfactual)
-	serviceapi.POST("/ids/:idaddr/forward", handleForwardCounterfactual)
-	serviceapi.GET("/ids/:idaddr/root", handleGetIdRoot)
-	serviceapi.POST("/ids/:idaddr/root", handleCommitNewIdRoot)
-	serviceapi.POST("/ids/:idaddr/claims", handlePostClaim)
-	serviceapi.GET("/ids/:idaddr/claims/:hi/proof", handleGetClaimProofUserByHi) // Get user claim proof
+	serviceapi.POST("/ids/:id/forward", handleForwardCounterfactual)
+	serviceapi.GET("/ids/:id/root", handleGetIdRoot)
+	serviceapi.POST("/ids/:id/root", handleCommitNewIdRoot)
+	serviceapi.POST("/ids/:id/claims", handlePostClaim)
+	serviceapi.GET("/ids/:id/claims/:hi/proof", handleGetClaimProofUserByHi) // Get user claim proof
 
 	serviceapisrv := &http.Server{Addr: genericserver.C.Server.ServiceApi, Handler: api}
 	go func() {

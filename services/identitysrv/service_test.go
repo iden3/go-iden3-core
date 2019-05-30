@@ -1,30 +1,37 @@
 package identitysrv
 
 import (
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
 	"testing"
-	"time"
+	// "time"
+	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
+	babykeystore "github.com/iden3/go-iden3/keystore"
+	// "github.com/ethereum/go-ethereum/crypto"
+	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3/services/signsrv"
+	// "github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 var debug = false
 
-var relaySecKey *ecdsa.PrivateKey
-var relayPubKey *ecdsa.PublicKey
-var relayKOpAddr common.Address
-var relayIdAddr core.ID
+const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
+
+var keyStore *babykeystore.KeyStore
+var relaySk babyjub.PrivateKey
+var relayPkComp *babyjub.PublicKeyComp
+var relayPk *babyjub.PublicKey
+var relayId core.ID
 
 type RootServiceMock struct {
 	mock.Mock
@@ -48,32 +55,32 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 	return
 }
 
-type SignServiceMock struct {
-	mock.Mock
-}
-
-func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-	h := utils.EthHash(msg)
-	sig, err := crypto.Sign(h[:], relaySecKey)
-	if err != nil {
-		return nil, err
-	}
-	sig[64] += 27
-	sigEthMsg := &utils.SignatureEthMsg{}
-	copy(sigEthMsg[:], sig)
-	return sigEthMsg, nil
-}
-
-func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
-	dateInt64 := time.Now().Unix()
-	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
-	sig, err := m.SignEthMsg(append(msg, dateBytes...))
-	return sig, dateInt64, err
-}
-
-func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
-	return relayPubKey
-}
+// type SignServiceMock struct {
+// 	mock.Mock
+// }
+//
+// func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
+// 	h := utils.EthHash(msg)
+// 	sig, err := crypto.Sign(h[:], relaySecKey)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	sig[64] += 27
+// 	sigEthMsg := &utils.SignatureEthMsg{}
+// 	copy(sigEthMsg[:], sig)
+// 	return sigEthMsg, nil
+// }
+//
+// func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
+// 	dateInt64 := time.Now().Unix()
+// 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+// 	sig, err := m.SignEthMsg(append(msg, dateBytes...))
+// 	return sig, dateInt64, err
+// }
+//
+// func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
+// 	return relayPubKey
+// }
 
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -89,7 +96,7 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	return mt, err
 }
 func initializeIdService(t *testing.T) *ServiceImpl {
-	relayIdAddr, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	relayId, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,16 +109,31 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	// sto := db.NewMemoryStorage()
 	rootservicemock := &RootServiceMock{}
 	rootservicemock.On("SetRoot", mock.Anything).Return()
-	claimService := claimsrv.New(relayIdAddr, mt, rootservicemock, &SignServiceMock{})
-	idService := New(claimService)
 
-	secKeyHex := "79156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"
-	relaySecKey, err = crypto.HexToECDSA(secKeyHex)
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
 	if err != nil {
 		panic(err)
 	}
-	relayPubKey = relaySecKey.Public().(*ecdsa.PublicKey)
-	relayKOpAddr = crypto.PubkeyToAddress(*relayPubKey)
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signSrv := signsrv.New(keyStore, *relayPk)
+
+	claimService := claimsrv.New(relayId, mt, rootservicemock, *signSrv)
+	idService := New(claimService)
 
 	return idService
 }
@@ -119,33 +141,20 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 func TestCreateIdGenesisRandom(t *testing.T) {
 	idsrv := initializeIdService(t)
 
-	kop, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	kopPub := kop.Public().(*ecdsa.PublicKey)
+	kOpSk := babyjub.NewRandPrivKey()
+	kop := kOpSk.Public()
 	if debug {
-		fmt.Println("kop", common3.HexEncode(crypto.CompressPubkey(kopPub)))
-	}
-	krec, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	krecPub := krec.Public().(*ecdsa.PublicKey)
-	if debug {
-		fmt.Println("krec", common3.HexEncode(crypto.CompressPubkey(krecPub)))
-	}
-	krev, err := crypto.GenerateKey()
-	assert.Nil(t, err)
-	krevPub := krev.Public().(*ecdsa.PublicKey)
-	if debug {
-		fmt.Println("krev", common3.HexEncode(crypto.CompressPubkey(krevPub)))
+		fmt.Println("kop", kop)
 	}
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub, krecPub, krevPub)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kop)
 	assert.Nil(t, err)
 
-	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
+	id2, _, err := core.CalculateIdGenesis(kop)
 	assert.Nil(t, err)
-	assert.Equal(t, idAddr, idAddr2)
+	assert.Equal(t, id, id2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }
@@ -153,38 +162,39 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 func TestCreateIdGenesisHardcoded(t *testing.T) {
 	idsrv := initializeIdService(t)
 
-	kopStr := "0x037e211781efef4687e78be4fb008768acca8101b6f1f7ea099599f02a8813f386"
-	krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
-	krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
+	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
 
-	kopBytes, err := common3.HexDecode(kopStr)
+	var kopComp babyjub.PublicKeyComp
+	err := kopComp.UnmarshalText([]byte(kopStr))
 	assert.Nil(t, err)
-	kopPub, err := crypto.DecompressPubkey(kopBytes[:])
-	assert.Nil(t, err)
-
-	krecBytes, err := common3.HexDecode(krecStr)
-	assert.Nil(t, err)
-	krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
 
-	krevBytes, err := common3.HexDecode(krevStr)
-	assert.Nil(t, err)
-	krevPub, err := crypto.DecompressPubkey(krevBytes[:])
-	assert.Nil(t, err)
+	// krecBytes, err := common3.HexDecode(krecStr)
+	// assert.Nil(t, err)
+	// krecPub, err := crypto.DecompressPubkey(krecBytes[:])
+	// assert.Nil(t, err)
 
-	idAddr, proofKOp, err := idsrv.CreateIdGenesis(kopPub, krecPub, krevPub)
+	// krevBytes, err := common3.HexDecode(krevStr)
+	// assert.Nil(t, err)
+	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
+	// assert.Nil(t, err)
+
+	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub)
 	assert.Nil(t, err)
 	if debug {
-		fmt.Println("idAddr", idAddr)
-		fmt.Println("idAddr (hex)", idAddr.String())
+		fmt.Println("id", id)
+		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z", idAddr.String())
+	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", id.String())
 
-	idAddr2, err := core.CalculateIdGenesis(kopPub, krecPub, krevPub)
+	id2, _, err := core.CalculateIdGenesis(kopPub)
 	assert.Nil(t, err)
-	assert.Equal(t, idAddr, idAddr2)
+	assert.Equal(t, id, id2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayKOpAddr, proofKOp)
+	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }

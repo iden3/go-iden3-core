@@ -6,11 +6,13 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
+	ethkeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/eth"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/adminsrv"
 	"github.com/iden3/go-iden3/services/claimsrv"
@@ -47,13 +49,13 @@ var Adminservice adminsrv.Service
 
 var SignedPacketService signedpacketsrv.SignedPacketSigner
 
-func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
+func LoadKeyStore() (*ethkeystore.KeyStore, accounts.Account) {
 
 	var err error
 	var passwd string
 
 	// Load keystore
-	ks := keystore.NewKeyStore(C.KeyStore.Path, keystore.StandardScryptN, keystore.StandardScryptP)
+	ks := ethkeystore.NewKeyStore(C.KeyStore.Path, ethkeystore.StandardScryptN, ethkeystore.StandardScryptP)
 
 	// Password can be prefixed by two options
 	//   file: <path to file containing the password>
@@ -82,7 +84,20 @@ func LoadKeyStore() (*keystore.KeyStore, accounts.Account) {
 	return ks, acc
 }
 
-func LoadWeb3(ks *keystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
+func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *babyjub.PublicKeyComp) {
+	storage := babykeystore.NewFileStorage(C.KeyStoreBaby.Path)
+	ks, err := babykeystore.NewKeyStore(storage, babykeystore.StandardKeyStoreParams)
+	if err != nil {
+		panic(err)
+	}
+	pk := &C.KeyStoreBaby.PubKeyComp
+	if err := ks.UnlockKey(pk, []byte(C.KeyStoreBaby.Password)); err != nil {
+		panic(err)
+	}
+	return ks, pk
+}
+
+func LoadWeb3(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	// Create geth client
 	url := C.Web3.Url
 	hidden := strings.HasPrefix(url, "hidden:")
@@ -165,13 +180,10 @@ func LoadCounterfactualService(client *eth.Web3Client, claimservice claimsrv.Ser
 	return counterfactualsrv.New(deployerContract, implContract, proxyContract, claimservice, counterfactualstorage)
 }
 
-func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *keystore.KeyStore, acc accounts.Account) claimsrv.Service {
-	log.WithField("idAddr", C.IdAddrRaw).Info("Running claim service")
-	signer, err := signsrv.New(ks, acc)
-	if err != nil {
-		panic(err)
-	}
-	return claimsrv.New(C.IdAddr, mt, rootservice, signer)
+func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *babykeystore.KeyStore, pk *babyjub.PublicKey) claimsrv.Service {
+	log.WithField("id", C.IdRaw).Info("Running claim service")
+	signer := signsrv.New(ks, *pk)
+	return claimsrv.New(C.Id, mt, rootservice, *signer)
 }
 
 func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, claimservice claimsrv.Service) adminsrv.Service {
@@ -179,16 +191,13 @@ func LoadAdminService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, cl
 }
 
 // LoadSignedPacketSigner Adds new claim authorizing a secp256ks key. Returns SignedPacketSigner to sign with key sign.
-func LoadSignedPacketSigner(ks *keystore.KeyStore, acc accounts.Account, claimservice claimsrv.Service) *signedpacketsrv.SignedPacketSigner {
+func LoadSignedPacketSigner(ks *babykeystore.KeyStore, pk *babyjub.PublicKey, claimservice claimsrv.Service) *signedpacketsrv.SignedPacketSigner {
 	// Create signer object
-	signer, err := signsrv.New(ks, acc)
-	if err != nil {
-		panic(err)
-	}
-	// Claim authorizing public key secp256k1 and get its proofKsign
-	claim := core.NewClaimAuthorizeKSignSecp256k1(signer.PublicKey())
+	signer := signsrv.New(ks, *pk)
+	// Claim authorizing public key baby jub and get its proofKsign
+	claim := core.NewClaimAuthorizeKSignBabyJub(pk)
 	// Add claim
-	err = claimservice.AddClaim(claim)
+	err := claimservice.AddClaim(claim)
 	if (err != nil) && (err != merkletree.ErrEntryIndexAlreadyExists) {
 		panic(err)
 	}
@@ -197,5 +206,5 @@ func LoadSignedPacketSigner(ks *keystore.KeyStore, acc accounts.Account, claimse
 	if err != nil {
 		panic(err)
 	}
-	return signedpacketsrv.NewSignedPacketSigner(signer, *proofKSign, C.IdAddr)
+	return signedpacketsrv.NewSignedPacketSigner(*signer, *proofKSign, C.Id)
 }

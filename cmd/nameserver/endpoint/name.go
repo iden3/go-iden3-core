@@ -54,7 +54,7 @@ func handleClaimAssignNameResolv(c *gin.Context) {
 		return
 	}
 	c.JSON(200, gin.H{
-		"idAddr":          claimAssignName.IdAddr,
+		"id":              claimAssignName.Id,
 		"proofAssignName": proofClaimAssignName,
 	})
 }
