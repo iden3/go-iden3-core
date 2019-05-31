@@ -8,6 +8,8 @@ import (
 
 	//"crypto/elliptic"
 	//"crypto/rand"
+
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"testing"
@@ -299,6 +301,29 @@ func TestClaimEthId(t *testing.T) {
 	assert.Equal(t, c0.IdentityFactory, identityFactoryAddr)
 	assert.Equal(t, c0.Address, c1.Address)
 	assert.Equal(t, c0.IdentityFactory, c1.IdentityFactory)
+
+	assert.Equal(t, c0.Entry().Bytes(), c1.Entry().Bytes())
+	assert.Equal(t, c0.Entry().Bytes(), c2.Entry().Bytes())
+}
+
+func TestClaimAuthEthKey(t *testing.T) {
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	ethKeyType := NewEthKeyType(2)
+
+	c0 := NewClaimAuthEthKey(ethKey, ethKeyType)
+
+	c1 := NewClaimAuthEthKeyFromEntry(c0.Entry())
+	c2, err := NewClaimFromEntry(c0.Entry())
+	assert.Nil(t, err)
+	assert.Equal(t, c0, c1)
+	assert.Equal(t, c0, c2)
+
+	assert.Equal(t, c0.EthKey, ethKey)
+	assert.Equal(t, c0.EthKeyType, binary.BigEndian.Uint32(ethKeyType[:]))
+	assert.Equal(t, c0.EthKey, c1.EthKey)
+	assert.Equal(t, c0.EthKeyType, c1.EthKeyType)
+	assert.Equal(t, c0.Type(), c1.Type())
+	assert.Equal(t, c0.Type(), *ClaimTypeAuthEthKey)
 
 	assert.Equal(t, c0.Entry().Bytes(), c1.Entry().Bytes())
 	assert.Equal(t, c0.Entry().Bytes(), c2.Entry().Bytes())
