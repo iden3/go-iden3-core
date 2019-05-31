@@ -3,6 +3,7 @@ package signsrv
 import (
 	// "crypto/ecdsa"
 	// "encoding/hex"
+	// "fmt"
 	"time"
 
 	"github.com/iden3/go-iden3/crypto/babyjub"
@@ -26,6 +27,11 @@ func (s *Service) PublicKey() *babyjub.PublicKey {
 }
 
 func (s *Service) SignEthMsg(msg []byte) (*babyjub.SignatureComp, error) {
+	// sig, err := s.ks.Sign(&s.pkComp, msg)
+	// fmt.Println("publicKey", s.pk.String())
+	// fmt.Println("signature", sig.String())
+	// fmt.Println("msg", hex.EncodeToString(msg))
+	// return sig, err
 	return s.ks.Sign(&s.pkComp, msg)
 }
 

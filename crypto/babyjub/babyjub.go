@@ -189,9 +189,7 @@ func PackPoint(ay *big.Int, sign bool) [32]byte {
 	if sign {
 		leBuf[31] = leBuf[31] | 0x80
 	}
-	pc := [32]byte{}
-	copy(pc[:], leBuf)
-	return pc
+	return leBuf
 }
 
 // Compress the point into a 32 byte array that contains the y coordinate in
