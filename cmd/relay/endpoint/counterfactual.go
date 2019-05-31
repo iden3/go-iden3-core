@@ -94,14 +94,14 @@ func handleCreateCounterfactual(c *gin.Context) {
 // handleDeployCounterfactual handles the deploying of the user contract in the blockchain.
 func handleDeployCounterfactual(c *gin.Context) {
 
-	idAddr := common.HexToAddress(c.Param("idaddr"))
-	id, err := genericserver.Counterfactualservice.Get(idAddr)
+	ethAddr := common.HexToAddress(c.Param("ethaddr"))
+	id, err := genericserver.Counterfactualservice.Get(ethAddr)
 	if err != nil {
 		genericserver.Fail(c, "cannot retrieve id", err)
 		return
 	}
 
-	isDeployed, err := genericserver.Counterfactualservice.IsDeployed(idAddr)
+	isDeployed, err := genericserver.Counterfactualservice.IsDeployed(ethAddr)
 	if err != nil {
 		genericserver.Fail(c, "cannot retrieve deployment status", err)
 		return
@@ -182,10 +182,9 @@ func handleForwardCounterfactual(c *gin.Context) {
 	astxt, _ := json.MarshalIndent(req, "", "   ")
 	fmt.Println(string(astxt))
 
-	// idaddr := common.HexToAddress(c.Param("id"))
-	id, err := core.IDFromString(c.Param("id"))
+	ethAddr, err := core.IDFromString(c.Param("ethaddr"))
 	if err := c.BindJSON(&req); err != nil {
-		genericserver.Fail(c, "cannot parse id", err)
+		genericserver.Fail(c, "cannot parse ethaddr", err)
 		return
 	}
 
@@ -203,7 +202,7 @@ func handleForwardCounterfactual(c *gin.Context) {
 		return
 	}
 
-	tx, err := genericserver.Counterfactualservice.Forward(id, req.CounterfactualAddr,
+	tx, err := genericserver.Counterfactualservice.Forward(ethAddr, req.CounterfactualAddr,
 		&req.KSignPk.PublicKey,
 		req.To, data, value, req.Gas, sig)
 

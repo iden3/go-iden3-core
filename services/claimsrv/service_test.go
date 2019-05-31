@@ -31,7 +31,7 @@ var mt *merkletree.MerkleTree
 var c config.Config
 
 const relayIdHex = "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps"
-const relaySkHex = "4406831fa7bb87d8c92fc65f090a6017916bd2197ffca0e1e97933b14e8f5de5"
+const relaySkHex = "4be5471a938bdf3606888472878baace4a6a64e14a153adf9a1333969e4e573c"
 
 var relayID core.ID
 var keyStore *babykeystore.KeyStore

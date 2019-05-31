@@ -1,7 +1,7 @@
 package signedpacketsrv
 
 import (
-	"encoding/hex"
+	// "encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
@@ -56,8 +56,6 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 	claimAuthorizeKSignPkComp := babyjub.PublicKeyComp(
 		babyjub.PackPoint(claimAuthorizeKSign.Ay, claimAuthorizeKSign.Sign))
 	if !reflect.DeepEqual(jws.Payload.KSign.Compress(), claimAuthorizeKSignPkComp) {
-		fmt.Println("jws.Payload.KSign", jws.Payload.KSign.Compress())
-		fmt.Println("claimAuthorizeKSign", hex.EncodeToString(claimAuthorizeKSignPkComp[:]))
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
@@ -111,7 +109,6 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 
 	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
 	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
-		fmt.Println("proof[0].root", jws.Payload.ProofKSign.Proofs[0].Root.Hex())
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
 

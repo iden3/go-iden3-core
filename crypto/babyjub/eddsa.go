@@ -91,9 +91,11 @@ func (pk *PublicKey) UnmarshalText(h []byte) error {
 	if err := common3.HexDecodeInto(pkc[:], h); err != nil {
 		return err
 	}
-	if _, err := pkc.Decompress(); err != nil {
+	pkd, err := pkc.Decompress()
+	if err != nil {
 		return err
 	}
+	*pk = *pkd
 	return nil
 }
 
