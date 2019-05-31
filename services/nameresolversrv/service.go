@@ -18,7 +18,6 @@ func New(namesFilePath string) (*Service, error) {
 		return nil, err
 	}
 	var service Service
-	fmt.Println(namesFile)
 	if err = json.NewDecoder(namesFile).Decode(&service.Names); err != nil {
 		return nil, err
 	}

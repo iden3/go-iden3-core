@@ -2,6 +2,7 @@ package signsrv
 
 import (
 	// "crypto/ecdsa"
+	// "encoding/hex"
 	"time"
 
 	"github.com/iden3/go-iden3/crypto/babyjub"
