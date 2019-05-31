@@ -8,6 +8,7 @@ import (
 
 	// "github.com/ethereum/go-ethereum/crypto"
 	// common3 "github.com/iden3/go-iden3/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
@@ -115,6 +116,8 @@ func TestCalculateIdGenesis(t *testing.T) {
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
 	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
+	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
 	var kopComp babyjub.PublicKeyComp
 	err := kopComp.UnmarshalText([]byte(kopStr))
@@ -122,21 +125,11 @@ func TestCalculateIdGenesis(t *testing.T) {
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
 
-	// krecBytes, err := common3.HexDecode(krecStr)
-	// assert.Nil(t, err)
-	// krecPub, err := crypto.DecompressPubkey(krecBytes[:])
-	// assert.Nil(t, err)
-
-	// krevBytes, err := common3.HexDecode(krevStr)
-	// assert.Nil(t, err)
-	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
-	// assert.Nil(t, err)
-
-	id, _, err := CalculateIdGenesis(kopPub)
+	id, _, err := CalculateIdGenesis(kopPub, kDis, kReen)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", id.String())
+	assert.Equal(t, "11B5vT7X3sQBrPX6F5tEXMb7yMGHQ3UwbHPTHaXLx", id.String())
 }

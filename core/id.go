@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
@@ -28,7 +29,7 @@ var (
 
 // ID is a byte array with
 // [  type  | root_genesis | checksum ]
-// [2 bytes |   28 bytes   | 2 bytes  ]
+// [2 bytes |   27 bytes   | 2 bytes  ]
 // where the root_genesis are the first 28 bytes from the hash root_genesis
 type ID [31]byte
 
@@ -128,15 +129,26 @@ func CheckChecksum(id ID) bool {
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(kop *babyjub.PublicKey) (*ID, []merkletree.Entrier, error) {
+func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*ID, []merkletree.Entrier, error) {
 	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	claim0 := NewClaimAuthorizeKSignBabyJub(kop)
-	err = mt.Add(claim0.Entry())
+	claimKOp := NewClaimAuthorizeKSignBabyJub(kop)
+	err = mt.Add(claimKOp.Entry())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	claimKDis := NewClaimAuthEthKey(kdis, NewEthKeyType(0))
+	err = mt.Add(claimKDis.Entry())
+	if err != nil {
+		return nil, nil, err
+	}
+	claimKReen := NewClaimAuthEthKey(kreen, NewEthKeyType(1))
+	err = mt.Add(claimKReen.Entry())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -146,5 +158,5 @@ func CalculateIdGenesis(kop *babyjub.PublicKey) (*ID, []merkletree.Entrier, erro
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[:27])
 	id := NewID(TypeBJM7, idGenesisBytes)
-	return &id, []merkletree.Entrier{claim0}, nil
+	return &id, []merkletree.Entrier{claimKOp}, nil
 }
