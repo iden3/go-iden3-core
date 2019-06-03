@@ -16,8 +16,11 @@ func SwapEndianness(xs []byte) []byte {
 }
 
 // BigIntLEBytes encodes a big.Int into an array in Little-Endian.
-func BigIntLEBytes(v *big.Int) []byte {
-	return SwapEndianness(v.Bytes())
+func BigIntLEBytes(v *big.Int) [32]byte {
+	le := SwapEndianness(v.Bytes())
+	res := [32]byte{}
+	copy(res[32-len(res):], le)
+	return res
 }
 
 // SetBigIntFromLEBytes sets the value of a big.Int from a Little-Endian

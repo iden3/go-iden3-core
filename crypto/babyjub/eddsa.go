@@ -145,7 +145,7 @@ func (s *Signature) Compress() SignatureComp {
 	Sp := BigIntLEBytes(s.S)
 	buf := [64]byte{}
 	copy(buf[:32], R8p[:])
-	copy(buf[32:], Sp)
+	copy(buf[32:], Sp[:])
 	return SignatureComp(buf)
 }
 
@@ -174,7 +174,7 @@ func (k *PrivateKey) SignMimc7(msg *big.Int) *Signature {
 	h1 := Blake512(k[:])
 	msgBuf := BigIntLEBytes(msg)
 	msgBuf32 := [32]byte{}
-	copy(msgBuf32[:], msgBuf)
+	copy(msgBuf32[:], msgBuf[:])
 	rBuf := Blake512(append(h1[32:], msgBuf32[:]...))
 	r := SetBigIntFromLEBytes(new(big.Int), rBuf) // r = H(H_{32..63}(k), msg)
 	r.Mod(r, SubOrder)
