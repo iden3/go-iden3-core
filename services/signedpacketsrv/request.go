@@ -27,7 +27,7 @@ type RequestIdenAssert struct {
 func NewRequestIdenAssert(nonceDb *core.NonceDb, origin string, expireDelta int64) *RequestIdenAssert {
 	nonceObj := nonceDb.New(expireDelta, nil)
 	return &RequestIdenAssert{
-		Header: RequestIdenAssertHeader{Type: SIGV01},
+		Header: RequestIdenAssertHeader{Type: SIGV02},
 		Body: RequestIdenAssertBody{
 			Type: IDENASSERTV01,
 			Data: IdenAssertData{
