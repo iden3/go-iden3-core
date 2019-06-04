@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	// "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/core"
@@ -12,10 +13,9 @@ import (
 )
 
 type handleIdGenesis struct {
-	KOp *babyjub.PublicKey `json:"operationalPk" binding:"required"`
-	// KRec *utils.PublicKey `json:"recoveryPk" binding:"required"`
-	// KRev *utils.PublicKey `json:"revokePk" binding:"required"`
-	// Relay common.Address   `json:"relayAddr" binding:"required"`
+	KOp   *babyjub.PublicKey `json:"operationalPk" binding:"required"`
+	KDis  common.Address     `json:"kdisable" binding:"required"`
+	KReen common.Address     `json:"kreenable" binding:"required"`
 }
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
@@ -34,10 +34,7 @@ func handleCreateIdGenesis(c *gin.Context) {
 		return
 	}
 
-	// krecPub := &idgen.KRec.PublicKey
-	// krevPub := &idgen.KRev.PublicKey
-
-	id, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp)
+	id, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp, idgen.KDis, idgen.KReen)
 	if err != nil {
 		genericserver.Fail(c, "failed generating identity address ", err)
 		return

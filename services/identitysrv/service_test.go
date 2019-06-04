@@ -146,11 +146,13 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 	if debug {
 		fmt.Println("kop", kop)
 	}
+	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, proofKOp, err := idsrv.CreateIdGenesis(kop)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen)
 	assert.Nil(t, err)
 
-	id2, _, err := core.CalculateIdGenesis(kop)
+	id2, _, err := core.CalculateIdGenesis(kop, kDis, kReen)
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 
@@ -171,26 +173,18 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
+	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	// krecBytes, err := common3.HexDecode(krecStr)
-	// assert.Nil(t, err)
-	// krecPub, err := crypto.DecompressPubkey(krecBytes[:])
-	// assert.Nil(t, err)
-
-	// krevBytes, err := common3.HexDecode(krevStr)
-	// assert.Nil(t, err)
-	// krevPub, err := crypto.DecompressPubkey(krevBytes[:])
-	// assert.Nil(t, err)
-
-	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub, kDis, kReen)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "11yCKcmsUsQBnkA13TDn42XxM1XwhckUbBdscP48p", id.String())
+	assert.Equal(t, "11B5vT7X3sQBrPX6F5tEXMb7yMGHQ3UwbHPTHaXLx", id.String())
 
-	id2, _, err := core.CalculateIdGenesis(kopPub)
+	id2, _, err := core.CalculateIdGenesis(kopPub, kDis, kReen)
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 

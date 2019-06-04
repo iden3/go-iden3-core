@@ -3,6 +3,7 @@ package identitysrv
 import (
 	// "crypto/ecdsa"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
@@ -10,7 +11,7 @@ import (
 )
 
 type Service interface {
-	CreateIdGenesis(kop *babyjub.PublicKey) (*core.ID, *core.ProofClaim, error)
+	CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*core.ID, *core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -23,12 +24,12 @@ func New(cs claimsrv.Service) *ServiceImpl {
 	}
 }
 
-// CreateIdGenesis initializes the id MerkleTree with the given the kop, krec,
-// krev public keys. Where the id is calculated a MerkleTree containing
+// CreateIdGenesis initializes the id MerkleTree with the given the kop, kdisable,
+// kreenable public keys. Where the id is calculated a MerkleTree containing
 // that initial data, calculated in the function CalculateIdGenesis()
-func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey) (*core.ID, *core.ProofClaim, error) {
+func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*core.ID, *core.ProofClaim, error) {
 
-	id, claims, err := core.CalculateIdGenesis(kop)
+	id, claims, err := core.CalculateIdGenesis(kop, kdis, kreen)
 	if err != nil {
 		return nil, nil, err
 	}
