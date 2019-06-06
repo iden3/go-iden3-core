@@ -17,6 +17,7 @@ require (
 	github.com/ipfs/go-ipfs-api v0.0.0-20190227013953-fc4b441cfe34
 	github.com/ipfs/go-ipfs-files v0.0.0-20190211184658-b9ab59872849 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
+	github.com/jamesruan/sodium v0.0.0-20181216154042-9620b83ffeae
 	github.com/jstemmer/gotags v1.4.1 // indirect
 	github.com/libp2p/go-flow-metrics v0.0.0-20180906182756-7e5a55af4853 // indirect
 	github.com/libp2p/go-libp2p-metrics v0.0.0-20190226174147-1f0f4db04727 // indirect
