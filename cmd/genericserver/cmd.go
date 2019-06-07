@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
@@ -157,7 +158,6 @@ func CmdAddClaimsFromFile(c *cli.Context) error {
 
 // DB
 func CmdDbRawDump(c *cli.Context) error {
-
 	if err := MustRead(c); err != nil {
 		return err
 	}
@@ -165,9 +165,63 @@ func CmdDbRawDump(c *cli.Context) error {
 	ldb := (storage.(*db.LevelDbStorage)).LevelDB()
 	iter := ldb.NewIterator(nil, nil)
 	for iter.Next() {
-		fmt.Println(hex.EncodeToString(iter.Key()), " ", hex.EncodeToString(iter.Value()))
+		fmt.Println(common3.HexEncode(iter.Key()) + ", " + common3.HexEncode(iter.Value()))
 	}
 	iter.Release()
+	return nil
+}
+
+func CmdDbRawImport(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
+		return err
+	}
+	path := c.Args().Get(0)
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	fmt.Println("importing raw dump from file " + path)
+
+	count := 0
+
+	storage := LoadStorage()
+	tx, err := storage.NewTx()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err == nil {
+			tx.Commit()
+		} else {
+			tx.Close()
+		}
+	}()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.Split(scanner.Text(), ", ")
+		if len(line) < 2 {
+			fmt.Println("error in line ", strconv.Itoa(count))
+			return err
+		}
+
+		var kBytes []byte
+		kBytes, err = common3.HexDecode(line[0])
+		if err != nil {
+			return err
+		}
+		var vBytes []byte
+		vBytes, err = common3.HexDecode(line[1])
+		if err != nil {
+			return err
+		}
+		tx.Put(kBytes, vBytes)
+		count++
+	}
+	fmt.Println("imported " + strconv.Itoa(count) + " lines")
 	return nil
 }
 

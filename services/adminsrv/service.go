@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/gin-gonic/gin"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/mimc7"
@@ -13,8 +15,8 @@ import (
 )
 
 type Service interface {
-	Info() map[string]string
-	RawDump() map[string]string
+	Info(contractAddr common.Address) map[string]string
+	RawDump(c *gin.Context)
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
@@ -32,28 +34,33 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.S
 }
 
 // Info returns the info overview of the Relay
-func (as *ServiceImpl) Info() map[string]string {
+func (as *ServiceImpl) Info(contractAddr common.Address) map[string]string {
 	o := make(map[string]string)
 	o["db"] = as.mt.Storage().Info()
 	o["root"] = as.mt.RootKey().Hex()
+
+	root, err := as.claimsrv.RootSrv().GetRoot(contractAddr)
+	if err != nil {
+		o["root_contract"] = "error getting root from contract"
+	} else {
+		o["root_contract"] = common3.HexEncode(root[:])
+	}
+
 	return o
 }
 
 // RawDump returns all the key and values from the database
-func (as *ServiceImpl) RawDump() map[string]string {
+func (as *ServiceImpl) RawDump(c *gin.Context) {
 	// var out string
-	data := make(map[string]string)
 	sto := as.mt.Storage()
 	sto.Iterate(func(key, value []byte) {
-		// out = out + "key: " + common3.HexEncode(key) + ", value: " + common3.HexEncode(value) + "\n"
-		data[common3.HexEncode(key)] = common3.HexEncode(value)
+		c.String(200, common3.HexEncode(key)+", "+common3.HexEncode(value)+"\n")
 	})
-	return data
+	return
 }
 
 // RawImport imports the key and values from the RawDump() to the database
 func (as *ServiceImpl) RawImport(raw map[string]string) (int, error) {
-	fmt.Println("raw", raw)
 	count := 0
 
 	tx, err := as.mt.Storage().NewTx()

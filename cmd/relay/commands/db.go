@@ -15,6 +15,11 @@ var DbCommands = []cli.Command{{
 			Action: genericserver.CmdDbRawDump,
 		},
 		{
+			Name:   "rawimport",
+			Usage:  "import database raw from dumped key values",
+			Action: genericserver.CmdDbRawImport,
+		},
+		{
 			Name:   "ipfsexport",
 			Usage:  "export database values to ipfs",
 			Action: genericserver.CmdDbIPFSexport,
