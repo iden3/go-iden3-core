@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/arnaucube/go-snark/bn128"
+	"github.com/iden3/go-iden3/crypto/field"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,8 +48,9 @@ func TestMIMC7Generic(t *testing.T) {
 	b2 := big.NewInt(int64(2))
 	b3 := big.NewInt(int64(3))
 
-	fqR, err := bn128.NewFqR()
-	assert.Nil(t, err)
+	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	assert.True(t, ok)
+	fqR := field.NewFq(r)
 
 	bigArray := []*big.Int{b1, b2, b3}
 	elementsArray, err := BigIntsToRElems(bigArray)
