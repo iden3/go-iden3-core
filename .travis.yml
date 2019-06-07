@@ -8,4 +8,4 @@ env:
   - GO111MODULE=on
 
 before_install:
-  - sudo apt-get install -y libsodium-dev
+  - ./install-libsodium.sh
