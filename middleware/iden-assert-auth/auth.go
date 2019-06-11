@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	jwt "github.com/appleboy/gin-jwt"
+	jwt "github.com/appleboy/gin-jwt/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signedpacketsrv"
