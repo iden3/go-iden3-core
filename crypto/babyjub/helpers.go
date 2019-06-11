@@ -19,7 +19,7 @@ func SwapEndianness(xs []byte) []byte {
 func BigIntLEBytes(v *big.Int) [32]byte {
 	le := SwapEndianness(v.Bytes())
 	res := [32]byte{}
-	copy(res[32-len(res):], le)
+	copy(res[:], le)
 	return res
 }
 

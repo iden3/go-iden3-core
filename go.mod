@@ -30,7 +30,7 @@ require (
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/ipfs/go-ipfs-api v0.0.1
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
-	github.com/jamesruan/sodium v0.0.0-20181216154042-9620b83ffeae // indirect
+	github.com/jamesruan/sodium v0.0.0-20181216154042-9620b83ffeae
 	github.com/kisielk/errcheck v1.2.0 // indirect
 	github.com/labstack/gommon v0.2.9 // indirect
 	github.com/lib/pq v1.1.1 // indirect
