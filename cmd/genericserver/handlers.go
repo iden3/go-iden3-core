@@ -39,14 +39,13 @@ func HandleGetRoot(c *gin.Context) {
 
 // Admin
 func HandleInfo(c *gin.Context) {
-	r := Adminservice.Info()
+	r := Adminservice.Info(common.HexToAddress(C.Contracts.RootCommits.Address))
 	c.JSON(200, gin.H{
 		"info": r,
 	})
 }
 func HandleRawDump(c *gin.Context) {
-	r := Adminservice.RawDump()
-	c.JSON(http.StatusOK, r)
+	Adminservice.RawDump(c)
 }
 
 func HandleRawImport(c *gin.Context) {
