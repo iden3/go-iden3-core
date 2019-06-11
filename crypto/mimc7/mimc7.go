@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/fields"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3/crypto/field"
 )
 
 const SEED = "mimc"
@@ -21,7 +20,7 @@ type constantsData struct {
 	maxFieldVal *big.Int
 	seedHash    *big.Int
 	iv          *big.Int
-	fqR         fields.Fq
+	fqR         field.Fq
 	nRounds     int
 	cts         []*big.Int
 }
@@ -32,11 +31,13 @@ func getIV(seed string) {
 func generateConstantsData() constantsData {
 	var constants constantsData
 
-	fqR, err := bn128.NewFqR()
-	if err != nil {
-		panic(err)
+	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	if !ok {
+
 	}
+	fqR := field.NewFq(r)
 	constants.fqR = fqR
+
 	// maxFieldVal is the R value of the Finite Field
 	constants.maxFieldVal = constants.fqR.Q
 
@@ -83,7 +84,7 @@ func RElemsToBigInts(arr []RElem) []*big.Int {
 	return o
 }
 
-func getConstants(fqR fields.Fq, seed string, nRounds int) ([]*big.Int, error) {
+func getConstants(fqR field.Fq, seed string, nRounds int) ([]*big.Int, error) {
 	cts := make([]*big.Int, nRounds)
 	cts[0] = big.NewInt(int64(0))
 	c := new(big.Int).SetBytes(crypto.Keccak256([]byte(SEED)))
@@ -97,7 +98,7 @@ func getConstants(fqR fields.Fq, seed string, nRounds int) ([]*big.Int, error) {
 }
 
 // MIMC7HashGeneric performs the MIMC7 hash over a RElem, in a generic way, where it can be specified the Finite Field over R, and the number of rounds
-func MIMC7HashGeneric(fqR fields.Fq, xIn, k *big.Int, nRounds int) (*big.Int, error) {
+func MIMC7HashGeneric(fqR field.Fq, xIn, k *big.Int, nRounds int) (*big.Int, error) {
 	cts, err := getConstants(fqR, SEED, nRounds)
 	if err != nil {
 		return &big.Int{}, err
@@ -118,7 +119,7 @@ func MIMC7HashGeneric(fqR fields.Fq, xIn, k *big.Int, nRounds int) (*big.Int, er
 }
 
 // HashGeneric performs the MIMC7 hash over a RElem array, in a generic way, where it can be specified the Finite Field over R, and the number of rounds
-func HashGeneric(iv *big.Int, arrEl []RElem, fqR fields.Fq, nRounds int) (RElem, error) {
+func HashGeneric(iv *big.Int, arrEl []RElem, fqR field.Fq, nRounds int) (RElem, error) {
 	arr := RElemsToBigInts(arrEl)
 	r := iv
 	var err error
