@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"testing"
 
-	// "github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/stretchr/testify/assert"

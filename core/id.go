@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	// "crypto/ecdsa"
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"

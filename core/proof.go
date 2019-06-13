@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	// "github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
