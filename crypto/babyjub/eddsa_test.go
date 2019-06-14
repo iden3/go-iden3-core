@@ -65,5 +65,23 @@ func TestSignVerify1(t *testing.T) {
 
 	ok = pk.VerifyMimc7(msg, sig2)
 	assert.Equal(t, true, ok)
+}
 
+func TestCompressDecompress(t *testing.T) {
+	var k PrivateKey
+	hex.Decode(k[:], []byte("0001020304050607080900010203040506070809000102030405060708090001"))
+	pk := k.Public()
+	for i := 0; i < 64; i++ {
+		msgBuf, err := hex.DecodeString(fmt.Sprintf("000102030405060708%02d", i))
+		if err != nil {
+			panic(err)
+		}
+		msg := SetBigIntFromLEBytes(new(big.Int), msgBuf)
+		sig := k.SignMimc7(msg)
+		sigBuf := sig.Compress()
+		sig2, err := new(Signature).Decompress(sigBuf)
+		assert.Equal(t, nil, err)
+		ok := pk.VerifyMimc7(msg, sig2)
+		assert.Equal(t, true, ok)
+	}
 }
