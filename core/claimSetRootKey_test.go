@@ -9,7 +9,7 @@ import (
 
 func TestClaimSetRootKey(t *testing.T) {
 	// ClaimSetRootKey
-	id, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 
 	rootKey := merkletree.Hash(merkletree.ElemBytes{
@@ -22,7 +22,7 @@ func TestClaimSetRootKey(t *testing.T) {
 	c0.Era = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x12bf59ff4171debe81321c04a52298e62650ca8514e9a7a8a64c23cb55eeaa2e",
+		"0x18401636bb62be35476e292834b24b85527131ce434d6ffa43b95f0a8b1f4586",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x01705b25f2cf7cda34d836f09e9b0dd1777bdc16752657cd9d1ae5f6286525ba",
@@ -31,7 +31,7 @@ func TestClaimSetRootKey(t *testing.T) {
 	assert.Equal(t, ""+
 		"0000000000000000000000000000000000000000000000000000000000000000"+
 		"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"0000041c980d8faa54be797337fa55dbe62a7675e0c83ce5383b78a04b26b9f4"+
+		"0000003cc1c968fa000000000000000000000000000000000000000000000328"+
 		"0000000000000000000000000000000000000001000000010000000000000002",
 		e.Data.String())
 	c1 := NewClaimSetRootKeyFromEntry(e)

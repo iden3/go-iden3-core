@@ -30,7 +30,7 @@ var service *ServiceImpl
 var mt *merkletree.MerkleTree
 var c config.Config
 
-const relayIdHex = "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2fps"
+const relayIdHex = "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf"
 const relaySkHex = "4be5471a938bdf3606888472878baace4a6a64e14a153adf9a1333969e4e573c"
 
 var relayID core.ID
@@ -234,7 +234,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 func TestGetClaimProof(t *testing.T) {
 	initializeEnvironment(t)
 
-	id, err := core.IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := core.IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
 	assert.Nil(t, err)
 
 	// Basic Claim

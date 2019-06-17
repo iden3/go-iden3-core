@@ -18,7 +18,7 @@ func TestProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -29,7 +29,7 @@ func TestProof(t *testing.T) {
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 
-	id1, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoWij")
+	id1, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 	rootKey1 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -61,7 +61,7 @@ func TestGetPredicateProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -101,7 +101,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -134,7 +134,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
@@ -190,7 +190,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 
 	_, v := getClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(3), v)
-	assert.Equal(t, predicateProof.OldRoot.Hex(), "0x22e52a06ab4c4824377859745863e4d306b74b451ec9d09637a4d0c0ad14667e")
+	assert.Equal(t, "0x1ca5dadd000f7e5874fe434888d916fbe81c9a3376675184dde0a213ab286d63", predicateProof.OldRoot.Hex())
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())
 
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])
