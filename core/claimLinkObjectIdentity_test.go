@@ -10,7 +10,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	// ClaimLinkObjectIdentity
 	const objectType = ObjectTypeAddress
 	var indexType uint16
-	id, err := IDFromString("1pnWU7Jdr4yLxp1azs1r1PpvfErxKGRQdcLBZuq3Z")
+	id, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	assert.Nil(t, err)
 
 	objectHash := []byte{
@@ -29,7 +29,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,
-		"0x2dc73c37e603a15f8f028aa5c3f668d1210c86008577188ce279ead60a9afec4",
+		"0x246fc0d072b8cd9a19ddf46364a2a10e3a9f0a59f6cf9e6303817bbe3b362b7a",
 		entry.HIndex().Hex())
 	assert.Equal(t,
 		"0x0f55d2c10514bb5be610006cc9a1ff18aa4bb248856b41de516ee6d027b9463c",
@@ -38,7 +38,7 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	assert.Equal(t, ""+
 		"000102030405060708090a0b0c0d0e0f01020304050607090a0b0c0d0e0f0102"+
 		"000b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c"+
-		"0000041c980d8faa54be797337fa55dbe62a7675e0c83ce5383b78a04b26b9f4"+
+		"0000003cc1c968fa000000000000000000000000000000000000000000000328"+
 		"0000000000000000000000000000000000000001000000010000000000000005",
 		entry.Data.String())
 	c1 := NewClaimLinkObjectIdentityFromEntry(entry)

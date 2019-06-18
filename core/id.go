@@ -9,7 +9,6 @@ import (
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
 )
 
 var (
@@ -104,12 +103,17 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 // CalculateChecksum, returns the checksum for a given type and genesis_root,
 // where checksum: hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
-	var toHash [29]byte
-	copy(toHash[:], typ[:])
-	copy(toHash[2:], genesis[:])
-	h := utils.HashBytes(toHash[:])
+	var toChecksum [29]byte
+	copy(toChecksum[:], typ[:])
+	copy(toChecksum[2:], genesis[:])
+
+	s := uint16(0)
+	for _, b := range toChecksum {
+		s += uint16(b)
+	}
 	var checksum [2]byte
-	copy(checksum[:], h[len(h)-2:]) // last two bytes
+	checksum[0] = byte(s >> 8)
+	checksum[1] = byte(s & 0xff)
 	return checksum
 }
 
@@ -155,7 +159,7 @@ func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*ID
 	idGenesis := mt.RootKey()
 
 	var idGenesisBytes [27]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes()[:27])
+	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
 	id := NewID(TypeBJM7, idGenesisBytes)
 	return &id, []merkletree.Entrier{claimKOp}, nil
 }
