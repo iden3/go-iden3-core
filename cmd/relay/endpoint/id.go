@@ -13,9 +13,10 @@ import (
 )
 
 type handleIdGenesis struct {
-	KOp   *babyjub.PublicKey `json:"operationalPk" binding:"required"`
-	KDis  common.Address     `json:"kdisable" binding:"required"`
-	KReen common.Address     `json:"kreenable" binding:"required"`
+	KOp   			*babyjub.PublicKey `json:"operationalPk" binding:"required"`
+	KDis  			common.Address     `json:"kdisable" binding:"required"`
+	KReen 			common.Address     `json:"kreenable" binding:"required"`
+	KUpdateRoot common.Address     `json:"kupdateRoot" binding:"required"`
 }
 
 // handlePostIdRes is the response of a creation of a new user tree in the relay.
@@ -34,7 +35,7 @@ func handleCreateIdGenesis(c *gin.Context) {
 		return
 	}
 
-	id, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp, idgen.KDis, idgen.KReen)
+	id, proofKOp, err := genericserver.Idservice.CreateIdGenesis(idgen.KOp, idgen.KDis, idgen.KReen, idgen.KUpdateRoot)
 	if err != nil {
 		genericserver.Fail(c, "failed generating identity address ", err)
 		return

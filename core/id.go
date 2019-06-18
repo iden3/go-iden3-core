@@ -132,7 +132,7 @@ func CheckChecksum(id ID) bool {
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*ID, []merkletree.Entrier, error) {
+func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, []merkletree.Entrier, error) {
 	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
@@ -145,13 +145,18 @@ func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*ID
 		return nil, nil, err
 	}
 
-	claimKDis := NewClaimAuthEthKey(kdis, NewEthKeyType(0))
+	claimKDis := NewClaimAuthEthKey(kdis, EthKeyTypeDisable)
 	err = mt.Add(claimKDis.Entry())
 	if err != nil {
 		return nil, nil, err
 	}
-	claimKReen := NewClaimAuthEthKey(kreen, NewEthKeyType(1))
+	claimKReen := NewClaimAuthEthKey(kreen, EthKeyTypeReenable)
 	err = mt.Add(claimKReen.Entry())
+	if err != nil {
+		return nil, nil, err
+	}
+	claimKUpdateRoot := NewClaimAuthEthKey(kupdateRoot, EthKeyTypeUpdateRoot)
+	err = mt.Add(claimKUpdateRoot.Entry())
 	if err != nil {
 		return nil, nil, err
 	}

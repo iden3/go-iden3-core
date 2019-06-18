@@ -11,7 +11,7 @@ import (
 )
 
 type Service interface {
-	CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*core.ID, *core.ProofClaim, error)
+	CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -25,11 +25,11 @@ func New(cs claimsrv.Service) *ServiceImpl {
 }
 
 // CreateIdGenesis initializes the id MerkleTree with the given the kop, kdisable,
-// kreenable public keys. Where the id is calculated a MerkleTree containing
+// kreenable and kupdateRoots public keys. Where the id is calculated a MerkleTree containing
 // that initial data, calculated in the function CalculateIdGenesis()
-func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen common.Address) (*core.ID, *core.ProofClaim, error) {
+func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
 
-	id, claims, err := core.CalculateIdGenesis(kop, kdis, kreen)
+	id, claims, err := core.CalculateIdGenesis(kop, kdis, kreen, kupdateRoot)
 	if err != nil {
 		return nil, nil, err
 	}
