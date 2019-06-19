@@ -148,11 +148,12 @@ func TestCreateIdGenesisRandom(t *testing.T) {
 	}
 	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 
-	id2, _, err := core.CalculateIdGenesis(kop, kDis, kReen)
+	id2, _, err := core.CalculateIdGenesis(kop, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 
@@ -175,16 +176,17 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	assert.Nil(t, err)
 	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub, kDis, kReen)
+	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1173kq3iZijfjAsVCrWd4niqfJFXvnz7HjyYX5NUGc", id.String())
+	assert.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
 
-	id2, _, err := core.CalculateIdGenesis(kopPub, kDis, kReen)
+	id2, _, err := core.CalculateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 

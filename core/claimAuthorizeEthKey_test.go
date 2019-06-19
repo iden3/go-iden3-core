@@ -10,7 +10,7 @@ import (
 
 func TestClaimAuthEthKey(t *testing.T) {
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	ethKeyType := NewEthKeyType(2)
+	ethKeyType := EthKeyTypeUpgrade
 
 	c0 := NewClaimAuthEthKey(ethKey, ethKeyType)
 

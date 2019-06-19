@@ -117,12 +117,13 @@ func TestCalculateIdGenesis(t *testing.T) {
 	kopPub := sk.Public()
 	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, _, err := CalculateIdGenesis(kopPub, kDis, kReen)
+	id, _, err := CalculateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "118x3ctowfRqF9jqoBZzyjjBVbpXZr6zsYqQ5SdgzX", id.String())
+	assert.Equal(t, "1172NXRBLZAfdKm8eGeoppUZ4vohBa8a3xXKTub9xQ", id.String())
 }
