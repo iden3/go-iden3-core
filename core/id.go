@@ -75,10 +75,15 @@ func IDFromString(s string) (ID, error) {
 	return IDFromBytes(b)
 }
 
+var emptyID [31]byte
+
 // IDFromBytes returns the ID from a given byte array
 func IDFromBytes(b []byte) (ID, error) {
 	if len(b) != 31 {
 		return ID{}, errors.New("IDFromBytes error: byte array incorrect length")
+	}
+	if bytes.Equal(b, emptyID[:]) {
+		return ID{}, errors.New("IDFromBytes error: byte array empty")
 	}
 	var bId [31]byte
 	copy(bId[:], b[:])
@@ -121,6 +126,9 @@ func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 func CheckChecksum(id ID) bool {
 	typ, genesis, checksum, err := DecomposeID(id)
 	if err != nil {
+		return false
+	}
+	if bytes.Equal(checksum[:], []byte{0, 0}) {
 		return false
 	}
 	c := CalculateChecksum(typ, genesis)

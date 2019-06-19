@@ -50,7 +50,11 @@ func HandleRawDump(c *gin.Context) {
 
 func HandleRawImport(c *gin.Context) {
 	var data map[string]string
-	c.BindJSON(&data)
+	err := c.BindJSON(&data)
+	if err != nil {
+		Fail(c, "json parsing error", err)
+		return
+	}
 
 	count, err := Adminservice.RawImport(data)
 	if err != nil {

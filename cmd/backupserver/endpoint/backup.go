@@ -4,16 +4,21 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/services/backupsrv"
 )
 
 func handleRegister(c *gin.Context) {
 	var user backupsrv.User
-	c.BindJSON(&user)
-
-	err := backupservice.Register(user)
+	err := c.BindJSON(&user)
 	if err != nil {
-		fail(c, "error on Register", err)
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
+
+	err = backupservice.Register(user)
+	if err != nil {
+		genericserver.Fail(c, "error on Register", err)
 		return
 	}
 
@@ -28,7 +33,11 @@ type backupMsg struct {
 
 func handleBackupUpload(c *gin.Context) {
 	var backupMsg backupMsg
-	c.BindJSON(&backupMsg)
+	err := c.BindJSON(&backupMsg)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	user := backupsrv.User{
 		Username: backupMsg.Username,
@@ -39,9 +48,9 @@ func handleBackupUpload(c *gin.Context) {
 		Backup:   backupMsg.Backup,
 	}
 
-	err := backupservice.BackupUpload(user, backupPacket)
+	err = backupservice.BackupUpload(user, backupPacket)
 	if err != nil {
-		fail(c, "error on BackupUpload", err)
+		genericserver.Fail(c, "error on BackupUpload", err)
 		return
 	}
 
@@ -50,11 +59,15 @@ func handleBackupUpload(c *gin.Context) {
 
 func handleBackupDownload(c *gin.Context) {
 	var user backupsrv.User
-	c.BindJSON(&user)
+	err := c.BindJSON(&user)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	backupPacket, err := backupservice.BackupDownload(user)
 	if err != nil {
-		fail(c, "error on BackupDownload", err)
+		genericserver.Fail(c, "error on BackupDownload", err)
 		return
 	}
 

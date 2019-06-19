@@ -16,7 +16,11 @@ type addClaimBasicMsg struct {
 
 func handleAddClaimBasic(c *gin.Context) {
 	var m addClaimBasicMsg
-	c.BindJSON(&m)
+	err := c.BindJSON(&m)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	indexData, err := common3.HexDecode(m.IndexData)
 	if err != nil {
