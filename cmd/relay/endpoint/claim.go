@@ -24,7 +24,11 @@ func handleCommitNewIdRoot(c *gin.Context) {
 	}
 
 	var setRootMsg claimsrv.SetRootMsg
-	c.BindJSON(&setRootMsg)
+	err = c.BindJSON(&setRootMsg)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	idMsg, err := core.IDFromString(setRootMsg.Id)
 	if err != nil {
@@ -73,7 +77,11 @@ func handlePostClaim(c *gin.Context) {
 		return
 	}
 	var bytesSignedMsg claimsrv.BytesSignedMsg
-	c.BindJSON(&bytesSignedMsg)
+	err = c.BindJSON(&bytesSignedMsg)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	bytesValue, err := common3.HexDecode(bytesSignedMsg.ValueHex)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -109,6 +110,11 @@ func TestCheckChecksum(t *testing.T) {
 
 	copy(id[2:27], changedGenesis[:])
 	assert.True(t, !CheckChecksum(id))
+
+	// test with a empty id
+	var empty [31]byte
+	_, err := IDFromBytes(empty[:])
+	assert.Equal(t, errors.New("IDFromBytes error: byte array empty"), err)
 }
 
 func TestCalculateIdGenesis(t *testing.T) {

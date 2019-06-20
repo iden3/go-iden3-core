@@ -21,7 +21,11 @@ func handleInfo(c *gin.Context) {
 //	id := common.HexToAddress(idHex)
 //
 //	var saveBackupMsg backupsrv.BackupData
-//	c.BindJSON(&saveBackupMsg)
+//	err := c.BindJSON(&saveBackupMsg)
+// 	if err != nil {
+//      	Fail(c, "json parsing error", err)
+//      	return
+// 	}
 //
 //	version, err := backupservice.Save(id, saveBackupMsg)
 //	if err != nil {

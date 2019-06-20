@@ -10,7 +10,11 @@ import (
 
 func handleMimc7(c *gin.Context) {
 	var elements []*big.Int
-	c.BindJSON(&elements)
+	err := c.BindJSON(&elements)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	r, err := genericserver.Adminservice.Mimc7(elements)
 	if err != nil {
@@ -27,7 +31,11 @@ type addClaimBasicMsg struct {
 
 func handleAddClaimBasic(c *gin.Context) {
 	var m addClaimBasicMsg
-	c.BindJSON(&m)
+	err := c.BindJSON(&m)
+	if err != nil {
+		genericserver.Fail(c, "json parsing error", err)
+		return
+	}
 
 	if len(m.IndexData) != 400/8 {
 		c.String(http.StatusBadRequest, "indexData smaller than 400/8")
