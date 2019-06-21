@@ -48,12 +48,14 @@ func cmdStart(c *cli.Context) error {
 
 	ks, acc := genericserver.LoadKeyStore()
 	ksBaby, pkc := genericserver.LoadKeyStoreBabyJub()
+	defer ksBaby.Close()
 	pk, err := pkc.Decompress()
 	if err != nil {
 		return err
 	}
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
+	defer storage.Close()
 	mt := genericserver.LoadMerkele(storage)
 
 	_ = genericserver.LoadGenesis(mt)
@@ -83,7 +85,6 @@ func cmdStart(c *cli.Context) error {
 	endpoint.Serve(rootService, claimService, idService, counterfactualService, adminService)
 
 	rootService.StopAndJoin()
-	storage.Close()
 
 	return nil
 }
