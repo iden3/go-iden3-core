@@ -141,7 +141,7 @@ func CheckChecksum(id ID) bool {
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
 func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, []merkletree.Entrier, error) {
-	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
+	// use an efimer merkletree in memory to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err

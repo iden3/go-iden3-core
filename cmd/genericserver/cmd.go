@@ -4,17 +4,22 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/csv"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"log"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/db"
+	babykeystore "github.com/iden3/go-iden3/keystore"
 	shell "github.com/ipfs/go-ipfs-api"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -25,8 +30,8 @@ func CmdAddClaim(c *cli.Context) error {
 	}
 
 	ks, acc := LoadKeyStore()
-	ksBaby, pkc := LoadKeyStoreBabyJub()
-	pk, err := pkc.Decompress()
+	ksBaby, kOp := LoadKeyStoreBabyJub()
+	pk, err := kOp.Decompress()
 	if err != nil {
 		return err
 	}
@@ -242,5 +247,79 @@ func CmdDbIPFSexport(c *cli.Context) error {
 		fmt.Println("value of key "+common3.HexEncode(iter.Key())+" added, ipfs hash: ", cid)
 	}
 	iter.Release()
+	return nil
+}
+
+func CmdNewIdentity(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
+		return err
+	}
+
+	if C.KeyStore.Path == "" {
+		return errors.New("No Ethereum Keystore path specified")
+	}
+	if C.KeyStore.Password == "" {
+		return errors.New("No Ethereum Keystore password specified")
+	}
+	if C.KeyStoreBaby.Path == "" {
+		return errors.New("No BabyJub Keystore path specified")
+	}
+	if C.KeyStoreBaby.Password == "" {
+		return errors.New("No BabyJub Keystore password specified")
+	}
+
+	// open babyjub keystore
+	params := babykeystore.StandardKeyStoreParams
+	storageBJ := babykeystore.NewFileStorage(C.KeyStoreBaby.Path)
+	ksBJ, err := babykeystore.NewKeyStore(storageBJ, params)
+	if err != nil {
+		panic(err)
+	}
+	// create babyjub keys
+	kopPubComp, err := ksBJ.NewKey([]byte(C.KeyStoreBaby.Password))
+	if err != nil {
+		panic(err)
+	}
+	kopPub, err := kopPubComp.Decompress()
+
+	// open ethereum keystore
+	ks := keystore.NewKeyStore(C.KeyStore.Path, keystore.StandardScryptN, keystore.StandardScryptP)
+	passbytes, err := ioutil.ReadFile(C.KeyStore.Password)
+
+	// kDis key
+	accKDis, err := ks.NewAccount(string(passbytes))
+	if err != nil {
+		return err
+	}
+	kDis := accKDis.Address
+	// kReen
+	accKReen, err := ks.NewAccount(string(passbytes))
+	if err != nil {
+		return err
+	}
+	kReen := accKReen.Address
+	// kUpdateRoot
+	accKUpdateRoot, err := ks.NewAccount(string(passbytes))
+	if err != nil {
+		return err
+	}
+	kUpdateRoot := accKUpdateRoot.Address
+
+	// create genesis identity
+	id, _, err := core.CalculateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
+	if err != nil {
+		return err
+	}
+	s := `
+keys:
+  ethereum:
+    kdis: ` + kDis.Hex() + `
+    kreen: ` + kReen.Hex() + `
+    kupdateroot: ` + kUpdateRoot.Hex() + `
+  babyjub:
+    kop: ` + hex.EncodeToString(kopPubComp[:]) + `
+id: ` + id.String()
+	fmt.Fprintf(os.Stderr, "keys and identity created successfully. Copy & paste this lines into the config file:\n")
+	fmt.Println(s)
 	return nil
 }

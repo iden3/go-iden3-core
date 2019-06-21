@@ -71,7 +71,7 @@ func handleCreateCounterfactual(c *gin.Context) {
 	counterfactual := &counterfactualsrv.Counterfactual{
 		Operational:   operational,
 		OperationalPk: idreq.OperationalPk,
-		Relayer:       common.HexToAddress(genericserver.C.KeyStore.Address),
+		Relayer:       common.HexToAddress(genericserver.C.Keys.Ethereum.KDis),
 		Recoverer:     idreq.Recoverer,
 		Revokator:     idreq.Revokator,
 		Impl:          *genericserver.Counterfactualservice.ImplAddr(),

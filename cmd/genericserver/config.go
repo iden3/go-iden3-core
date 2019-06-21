@@ -15,6 +15,12 @@ type ContractInfo struct {
 	Address string
 }
 
+type BabyJubKey struct {
+	PubKeyRaw  string                `mapstructure:"pubkey"`
+	PubKey     babyjub.PublicKey     `mapstructure:"-"`
+	PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
+}
+
 type Config struct {
 	Server struct {
 		ServiceApi string
@@ -25,15 +31,21 @@ type Config struct {
 	}
 	KeyStore struct {
 		Path     string
-		Address  string
 		Password string
 	}
 	KeyStoreBaby struct {
-		Path       string
-		PubKeyRaw  string                `mapstructure:"pubkey"`
-		PubKey     babyjub.PublicKey     `mapstructure:"-"`
-		PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
-		Password   string
+		Path     string
+		Password string
+	}
+	Keys struct {
+		Ethereum struct {
+			KDis        string
+			KReen       string
+			KUpdateRoot string
+		}
+		BabyJub struct {
+			KOp BabyJubKey
+		}
 	}
 	IdRaw     string  `mapstructure:"id"`
 	Id        core.ID `mapstructure:"-"`
@@ -78,12 +90,16 @@ func MustRead(c *cli.Context) error {
 		return err
 	}
 	var err error
-	if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
-		return err
+	if C.IdRaw != "" {
+		if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
+			return err
+		}
 	}
-	if err := C.KeyStoreBaby.PubKey.UnmarshalText([]byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
-		return err
+	if C.Keys.BabyJub.KOp.PubKeyRaw != "" {
+		if err := C.Keys.BabyJub.KOp.PubKey.UnmarshalText([]byte(C.Keys.BabyJub.KOp.PubKeyRaw)); err != nil {
+			return err
+		}
+		C.Keys.BabyJub.KOp.PubKeyComp = C.Keys.BabyJub.KOp.PubKey.Compress()
 	}
-	C.KeyStoreBaby.PubKeyComp = C.KeyStoreBaby.PubKey.Compress()
 	return nil
 }

@@ -15,6 +15,12 @@ import (
 
 var ServerCommands = []cli.Command{
 	{
+		Name:    "init",
+		Aliases: []string{},
+		Usage:   "create keys and identity for the server",
+		Action:  genericserver.CmdNewIdentity,
+	},
+	{
 		Name:    "start",
 		Aliases: []string{},
 		Usage:   "start the server",
@@ -49,6 +55,9 @@ func cmdStart(c *cli.Context) error {
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
+
+	// TODO here from the CalculateIdGenesis output 'proofsClaims', check if the
+	// mt already has the keys for the GenesisID, or no, and if no, add it
 
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)

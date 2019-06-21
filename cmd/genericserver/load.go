@@ -74,7 +74,16 @@ func LoadKeyStore() (*ethkeystore.KeyStore, accounts.Account) {
 	}
 
 	acc, err := ks.Find(accounts.Account{
-		Address: common.HexToAddress(C.KeyStore.Address),
+		Address: common.HexToAddress(C.Keys.Ethereum.KUpdateRoot),
+	})
+	Assert("Cannot find keystore account", err)
+	// KDis and KReen not used yet, but need to check if they exist
+	_, err = ks.Find(accounts.Account{
+		Address: common.HexToAddress(C.Keys.Ethereum.KDis),
+	})
+	Assert("Cannot find keystore account", err)
+	_, err = ks.Find(accounts.Account{
+		Address: common.HexToAddress(C.Keys.Ethereum.KReen),
 	})
 	Assert("Cannot find keystore account", err)
 
@@ -90,11 +99,12 @@ func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *babyjub.PublicKeyComp) {
 	if err != nil {
 		panic(err)
 	}
-	pk := &C.KeyStoreBaby.PubKeyComp
-	if err := ks.UnlockKey(pk, []byte(C.KeyStoreBaby.Password)); err != nil {
+	var kOp *babyjub.PublicKeyComp
+	kOp = &C.Keys.BabyJub.KOp.PubKeyComp
+	if err := ks.UnlockKey(kOp, []byte(C.KeyStoreBaby.Password)); err != nil {
 		panic(err)
 	}
-	return ks, pk
+	return ks, kOp
 }
 
 func LoadWeb3(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
