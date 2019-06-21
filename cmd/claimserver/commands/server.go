@@ -15,6 +15,12 @@ import (
 
 var ServerCommands = []cli.Command{
 	{
+		Name:    "init",
+		Aliases: []string{},
+		Usage:   "create keys and identity for the server",
+		Action:  genericserver.CmdNewIdentity,
+	},
+	{
 		Name:    "start",
 		Aliases: []string{},
 		Usage:   "start the server",
@@ -42,14 +48,20 @@ func cmdStart(c *cli.Context) error {
 
 	ks, acc := genericserver.LoadKeyStore()
 	ksBaby, pkc := genericserver.LoadKeyStoreBabyJub()
+	defer ksBaby.Close()
 	pk, err := pkc.Decompress()
 	if err != nil {
 		return err
 	}
 	client := genericserver.LoadWeb3(ks, &acc)
 	storage := genericserver.LoadStorage()
+	defer storage.Close()
 	mt := genericserver.LoadMerkele(storage)
 
+	_ = genericserver.LoadGenesis(mt)
+	if err != nil {
+		log.Panic(err)
+	}
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 	adminService := genericserver.LoadAdminService(mt, rootService, claimService)
@@ -73,7 +85,6 @@ func cmdStart(c *cli.Context) error {
 	endpoint.Serve(rootService, claimService, adminService, signedPacketSigner)
 
 	rootService.StopAndJoin()
-	storage.Close()
 
 	return nil
 }

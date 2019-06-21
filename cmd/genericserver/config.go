@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	// common3 "github.com/iden3/go-iden3/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/spf13/viper"
@@ -25,15 +26,25 @@ type Config struct {
 	}
 	KeyStore struct {
 		Path     string
-		Address  string
 		Password string
 	}
 	KeyStoreBaby struct {
-		Path       string
-		PubKeyRaw  string                `mapstructure:"pubkey"`
-		PubKey     babyjub.PublicKey     `mapstructure:"-"`
-		PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
-		Password   string
+		Path     string
+		Password string
+	}
+	Keys struct {
+		Ethereum struct {
+			KDisRaw        string         `mapstructure:"kdis"`
+			KDis           common.Address `mapstructure:"-"`
+			KReenRaw       string         `mapstructure:"kreen"`
+			KReen          common.Address `mapstructure:"-"`
+			KUpdateRootRaw string         `mapstructure:"kupdateroot"`
+			KUpdateRoot    common.Address `mapstructure:"-"`
+		}
+		BabyJub struct {
+			KOpRaw string            `mapstructure:"kop"`
+			KOp    babyjub.PublicKey `mapstructure:"-"`
+		}
 	}
 	IdRaw     string  `mapstructure:"id"`
 	Id        core.ID `mapstructure:"-"`
@@ -78,12 +89,18 @@ func MustRead(c *cli.Context) error {
 		return err
 	}
 	var err error
-	if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
-		return err
+	if C.IdRaw != "" {
+		if C.Id, err = core.IDFromString(C.IdRaw); err != nil {
+			return err
+		}
 	}
-	if err := C.KeyStoreBaby.PubKey.UnmarshalText([]byte(C.KeyStoreBaby.PubKeyRaw)); err != nil {
-		return err
+	if C.Keys.BabyJub.KOpRaw != "" {
+		if err := C.Keys.BabyJub.KOp.UnmarshalText([]byte(C.Keys.BabyJub.KOpRaw)); err != nil {
+			return err
+		}
 	}
-	C.KeyStoreBaby.PubKeyComp = C.KeyStoreBaby.PubKey.Compress()
+	C.Keys.Ethereum.KDis = common.HexToAddress(C.Keys.Ethereum.KDisRaw)
+	C.Keys.Ethereum.KReen = common.HexToAddress(C.Keys.Ethereum.KReenRaw)
+	C.Keys.Ethereum.KUpdateRoot = common.HexToAddress(C.Keys.Ethereum.KUpdateRootRaw)
 	return nil
 }

@@ -1,6 +1,8 @@
 package genericserver
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -69,12 +71,21 @@ func LoadKeyStore() (*ethkeystore.KeyStore, accounts.Account) {
 			filename = C.KeyStore.Password[len(filePrefix):]
 		}
 		passwdbytes, err := ioutil.ReadFile(filename)
-		Assert("Cannot read password ", err)
+		Assert("Cannot read password", err)
 		passwd = string(passwdbytes)
 	}
 
 	acc, err := ks.Find(accounts.Account{
-		Address: common.HexToAddress(C.KeyStore.Address),
+		Address: C.Keys.Ethereum.KUpdateRoot,
+	})
+	Assert("Cannot find keystore account", err)
+	// KDis and KReen not used yet, but need to check if they exist
+	_, err = ks.Find(accounts.Account{
+		Address: C.Keys.Ethereum.KDis,
+	})
+	Assert("Cannot find keystore account", err)
+	_, err = ks.Find(accounts.Account{
+		Address: C.Keys.Ethereum.KReen,
 	})
 	Assert("Cannot find keystore account", err)
 
@@ -90,11 +101,12 @@ func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *babyjub.PublicKeyComp) {
 	if err != nil {
 		panic(err)
 	}
-	pk := &C.KeyStoreBaby.PubKeyComp
-	if err := ks.UnlockKey(pk, []byte(C.KeyStoreBaby.Password)); err != nil {
+	var kOp babyjub.PublicKeyComp
+	kOp = C.Keys.BabyJub.KOp.Compress()
+	if err := ks.UnlockKey(&kOp, []byte(C.KeyStoreBaby.Password)); err != nil {
 		panic(err)
 	}
-	return ks, pk
+	return ks, &kOp
 }
 
 func LoadWeb3(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
@@ -105,7 +117,7 @@ func LoadWeb3(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 		url = url[len("hidden:"):]
 	}
 	web3cli, err := eth.NewWeb3Client(url, ks, acc)
-	Assert("Cannot open connection to web3 ", err)
+	Assert("Cannot open connection to web3", err)
 	if hidden {
 		log.WithField("url", "(hidden)").Info("Connection to web3 server opened")
 	} else {
@@ -207,4 +219,55 @@ func LoadSignedPacketSigner(ks *babykeystore.KeyStore, pk *babyjub.PublicKey, cl
 		panic(err)
 	}
 	return signedpacketsrv.NewSignedPacketSigner(*signer, *proofKSign, C.Id)
+}
+
+// LoadGenesis will calculate the genesis id from the keys in the configuration
+// file and check it against the id in the configuration.  It will populate the
+// merkle tree with the genesis claims if it's empty or check that the claims
+// exist in the merkle tree otherwise.  It returns the ProofClaims of the
+// genesis claims.
+func LoadGenesis(mt *merkletree.MerkleTree) *core.GenesisProofClaims {
+	kOp := C.Keys.BabyJub.KOp
+	kDis := C.Keys.Ethereum.KDis
+	kReen := C.Keys.Ethereum.KReen
+	kUpdateRoot := C.Keys.Ethereum.KUpdateRoot
+	id, proofClaims, err := core.CalculateIdGenesis(&kOp, kDis, kReen, kUpdateRoot)
+	Assert("CalculateIdGenesis failed", err)
+
+	if *id != C.Id {
+		Assert("Error", fmt.Errorf("Calculated genesis id (%v) "+
+			"doesn't match configuration id (%v)", id.String(), C.Id.String()))
+	}
+
+	proofClaimsList := []core.ProofClaim{proofClaims.KOp, proofClaims.KDis,
+		proofClaims.KReen, proofClaims.KUpdateRoot}
+	root := mt.RootKey()
+	if bytes.Equal(root[:], merkletree.HashZero[:]) {
+		// Merklee tree DB is empty
+		// Add genesis claims to merkle tree
+		log.WithField("root", root.Hex()).Info("Merkle tree is empty")
+		for _, proofClaim := range proofClaimsList {
+			if err := mt.Add(&merkletree.Entry{Data: *proofClaim.Leaf}); err != nil {
+				Assert("Error adding claim to merkle tree", err)
+			}
+		}
+	} else {
+		// MerkleTree DB has already been initialized
+		// Check that the geneiss claims are in the merkle tree
+		log.WithField("root", root.Hex()).Info("Merkle tree already initialized")
+		for _, proofClaim := range proofClaimsList {
+			entry := merkletree.Entry{Data: *proofClaim.Leaf}
+			data, err := mt.GetDataByIndex(entry.HIndex())
+			if err != nil {
+				Assert("Error getting claim from the merkle tree", err)
+			}
+			if !entry.Data.Equal(data) {
+				Assert("Error", fmt.Errorf("Claim from the merkle tree (%v) "+
+					"doesn't match the expected claim (%v)",
+					data.String(), entry.Data.String()))
+			}
+		}
+	}
+
+	return proofClaims
 }

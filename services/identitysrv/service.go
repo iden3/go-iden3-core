@@ -29,7 +29,7 @@ func New(cs claimsrv.Service) *ServiceImpl {
 // that initial data, calculated in the function CalculateIdGenesis()
 func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
 
-	id, claims, err := core.CalculateIdGenesis(kop, kdis, kreen, kupdateRoot)
+	id, proofClaims, err := core.CalculateIdGenesis(kop, kdis, kreen, kupdateRoot)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -41,8 +41,10 @@ func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupd
 		return nil, nil, err
 	}
 
-	for _, claim := range claims {
-		err = userMT.Add(claim.Entry())
+	proofClaimsList := []core.ProofClaim{proofClaims.KOp, proofClaims.KDis,
+		proofClaims.KReen, proofClaims.KUpdateRoot}
+	for _, proofClaim := range proofClaimsList {
+		err = userMT.Add(&merkletree.Entry{Data: *proofClaim.Leaf})
 		if err != nil {
 			return nil, nil, err
 		}
@@ -60,10 +62,5 @@ func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupd
 	// update Relay's Root in the Smart Contract
 	is.cs.RootSrv().SetRoot(*is.cs.MT().RootKey())
 
-	proofClaimKop, err := is.cs.GetClaimProofUserByHi(*id, claims[0].Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return id, proofClaimKop, nil
+	return id, &proofClaims.KOp, nil
 }

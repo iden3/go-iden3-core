@@ -135,13 +135,20 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
+type GenesisProofClaims struct {
+	KOp         ProofClaim
+	KDis        ProofClaim
+	KReen       ProofClaim
+	KUpdateRoot ProofClaim
+}
+
 // CalculateIdGenesis calculates the ID given the input parameters.
 // Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, []merkletree.Entrier, error) {
-	// add the claims into an efimer merkletree to calculate the genesis root to get that identity
+func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, *GenesisProofClaims, error) {
+	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
@@ -171,8 +178,30 @@ func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.
 
 	idGenesis := mt.RootKey()
 
+	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+	proofClaimKDis, err := GetClaimProofByHi(mt, claimKDis.Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+	proofClaimKReen, err := GetClaimProofByHi(mt, claimKReen.Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+	proofClaimKUpdateRoot, err := GetClaimProofByHi(mt, claimKUpdateRoot.Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
 	id := NewID(TypeBJM7, idGenesisBytes)
-	return &id, []merkletree.Entrier{claimKOp}, nil
+	return &id, &GenesisProofClaims{
+		KOp:         *proofClaimKOp,
+		KDis:        *proofClaimKDis,
+		KReen:       *proofClaimKReen,
+		KUpdateRoot: *proofClaimKUpdateRoot,
+	}, nil
 }

@@ -40,8 +40,10 @@ func HandleGetRoot(c *gin.Context) {
 // Admin
 func HandleInfo(c *gin.Context) {
 	r := Adminservice.Info(common.HexToAddress(C.Contracts.RootCommits.Address))
+
 	c.JSON(200, gin.H{
-		"info": r,
+		"info":   r,
+		"config": C,
 	})
 }
 func HandleRawDump(c *gin.Context) {
