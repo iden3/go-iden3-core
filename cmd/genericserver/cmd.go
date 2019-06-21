@@ -250,41 +250,38 @@ func CmdDbIPFSexport(c *cli.Context) error {
 	return nil
 }
 
-func CmdNewIdentity(c *cli.Context) error {
-	if err := MustRead(c); err != nil {
-		return err
-	}
-
-	if C.KeyStore.Path == "" {
+func NewIdentity(keyStorePath, keyStorePassword, keyStoreBabyPath, keyStoreBabyPassword string) error {
+	if keyStorePath == "" {
 		return errors.New("No Ethereum Keystore path specified")
 	}
-	if C.KeyStore.Password == "" {
+	if keyStorePassword == "" {
 		return errors.New("No Ethereum Keystore password specified")
 	}
-	if C.KeyStoreBaby.Path == "" {
+	if keyStoreBabyPath == "" {
 		return errors.New("No BabyJub Keystore path specified")
 	}
-	if C.KeyStoreBaby.Password == "" {
+	if keyStoreBabyPassword == "" {
 		return errors.New("No BabyJub Keystore password specified")
 	}
 
 	// open babyjub keystore
 	params := babykeystore.StandardKeyStoreParams
-	storageBJ := babykeystore.NewFileStorage(C.KeyStoreBaby.Path)
+	storageBJ := babykeystore.NewFileStorage(keyStoreBabyPath)
 	ksBJ, err := babykeystore.NewKeyStore(storageBJ, params)
 	if err != nil {
 		panic(err)
 	}
+	defer ksBJ.Close()
 	// create babyjub keys
-	kopPubComp, err := ksBJ.NewKey([]byte(C.KeyStoreBaby.Password))
+	kopPubComp, err := ksBJ.NewKey([]byte(keyStoreBabyPassword))
 	if err != nil {
 		panic(err)
 	}
 	kopPub, err := kopPubComp.Decompress()
 
 	// open ethereum keystore
-	ks := keystore.NewKeyStore(C.KeyStore.Path, keystore.StandardScryptN, keystore.StandardScryptP)
-	passbytes, err := ioutil.ReadFile(C.KeyStore.Password)
+	ks := keystore.NewKeyStore(keyStorePath, keystore.StandardScryptN, keystore.StandardScryptP)
+	passbytes, err := ioutil.ReadFile(keyStorePassword)
 
 	// kDis key
 	accKDis, err := ks.NewAccount(string(passbytes))
@@ -322,4 +319,11 @@ id: ` + id.String()
 	fmt.Fprintf(os.Stderr, "keys and identity created successfully. Copy & paste this lines into the config file:\n")
 	fmt.Println(s)
 	return nil
+}
+
+func CmdNewIdentity(c *cli.Context) error {
+	if err := MustRead(c); err != nil {
+		return err
+	}
+	return NewIdentity(C.KeyStore.Path, C.KeyStore.Password, C.KeyStoreBaby.Path, C.KeyStoreBaby.Password)
 }

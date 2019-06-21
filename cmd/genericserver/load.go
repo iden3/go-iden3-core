@@ -193,7 +193,7 @@ func LoadCounterfactualService(client *eth.Web3Client, claimservice claimsrv.Ser
 }
 
 func LoadClaimService(mt *merkletree.MerkleTree, rootservice rootsrv.Service, ks *babykeystore.KeyStore, pk *babyjub.PublicKey) claimsrv.Service {
-	log.WithField("id", C.IdRaw).Info("Running claim service")
+	log.WithField("id", C.Id.String()).Info("Running claim service")
 	signer := signsrv.New(ks, *pk)
 	return claimsrv.New(C.Id, mt, rootservice, *signer)
 }
