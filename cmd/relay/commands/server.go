@@ -56,8 +56,10 @@ func cmdStart(c *cli.Context) error {
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
-	// TODO here from the CalculateIdGenesis output 'proofsClaims', check if the
-	// mt already has the keys for the GenesisID, or no, and if no, add it
+	_ = genericserver.LoadGenesis(mt)
+	if err != nil {
+		log.Panic(err)
+	}
 
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)

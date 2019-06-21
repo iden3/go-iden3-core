@@ -52,6 +52,11 @@ func (d *Data) Bytes() (b [ElemBytesLen * DataLen]byte) {
 	return b
 }
 
+func (d1 *Data) Equal(d2 *Data) bool {
+	return bytes.Equal(d1[0][:], d2[0][:]) && bytes.Equal(d1[1][:], d2[1][:]) &&
+		bytes.Equal(d1[2][:], d2[2][:]) && bytes.Equal(d1[3][:], d2[3][:])
+}
+
 func (d *Data) MarshalJSON() ([]byte, error) {
 	dataBytes := d.Bytes()
 	return json.Marshal(common3.HexEncode(dataBytes[:]))

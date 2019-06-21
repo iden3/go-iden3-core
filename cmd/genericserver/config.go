@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	// common3 "github.com/iden3/go-iden3/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/spf13/viper"
@@ -13,12 +14,6 @@ import (
 type ContractInfo struct {
 	JsonABI string
 	Address string
-}
-
-type BabyJubKey struct {
-	PubKeyRaw  string                `mapstructure:"pubkey"`
-	PubKey     babyjub.PublicKey     `mapstructure:"-"`
-	PubKeyComp babyjub.PublicKeyComp `mapstructure:"-"`
 }
 
 type Config struct {
@@ -39,12 +34,16 @@ type Config struct {
 	}
 	Keys struct {
 		Ethereum struct {
-			KDis        string
-			KReen       string
-			KUpdateRoot string
+			KDisRaw        string         `mapstructure:"kdis"`
+			KDis           common.Address `mapstructure:"-"`
+			KReenRaw       string         `mapstructure:"kreen"`
+			KReen          common.Address `mapstructure:"-"`
+			KUpdateRootRaw string         `mapstructure:"kupdateroot"`
+			KUpdateRoot    common.Address `mapstructure:"-"`
 		}
 		BabyJub struct {
-			KOp BabyJubKey
+			KOpRaw string            `mapstructure:"kop"`
+			KOp    babyjub.PublicKey `mapstructure:"-"`
 		}
 	}
 	IdRaw     string  `mapstructure:"id"`
@@ -95,11 +94,13 @@ func MustRead(c *cli.Context) error {
 			return err
 		}
 	}
-	if C.Keys.BabyJub.KOp.PubKeyRaw != "" {
-		if err := C.Keys.BabyJub.KOp.PubKey.UnmarshalText([]byte(C.Keys.BabyJub.KOp.PubKeyRaw)); err != nil {
+	if C.Keys.BabyJub.KOpRaw != "" {
+		if err := C.Keys.BabyJub.KOp.UnmarshalText([]byte(C.Keys.BabyJub.KOpRaw)); err != nil {
 			return err
 		}
-		C.Keys.BabyJub.KOp.PubKeyComp = C.Keys.BabyJub.KOp.PubKey.Compress()
 	}
+	C.Keys.Ethereum.KDis = common.HexToAddress(C.Keys.Ethereum.KDisRaw)
+	C.Keys.Ethereum.KReen = common.HexToAddress(C.Keys.Ethereum.KReenRaw)
+	C.Keys.Ethereum.KUpdateRoot = common.HexToAddress(C.Keys.Ethereum.KUpdateRootRaw)
 	return nil
 }

@@ -56,6 +56,10 @@ func cmdStart(c *cli.Context) error {
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
+	_ = genericserver.LoadGenesis(mt)
+	if err != nil {
+		log.Panic(err)
+	}
 	rootService := genericserver.LoadRootsService(client)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 	adminService := genericserver.LoadAdminService(mt, rootService, claimService)
