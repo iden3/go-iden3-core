@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 )

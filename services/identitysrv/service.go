@@ -4,8 +4,8 @@ import (
 	// "crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 )

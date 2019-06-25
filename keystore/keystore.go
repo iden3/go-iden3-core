@@ -5,19 +5,20 @@ import (
 	// "encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gofrs/flock"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/crypto/babyjub"
-	"github.com/iden3/go-iden3/crypto/mimc7"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/nacl/secretbox"
-	"golang.org/x/crypto/scrypt"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"runtime"
 	"sync"
+
+	"github.com/gofrs/flock"
+	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/mimc7"
+	common3 "github.com/iden3/go-iden3/common"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/scrypt"
 )
 
 // Constants taken from

@@ -6,7 +6,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 )

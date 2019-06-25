@@ -5,8 +5,8 @@ import (
 
 	// common3 "github.com/iden3/go-iden3/common"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli"
 )
