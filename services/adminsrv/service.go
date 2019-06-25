@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
@@ -15,7 +15,7 @@ import (
 )
 
 type Service interface {
-	Info(contractAddr common.Address) map[string]string
+	Info(id *core.ID) map[string]string
 	RawDump(c *gin.Context)
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
@@ -34,12 +34,12 @@ func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.S
 }
 
 // Info returns the info overview of the Relay
-func (as *ServiceImpl) Info(contractAddr common.Address) map[string]string {
+func (as *ServiceImpl) Info(id *core.ID) map[string]string {
 	o := make(map[string]string)
 	o["db"] = as.mt.Storage().Info()
 	o["root"] = as.mt.RootKey().Hex()
 
-	root, err := as.claimsrv.RootSrv().GetRoot(contractAddr)
+	root, err := as.claimsrv.RootSrv().GetRoot(id)
 	if err != nil {
 		o["root_contract"] = "error getting root from contract"
 	} else {

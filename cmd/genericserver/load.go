@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	ethkeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
@@ -109,6 +110,22 @@ func LoadKeyStoreBabyJub() (*babykeystore.KeyStore, *babyjub.PublicKeyComp) {
 	return ks, &kOp
 }
 
+func LoadEthClient2(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Client2 {
+	url := C.Web3.Url
+	hidden := strings.HasPrefix(url, "hidden:")
+	if hidden {
+		url = url[len("hidden:"):]
+	}
+	client, err := ethclient.Dial(url)
+	Assert("Cannot open connection to web3", err)
+	if hidden {
+		log.WithField("url", "(hidden)").Info("Connection to web3 server opened")
+	} else {
+		log.WithField("url", C.Web3.Url).Info("Connection to web3 server opened")
+	}
+	return eth.NewClient2(client, acc, ks)
+}
+
 func LoadWeb3(ks *ethkeystore.KeyStore, acc *accounts.Account) *eth.Web3Client {
 	// Create geth client
 	url := C.Web3.Url
@@ -158,12 +175,13 @@ func LoadContract(client eth.Client, jsonabifile string, address *string) *eth.C
 	return eth.NewContract(client, abi, code, addrPtr)
 }
 
-func LoadRootsService(client *eth.Web3Client) rootsrv.Service {
-	return rootsrv.New(LoadContract(
+func LoadRootsService(client *eth.Client2, kUpdateRootMtp []byte) rootsrv.Service {
+	return rootsrv.New(
 		client,
-		C.Contracts.RootCommits.JsonABI,
-		&C.Contracts.RootCommits.Address,
-	))
+		&C.Id,
+		kUpdateRootMtp,
+		common.HexToAddress(C.Contracts.RootCommits.Address),
+	)
 }
 
 func LoadIdentityService(claimservice claimsrv.Service) identitysrv.Service {

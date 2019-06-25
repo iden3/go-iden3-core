@@ -19,7 +19,8 @@ require (
 	github.com/dchest/blake512 v1.0.0
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
-	github.com/ethereum/go-ethereum v1.8.27
+	github.com/elastic/gosigar v0.10.3 // indirect
+	github.com/ethereum/go-ethereum v1.8.22-0.20190625100134-54fd263b400d
 	github.com/fatih/color v1.7.0
 	github.com/gin-contrib/cors v1.3.0
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -44,6 +45,8 @@ require (
 	github.com/siddontang/ledisdb v0.0.0-20190202134119-8ceb77e66a92 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/viper v1.4.0
+	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
+	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli v1.20.0

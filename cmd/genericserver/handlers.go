@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	common3 "github.com/iden3/go-iden3/common"
 	log "github.com/sirupsen/logrus"
@@ -25,10 +25,9 @@ func Fail(c *gin.Context, msg string, err error) {
 // Generic
 func HandleGetRoot(c *gin.Context) {
 	// get the contract data
-	contractAddress := common.HexToAddress(C.Contracts.RootCommits.Address)
-	root, err := Rootservice.GetRoot(contractAddress)
+	root, err := Rootservice.GetRoot(&C.Id)
 	if err != nil {
-		Fail(c, "error contract.GetRoot(contractAddress)", err)
+		Fail(c, "error contract.GetRoot(C.Keys.Ethereum.KUpdateRoot)", err)
 		return
 	}
 	c.JSON(200, gin.H{
@@ -39,7 +38,7 @@ func HandleGetRoot(c *gin.Context) {
 
 // Admin
 func HandleInfo(c *gin.Context) {
-	r := Adminservice.Info(common.HexToAddress(C.Contracts.RootCommits.Address))
+	r := Adminservice.Info(&C.Id)
 
 	c.JSON(200, gin.H{
 		"info":   r,
