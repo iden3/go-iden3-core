@@ -23,7 +23,7 @@ type Client2 struct {
 }
 
 func NewClient2(client *ethclient.Client, account *accounts.Account, ks *ethkeystore.KeyStore) *Client2 {
-	return &Client2{client: client, account: account, ks: ks, ReceiptTimeout: 120 * time.Second}
+	return &Client2{client: client, account: account, ks: ks, ReceiptTimeout: 60 * time.Second}
 }
 
 func (c *Client2) CallAuth(fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
@@ -58,7 +58,7 @@ func (c *Client2) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
 	var receipt *types.Receipt
 
 	txid := tx.Hash()
-	log.WithField("tx", txid.Hex()).Info("Waiting for receipt")
+	log.WithField("tx", txid.Hex()).Debug("Waiting for receipt")
 
 	start := time.Now()
 	for receipt == nil && time.Now().Sub(start) < c.ReceiptTimeout {
