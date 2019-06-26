@@ -5,19 +5,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"testing"
+
 	// "time"
 	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
 	babykeystore "github.com/iden3/go-iden3/keystore"
+
 	// "github.com/ethereum/go-ethereum/crypto"
 	// common3 "github.com/iden3/go-iden3/common"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/crypto/babyjub"
 	"github.com/iden3/go-iden3/db"
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/signsrv"
+
 	// "github.com/iden3/go-iden3/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

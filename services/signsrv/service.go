@@ -6,7 +6,7 @@ import (
 	// "fmt"
 	"time"
 
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/utils"
 )

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 

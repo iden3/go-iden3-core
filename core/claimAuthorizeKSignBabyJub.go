@@ -3,7 +3,7 @@ package core
 import (
 	"math/big"
 
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/merkletree"
 )
 

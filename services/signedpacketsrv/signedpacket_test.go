@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/stretchr/testify/assert"
 

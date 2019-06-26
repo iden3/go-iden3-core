@@ -12,8 +12,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	babykeystore "github.com/iden3/go-iden3/keystore"
+
 	// "github.com/ethereum/go-ethereum/accounts"
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	// "github.com/ethereum/go-ethereum/crypto"
