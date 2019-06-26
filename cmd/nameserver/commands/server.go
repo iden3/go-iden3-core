@@ -11,9 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3/cmd/genericserver"
 	"github.com/iden3/go-iden3/cmd/nameserver/endpoint"
-	"github.com/iden3/go-iden3/crypto/babyjub"
 	babykeystore "github.com/iden3/go-iden3/keystore"
 	"github.com/iden3/go-iden3/services/claimsrv"
 	"github.com/iden3/go-iden3/services/discoverysrv"

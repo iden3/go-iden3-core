@@ -14,8 +14,9 @@ import (
 	"github.com/iden3/go-iden3/merkletree"
 	"github.com/iden3/go-iden3/services/discoverysrv"
 	"github.com/iden3/go-iden3/services/nameresolversrv"
+
 	// "github.com/iden3/go-iden3/utils"
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 type SignedPacketVerifier struct {

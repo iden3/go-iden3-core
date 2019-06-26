@@ -10,8 +10,9 @@ import (
 	common3 "github.com/iden3/go-iden3/common"
 	"github.com/iden3/go-iden3/core"
 	"github.com/iden3/go-iden3/services/signsrv"
+
 	// "github.com/iden3/go-iden3/utils"
-	"github.com/iden3/go-iden3/crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // SIGV01 is the JWS type of an iden3 signed packet.
