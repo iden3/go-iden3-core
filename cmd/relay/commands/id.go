@@ -21,9 +21,13 @@ func loadIdService() (eth.Client, identitysrv.Service, counterfactualsrv.Service
 		panic(err)
 	}
 	client := genericserver.LoadWeb3(ks, &acc)
+	client2 := genericserver.LoadEthClient2(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
-	rootService := genericserver.LoadRootsService(client)
+	proofClaims := genericserver.LoadGenesis(mt)
+	kUpdateMtp := proofClaims.KUpdateRoot.Proofs[0].Mtp0.Bytes()
+
+	rootService := genericserver.LoadRootsService(client2, kUpdateMtp)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 	return client, genericserver.LoadIdentityService(claimService), genericserver.LoadCounterfactualService(client, claimService, storage)
 }
