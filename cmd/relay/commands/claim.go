@@ -46,11 +46,15 @@ func cmdAddClaim(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	client := genericserver.LoadWeb3(ks, &acc)
+	// client := genericserver.LoadWeb3(ks, &acc)
+	client2 := genericserver.LoadEthClient2(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
-	rootService := genericserver.LoadRootsService(client)
+	proofClaims := genericserver.LoadGenesis(mt)
+	kUpdateMtp := proofClaims.KUpdateRoot.Proofs[0].Mtp0.Bytes()
+
+	rootService := genericserver.LoadRootsService(client2, kUpdateMtp)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 
 	indexData := c.Args().Get(0)
@@ -91,11 +95,15 @@ func cmdAddClaimsFromFile(c *cli.Context) error {
 	filepath := c.Args().Get(0)
 
 	ks, acc := genericserver.LoadKeyStore()
-	client := genericserver.LoadWeb3(ks, &acc)
+	// client := genericserver.LoadWeb3(ks, &acc)
+	client2 := genericserver.LoadEthClient2(ks, &acc)
 	storage := genericserver.LoadStorage()
 	mt := genericserver.LoadMerkele(storage)
 
-	rootService := genericserver.LoadRootsService(client)
+	proofClaims := genericserver.LoadGenesis(mt)
+	kUpdateMtp := proofClaims.KUpdateRoot.Proofs[0].Mtp0.Bytes()
+
+	rootService := genericserver.LoadRootsService(client2, kUpdateMtp)
 
 	fmt.Print("\n---\nimporting claims\n---\n\n")
 	// csv file will have the following structure: indexData, noindexData

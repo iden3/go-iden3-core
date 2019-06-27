@@ -54,16 +54,15 @@ func cmdStart(c *cli.Context) error {
 		return err
 	}
 	client := genericserver.LoadWeb3(ks, &acc)
+	client2 := genericserver.LoadEthClient2(ks, &acc)
 	storage := genericserver.LoadStorage()
 	defer storage.Close()
 	mt := genericserver.LoadMerkele(storage)
 
-	_ = genericserver.LoadGenesis(mt)
-	if err != nil {
-		log.Panic(err)
-	}
+	proofClaims := genericserver.LoadGenesis(mt)
+	kUpdateMtp := proofClaims.KUpdateRoot.Proofs[0].Mtp0.Bytes()
 
-	rootService := genericserver.LoadRootsService(client)
+	rootService := genericserver.LoadRootsService(client2, kUpdateMtp)
 	claimService := genericserver.LoadClaimService(mt, rootService, ksBaby, pk)
 	idService := genericserver.LoadIdentityService(claimService)
 	counterfactualService := genericserver.LoadCounterfactualService(client, claimService, storage)

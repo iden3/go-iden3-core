@@ -48,8 +48,8 @@ func (m *RootServiceMock) StopAndJoin() {
 
 }
 
-func (m *RootServiceMock) GetRoot(addr common.Address) (merkletree.Hash, error) {
-	args := m.Called(addr)
+func (m *RootServiceMock) GetRoot(id *core.ID) (merkletree.Hash, error) {
+	args := m.Called(id)
 	return args.Get(0).(merkletree.Hash), args.Error(1)
 }
 

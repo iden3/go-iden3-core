@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3/cmd/genericserver"
@@ -32,8 +32,7 @@ func init() {
 
 func handleGetRoot(c *gin.Context) {
 	// get the contract data
-	contractAddress := common.HexToAddress(genericserver.C.Contracts.RootCommits.Address)
-	root, err := rootService.GetRoot(contractAddress)
+	root, err := rootService.GetRoot(&genericserver.C.Id)
 	if err != nil {
 		genericserver.Fail(c, "error contract.GetRoot(contractAddress)", err)
 		return
