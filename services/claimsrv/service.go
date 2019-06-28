@@ -89,7 +89,10 @@ func (cs *ServiceImpl) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, roo
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(id, root)
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, root)
+	if err != nil {
+		return nil, err
+	}
 	// entry := claimSetRootKey.Entry()
 	// version, err := GetNextVersion(cs.mt, entry.HIndex())
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -189,7 +192,10 @@ func (cs *ServiceImpl) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	if err != nil {
+		return err
+	}
 
 	// get next version of the claim
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
@@ -240,7 +246,10 @@ func (cs *ServiceImpl) AddUserIdClaim(id core.ID, claimValueMsg ClaimValueMsg) e
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	if err != nil {
+		return err
+	}
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return err
@@ -281,7 +290,11 @@ func (cs *ServiceImpl) GetIdRoot(id core.ID) (merkletree.Hash, []byte, error) {
 	}
 
 	// build ClaimSetRootKey of the user id
-	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	if err != nil {
+		return merkletree.Hash{}, []byte{}, err
+	}
+
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
@@ -338,7 +351,10 @@ func (cs *ServiceImpl) GetClaimProofUserByHiOld(id core.ID, hi merkletree.Hash) 
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	if err != nil {
+		return nil, err
+	}
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
 		return nil, err
@@ -413,7 +429,10 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(id core.ID,
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	if err != nil {
+		return nil, err
+	}
 	// TODO in a future iteration: make an efficient implementation of GetNextVersion
 	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {

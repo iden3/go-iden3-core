@@ -128,7 +128,10 @@ func VerifyProofClaim(operationalPk *babyjub.PublicKey, pc *ProofClaim) (bool, e
 		}
 
 		// Create the set root key claim for the next level
-		claim := NewClaimSetRootKey(proof.Aux.Id, *rootKey)
+		claim, err := NewClaimSetRootKey(proof.Aux.Id, *rootKey)
+		if err != nil {
+			return false, err
+		}
 		claim.Version = proof.Aux.Version
 		claim.Era = proof.Aux.Era
 		leaf = claim.Entry()

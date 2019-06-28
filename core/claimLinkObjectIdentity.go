@@ -47,9 +47,9 @@ type ClaimLinkObjectIdentity struct {
 	// Id is the ID.
 	Id ID
 	// ObjectHash is the hash of the object.
-	ObjectHash [248 / 8]byte
+	ObjectHash [256 / 8]byte
 	// Auxiliary data to complement claim information.
-	AuxData [248 / 8]byte
+	AuxData [256 / 8]byte
 }
 
 // minInt returns the minimum between two inputs
@@ -62,21 +62,21 @@ func minInt(a int, b int) int {
 
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
 func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, id ID,
-	objectHash []byte, auxData []byte) *ClaimLinkObjectIdentity {
-	var objectHashSlice [31]byte
-	minLen := minInt(len(objectHash), 32)
-	copy(objectHashSlice[:], objectHash[1:minLen])
-	var auxDataSlice [31]byte
-	minLen = minInt(len(auxData), 32)
-	copy(auxDataSlice[:], auxData[1:minLen])
+	objectHash [256 / 8]byte, auxData [256 / 8]byte) (*ClaimLinkObjectIdentity, error) {
+	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(objectHash)); err != nil {
+		return nil, err
+	}
+	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(auxData)); err != nil {
+		return nil, err
+	}
 	return &ClaimLinkObjectIdentity{
 		Version:     0,
 		ObjectType:  objectType,
 		ObjectIndex: objectIndex,
 		Id:          id,
-		ObjectHash:  objectHashSlice,
-		AuxData:     auxDataSlice,
-	}
+		ObjectHash:  objectHash,
+		AuxData:     auxData,
+	}, nil
 }
 
 // NewClaimLinkObjectIdentityFromEntry deserializes a ClaimLinkObjectIdentity from an Entry.

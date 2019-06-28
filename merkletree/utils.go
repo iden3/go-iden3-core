@@ -59,6 +59,14 @@ func ElemsBytesToRElems(elems ...ElemBytes) ([]mimc7.RElem, error) {
 	return mimc7.BigIntsToRElems(ints)
 }
 
+// ElemBytesToRElem converts an ElemBytes to a mimc7.RElem.
+// This function returns an error if the ElemBytes is invalid (it's bigger than
+// the RElement field).
+func ElemBytesToRElem(elem ElemBytes) (mimc7.RElem, error) {
+	bigInt := big.NewInt(0).SetBytes(elem[:])
+	return mimc7.BigIntToRElem(bigInt)
+}
+
 // RElemToHash converts a mimc7.RElem to a Hash.
 func RElemToHash(relem mimc7.RElem) (h Hash) {
 	bs := (*big.Int)(relem).Bytes()
