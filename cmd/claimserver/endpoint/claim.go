@@ -51,13 +51,17 @@ func handlePostClaim(c *gin.Context) {
 		return
 	}
 
-	hash := utils.HashBytes([]byte(m.Cert))
+	hash := core.ClearMostSigByte(utils.HashBytes([]byte(m.Cert)))
 	// Pending to update according new data received by the server
-	auxData := utils.HashBytes([]byte(m.Cert))
+	auxData := core.ClearMostSigByte(utils.HashBytes([]byte(m.Cert)))
 	objectType := core.ObjectTypeCertificate
 	indexObject := uint16(0)
-	claim := core.NewClaimLinkObjectIdentity(objectType, indexObject,
-		m.IdData.Id, hash[:], auxData[:])
+	claim, err := core.NewClaimLinkObjectIdentity(objectType, indexObject,
+		m.IdData.Id, hash, auxData)
+	if err != nil {
+		genericserver.Fail(c, "error on NewClaimLinkObjectIdentity", err)
+		return
+	}
 
 	// If necessary store the claim with a version higher than an existing
 	// claim to invalidate the later.

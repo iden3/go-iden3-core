@@ -51,7 +51,10 @@ func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupd
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey := core.NewClaimSetRootKey(*id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(*id, *userMT.RootKey())
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
 	err = is.cs.MT().Add(claimSetRootKey.Entry())

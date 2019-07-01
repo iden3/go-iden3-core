@@ -17,6 +17,13 @@ func copyToElemBytes(e *merkletree.ElemBytes, start int, src []byte) {
 	copy(e[merkletree.ElemBytesLen-start-len(src):], src)
 }
 
+// ClearMostSigByte sets the most significant byte of the element to 0 to make sure it fits
+// inside a merkletree.RElement.
+func ClearMostSigByte(e [256 / 8]byte) merkletree.ElemBytes {
+	e[0] = 0
+	return merkletree.ElemBytes(e)
+}
+
 // copyFromElemBytes copies from e to dst, ending at -start of e and going
 // forwards.  This function will panic if len(e)-start is smaller than
 // len(dst).
@@ -109,6 +116,11 @@ const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
 
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
+	for _, elemBytes := range e.Data {
+		if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
+			return nil, err
+		}
+	}
 	claimType, _ := getClaimTypeVersion(e)
 	switch claimType {
 	case *ClaimTypeBasic:

@@ -20,13 +20,16 @@ type ClaimSetRootKey struct {
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(id ID, rootKey merkletree.Hash) *ClaimSetRootKey {
+func NewClaimSetRootKey(id ID, rootKey merkletree.Hash) (*ClaimSetRootKey, error) {
+	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(rootKey)); err != nil {
+		return nil, err
+	}
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
 		Id:      id,
 		RootKey: rootKey,
-	}
+	}, nil
 }
 
 // NewClaimSetRootKeyFromEntry deserializes a ClaimSetRootKey from an Entry.

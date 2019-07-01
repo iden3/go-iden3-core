@@ -280,7 +280,8 @@ func TestGetClaimProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
-	setRootClaim := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	setRootClaim, err := core.NewClaimSetRootKey(id, *userMT.RootKey())
+	assert.Nil(t, err)
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
 	err = mt.Add(setRootClaim.Entry())
