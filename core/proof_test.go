@@ -1,7 +1,10 @@
 package core
 
 import (
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
+	"math/big"
 	"testing"
 
 	"github.com/iden3/go-iden3/db"
@@ -52,6 +55,44 @@ func TestProof(t *testing.T) {
 	verified, err := VerifyProofClaim(nil, mtp)
 	assert.Nil(t, err)
 	assert.True(t, verified)
+}
+
+func NewEntryFromInts(a, b, c, d int64) (e merkletree.Entry) {
+	e.Data = IntsToData(a, b, c, d)
+	return e
+}
+
+func IntsToData(_a, _b, _c, _d int64) merkletree.Data {
+	a, b, c, d := big.NewInt(_a), big.NewInt(_b), big.NewInt(_c), big.NewInt(_d)
+	return BigIntsToData(a, b, c, d)
+}
+
+func BigIntsToData(a, b, c, d *big.Int) (data merkletree.Data) {
+	di := []*big.Int{a, b, c, d}
+	for i, v := range di {
+		copy(data[i][(merkletree.ElemBytesLen-len(v.Bytes())):], v.Bytes())
+	}
+	return
+}
+
+func TestClaimProof(t *testing.T) {
+	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	assert.Nil(t, err)
+
+	claim1 := NewEntryFromInts(33, 44, 55, 66)
+	claim2 := NewEntryFromInts(1111, 2222, 3333, 4444)
+	claim3 := NewEntryFromInts(5555, 6666, 7777, 8888)
+
+	mt.Add(&claim1)
+	mt.Add(&claim2)
+	mt.Add(&claim3)
+
+	mtp, err := GetClaimProofByHi(mt, claim1.HIndex())
+	assert.Nil(t, err)
+
+	fmt.Println("mtp", mtp.Leaf,
+		hex.EncodeToString(mtp.Proofs[0].Mtp0.Bytes()),
+		hex.EncodeToString(mtp.Proofs[0].Mtp1.Bytes()))
 }
 
 func TestGetPredicateProof(t *testing.T) {
