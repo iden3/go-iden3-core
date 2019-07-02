@@ -34,6 +34,8 @@ const (
 	ObjectTypeFamilyName ObjectType = 5
 	// ObjectTypeCertificate indicates that hash represents a certificate.
 	ObjectTypeCertificate ObjectType = 6
+	// ObjectTypeStorage indicates that hash represents a stored file.
+	ObjectTypeStorage ObjectType = 7
 )
 
 // ClaimLinkObjectIdentity aims to link a hash of an object to an identity.
