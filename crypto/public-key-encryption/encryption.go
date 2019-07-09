@@ -17,6 +17,10 @@ func ImportBoxPublicKey(pkHex string) (*sodium.BoxPublicKey, error) {
 	return &sodium.BoxPublicKey{Bytes: sodium.Bytes(pkBytes)}, nil
 }
 
+func ExportBoxPublicKey(pk *sodium.BoxPublicKey) string {
+	return hex.EncodeToString(pk.Bytes[:])
+}
+
 func ImportBoxKP(kpHex string) (*sodium.BoxKP, error) {
 	kpBytes, err := hex.DecodeString(kpHex)
 	if err != nil {
@@ -30,13 +34,15 @@ func ImportBoxKP(kpHex string) (*sodium.BoxKP, error) {
 	return &sodium.BoxKP{PublicKey: pk, SecretKey: sk}, nil
 }
 
+func ExportBoxKP(kp *sodium.BoxKP) string {
+	return hex.EncodeToString(kp.PublicKey.Bytes[:]) + hex.EncodeToString(kp.SecretKey.Bytes[:])
+}
+
 func GenKP() sodium.BoxKP {
 	return sodium.MakeBoxKP()
 }
 
 func Encrypt(pk *sodium.BoxPublicKey, data []byte) []byte {
-	n := sodium.BoxNonce{}
-	sodium.Randomize(&n)
 	return sodium.Bytes(data).SealedBox(*pk)
 }
 
