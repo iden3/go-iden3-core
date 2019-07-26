@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/mimc7"
-	common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3-core/common"
 )
 
 // Hash is the type used to represent a hash used in the MT.

@@ -13,9 +13,10 @@ import (
 	"sync"
 
 	"github.com/gofrs/flock"
+	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/mimc7"
-	common3 "github.com/iden3/go-iden3/common"
+	i3cryptoutils "github.com/iden3/go-iden3-crypto/utils"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
@@ -329,12 +330,12 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 	msgElems := make([]mimc7.RElem, 0, len(msg)/n+1)
 	for i := 0; i < len(msg)/n; i++ {
 		v := new(big.Int)
-		babyjub.SetBigIntFromLEBytes(v, msg[n*i:n*(i+1)])
+		i3cryptoutils.SetBigIntFromLEBytes(v, msg[n*i:n*(i+1)])
 		msgElems = append(msgElems, v)
 	}
 	if len(msg)%n != 0 {
 		v := new(big.Int)
-		babyjub.SetBigIntFromLEBytes(v, msg[(len(msg)/n)*n:])
+		i3cryptoutils.SetBigIntFromLEBytes(v, msg[(len(msg)/n)*n:])
 		msgElems = append(msgElems, v)
 	}
 	return mimc7.Hash(msgElems, nil)

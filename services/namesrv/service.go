@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	//"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/signsrv"
-	//"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/services/signsrv"
+	//"github.com/iden3/go-iden3-core/utils"
 )
 
 type Service interface {

@@ -1,7 +1,7 @@
 package signedpacketsrv
 
 import (
-	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3-core/core"
 )
 
 // RequestIdenAssertBody is the header request of a RequestIdenAssert.

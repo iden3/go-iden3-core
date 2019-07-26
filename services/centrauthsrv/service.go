@@ -5,9 +5,9 @@ package centrauthsrv
 //
 //	"github.com/ethereum/go-ethereum/common"
 //	"github.com/ethereum/go-ethereum/crypto"
-//	common3 "github.com/iden3/go-iden3/common"
-//	"github.com/iden3/go-iden3/services/claimsrv"
-//	"github.com/iden3/go-iden3/utils"
+//	common3 "github.com/iden3/go-iden3-core/common"
+//	"github.com/iden3/go-iden3-core/services/claimsrv"
+//	"github.com/iden3/go-iden3-core/utils"
 //)
 //
 //// Auth validates that the given AuthMsg data matches the requirments

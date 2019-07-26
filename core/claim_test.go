@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 var debug = false

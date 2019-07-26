@@ -3,7 +3,7 @@ package keystore
 import (
 	"encoding/hex"
 	"fmt"
-	common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"

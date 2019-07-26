@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/signsrv"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/services/signsrv"
 
-	// "github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 

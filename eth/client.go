@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/utils"
 
 	log "github.com/sirupsen/logrus"
 )

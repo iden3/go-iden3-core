@@ -13,15 +13,15 @@ import (
 	"testing"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	babykeystore "github.com/iden3/go-iden3/keystore"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
 
 	// "github.com/ethereum/go-ethereum/accounts"
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
 	// "github.com/ethereum/go-ethereum/crypto"
-	// common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/signedpacketsrv"
-	"github.com/iden3/go-iden3/services/signsrv"
+	// common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/services/signedpacketsrv"
+	"github.com/iden3/go-iden3-core/services/signsrv"
 	"github.com/stretchr/testify/assert"
 )
 

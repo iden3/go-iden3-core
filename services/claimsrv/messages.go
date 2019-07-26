@@ -3,10 +3,10 @@ package claimsrv
 import (
 	"crypto/ecdsa"
 
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/utils"
 )
 
 // BytesSignedMsg contains the value and its signature in Hex representation

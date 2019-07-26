@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/utils"
 )
 
 // VerifyChallengeTimestamp checks that the given timestamp is correct

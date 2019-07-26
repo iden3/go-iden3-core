@@ -1,8 +1,8 @@
 package backupsrv
 
 import (
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/utils"
 )
 
 type User struct {

@@ -11,10 +11,10 @@ import (
 	//"time"
 	"math/big"
 
-	//common3 "github.com/iden3/go-iden3/common"
+	//common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/ethereum/go-ethereum/common"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/db"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/db"
 	"github.com/stretchr/testify/assert"
 )
 

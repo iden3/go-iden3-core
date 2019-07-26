@@ -7,11 +7,11 @@ import (
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
 	"github.com/iden3/go-iden3-crypto/mimc7"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	merkletree "github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/rootsrv"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	merkletree "github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/services/rootsrv"
 )
 
 type Service interface {

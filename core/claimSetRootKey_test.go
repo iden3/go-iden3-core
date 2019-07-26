@@ -3,7 +3,7 @@ package core
 import (
 	"testing"
 
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
 )
 

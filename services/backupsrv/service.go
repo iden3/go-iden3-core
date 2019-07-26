@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/mongosrv"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/services/mongosrv"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/mgo.v2/bson"
 )

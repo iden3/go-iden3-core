@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/contracts"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/eth"
-	"github.com/iden3/go-iden3/merkletree"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/eth"
+	"github.com/iden3/go-iden3-core/eth/contracts"
+	"github.com/iden3/go-iden3-core/merkletree"
 	log "github.com/sirupsen/logrus"
 )
 

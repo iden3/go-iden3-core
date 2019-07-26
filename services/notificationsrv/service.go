@@ -12,8 +12,8 @@ import (
 
 	// "github.com/ethereum/go-ethereum/accounts/keystore"
 
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/signedpacketsrv"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/services/signedpacketsrv"
 )
 
 const MSGPROOFCLAIMV01 = "iden3.proofclaim.v0_1"

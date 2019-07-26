@@ -6,10 +6,10 @@ import (
 	"os"
 
 	// "github.com/ethereum/go-ethereum/common"
-	// common3 "github.com/iden3/go-iden3/common"
+	// common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/core"
-	// "github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/core"
+	// "github.com/iden3/go-iden3-core/utils"
 )
 
 type Trusted struct {

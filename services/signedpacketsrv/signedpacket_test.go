@@ -13,13 +13,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	babykeystore "github.com/iden3/go-iden3/keystore"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/services/discoverysrv"
-	"github.com/iden3/go-iden3/services/nameresolversrv"
-	"github.com/iden3/go-iden3/services/signsrv"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/services/discoverysrv"
+	"github.com/iden3/go-iden3-core/services/nameresolversrv"
+	"github.com/iden3/go-iden3-core/services/signsrv"
 )
 
 const debug = false

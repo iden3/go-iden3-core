@@ -10,18 +10,18 @@ import (
 	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
-	babykeystore "github.com/iden3/go-iden3/keystore"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
 
 	// "github.com/ethereum/go-ethereum/crypto"
-	// common3 "github.com/iden3/go-iden3/common"
+	// common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/signsrv"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/services/signsrv"
 
-	// "github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

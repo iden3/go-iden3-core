@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 // EthKeyTypeLen is the length in bytes of the type in a claim

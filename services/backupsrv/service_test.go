@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/utils"
 	"github.com/stretchr/testify/assert"
 )
 

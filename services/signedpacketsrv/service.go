@@ -8,14 +8,14 @@ import (
 	"time"
 
 	// "github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/core"
-	babykeystore "github.com/iden3/go-iden3/keystore"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/discoverysrv"
-	"github.com/iden3/go-iden3/services/nameresolversrv"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/discoverysrv"
+	"github.com/iden3/go-iden3-core/services/nameresolversrv"
 
-	// "github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 

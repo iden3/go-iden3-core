@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 // ClaimAuthorizeKSignBabyJub is a claim to authorize a baby jub public key for
