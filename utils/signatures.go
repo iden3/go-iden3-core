@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3-core/common"
 )
 
 // Signature is a secp256k1 ecdsa signature.

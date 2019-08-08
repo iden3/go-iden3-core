@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/eth"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/eth"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/utils"
 
 	log "github.com/sirupsen/logrus"
 )

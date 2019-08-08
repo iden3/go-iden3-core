@@ -3,8 +3,8 @@ package core
 import (
 	"math/big"
 
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/merkletree"
 )
 
 // ClaimAuthorizeKSignBabyJub is a claim to authorize a baby jub public key for
@@ -52,7 +52,8 @@ func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 		sign = []byte{1}
 	}
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, sign)
-	copy(e.Data[2][:], c.Ay.Bytes())
+	ayBytes := c.Ay.Bytes()
+	copy(e.Data[2][merkletree.ElemBytesLen-len(ayBytes):], ayBytes)
 	return e
 }
 

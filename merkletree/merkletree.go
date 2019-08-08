@@ -9,8 +9,8 @@ import (
 	"io"
 	"sync"
 
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/db"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/db"
 )
 
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes

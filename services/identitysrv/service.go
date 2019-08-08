@@ -5,9 +5,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/claimsrv"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
 )
 
 type Service interface {

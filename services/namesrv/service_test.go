@@ -6,11 +6,11 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3/cmd/id/config"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/web3"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/cmd/id/config"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/web3"
+	"github.com/iden3/go-iden3-core/utils"
 	"github.com/stretchr/testify/assert"
 )
 

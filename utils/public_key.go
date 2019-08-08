@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3-core/common"
 )
 
 // PublicKey is a secp256k1 public key used to verify ecdsa signatures.

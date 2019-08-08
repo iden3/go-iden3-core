@@ -10,18 +10,18 @@ import (
 	"encoding/hex"
 
 	"github.com/ethereum/go-ethereum/common"
-	babykeystore "github.com/iden3/go-iden3/keystore"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
 
 	// "github.com/ethereum/go-ethereum/crypto"
-	// common3 "github.com/iden3/go-iden3/common"
+	// common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-core/services/signsrv"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/services/claimsrv"
-	"github.com/iden3/go-iden3/services/signsrv"
 
-	// "github.com/iden3/go-iden3/utils"
+	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -141,28 +141,30 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 	return idService
 }
 
-func TestCreateIdGenesisRandom(t *testing.T) {
+func TestCreateIdGenesisRandomLoop(t *testing.T) {
 	idsrv := initializeIdService(t)
 
-	kOpSk := babyjub.NewRandPrivKey()
-	kop := kOpSk.Public()
-	if debug {
-		fmt.Println("kop", kop)
+	for i := 0; i < 1024; i++ {
+		kOpSk := babyjub.NewRandPrivKey()
+		kop := kOpSk.Public()
+		if debug {
+			fmt.Println("kop", kop)
+		}
+		kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+		kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+		kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+		id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen, kUpdateRoot)
+		assert.Nil(t, err)
+
+		id2, _, err := core.CalculateIdGenesis(kop, kDis, kReen, kUpdateRoot)
+		assert.Nil(t, err)
+		assert.Equal(t, id, id2)
+
+		proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
+		assert.Nil(t, err)
+		assert.True(t, proofKOpVerified)
 	}
-	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-
-	id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen, kUpdateRoot)
-	assert.Nil(t, err)
-
-	id2, _, err := core.CalculateIdGenesis(kop, kDis, kReen, kUpdateRoot)
-	assert.Nil(t, err)
-	assert.Equal(t, id, id2)
-
-	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
-	assert.Nil(t, err)
-	assert.True(t, proofKOpVerified)
 }
 
 func TestCreateIdGenesisHardcoded(t *testing.T) {

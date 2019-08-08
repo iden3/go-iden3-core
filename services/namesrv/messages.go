@@ -1,8 +1,8 @@
 package namesrv
 
 import (
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/utils"
 )
 
 // RawIdentityTx is TODO

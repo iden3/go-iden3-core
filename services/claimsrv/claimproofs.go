@@ -5,9 +5,9 @@ import (
 	"crypto/ecdsa"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 // CheckKSignInIddb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)

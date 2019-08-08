@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/iden3/go-iden3/core"
+	"github.com/iden3/go-iden3-core/core"
 )
 
 type Service struct {

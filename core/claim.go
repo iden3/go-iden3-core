@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/iden3/go-iden3/merkletree"
-	"github.com/iden3/go-iden3/utils"
+	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/utils"
 )
 
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.

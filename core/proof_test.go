@@ -7,8 +7,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
 )
 

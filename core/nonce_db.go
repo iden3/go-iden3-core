@@ -3,7 +3,7 @@ package core
 import (
 	"container/heap"
 	"crypto/rand"
-	common3 "github.com/iden3/go-iden3/common"
+	common3 "github.com/iden3/go-iden3-core/common"
 	"sync"
 	"time"
 )

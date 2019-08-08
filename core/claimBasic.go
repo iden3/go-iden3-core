@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 // ClaimBasic is a simple claim that can be used for anything.

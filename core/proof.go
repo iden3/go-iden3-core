@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	common3 "github.com/iden3/go-iden3/common"
-	"github.com/iden3/go-iden3/merkletree"
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 var (

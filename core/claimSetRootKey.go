@@ -3,7 +3,7 @@ package core
 import (
 	"encoding/binary"
 
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 // ClaimSetRootKey is a claim of the root key of a merkle tree that goes into the relay.

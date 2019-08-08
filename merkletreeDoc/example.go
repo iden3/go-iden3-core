@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/iden3/go-iden3/core"
-	"github.com/iden3/go-iden3/db"
-	"github.com/iden3/go-iden3/merkletree"
+	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/merkletree"
 )
 
 func main() {
