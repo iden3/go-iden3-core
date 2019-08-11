@@ -4,10 +4,10 @@ import (
 	// "crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 type Service interface {
@@ -29,7 +29,7 @@ func New(cs claimsrv.Service) *ServiceImpl {
 // that initial data, calculated in the function CalculateIdGenesis()
 func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
 
-	id, proofClaims, err := core.CalculateIdGenesis(kop, kdis, kreen, kupdateRoot)
+	id, proofClaims, err := core.CalculateIdGenesisFrom4Keys(kop, kdis, kreen, kupdateRoot)
 	if err != nil {
 		return nil, nil, err
 	}
