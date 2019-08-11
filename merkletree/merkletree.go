@@ -134,7 +134,7 @@ type Entry struct {
 	hValue *Hash
 }
 
-type Entrier interface {
+type Claim interface {
 	Entry() *Entry
 }
 

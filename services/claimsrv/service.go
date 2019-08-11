@@ -22,7 +22,7 @@ type Service interface {
 	AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 		claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error
 	AddUserIdClaim(id core.ID, claimValueMsg ClaimValueMsg) error
-	AddClaim(claim merkletree.Entrier) error
+	AddClaim(claim merkletree.Claim) error
 	GetIdRoot(id core.ID) (merkletree.Hash, []byte, error)
 	GetClaimProofUserByHi(id core.ID, hi *merkletree.Hash) (*core.ProofClaim, error)
 	GetClaimProofUserByHiOld(id core.ID, hi merkletree.Hash) (*ProofClaimUser, error)
@@ -269,7 +269,7 @@ func (cs *ServiceImpl) AddUserIdClaim(id core.ID, claimValueMsg ClaimValueMsg) e
 }
 
 // AddClaim adds a claim directly to the Relay merkletree
-func (cs *ServiceImpl) AddClaim(claim merkletree.Entrier) error {
+func (cs *ServiceImpl) AddClaim(claim merkletree.Claim) error {
 	err := cs.mt.Add(claim.Entry())
 	if err != nil {
 		return err
