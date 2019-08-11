@@ -6,9 +6,9 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -135,6 +135,43 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
+// CalculateIdGenesis calculates the ID given the input parameters.
+// Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
+// ID: base58 ( [ type | root_genesis | checksum ] )
+// where checksum: hash( [type | root_genesis ] )
+// where the hash function is MIMC7
+func CalculateIdGenesis(claimKOp merkletree.Claim, extraGenesisClaims []merkletree.Claim) (*ID, *ProofClaim, error) {
+	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
+	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = mt.Add(claimKOp.Entry())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, claim := range extraGenesisClaims {
+		err = mt.Add(claim.Entry())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	idGenesis := mt.RootKey()
+
+	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var idGenesisBytes [27]byte
+	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
+	id := NewID(TypeBJM7, idGenesisBytes)
+	return &id, proofClaimKOp, nil
+}
+
 type GenesisProofClaims struct {
 	KOp         ProofClaim
 	KDis        ProofClaim
@@ -142,12 +179,7 @@ type GenesisProofClaims struct {
 	KUpdateRoot ProofClaim
 }
 
-// CalculateIdGenesis calculates the ID given the input parameters.
-// Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
-// ID: base58 ( [ type | root_genesis | checksum ] )
-// where checksum: hash( [type | root_genesis ] )
-// where the hash function is MIMC7
-func CalculateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, *GenesisProofClaims, error) {
+func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, *GenesisProofClaims, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {

@@ -115,7 +115,7 @@ const ClaimVersionLen = 32 / 8
 const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
 
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
-func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
+func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Claim, error) {
 	for _, elemBytes := range e.Data {
 		if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
 			return nil, err

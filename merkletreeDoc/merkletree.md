@@ -33,7 +33,7 @@ defer mt.Storage().Close()
 ## Add claims
 
 To add claims, first we need to have a claim data struct that fits the
-`Entrier` interface:
+`Claim` interface:
 ```go
 // Data consists of 4 elements of the mimc7 field.
 type Data [4]ElemBytes
@@ -42,8 +42,8 @@ type Entry struct {
   Data Data
   [...]
 }
-// Entrier is the interface of a generic claim.
-type Entrier interface {
+// Claim is the interface of a generic claim.
+type Claim interface {
   Entry() *Entry
 }
 ```
@@ -63,7 +63,7 @@ ethAddr1 := common.HexToAddress("0x28f8267fb21e8ce0cdd9888a6e532764eb8d52dd")
 claim1 := core.NewClaimAssignName(name1, ethAddr1)
 claimEntry1 := claim1.Entry()
 ```
-Once we have the `claim` struct that fits the `Entrier` interface, we can add
+Once we have the `claim` struct that fits the `Claim` interface, we can add
 it to the merkletree:
 ```go
 err = mt.Add(claimEntry0)

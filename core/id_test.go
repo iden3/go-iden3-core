@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-core/utils"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -125,7 +125,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, _, err := CalculateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
+	id, _, err := CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
