@@ -1,6 +1,7 @@
 package identityagentsrv
 
 import (
+	"encoding/hex"
 	"io/ioutil"
 	"testing"
 
@@ -153,4 +154,80 @@ func TestGetClaims(t *testing.T) {
 	assert.Equal(t, c1.Entry().Bytes(), emittedClaims[2].Claim.Entry().Bytes())
 	assert.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
 	assert.Equal(t, 0, len(receivedClaims))
+}
+
+func TestGetClaimByHi(t *testing.T) {
+	sto, err := NewTestingStorage()
+	assert.Nil(t, err)
+
+	ia := New(sto)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err = kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+
+	// create claims to be added
+	ethKey = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+
+	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	assert.Nil(t, err)
+
+	claim, _, err := ia.GetClaimByHi(id, c0.Entry().HIndex())
+	assert.Nil(t, err)
+	assert.Equal(t, c0.Entry().Bytes(), claim.Entry().Bytes())
+
+	claim, _, err = ia.GetClaimByHi(id, c1.Entry().HIndex())
+	assert.Nil(t, err)
+	assert.Equal(t, c1.Entry().Bytes(), claim.Entry().Bytes())
+}
+
+func TestGetFullMT(t *testing.T) {
+	sto, err := NewTestingStorage()
+	assert.Nil(t, err)
+
+	ia := New(sto)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err = kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+
+	// create claims to be added
+	ethKey = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+
+	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	assert.Nil(t, err)
+
+	mt, err := ia.GetFullMT(id)
+	assert.Nil(t, err)
+	idStorages, err := ia.LoadIdStorages(id)
+	assert.Nil(t, err)
+	assert.Equal(t, idStorages.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:]) // crop first 4 from mt map, as the first 2 are for '03' indicating the node type of the MerkleTree, the other 2 are for the '0x'
+
+	count := 0
+	for _, _ = range mt {
+		count++
+	}
+	assert.Equal(t, 7, count)
 }
