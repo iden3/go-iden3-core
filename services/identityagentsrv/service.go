@@ -2,6 +2,7 @@ package identityagentsrv
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 
 	"github.com/iden3/go-iden3-core/core"
@@ -281,4 +282,57 @@ func (ia *ServiceImpl) GetAllClaims(id *core.ID) ([]ClaimObj, []ClaimObj, error)
 	emittedClaims, err := ia.GetAllEmittedClaims(id, idStorages)
 	return emittedClaims, receivedClaims, err
 
+}
+
+func (ia *ServiceImpl) GetClaimByHi(id *core.ID, hi *merkletree.Hash) (merkletree.Claim, *core.ProofClaimPartial, error) {
+	idStorages, err := ia.LoadIdStorages(id)
+	if err != nil {
+		return nil, nil, err
+	}
+	mtp, err := idStorages.mt.GenerateProof(hi, nil)
+	// TODO see issues #167 and #169
+	// once RootUpdater is ready, tie the claim proof in the identity merkletree. Also the mtpNonRevokated depends on the RootUpdater
+	// with the proof of the SetRootClaim in the Relay's merkletree
+	proof := core.ProofClaimPartial{
+		Mtp0: mtp,
+		Mtp1: &merkletree.Proof{},
+		Root: idStorages.mt.RootKey(),
+		Aux:  nil,
+	}
+	// var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
+	// copy(leafBytes[:], value[:merkletree.ElemBytesLen*merkletree.DataLen])
+	// leafData := merkletree.NewDataFromBytes(leafBytes)
+	leafData, err := idStorages.mt.GetDataByIndex(hi)
+	if err != nil {
+		return nil, nil, err
+	}
+	entry := merkletree.Entry{
+		Data: *leafData,
+	}
+	claim, err := core.NewClaimFromEntry(&entry)
+	if err != nil {
+		return nil, nil, err
+	}
+	return claim, &proof, nil
+}
+
+func (ia *ServiceImpl) GetFullMT(id *core.ID) (map[string]string, error) {
+	mt := make(map[string]string)
+	idStorages, err := ia.LoadIdStorages(id)
+	if err != nil {
+		return mt, err
+	}
+
+	idStorages.ecSto.Iterate(func(key, value []byte) {
+		// filter only the key-value with the prefix of id+emittedclaims
+		// as the Iterate from the Storage don't filters by prefix
+		// in the future do a more efficient way to filter without going through all the keys-values
+		var prefix []byte
+		prefix = append(prefix[:], id.Bytes()...)
+		prefix = append(prefix[:], merkletree.PREFIX_MERKLETREE...)
+		if bytes.Equal(key[:len(prefix)], prefix) {
+			mt["0x"+hex.EncodeToString(key[len(prefix):])] = "0x" + hex.EncodeToString(value)
+		}
+	})
+	return mt, nil
 }
