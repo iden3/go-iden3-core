@@ -55,3 +55,102 @@ func TestNewIdentity(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }
+
+func TestAddClaim(t *testing.T) {
+	sto, err := NewTestingStorage()
+	assert.Nil(t, err)
+
+	ia := New(sto)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err = kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+
+	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+
+	// create claim to be added
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	ethKeyType := core.EthKeyTypeUpgrade
+	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+
+	err = ia.AddClaim(id, c0)
+	assert.Nil(t, err)
+
+	// should give collision error when adding the claim already added
+	err = ia.AddClaim(id, c0)
+	assert.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
+}
+
+func TestAddClaims(t *testing.T) {
+	sto, err := NewTestingStorage()
+	assert.Nil(t, err)
+
+	ia := New(sto)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err = kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+
+	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+
+	// create claim to be added
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	ethKeyType := core.EthKeyTypeUpgrade
+	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
+	ethKeyType = core.EthKeyTypeUpgrade
+	c1 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+
+	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	assert.Nil(t, err)
+
+	// should give collision error when adding the claim already added
+	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	assert.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
+}
+
+func TestGetClaims(t *testing.T) {
+	sto, err := NewTestingStorage()
+	assert.Nil(t, err)
+
+	ia := New(sto)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err = kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+
+	// create claims to be added
+	ethKey = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+
+	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	assert.Nil(t, err)
+
+	emittedClaims, receivedClaims, err := ia.GetAllClaims(id)
+	assert.Nil(t, err)
+	assert.Equal(t, c0.Entry().Bytes(), emittedClaims[0].Claim.Entry().Bytes())
+	assert.Equal(t, claimKOp.Entry().Bytes(), emittedClaims[1].Claim.Entry().Bytes())
+	assert.Equal(t, c1.Entry().Bytes(), emittedClaims[2].Claim.Entry().Bytes())
+	assert.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
+	assert.Equal(t, 0, len(receivedClaims))
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
 	//"strconv"
 	"testing"
 	//"time"
@@ -748,4 +749,44 @@ func TestAddBigIntEntries(t *testing.T) {
 	assert.Equal(t,
 		"0x2b5433214c653859dde8ba916fb6b31cb93c26bcca70630219e3bb4f587886df",
 		mt.RootKey().Hex())
+}
+
+type testClaim struct {
+	E *Entry
+}
+
+func (tc *testClaim) Entry() *Entry {
+	return tc.E
+}
+
+func TestEntryToBytesToEntry(t *testing.T) {
+
+	e, err := NewEntryFromHexs("0x0000000000000000000000000000000000000000000000000000000000000000",
+		"0x0000000000000000000000000000000000000000000000000000000000000000",
+		"0x00036d94c84a7096c572b83d44df576e1ffb3573123f62099f8d4fa19de806bd",
+		"0x0000000000000000000000000000000000004d59000000000000000000000004")
+	assert.Nil(t, err)
+
+	claim := testClaim{
+		E: &e,
+	}
+	cBytes := claim.Entry().Bytes()
+
+	var leafBytes [ElemBytesLen * DataLen]byte
+	copy(leafBytes[:], cBytes[:ElemBytesLen*DataLen])
+	leafData := NewDataFromBytes(leafBytes)
+	leafDataBytes := leafData.Bytes()
+
+	assert.Equal(t, cBytes, leafDataBytes[:])
+	assert.Equal(t, cBytes, leafBytes[:])
+
+	entry := Entry{
+		Data: *leafData,
+	}
+	for _, elemBytes := range entry.Data {
+		if _, err := ElemBytesToRElem(elemBytes); err != nil {
+			assert.Nil(t, err)
+		}
+	}
+
 }
