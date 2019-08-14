@@ -16,13 +16,14 @@ var PREFIX_EMITTEDCLAIMS = []byte("emittedclaims")
 var PREFIX_RECEIVEDCLAIMS = []byte("receivedclaims")
 
 type Service interface {
-	LoadIdStorages(id *core.ID) (db.Storage, *merkletree.MerkleTree, error)
-	NewIdentity(claimAuthKOp merkletree.Claim, extraGenesisClaims []merkletree.Claim) (core.ID, core.ProofClaim, error)
-	AddClaim(id core.ID, claim merkletree.Claim) error
-	AddClaims(id core.ID, claims []merkletree.Claim) error
-	GetAllReceivedClaims(id *core.ID, idStorages *IdStorages) ([]ClaimObj, error)
-	GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) ([]ClaimObj, error)
-	GetAllClaims(id *core.ID) ([]ClaimObj, []ClaimObj, error)
+	LoadIdStorages(id *core.ID) (*IdStorages, error)
+	NewIdentity(claimAuthKOp merkletree.Claim, extraGenesisClaims []merkletree.Claim) (*core.ID, *core.ProofClaim, error)
+	AddClaim(id *core.ID, claim merkletree.Claim) error
+	AddClaims(id *core.ID, claims []merkletree.Claim) error
+	GetAllReceivedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error)
+	GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error)
+	GetAllClaims(id *core.ID) ([]core.ClaimObj, []core.ClaimObj, error)
+	GetFullMT(id *core.ID) (map[string]string, error)
 }
 
 type RootUpdaterConfig struct {
@@ -102,6 +103,7 @@ func (ia *ServiceImpl) NewIdentity(claimAuthKOp merkletree.Claim, extraGenesisCl
 }
 
 func (ia *ServiceImpl) AddClaim(id *core.ID, claim merkletree.Claim) error {
+	// maybe this function is not needed and when adding one claim is through AddClaims
 	idStorages, err := ia.LoadIdStorages(id)
 	if err != nil {
 		return err
@@ -168,22 +170,17 @@ func (ia *ServiceImpl) AddClaims(id *core.ID, claims []merkletree.Claim) error {
 	return nil
 }
 
-type ClaimObj struct {
-	Claim merkletree.Claim
-	Proof core.ProofClaimPartial // TODO once the RootUpdater is ready we can use here the proof part of the Relay (or direct from blockchain)
-}
-
-func (ia *ServiceImpl) GetAllReceivedClaims(id *core.ID, idStorages *IdStorages) ([]ClaimObj, error) {
+func (ia *ServiceImpl) GetAllReceivedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error) {
 	var err error
 	if idStorages == nil {
 		idStorages, err = ia.LoadIdStorages(id)
 		if err != nil {
-			return []ClaimObj{}, err
+			return []core.ClaimObj{}, err
 		}
 	}
 
 	// get received claims
-	var receivedClaims []ClaimObj
+	var receivedClaims []core.ClaimObj
 	idStorages.rcSto.Iterate(func(key, value []byte) {
 		// filter only the key-value with the prefix of id+emittedclaims
 		// as the Iterate from the Storage don't filters by prefix
@@ -192,7 +189,7 @@ func (ia *ServiceImpl) GetAllReceivedClaims(id *core.ID, idStorages *IdStorages)
 		prefix = append(prefix[:], id.Bytes()...)
 		prefix = append(prefix[:], PREFIX_RECEIVEDCLAIMS...)
 		if bytes.Equal(key[:len(prefix)], prefix) {
-			rClaim := ClaimObj{
+			rClaim := core.ClaimObj{
 				// TODO to be defined the way to store received claims
 				Claim: &core.ClaimBasic{},
 				Proof: core.ProofClaimPartial{},
@@ -204,17 +201,17 @@ func (ia *ServiceImpl) GetAllReceivedClaims(id *core.ID, idStorages *IdStorages)
 	return receivedClaims, err
 }
 
-func (ia *ServiceImpl) GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) ([]ClaimObj, error) {
+func (ia *ServiceImpl) GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error) {
 	var err error
 	if idStorages == nil {
 		idStorages, err = ia.LoadIdStorages(id)
 		if err != nil {
-			return []ClaimObj{}, err
+			return []core.ClaimObj{}, err
 		}
 	}
 
 	// get emitted claims, and generate fresh proof with current Root
-	var emittedClaims []ClaimObj
+	var emittedClaims []core.ClaimObj
 	var iterErr error
 	idStorages.ecSto.Iterate(func(key, value []byte) {
 		// filter only the key-value with the prefix of id+emittedclaims
@@ -252,7 +249,7 @@ func (ia *ServiceImpl) GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) 
 				iterErr = errors.New(err.Error())
 				return
 			}
-			eClaim := ClaimObj{
+			eClaim := core.ClaimObj{
 				Claim: c,
 				Proof: proof,
 			}
@@ -266,16 +263,16 @@ func (ia *ServiceImpl) GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) 
 
 }
 
-func (ia *ServiceImpl) GetAllClaims(id *core.ID) ([]ClaimObj, []ClaimObj, error) {
+func (ia *ServiceImpl) GetAllClaims(id *core.ID) ([]core.ClaimObj, []core.ClaimObj, error) {
 	idStorages, err := ia.LoadIdStorages(id)
 	if err != nil {
-		return []ClaimObj{}, []ClaimObj{}, err
+		return []core.ClaimObj{}, []core.ClaimObj{}, err
 	}
 
 	// get received claims
 	receivedClaims, err := ia.GetAllReceivedClaims(id, idStorages)
 	if err != nil {
-		return []ClaimObj{}, []ClaimObj{}, err
+		return []core.ClaimObj{}, []core.ClaimObj{}, err
 	}
 
 	// get emitted claims, and generate fresh proof with current Root
@@ -335,4 +332,14 @@ func (ia *ServiceImpl) GetFullMT(id *core.ID) (map[string]string, error) {
 		}
 	})
 	return mt, nil
+}
+
+// GetCurrentRoot is used from wallet to check if is syncronized with the MerkleTree in the IdentityAgent
+func (ia *ServiceImpl) GetCurrentRoot(id *core.ID) (*merkletree.Hash, error) {
+	idStorages, err := ia.LoadIdStorages(id)
+	if err != nil {
+		return &merkletree.Hash{}, err
+	}
+
+	return idStorages.mt.RootKey(), nil
 }
