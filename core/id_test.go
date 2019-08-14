@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
@@ -117,7 +118,7 @@ func TestCheckChecksum(t *testing.T) {
 	assert.Equal(t, errors.New("IDFromBytes error: byte array empty"), err)
 }
 
-func TestCalculateIdGenesis(t *testing.T) {
+func TestCalculateIdGenesisFrom4Keys(t *testing.T) {
 	var sk babyjub.PrivateKey
 	hex.Decode(sk[:], []byte("28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f"))
 	kopPub := sk.Public()
@@ -132,4 +133,22 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("id (hex)", id.String())
 	}
 	assert.Equal(t, "1172NXRBLZAfdKm8eGeoppUZ4vohBa8a3xXKTub9xQ", id.String())
+}
+
+func TestCalculateIdGenesis(t *testing.T) {
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kopComp babyjub.PublicKeyComp
+	err := kopComp.UnmarshalText([]byte(kopStr))
+	assert.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	assert.Nil(t, err)
+	claimKOp := NewClaimAuthorizeKSignBabyJub(kopPub)
+
+	id, _, err := CalculateIdGenesis(claimKOp, []merkletree.Claim{})
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println("id", id)
+		fmt.Println("id (hex)", id.String())
+	}
+	assert.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
 }
