@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	common3 "github.com/iden3/go-iden3-core/common"
@@ -450,7 +451,44 @@ node [fontname=Monospace,fontsize=10,shape=box]
 }
 
 // DumpClaims uses Walk function to get all the Claims of the tree and write them to w
-func (mt *MerkleTree) DumpClaims(w io.Writer, rootKey *Hash) error {
+func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
+	var dumpedClaims []string
+	err := mt.Walk(rootKey, func(n *Node) {
+		if n.Type == NodeTypeLeaf {
+			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Value()))
+		}
+	})
+	return dumpedClaims, err
+}
+
+// ImportClaims parses and adds the dumped claims from the DumpClaims function
+func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
+	for _, c := range dumpedClaims {
+		if strings.HasPrefix(c, "0x") && len(c) < 260 {
+			return errors.New("hex less than 260 (with 0x prefix)")
+		} else if len(c) < 256 {
+			return errors.New("hex less than 256")
+		}
+		var err error
+		var e Entry
+		if strings.HasPrefix(c, "0x") {
+			e, err = NewEntryFromHexs(c[4:68], c[68:132], c[132:196], c[196:])
+		} else {
+			e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:])
+		}
+		if err != nil {
+			return err
+		}
+
+		err = mt.Add(&e)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (mt *MerkleTree) DumpClaimsIoWritter(w io.Writer, rootKey *Hash) error {
 	fmt.Fprintf(w, "[\n")
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type == NodeTypeLeaf {
