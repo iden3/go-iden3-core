@@ -8,6 +8,7 @@ require (
 	github.com/aristanetworks/goarista v0.0.0-20190712234253-ed1100a1c015 // indirect
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/deckarep/golang-set v1.7.1 // indirect
+	github.com/dghubble/sling v1.3.0
 	github.com/elastic/gosigar v0.10.4 // indirect
 	github.com/ethereum/go-ethereum v1.8.29-0.20190620093831-25c3282cf126
 	github.com/fatih/color v1.7.0

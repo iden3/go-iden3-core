@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var service *ServiceImpl
+var service *Service
 
 func NewTestingStorage() (db.Storage, error) {
 	dir, err := ioutil.TempDir("", "db")
@@ -26,7 +26,7 @@ func NewTestingStorage() (db.Storage, error) {
 	return sto, err
 }
 
-func testServiceInterficeFunction(ia Service) {
+func testServiceInterficeFunction(ia *Service) {
 
 }
 
@@ -34,7 +34,7 @@ func TestServiceInterface(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	testServiceInterficeFunction(ia)
 }
@@ -43,7 +43,7 @@ func TestNewIdentity(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -74,7 +74,7 @@ func TestAddClaim(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -104,7 +104,7 @@ func TestAddClaims(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -137,7 +137,7 @@ func TestGetClaims(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -173,7 +173,7 @@ func TestGetClaimByHi(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -209,7 +209,7 @@ func TestGetFullMT(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
@@ -249,7 +249,7 @@ func TestGetCurrentRoot(t *testing.T) {
 	sto, err := NewTestingStorage()
 	assert.Nil(t, err)
 
-	ia := New(sto)
+	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
