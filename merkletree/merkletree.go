@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	common3 "github.com/iden3/go-iden3-core/common"
@@ -449,12 +450,49 @@ node [fontname=Monospace,fontsize=10,shape=box]
 	return err
 }
 
-// DumpClaims uses Walk function to get all the Claims of the tree and write them to w
-func (mt *MerkleTree) DumpClaims(w io.Writer, rootKey *Hash) error {
+// DumpClaims outputs a list of all the claims in hex.
+func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
+	var dumpedClaims []string
+	err := mt.Walk(rootKey, func(n *Node) {
+		if n.Type == NodeTypeLeaf {
+			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Entry.Bytes()))
+		}
+	})
+	return dumpedClaims, err
+}
+
+// ImportClaims parses and adds the dumped list of claims in hex from the
+// DumpClaims function.
+func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
+	for _, c := range dumpedClaims {
+		if strings.HasPrefix(c, "0x") {
+			c = c[2:]
+		}
+		if len(c) != 256 {
+			return errors.New("hex length different than 256")
+		}
+		var err error
+		var e Entry
+		e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:])
+		if err != nil {
+			return err
+		}
+
+		err = mt.Add(&e)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
+// them to w.  The output is JSON encoded with claims in hex.
+func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
 	fmt.Fprintf(w, "[\n")
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type == NodeTypeLeaf {
-			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Value()))
+			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
 		}
 	})
 	fmt.Fprintf(w, "]\n")

@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
-	"github.com/iden3/go-iden3-crypto/mimc7"
 	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-crypto/mimc7"
 )
 
 // Hash is the type used to represent a hash used in the MT.
@@ -115,4 +116,63 @@ func testBit(bitmap []byte, n uint) bool {
 // testBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
 func testBitBigEndian(bitmap []byte, n uint) bool {
 	return bitmap[uint(len(bitmap))-n/8-1]&(1<<(n%8)) != 0
+}
+
+func HexDecode(h string) ([]byte, error) {
+	if strings.HasPrefix(h, "0x") {
+		h = h[2:]
+	}
+	return hex.DecodeString(h)
+}
+func NewEntryFromHexs(a, b, c, d string) (e Entry, err error) {
+	e.Data, err = HexsToData(a, b, c, d)
+	if err != nil {
+		return e, err
+	}
+	return e, nil
+}
+func HexsToData(_a, _b, _c, _d string) (Data, error) {
+	aBytes, err := HexDecode(_a)
+	if err != nil {
+		return Data{}, err
+	}
+	a := new(big.Int).SetBytes(aBytes)
+
+	bBytes, err := HexDecode(_b)
+	if err != nil {
+		return Data{}, err
+	}
+	b := new(big.Int).SetBytes(bBytes)
+
+	cBytes, err := HexDecode(_c)
+	if err != nil {
+		return Data{}, err
+	}
+	c := new(big.Int).SetBytes(cBytes)
+
+	dBytes, err := HexDecode(_d)
+	if err != nil {
+		return Data{}, err
+	}
+	d := new(big.Int).SetBytes(dBytes)
+
+	return BigIntsToData(a, b, c, d), nil
+}
+
+func NewEntryFromInts(a, b, c, d int64) (e Entry) {
+	e.Data = IntsToData(a, b, c, d)
+	return e
+}
+
+func IntsToData(_a, _b, _c, _d int64) Data {
+	a, b, c, d := big.NewInt(_a), big.NewInt(_b), big.NewInt(_c), big.NewInt(_d)
+	return BigIntsToData(a, b, c, d)
+}
+
+func BigIntsToData(a, b, c, d *big.Int) (data Data) {
+	di := []*big.Int{a, b, c, d}
+	for i, v := range di {
+		copy(data[i][(ElemBytesLen-len(v.Bytes())):], v.Bytes())
+	}
+	return
 }
