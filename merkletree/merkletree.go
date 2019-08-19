@@ -450,32 +450,30 @@ node [fontname=Monospace,fontsize=10,shape=box]
 	return err
 }
 
-// DumpClaims uses Walk function to get all the Claims of the tree and write them to w
+// DumpClaims outputs a list of all the claims in hex.
 func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
 	var dumpedClaims []string
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type == NodeTypeLeaf {
-			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Value()))
+			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Entry.Bytes()))
 		}
 	})
 	return dumpedClaims, err
 }
 
-// ImportClaims parses and adds the dumped claims from the DumpClaims function
+// ImportClaims parses and adds the dumped list of claims in hex from the
+// DumpClaims function.
 func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 	for _, c := range dumpedClaims {
-		if strings.HasPrefix(c, "0x") && len(c) < 260 {
-			return errors.New("hex less than 260 (with 0x prefix)")
-		} else if len(c) < 256 {
-			return errors.New("hex less than 256")
+		if strings.HasPrefix(c, "0x") {
+			c = c[2:]
+		}
+		if len(c) != 256 {
+			return errors.New("hex length different than 256")
 		}
 		var err error
 		var e Entry
-		if strings.HasPrefix(c, "0x") {
-			e, err = NewEntryFromHexs(c[4:68], c[68:132], c[132:196], c[196:])
-		} else {
-			e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:])
-		}
+		e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:])
 		if err != nil {
 			return err
 		}
@@ -488,11 +486,13 @@ func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 	return nil
 }
 
-func (mt *MerkleTree) DumpClaimsIoWritter(w io.Writer, rootKey *Hash) error {
+// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
+// them to w.  The output is JSON encoded with claims in hex.
+func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
 	fmt.Fprintf(w, "[\n")
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type == NodeTypeLeaf {
-			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Value()))
+			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
 		}
 	})
 	fmt.Fprintf(w, "]\n")
