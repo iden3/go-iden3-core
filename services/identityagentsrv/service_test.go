@@ -12,29 +12,32 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //// BEGIN Helper functions
 
-func createIdentity(t *testing.T) (*core.ID, *babyjub.PublicKey, *Service) {
+func createIdentityLoadAgent(t *testing.T) (*core.ID, *babyjub.PublicKey, *Agent) {
 	sto, err := NewTestingStorage()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
 	err = kopComp.UnmarshalText([]byte(kopStr))
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
 	id, _, err := ia.CreateIdentity(claimKOp, nil)
-	assert.Nil(t, err)
-	assert.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
-	return id, kopPub, ia
+	require.Nil(t, err)
+	require.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
+
+	agent, err := ia.NewAgent(id)
+	require.Nil(t, err)
+	return id, kopPub, agent
 }
 
 //// END
@@ -56,7 +59,7 @@ func testServiceInterficeFunction(ia *Service) {
 
 func TestServiceInterface(t *testing.T) {
 	sto, err := NewTestingStorage()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	ia := New(sto, &RootUpdaterMock{})
 
@@ -65,16 +68,16 @@ func TestServiceInterface(t *testing.T) {
 
 func TestNewIdentity(t *testing.T) {
 	sto, err := NewTestingStorage()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
 	ia := New(sto, &RootUpdaterMock{})
 
 	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
 	var kopComp babyjub.PublicKeyComp
 	err = kopComp.UnmarshalText([]byte(kopStr))
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
-	assert.Nil(t, err)
+	require.Nil(t, err)
 	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
@@ -85,33 +88,33 @@ func TestNewIdentity(t *testing.T) {
 	claimKUpdateRoot := core.NewClaimAuthEthKey(kUpdateRoot, core.EthKeyTypeUpdateRoot).Entry()
 
 	id, proofKOp, err := ia.CreateIdentity(claimKOp, []*merkletree.Entry{claimKDis, claimKReen, claimKUpdateRoot})
-	assert.Nil(t, err)
+	require.Nil(t, err)
 
-	assert.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
+	require.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
 	var relayPk *babyjub.PublicKey
 	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
-	assert.Nil(t, err)
-	assert.True(t, proofKOpVerified)
+	require.Nil(t, err)
+	require.True(t, proofKOpVerified)
 }
 
 func TestAddClaim(t *testing.T) {
-	id, _, ia := createIdentity(t)
+	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claim to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	ethKeyType := core.EthKeyTypeUpgrade
 	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
 
-	err := ia.AddClaim(id, c0)
-	assert.Nil(t, err)
+	err := agent.AddClaim(c0)
+	require.Nil(t, err)
 
 	// should give collision error when adding the claim already added
-	err = ia.AddClaim(id, c0)
-	assert.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
+	err = agent.AddClaim(c0)
+	require.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
 }
 
 func TestAddClaims(t *testing.T) {
-	id, _, ia := createIdentity(t)
+	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claim to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
@@ -121,16 +124,16 @@ func TestAddClaims(t *testing.T) {
 	ethKeyType = core.EthKeyTypeUpgrade
 	c1 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
 
-	err := ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Nil(t, err)
+	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Nil(t, err)
 
 	// should give collision error when adding the claim already added
-	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
+	err = agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
 }
 
 func TestGetClaims(t *testing.T) {
-	id, kopPub, ia := createIdentity(t)
+	_, kopPub, agent := createIdentityLoadAgent(t)
 	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
 	// create claims to be added
@@ -139,20 +142,22 @@ func TestGetClaims(t *testing.T) {
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err := ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Nil(t, err)
+	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Nil(t, err)
 
-	emittedClaims, receivedClaims, err := ia.GetAllClaims(id)
-	assert.Nil(t, err)
-	assert.Equal(t, c0.Bytes(), emittedClaims[0].Claim.Entry().Bytes())
-	assert.Equal(t, claimKOp.Bytes(), emittedClaims[1].Claim.Entry().Bytes())
-	assert.Equal(t, c1.Bytes(), emittedClaims[2].Claim.Entry().Bytes())
-	assert.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
-	assert.Equal(t, 0, len(receivedClaims))
+	emittedClaims, err := agent.GetAllEmittedClaims()
+	require.Nil(t, err)
+	receivedClaims, err := agent.GetAllReceivedClaims()
+	require.Nil(t, err)
+	require.Equal(t, c0.Bytes(), emittedClaims[0].Bytes())
+	require.Equal(t, claimKOp.Bytes(), emittedClaims[1].Bytes())
+	require.Equal(t, c1.Bytes(), emittedClaims[2].Bytes())
+	require.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
+	require.Equal(t, 0, len(receivedClaims))
 }
 
 func TestGetClaimByHi(t *testing.T) {
-	id, _, ia := createIdentity(t)
+	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claims to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
@@ -160,20 +165,20 @@ func TestGetClaimByHi(t *testing.T) {
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err := ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Nil(t, err)
+	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Nil(t, err)
 
-	claim, _, err := ia.GetClaimByHi(id, c0.HIndex())
-	assert.Nil(t, err)
-	assert.Equal(t, c0.Bytes(), claim.Entry().Bytes())
+	claim, _, err := agent.GetClaimByHi(c0.HIndex())
+	require.Nil(t, err)
+	require.Equal(t, c0.Bytes(), claim.Bytes())
 
-	claim, _, err = ia.GetClaimByHi(id, c1.HIndex())
-	assert.Nil(t, err)
-	assert.Equal(t, c1.Bytes(), claim.Entry().Bytes())
+	claim, _, err = agent.GetClaimByHi(c1.HIndex())
+	require.Nil(t, err)
+	require.Equal(t, c1.Bytes(), claim.Bytes())
 }
 
 func TestGetFullMT(t *testing.T) {
-	id, _, ia := createIdentity(t)
+	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claims to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
@@ -181,24 +186,22 @@ func TestGetFullMT(t *testing.T) {
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err := ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Nil(t, err)
+	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Nil(t, err)
 
-	mt, err := ia.GetFullMT(id)
-	assert.Nil(t, err)
-	idStorages, err := ia.LoadIdStorages(id)
-	assert.Nil(t, err)
-	assert.Equal(t, idStorages.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:]) // crop first 4 from mt map, as the first 2 are for '03' indicating the node type of the MerkleTree, the other 2 are for the '0x'
+	mt, err := agent.GetFullMT()
+	require.Nil(t, err)
+	require.Equal(t, agent.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:]) // crop first 4 from mt map, as the first 2 are for '03' indicating the node type of the MerkleTree, the other 2 are for the '0x'
 
 	count := 0
 	for _, _ = range mt {
 		count++
 	}
-	assert.Equal(t, 7, count)
+	require.Equal(t, 7, count)
 }
 
 func TestGetCurrentRoot(t *testing.T) {
-	id, _, ia := createIdentity(t)
+	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claims to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
@@ -206,17 +209,14 @@ func TestGetCurrentRoot(t *testing.T) {
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err := ia.AddClaims(id, []*merkletree.Entry{c0, c1})
-	assert.Nil(t, err)
+	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	require.Nil(t, err)
 
-	mt, err := ia.GetFullMT(id)
-	assert.Nil(t, err)
+	mt, err := agent.GetFullMT()
+	require.Nil(t, err)
 
-	idStorages, err := ia.LoadIdStorages(id)
-	assert.Nil(t, err)
-	assert.Equal(t, idStorages.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:])
+	require.Equal(t, agent.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:])
 
-	root, err := ia.GetCurrentRoot(id)
-	assert.Nil(t, err)
-	assert.Equal(t, idStorages.mt.RootKey().Hex(), root.Hex())
+	root := agent.GetCurrentRoot()
+	require.Equal(t, agent.mt.RootKey().Hex(), root.Hex())
 }

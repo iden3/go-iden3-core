@@ -138,6 +138,10 @@ type Claim interface {
 	Entry() *Entry
 }
 
+func NewEntryFromBytes(b [ElemBytesLen * DataLen]byte) *Entry {
+	return &Entry{Data: *NewDataFromBytes(b)}
+}
+
 // HIndex calculates the hash of the Index of the entry, used to find the path
 // from the root to the leaf in the MT.
 func (e *Entry) HIndex() *Hash {

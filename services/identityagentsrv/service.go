@@ -3,7 +3,7 @@ package identityagentsrv
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
+	// "errors"
 	"fmt"
 
 	"github.com/dghubble/sling"
@@ -70,27 +70,6 @@ func New(storage db.Storage, rootUpdater RootUpdater) *Service {
 	}
 }
 
-type IdStorages struct {
-	storage db.Storage
-	ecSto   db.Storage
-	rcSto   db.Storage
-	mt      *merkletree.MerkleTree
-}
-
-// LoadPrefixStorage returns the identity storages
-func (ia *Service) LoadIdStorages(id *core.ID) (*IdStorages, error) {
-	idSto := ia.storage.WithPrefix(id.Bytes())
-	ecSto := idSto.WithPrefix(PREFIX_EMITTEDCLAIMS)
-	rcSto := idSto.WithPrefix(PREFIX_RECEIVEDCLAIMS)
-	mt, err := merkletree.NewMerkleTree(idSto, 140)
-	return &IdStorages{
-		storage: idSto,
-		ecSto:   ecSto,
-		rcSto:   rcSto,
-		mt:      mt,
-	}, err
-}
-
 // NewIdentity creates a new identity from the given claims
 func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	extraGenesisClaims []*merkletree.Entry) (*core.ID, *core.ProofClaim, error) {
@@ -101,20 +80,21 @@ func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	}
 
 	// load identity storages
-	idStorages, err := ia.LoadIdStorages(id)
+	agent, err := ia.NewAgent(id)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// add claims into the stored MerkleTree & into the EmittedClaimsStorage
-	tx, err := idStorages.ecSto.NewTx() // for the moment a simple storage, in the future a storage that allows to query searches
-	err = idStorages.mt.Add(claimAuthKOp)
+	// for the moment a simple storage, in the future a storage that allows to query searches
+	tx, err := agent.storage.claims.emitted.NewTx()
+	err = agent.mt.Add(claimAuthKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 	tx.Put(claimAuthKOp.HIndex().Bytes(), claimAuthKOp.Bytes())
 	for _, claim := range extraGenesisClaims {
-		err = idStorages.mt.Add(claim)
+		err = agent.mt.Add(claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -131,19 +111,53 @@ func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	return id, proofKOp, nil
 }
 
-func (ia *Service) AddClaim(id *core.ID, claim *merkletree.Entry) error {
-	return ia.AddClaims(id, []*merkletree.Entry{claim})
+type IdStorage struct {
+	base   db.Storage
+	claims struct {
+		emitted  db.Storage
+		received db.Storage
+	}
 }
 
-func (ia *Service) AddClaims(id *core.ID, claims []*merkletree.Entry) error {
-	idStorages, err := ia.LoadIdStorages(id)
-	if err != nil {
-		return err
-	}
+type Agent struct {
+	storage *IdStorage
+	mt      *merkletree.MerkleTree
+	id      *core.ID
+}
 
-	tx, err := idStorages.ecSto.NewTx()
+// LoadPrefixStorage returns the identity storages
+func (a *Agent) loadStorage(base db.Storage) error {
+	emittedClaims := base.WithPrefix(PREFIX_EMITTEDCLAIMS)
+	receivedClaims := base.WithPrefix(PREFIX_RECEIVEDCLAIMS)
+	a.storage = &IdStorage{
+		base: base,
+		claims: struct {
+			emitted  db.Storage
+			received db.Storage
+		}{
+			emitted:  emittedClaims,
+			received: receivedClaims,
+		},
+	}
+	mt, err := merkletree.NewMerkleTree(base, 140)
+	a.mt = mt
+	return err
+}
+
+func (s *Service) NewAgent(id *core.ID) (*Agent, error) {
+	agent := &Agent{id: id}
+	err := agent.loadStorage(s.storage.WithPrefix(agent.id.Bytes()))
+	return agent, err
+}
+
+func (a *Agent) AddClaim(claim *merkletree.Entry) error {
+	return a.AddClaims([]*merkletree.Entry{claim})
+}
+
+func (a *Agent) AddClaims(claims []*merkletree.Entry) error {
+	tx, err := a.storage.claims.emitted.NewTx()
 	for _, claim := range claims {
-		err = idStorages.mt.Add(claim)
+		err = a.mt.Add(claim)
 		if err != nil {
 			return err
 		}
@@ -180,165 +194,115 @@ func (ia *Service) AddClaims(id *core.ID, claims []*merkletree.Entry) error {
 	return nil
 }
 
-func (ia *Service) GetAllReceivedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error) {
-	var err error
-	if idStorages == nil {
-		idStorages, err = ia.LoadIdStorages(id)
-		if err != nil {
-			return []core.ClaimObj{}, err
-		}
-	}
-
-	// get received claims
-	var receivedClaims []core.ClaimObj
-	idStorages.rcSto.Iterate(func(key, value []byte) {
+func (a *Agent) GetAllReceivedClaims() ([]*merkletree.Entry, error) {
+	var receivedClaims []*merkletree.Entry
+	err := a.storage.claims.received.Iterate(func(key, value []byte) {
 		// filter only the key-value with the prefix of id+emittedclaims
 		// as the Iterate from the Storage don't filters by prefix
 		// in the future do a more efficient way to filter without going through all the keys-values
 		var prefix []byte
-		prefix = append(prefix[:], id.Bytes()...)
+		prefix = append(prefix[:], a.id.Bytes()...)
 		prefix = append(prefix[:], PREFIX_RECEIVEDCLAIMS...)
 		if bytes.Equal(key[:len(prefix)], prefix) {
-			rClaim := core.ClaimObj{
-				// TODO to be defined the way to store received claims
-				Claim: &core.ClaimBasic{},
-				Proof: core.ProofClaimPartial{},
-			}
-			receivedClaims = append(receivedClaims, rClaim)
+			// TODO to be defined the way to store received claims
+			claim := merkletree.Entry{}
+			receivedClaims = append(receivedClaims, &claim)
 		}
 	})
-
 	return receivedClaims, err
 }
 
-func (ia *Service) GetAllEmittedClaims(id *core.ID, idStorages *IdStorages) ([]core.ClaimObj, error) {
-	var err error
-	if idStorages == nil {
-		idStorages, err = ia.LoadIdStorages(id)
-		if err != nil {
-			return []core.ClaimObj{}, err
-		}
-	}
-
+func (a *Agent) GetAllEmittedClaims() ([]*merkletree.Entry, error) {
 	// get emitted claims, and generate fresh proof with current Root
-	var emittedClaims []core.ClaimObj
-	var iterErr error
-	idStorages.ecSto.Iterate(func(key, value []byte) {
+	var emittedClaims []*merkletree.Entry
+	err := a.storage.claims.emitted.Iterate(func(key, value []byte) {
 		// filter only the key-value with the prefix of id+emittedclaims
 		// as the Iterate from the Storage don't filters by prefix
 		// in the future do a more efficient way to filter without going through all the keys-values
 		var prefix []byte
-		prefix = append(prefix[:], id.Bytes()...)
+		prefix = append(prefix[:], a.id.Bytes()...)
 		prefix = append(prefix[:], PREFIX_EMITTEDCLAIMS...)
 		if bytes.Equal(key[:len(prefix)], prefix) {
 			// where key is the hi, value is the leaf
-			var hi_b [32]byte
-			copy(hi_b[:], key[:32])
-			hi := merkletree.Hash(hi_b)
+			// var hiBytes [32]byte
+			// copy(hiBytes[:], key[:32])
+			// hi := merkletree.Hash(hiBytes)
 
-			mtp, err := idStorages.mt.GenerateProof(&hi, nil)
+			// mtp, err := idStorages.mt.GenerateProof(&hi, nil)
 
 			// TODO see issues #167 and #169
 			// once RootUpdater is ready, tie the claim proof in
 			// the identity merkletree. Also the mtpNonRevokated
 			// depends on the RootUpdater
 			// with the proof of the SetRootClaim in the Relay's merkletree
-			proof := core.ProofClaimPartial{
-				Mtp0: mtp,
-				Mtp1: &merkletree.Proof{},
-				Root: idStorages.mt.RootKey(),
-				Aux:  nil,
-			}
+			// proof := core.ProofClaimPartial{
+			// 	Mtp0: mtp,
+			// 	Mtp1: &merkletree.Proof{},
+			// 	Root: idStorages.mt.RootKey(),
+			// 	Aux:  nil,
+			// }
 
-			var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
-			copy(leafBytes[:], value[:merkletree.ElemBytesLen*merkletree.DataLen])
-			leafData := merkletree.NewDataFromBytes(leafBytes)
-			entry := merkletree.Entry{
-				Data: *leafData,
-			}
-			c, err := core.NewClaimFromEntry(&entry)
-			if err != nil {
-				iterErr = errors.New(err.Error())
-				return
-			}
-			eClaim := core.ClaimObj{
-				Claim: c,
-				Proof: proof,
-			}
-			emittedClaims = append(emittedClaims, eClaim)
+			var data [merkletree.ElemBytesLen * merkletree.DataLen]byte
+			copy(data[:], value)
+			claim := merkletree.NewEntryFromBytes(data)
+			// leafData := merkletree.NewDataFromBytes(leafBytes)
+			// entry := merkletree.Entry{
+			// 	Data: *leafData,
+			// }
+			// c, err := core.NewClaimFromEntry(&entry)
+			// if err != nil {
+			// 	iterErr = errors.New(err.Error())
+			// 	return
+			// }
+			// eClaim := core.ClaimObj{
+			// 	Claim: c,
+			// 	Proof: proof,
+			// }
+			emittedClaims = append(emittedClaims, claim)
 		}
 	})
-	if iterErr != nil {
-		return emittedClaims, iterErr
-	}
 	return emittedClaims, err
 
 }
 
-func (ia *Service) GetAllClaims(id *core.ID) ([]core.ClaimObj, []core.ClaimObj, error) {
-	idStorages, err := ia.LoadIdStorages(id)
-	if err != nil {
-		return []core.ClaimObj{}, []core.ClaimObj{}, err
-	}
-
-	// get received claims
-	receivedClaims, err := ia.GetAllReceivedClaims(id, idStorages)
-	if err != nil {
-		return []core.ClaimObj{}, []core.ClaimObj{}, err
-	}
-
-	// get emitted claims, and generate fresh proof with current Root
-	emittedClaims, err := ia.GetAllEmittedClaims(id, idStorages)
-	return emittedClaims, receivedClaims, err
-
-}
-
-func (ia *Service) GetClaimByHi(id *core.ID, hi *merkletree.Hash) (merkletree.Claim, *core.ProofClaimPartial, error) {
-	idStorages, err := ia.LoadIdStorages(id)
+func (a *Agent) GetClaimByHi(hi *merkletree.Hash) (*merkletree.Entry, *core.ProofClaimPartial, error) {
+	leafData, err := a.mt.GetDataByIndex(hi)
 	if err != nil {
 		return nil, nil, err
 	}
-	mtp, err := idStorages.mt.GenerateProof(hi, nil)
+	entry := &merkletree.Entry{
+		Data: *leafData,
+	}
+
+	mtp, err := a.mt.GenerateProof(hi, nil)
+	if err != nil {
+		return nil, nil, err
+	}
 	// TODO see issues #167 and #169
 	// once RootUpdater is ready, tie the claim proof in the identity
 	// merkletree. Also the mtpNonRevokated depends on the RootUpdater
 	// with the proof of the SetRootClaim in the Relay's merkletree
-	proof := core.ProofClaimPartial{
+	proof := &core.ProofClaimPartial{
 		Mtp0: mtp,
 		Mtp1: &merkletree.Proof{},
-		Root: idStorages.mt.RootKey(),
+		// FIXME: There is a data race here!
+		Root: a.mt.RootKey(),
 		Aux:  nil,
 	}
-	// var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
-	// copy(leafBytes[:], value[:merkletree.ElemBytesLen*merkletree.DataLen])
-	// leafData := merkletree.NewDataFromBytes(leafBytes)
-	leafData, err := idStorages.mt.GetDataByIndex(hi)
-	if err != nil {
-		return nil, nil, err
-	}
-	entry := merkletree.Entry{
-		Data: *leafData,
-	}
-	claim, err := core.NewClaimFromEntry(&entry)
-	if err != nil {
-		return nil, nil, err
-	}
-	return claim, &proof, nil
+	return entry, proof, nil
 }
 
-func (ia *Service) GetFullMT(id *core.ID) (map[string]string, error) {
+func (a *Agent) GetFullMT() (map[string]string, error) {
 	mt := make(map[string]string)
-	idStorages, err := ia.LoadIdStorages(id)
-	if err != nil {
-		return mt, err
-	}
 
-	idStorages.ecSto.Iterate(func(key, value []byte) {
+	// FIXME: This is not a full Merkle Tree, but a list of emitted claims :S
+	// FIXME: Ok, this is abusing the no prefix filter in the db iteration... Please, use an iterator over the mt!
+	a.storage.claims.emitted.Iterate(func(key, value []byte) {
 		// filter only the key-value with the prefix of id+emittedclaims
 		// as the Iterate from the Storage don't filters by prefix
 		// in the future do a more efficient way to filter without going through all the keys-values
 		var prefix []byte
-		prefix = append(prefix[:], id.Bytes()...)
+		prefix = append(prefix[:], a.id.Bytes()...)
 		prefix = append(prefix[:], merkletree.PREFIX_MERKLETREE...)
 		if bytes.Equal(key[:len(prefix)], prefix) {
 			mt["0x"+hex.EncodeToString(key[len(prefix):])] = "0x" + hex.EncodeToString(value)
@@ -349,11 +313,6 @@ func (ia *Service) GetFullMT(id *core.ID) (map[string]string, error) {
 
 // GetCurrentRoot is used from wallet to check if it is syncronized with the
 // MerkleTree in the IdentityAgent
-func (ia *Service) GetCurrentRoot(id *core.ID) (*merkletree.Hash, error) {
-	idStorages, err := ia.LoadIdStorages(id)
-	if err != nil {
-		return &merkletree.Hash{}, err
-	}
-
-	return idStorages.mt.RootKey(), nil
+func (a *Agent) GetCurrentRoot() *merkletree.Hash {
+	return a.mt.RootKey()
 }

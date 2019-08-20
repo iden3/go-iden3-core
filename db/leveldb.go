@@ -84,7 +84,7 @@ func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
 }
 
 func (l *LevelDbStorage) Iterate(f func([]byte, []byte)) error {
-	// WARNING iterate doesn't use the prefix
+	// FIXME: Use the prefix!
 	snapshot, err := l.ldb.GetSnapshot()
 	if err != nil {
 		return err
