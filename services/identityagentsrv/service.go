@@ -92,7 +92,7 @@ func (ia *Service) LoadIdStorages(id *core.ID) (*IdStorages, error) {
 }
 
 // NewIdentity creates a new identity from the given claims
-func (ia *Service) NewIdentity(claimAuthKOp *merkletree.Entry,
+func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	extraGenesisClaims []*merkletree.Entry) (*core.ID, *core.ProofClaim, error) {
 	// calculate new ID in a memorydb
 	id, proofKOp, err := core.CalculateIdGenesis(claimAuthKOp, extraGenesisClaims)
