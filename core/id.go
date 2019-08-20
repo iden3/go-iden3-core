@@ -140,20 +140,20 @@ func CheckChecksum(id ID) bool {
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(claimKOp merkletree.Claim, extraGenesisClaims []merkletree.Claim) (*ID, *ProofClaim, error) {
+func CalculateIdGenesis(claimKOp *merkletree.Entry, extraGenesisClaims []*merkletree.Entry) (*ID, *ProofClaim, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = mt.Add(claimKOp.Entry())
+	err = mt.Add(claimKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, claim := range extraGenesisClaims {
-		err = mt.Add(claim.Entry())
+		err = mt.Add(claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -161,7 +161,7 @@ func CalculateIdGenesis(claimKOp merkletree.Claim, extraGenesisClaims []merkletr
 
 	idGenesis := mt.RootKey()
 
-	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
+	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.HIndex())
 	if err != nil {
 		return nil, nil, err
 	}

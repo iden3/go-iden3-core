@@ -55,12 +55,12 @@ func TestNewIdentity(t *testing.T) {
 	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
-	claimKDis := core.NewClaimAuthEthKey(kDis, core.EthKeyTypeDisable)
-	claimKReen := core.NewClaimAuthEthKey(kReen, core.EthKeyTypeReenable)
-	claimKUpdateRoot := core.NewClaimAuthEthKey(kUpdateRoot, core.EthKeyTypeUpdateRoot)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
+	claimKDis := core.NewClaimAuthEthKey(kDis, core.EthKeyTypeDisable).Entry()
+	claimKReen := core.NewClaimAuthEthKey(kReen, core.EthKeyTypeReenable).Entry()
+	claimKUpdateRoot := core.NewClaimAuthEthKey(kUpdateRoot, core.EthKeyTypeUpdateRoot).Entry()
 
-	id, proofKOp, err := ia.NewIdentity(claimKOp, []merkletree.Claim{claimKDis, claimKReen, claimKUpdateRoot})
+	id, proofKOp, err := ia.NewIdentity(claimKOp, []*merkletree.Entry{claimKDis, claimKReen, claimKUpdateRoot})
 	assert.Nil(t, err)
 
 	assert.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
@@ -82,15 +82,15 @@ func TestAddClaim(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 
 	// create claim to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	ethKeyType := core.EthKeyTypeUpgrade
-	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
 
 	err = ia.AddClaim(id, c0)
 	assert.Nil(t, err)
@@ -112,24 +112,24 @@ func TestAddClaims(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 
 	// create claim to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	ethKeyType := core.EthKeyTypeUpgrade
-	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	ethKeyType = core.EthKeyTypeUpgrade
-	c1 := core.NewClaimAuthEthKey(ethKey, ethKeyType)
+	c1 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
 
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Nil(t, err)
 
 	// should give collision error when adding the claim already added
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
 }
 
@@ -145,26 +145,26 @@ func TestGetClaims(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 
 	// create claims to be added
 	ethKey = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
-	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Nil(t, err)
 
 	emittedClaims, receivedClaims, err := ia.GetAllClaims(id)
 	assert.Nil(t, err)
-	assert.Equal(t, c0.Entry().Bytes(), emittedClaims[0].Claim.Entry().Bytes())
-	assert.Equal(t, claimKOp.Entry().Bytes(), emittedClaims[1].Claim.Entry().Bytes())
-	assert.Equal(t, c1.Entry().Bytes(), emittedClaims[2].Claim.Entry().Bytes())
+	assert.Equal(t, c0.Bytes(), emittedClaims[0].Claim.Entry().Bytes())
+	assert.Equal(t, claimKOp.Bytes(), emittedClaims[1].Claim.Entry().Bytes())
+	assert.Equal(t, c1.Bytes(), emittedClaims[2].Claim.Entry().Bytes())
 	assert.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
 	assert.Equal(t, 0, len(receivedClaims))
 }
@@ -181,28 +181,28 @@ func TestGetClaimByHi(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 
 	// create claims to be added
 	ethKey = common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
-	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Nil(t, err)
 
-	claim, _, err := ia.GetClaimByHi(id, c0.Entry().HIndex())
+	claim, _, err := ia.GetClaimByHi(id, c0.HIndex())
 	assert.Nil(t, err)
-	assert.Equal(t, c0.Entry().Bytes(), claim.Entry().Bytes())
+	assert.Equal(t, c0.Bytes(), claim.Entry().Bytes())
 
-	claim, _, err = ia.GetClaimByHi(id, c1.Entry().HIndex())
+	claim, _, err = ia.GetClaimByHi(id, c1.HIndex())
 	assert.Nil(t, err)
-	assert.Equal(t, c1.Entry().Bytes(), claim.Entry().Bytes())
+	assert.Equal(t, c1.Bytes(), claim.Entry().Bytes())
 }
 
 func TestGetFullMT(t *testing.T) {
@@ -217,19 +217,19 @@ func TestGetFullMT(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
 
 	// create claims to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
-	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Nil(t, err)
 
 	mt, err := ia.GetFullMT(id)
@@ -257,19 +257,19 @@ func TestGetCurrentRoot(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
-	id, _, err := ia.NewIdentity(claimKOp, []merkletree.Claim{})
+	id, _, err := ia.NewIdentity(claimKOp, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
 
 	// create claims to be added
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c0 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
-	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade)
+	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err = ia.AddClaims(id, []merkletree.Claim{c0, c1})
+	err = ia.AddClaims(id, []*merkletree.Entry{c0, c1})
 	assert.Nil(t, err)
 
 	mt, err := ia.GetFullMT(id)

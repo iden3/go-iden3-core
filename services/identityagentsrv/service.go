@@ -92,8 +92,8 @@ func (ia *Service) LoadIdStorages(id *core.ID) (*IdStorages, error) {
 }
 
 // NewIdentity creates a new identity from the given claims
-func (ia *Service) NewIdentity(claimAuthKOp merkletree.Claim,
-	extraGenesisClaims []merkletree.Claim) (*core.ID, *core.ProofClaim, error) {
+func (ia *Service) NewIdentity(claimAuthKOp *merkletree.Entry,
+	extraGenesisClaims []*merkletree.Entry) (*core.ID, *core.ProofClaim, error) {
 	// calculate new ID in a memorydb
 	id, proofKOp, err := core.CalculateIdGenesis(claimAuthKOp, extraGenesisClaims)
 	if err != nil {
@@ -108,17 +108,17 @@ func (ia *Service) NewIdentity(claimAuthKOp merkletree.Claim,
 
 	// add claims into the stored MerkleTree & into the EmittedClaimsStorage
 	tx, err := idStorages.ecSto.NewTx() // for the moment a simple storage, in the future a storage that allows to query searches
-	err = idStorages.mt.Add(claimAuthKOp.Entry())
+	err = idStorages.mt.Add(claimAuthKOp)
 	if err != nil {
 		return nil, nil, err
 	}
-	tx.Put(claimAuthKOp.Entry().HIndex().Bytes(), claimAuthKOp.Entry().Bytes())
+	tx.Put(claimAuthKOp.HIndex().Bytes(), claimAuthKOp.Bytes())
 	for _, claim := range extraGenesisClaims {
-		err = idStorages.mt.Add(claim.Entry())
+		err = idStorages.mt.Add(claim)
 		if err != nil {
 			return nil, nil, err
 		}
-		tx.Put(claim.Entry().HIndex().Bytes(), claim.Entry().Bytes())
+		tx.Put(claim.HIndex().Bytes(), claim.Bytes())
 	}
 	err = tx.Commit()
 	if err != nil {
@@ -131,11 +131,11 @@ func (ia *Service) NewIdentity(claimAuthKOp merkletree.Claim,
 	return id, proofKOp, nil
 }
 
-func (ia *Service) AddClaim(id *core.ID, claim merkletree.Claim) error {
-	return ia.AddClaims(id, []merkletree.Claim{claim})
+func (ia *Service) AddClaim(id *core.ID, claim *merkletree.Entry) error {
+	return ia.AddClaims(id, []*merkletree.Entry{claim})
 }
 
-func (ia *Service) AddClaims(id *core.ID, claims []merkletree.Claim) error {
+func (ia *Service) AddClaims(id *core.ID, claims []*merkletree.Entry) error {
 	idStorages, err := ia.LoadIdStorages(id)
 	if err != nil {
 		return err
@@ -143,11 +143,11 @@ func (ia *Service) AddClaims(id *core.ID, claims []merkletree.Claim) error {
 
 	tx, err := idStorages.ecSto.NewTx()
 	for _, claim := range claims {
-		err = idStorages.mt.Add(claim.Entry())
+		err = idStorages.mt.Add(claim)
 		if err != nil {
 			return err
 		}
-		tx.Put(claim.Entry().HIndex().Bytes(), claim.Entry().Bytes())
+		tx.Put(claim.HIndex().Bytes(), claim.Bytes())
 	}
 	err = tx.Commit()
 	if err != nil {
@@ -157,24 +157,25 @@ func (ia *Service) AddClaims(id *core.ID, claims []merkletree.Claim) error {
 	// TODO send identity Root to RootUpdater (Relay)
 	// this will be implemented when the Connection with RootUpdater is ready
 
-	cBytes := claims[0].Entry().Bytes()
+	// TODO: @arnaucube: what is this?
+	// cBytes := claims[0].Entry().Bytes()
 
-	var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
-	copy(leafBytes[:], cBytes[:merkletree.ElemBytesLen*merkletree.DataLen])
-	leafData := merkletree.NewDataFromBytes(leafBytes)
-	// leafDataBytes := leafData.Bytes()
+	// var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
+	// copy(leafBytes[:], cBytes[:merkletree.ElemBytesLen*merkletree.DataLen])
+	// leafData := merkletree.NewDataFromBytes(leafBytes)
+	// // leafDataBytes := leafData.Bytes()
 
-	// assert.Equal(t, cBytes, leafDataBytes[:])
-	// assert.Equal(t, cBytes, leafBytes[:])
+	// // assert.Equal(t, cBytes, leafDataBytes[:])
+	// // assert.Equal(t, cBytes, leafBytes[:])
 
-	entry := merkletree.Entry{
-		Data: *leafData,
-	}
-	for _, elemBytes := range entry.Data {
-		if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
-			return err
-		}
-	}
+	// entry := merkletree.Entry{
+	// 	Data: *leafData,
+	// }
+	// for _, elemBytes := range entry.Data {
+	// 	if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
