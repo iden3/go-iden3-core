@@ -47,6 +47,15 @@ type RootUpdaterRelay struct {
 	validate *validator.Validate
 }
 
+func NewRootUpdaterRelay(relayUrl string, relayId, userId *core.ID) RootUpdaterRelay {
+	if relayUrl[len(relayUrl)-1] != '/' {
+		relayUrl += "/"
+	}
+	client := sling.New().Base(relayUrl)
+	return RootUpdaterRelay{RelayUrl: relayUrl, RelayId: relayId, UserId: userId,
+		_client: client, validate: validator.New()}
+}
+
 func (ru *RootUpdaterRelay) client() *sling.Sling {
 	return ru._client.New()
 }
@@ -65,21 +74,21 @@ func (ru *RootUpdaterRelay) request(s *sling.Sling, res interface{}) error {
 	return err
 }
 
-func NewRootUpdaterRelay(relayUrl string, relayId, userId *core.ID) RootUpdaterRelay {
-	if relayUrl[len(relayUrl)-1] != '/' {
-		relayUrl += "/"
-	}
-	client := sling.New().Base(relayUrl)
-	return RootUpdaterRelay{RelayUrl: relayUrl, RelayId: relayId, UserId: userId,
-		_client: client, validate: validator.New()}
-}
-
 func (ru *RootUpdaterRelay) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
 	var setRootClaim struct {
 		SetRootClaim *merkletree.Entry `json:"setRootClaim" validate:"required"`
 	}
 	path := fmt.Sprintf("ids/%s/setrootclaim", ru.UserId)
 	return ru.request(ru.client().Path(path).Post("").BodyJSON(setRootReq), &setRootClaim)
+}
+
+func (ru *RootUpdaterRelay) GetRootProof() (*core.ProofClaim, error) {
+	var proofClaim struct {
+		ProofClaim *core.ProofClaim `json:"proofClaim" validate:"required"`
+	}
+	path := fmt.Sprintf("ids/%s/setrootclaim", ru.UserId)
+	err := ru.request(ru.client().Path(path).Get(""), &proofClaim)
+	return proofClaim.ProofClaim, err
 }
 
 type RootUpdater interface {
