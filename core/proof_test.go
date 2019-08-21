@@ -9,6 +9,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,6 +94,55 @@ func TestClaimProof(t *testing.T) {
 	fmt.Println("mtp", mtp.Leaf,
 		hex.EncodeToString(mtp.Proofs[0].Mtp0.Bytes()),
 		hex.EncodeToString(mtp.Proofs[0].Mtp1.Bytes()))
+}
+
+func TestProofClaimGenesis(t *testing.T) {
+	kOpStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kOp babyjub.PublicKey
+	err := kOp.UnmarshalText([]byte(kOpStr))
+	assert.Nil(t, err)
+
+	claimKOp := NewClaimAuthorizeKSignBabyJub(&kOp).Entry()
+
+	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []*merkletree.Entry{})
+	assert.Nil(t, err)
+
+	proofClaimGenesis := ProofClaimGenesis{
+		Claim: claimKOp,
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    id,
+	}
+	assert.Nil(t, proofClaimGenesis.Verify())
+
+	// Invalid Id
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: claimKOp,
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
+
+	// Invalid Mtp of non-existence
+	claimKOp2 := NewClaimAuthorizeKSignBabyJub(&kOp)
+	claimKOp2.Version = 1
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: claimKOp2.Entry(),
+		Mtp:   proofClaimKOp.Proofs[0].Mtp1,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
+
+	// Invalid Claim
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: NewClaimBasic([50]byte{}, [62]byte{}).Entry(),
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
 }
 
 func TestGetPredicateProof(t *testing.T) {

@@ -30,6 +30,7 @@ type Service interface {
 	GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.ProofClaim, error)
 	MT() *merkletree.MerkleTree
 	RootSrv() rootsrv.Service
+	GetSetRootClaim(id core.ID) (*core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -308,6 +309,24 @@ func (cs *ServiceImpl) GetIdRoot(id core.ID) (merkletree.Hash, []byte, error) {
 		return merkletree.Hash{}, []byte{}, err
 	}
 	return *userMT.RootKey(), idRootProof.Bytes(), nil
+}
+
+// GetSetRootClaim returns the last SetRootKey claim corresponding to an id
+// with a proof to the root in the blockchain.
+func (cs *ServiceImpl) GetSetRootClaim(id core.ID) (*core.ProofClaim, error) {
+	// build ClaimSetRootKey of the user id
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, merkletree.Hash{})
+	if err != nil {
+		return nil, err
+	}
+
+	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+	if err != nil {
+		return nil, err
+	}
+	claimSetRootKey.Version = version - 1
+
+	return cs.GetClaimProofByHiBlockchain(claimSetRootKey.Entry().HIndex())
 }
 
 // TODO: Remove this

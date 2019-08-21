@@ -71,6 +71,31 @@ func (pc *ProofClaim) String() string {
 	return buf.String()
 }
 
+// ProofClaimGenesis is a proof that a claim belongs to the genesis tree of an
+// Id.
+type ProofClaimGenesis struct {
+	Claim *merkletree.Entry `json:"claim" binding:"required"`
+	Mtp   *merkletree.Proof `json:"mtp" binding:"required"`
+	Root  *merkletree.Hash  `json:"root" binding:"required"`
+	Id    *ID               `json:"id" binding:"required"`
+}
+
+// Verify that the claim belongs to the genesis tree with the specified root
+// which was used to generate the Id.
+func (p *ProofClaimGenesis) Verify() error {
+	if !p.Mtp.Existence {
+		return fmt.Errorf("Mtp is a non-existence proof")
+	}
+	rootId := IdGenesisFromRoot(p.Root)
+	if !p.Id.Equal(rootId) {
+		return fmt.Errorf("Id was not calculated from Root")
+	}
+	if !merkletree.VerifyProof(p.Root, p.Mtp, p.Claim.HIndex(), p.Claim.HValue()) {
+		return fmt.Errorf("Mtp doesn't match with the Root")
+	}
+	return nil
+}
+
 // CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
 // WARNING TODO currently the Root signature verification is disabled, see comment in line 82
 func VerifyProofClaim(operationalPk *babyjub.PublicKey, pc *ProofClaim) (bool, error) {

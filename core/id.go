@@ -51,6 +51,10 @@ func (id *ID) Bytes() []byte {
 	return id[:]
 }
 
+func (id1 *ID) Equal(id2 *ID) bool {
+	return bytes.Equal(id1[:], id2[:])
+}
+
 // func (id ID) MarshalJSON() ([]byte, error) {
 //         fmt.Println(id.String())
 //         return json.Marshal(id.String())
@@ -133,6 +137,14 @@ func CheckChecksum(id ID) bool {
 	}
 	c := CalculateChecksum(typ, genesis)
 	return bytes.Equal(c[:], checksum[:])
+}
+
+func IdGenesisFromRoot(root *merkletree.Hash) *ID {
+	var idGenesisBytes [27]byte
+	rootBytes := root.Bytes()
+	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
+	id := NewID(TypeBJM7, idGenesisBytes)
+	return &id
 }
 
 // CalculateIdGenesis calculates the ID given the input parameters.

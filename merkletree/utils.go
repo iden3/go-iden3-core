@@ -1,13 +1,13 @@
 package merkletree
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
+	// "encoding/hex"
+	// "encoding/json"
+	// "fmt"
 	"math/big"
 
-	"github.com/iden3/go-iden3-crypto/mimc7"
 	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-crypto/mimc7"
 )
 
 // Hash is the type used to represent a hash used in the MT.
@@ -21,7 +21,7 @@ func (h *Hash) String() string {
 
 // Hex returns a hex string from the Hash type.
 func (h Hash) Hex() string {
-	return fmt.Sprintf("0x%s", hex.EncodeToString(h[:]))
+	return common3.HexEncode(h[:])
 }
 
 // Bytes returns a byte array from a Hash.
@@ -29,12 +29,12 @@ func (h Hash) Bytes() []byte {
 	return h[:]
 }
 
-func (h *Hash) MarshalJSON() ([]byte, error) {
-	return json.Marshal(common3.HexEncode(h.Bytes()))
+func (h *Hash) MarshalText() ([]byte, error) {
+	return []byte(common3.HexEncode(h.Bytes())), nil
 }
 
-func (h *Hash) UnmarshalJSON(bs []byte) error {
-	return common3.UnmarshalJSONHexDecodeInto(h[:], bs)
+func (h *Hash) UnmarshalText(bs []byte) error {
+	return common3.HexDecodeInto(h[:], bs)
 }
 
 // ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
