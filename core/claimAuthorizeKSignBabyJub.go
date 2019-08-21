@@ -61,3 +61,12 @@ func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 func (c *ClaimAuthorizeKSignBabyJub) Type() ClaimType {
 	return *ClaimTypeAuthorizeKSignBabyJub
 }
+
+// TODO: Keep the PublicKey in the Claim and only compress it when calling
+// Entry() so that the key is available any time without this extra function.
+// PublicKeyComp returns the compressed form of the public key in this claim
+func (c *ClaimAuthorizeKSignBabyJub) PublicKeyComp() *babyjub.PublicKeyComp {
+	pkc := babyjub.PublicKeyComp(
+		babyjub.PackPoint(c.Ay, c.Sign))
+	return &pkc
+}

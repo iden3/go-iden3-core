@@ -3,14 +3,17 @@ package claimsrv
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
+	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/rootsrv"
 	"github.com/iden3/go-iden3-core/services/signsrv"
 	"github.com/iden3/go-iden3-core/utils"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -31,6 +34,8 @@ type Service interface {
 	MT() *merkletree.MerkleTree
 	RootSrv() rootsrv.Service
 	GetSetRootClaim(id core.ID) (*core.ProofClaim, error)
+	UpdateSetRootClaim(id *core.ID, root *merkletree.Hash, proofKOp *core.ProofClaimGenesis,
+		date int64, signature *babyjub.SignatureComp) (*core.ClaimSetRootKey, error)
 }
 
 type ServiceImpl struct {
@@ -55,8 +60,64 @@ func (cs *ServiceImpl) RootSrv() rootsrv.Service {
 	return cs.rootsrv
 }
 
+func (cs *ServiceImpl) UpdateSetRootClaim(id *core.ID, root *merkletree.Hash, proofKOp *core.ProofClaimGenesis,
+	date int64, signature *babyjub.SignatureComp) (*core.ClaimSetRootKey, error) {
+	// TODO: Use the date in the signature and define a protection against reply attacks
+	// TODO: For now the date is ignored!
+
+	//// 1. Check that id and proofKOp.Id match
+	if !id.Equal(proofKOp.Id) {
+		return nil, fmt.Errorf("id and proofKOp.Id don't match")
+	}
+
+	//// 2. Parse proofKOp.Claim to get kOp
+	claim, err := core.NewClaimFromEntry(proofKOp.Claim)
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing proofKOp.Claim: %v", err)
+	}
+	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
+	if !ok {
+		return nil, fmt.Errorf("Invalid claim type in proofKOp.Claim," +
+			"expected ClaimAuthorizeKSignBabyJub")
+	}
+
+	//// 3. Verify that sig(kOp, root) == signature
+	kSignComp := claimAuthorizeKSign.PublicKeyComp()
+	if ok, err := babykeystore.VerifySignature(kSignComp, signature, root[:]); !ok {
+		return nil, fmt.Errorf("root signature doesn't match with kOp from proofKOp.Claim: %v", err)
+	}
+	//// 4. Verify proofKOp
+	if err := proofKOp.Verify(); err != nil {
+		return nil, fmt.Errorf("Verification of proofKOp failed: %v", err)
+	}
+
+	//// 5. Add new SetRootClaim with id -> root
+	// claimSetRootKey of the user in the Relay Merkle Tree
+	// create new ClaimSetRootKey
+	claimSetRootKey, err := core.NewClaimSetRootKey(*id, *root)
+	if err != nil {
+		return nil, err
+	}
+	version, err := GetNextVersion(cs.mt, claimSetRootKey.Entry().HIndex())
+	if err != nil {
+		return nil, err
+	}
+	claimSetRootKey.Version = version
+
+	// add User's Id Merkle Root into the Relay's Merkle Tree
+	if err = cs.mt.Add(claimSetRootKey.Entry()); err != nil {
+		return nil, err
+	}
+
+	// update Relay Root in Smart Contract
+	cs.rootsrv.SetRoot(*cs.mt.RootKey())
+
+	return claimSetRootKey, nil
+}
+
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
-func (cs *ServiceImpl) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash, timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
+func (cs *ServiceImpl) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash,
+	timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
 
