@@ -164,6 +164,10 @@ func (e *Entry) Bytes() []byte {
 	return b[:]
 }
 
+func (e1 *Entry) Equal(e2 *Entry) bool {
+	return e1.Data.Equal(&e2.Data)
+}
+
 func (e *Entry) MarshalText() ([]byte, error) {
 	return []byte(common3.HexEncode(e.Bytes())), nil
 }

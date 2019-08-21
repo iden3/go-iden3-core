@@ -51,9 +51,7 @@ func New(client *eth.Client2, id *core.ID, kUpdateRootMtp []byte, contractAddr c
 
 func (s *ServiceImpl) Start() {
 	go func() {
-		s.lastRootMutex.RLock()
-		lastRoot := s.lastRoot
-		s.lastRootMutex.RUnlock()
+		lastRoot := s.getLastRoot()
 		log.Info("Starting root publisher")
 		for {
 			select {
@@ -62,9 +60,7 @@ func (s *ServiceImpl) Start() {
 				s.stoppedch <- nil
 				return
 			case <-time.After(time.Second):
-				s.lastRootMutex.RLock()
-				sLastRoot := s.lastRoot
-				s.lastRootMutex.RUnlock()
+				sLastRoot := s.getLastRoot()
 				if lastRoot != sLastRoot {
 					lastRoot = sLastRoot
 					log.Debugf("Upading root in smart contract to %v\n",
@@ -103,6 +99,12 @@ func (s *ServiceImpl) SetRoot(hash merkletree.Hash) {
 	s.lastRootMutex.Lock()
 	s.lastRoot = hash
 	s.lastRootMutex.Unlock()
+}
+
+func (s *ServiceImpl) getLastRoot() (hash merkletree.Hash) {
+	s.lastRootMutex.RLock()
+	defer s.lastRootMutex.RUnlock()
+	return s.lastRoot
 }
 
 func (s *ServiceImpl) updateRoot(hash merkletree.Hash) error {

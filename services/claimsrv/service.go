@@ -27,6 +27,7 @@ type Service interface {
 	GetClaimProofUserByHi(id core.ID, hi *merkletree.Hash) (*core.ProofClaim, error)
 	GetClaimProofUserByHiOld(id core.ID, hi merkletree.Hash) (*ProofClaimUser, error)
 	GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim, error)
+	GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.ProofClaim, error)
 	MT() *merkletree.MerkleTree
 	RootSrv() rootsrv.Service
 }
@@ -469,6 +470,34 @@ func (cs *ServiceImpl) GetClaimProofUserByHi(id core.ID,
 // a timestamp) by the service.
 func (cs *ServiceImpl) GetClaimProofByHi(hi *merkletree.Hash) (*core.ProofClaim, error) {
 	mt, err := cs.mt.Snapshot(cs.mt.RootKey())
+	if err != nil {
+		return nil, err
+	}
+	proofClaim, err := core.GetClaimProofByHi(mt, hi)
+	if err != nil {
+		return nil, err
+	}
+
+	sig, date, err := cs.signer.SignEthMsgDate(proofClaim.Proofs[0].Root[:])
+	if err != nil {
+		return nil, err
+	}
+	proofClaim.Signer, proofClaim.Signature, proofClaim.Date = cs.id, sig, date
+
+	return proofClaim, nil
+}
+
+// GetClaimProofByHiBlockchain given a Hash(index) (Hi), returns the Claim in that Hi
+// position inside the Relay merkletree, and it's proof of existence and of
+// non-revocated, all in the form of a ProofClaim, using a root that is
+// published in the blockchain.  The result is signed (with
+// a timestamp) by the service.
+func (cs *ServiceImpl) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.ProofClaim, error) {
+	root, err := cs.rootsrv.GetRoot(&cs.id)
+	if err != nil {
+		return nil, err
+	}
+	mt, err := cs.mt.Snapshot(&root)
 	if err != nil {
 		return nil, err
 	}

@@ -38,7 +38,7 @@ type ClaimAuthorizeKSignSecp256k1Msg struct {
 // SetRootMsg contains the data to set the SetRootClaim with its signature in Hex
 type SetRootMsg struct {
 	Root      string                 `binding:"required"`
-	Id        string                 `binding:"required"`
+	Id        *core.ID               `binding:"required"`
 	KSignPk   *utils.PublicKey       `binding:"required"`
 	Timestamp int64                  `binding:"required"`
 	Signature *utils.SignatureEthMsg `binding:"required"`
