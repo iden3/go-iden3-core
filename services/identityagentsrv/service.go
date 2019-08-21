@@ -11,6 +11,7 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/claimsrv"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // identityagentsrv is a service that can hold multiple IdentityAgents (one for each Identity)
@@ -30,32 +31,60 @@ func (e ServerError) Error() string {
 
 type RootUpdaterMock struct{}
 
-func (ru *RootUpdaterMock) RootUpdate(setRootMsg claimsrv.SetRootMsg) (*core.ProofClaim, error) {
+func (ru *RootUpdaterMock) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+	return fmt.Errorf("mock mock")
+}
+
+func (ru *RootUpdaterMock) GetRootProof() (*core.ProofClaim, error) {
 	return nil, fmt.Errorf("mock mock")
 }
 
 type RootUpdaterRelay struct {
-	UrlRelay string
+	RelayUrl string
+	RelayId  *core.ID
+	UserId   *core.ID
+	_client  *sling.Sling
+	validate *validator.Validate
 }
 
-func NewRootUpdaterRelay(url string) RootUpdaterRelay {
-	return RootUpdaterRelay{UrlRelay: url}
+func (ru *RootUpdaterRelay) client() *sling.Sling {
+	return ru._client.New()
 }
 
-func (ru *RootUpdaterRelay) RootUpdate(setRootMsg claimsrv.SetRootMsg) (*core.ProofClaim, error) {
-	url := fmt.Sprintf("%s/ids/%s/root", ru.UrlRelay, setRootMsg.Id)
-	proofClaim, serverError := struct {
-		ProofClaim core.ProofClaim `json:"proofClaim"`
-	}{}, ServerError{}
-	_, err := sling.New().Base(url).BodyJSON(setRootMsg).Receive(&proofClaim, &serverError)
+func (ru *RootUpdaterRelay) request(s *sling.Sling, res interface{}) error {
+	var serverError ServerError
+	resp, err := s.Receive(res, &serverError)
 	if err == nil {
-		err = serverError
+		defer resp.Body.Close()
+		if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
+			err = serverError
+		} else if res != nil {
+			err = ru.validate.Struct(res)
+		}
 	}
-	return &proofClaim.ProofClaim, err
+	return err
+}
+
+func NewRootUpdaterRelay(relayUrl string, relayId, userId *core.ID) RootUpdaterRelay {
+	if relayUrl[len(relayUrl)-1] != '/' {
+		relayUrl += "/"
+	}
+	client := sling.New().Base(relayUrl)
+	return RootUpdaterRelay{RelayUrl: relayUrl, RelayId: relayId, UserId: userId,
+		_client: client, validate: validator.New()}
+}
+
+func (ru *RootUpdaterRelay) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+	var setRootClaim struct {
+		SetRootClaim *merkletree.Entry `json:"setRootClaim" validate:"required"`
+	}
+	path := fmt.Sprintf("ids/%s/setrootclaim", ru.UserId)
+	return ru.request(ru.client().Path(path).Post("").BodyJSON(setRootReq), &setRootClaim)
 }
 
 type RootUpdater interface {
-	RootUpdate(setRootMsg claimsrv.SetRootMsg) (*core.ProofClaim, error)
+	RootUpdate(setRootMsg claimsrv.SetRoot0Req) error
+	GetRootProof() (*core.ProofClaim, error)
 }
 
 type Service struct {

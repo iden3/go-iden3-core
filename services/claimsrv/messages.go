@@ -7,6 +7,7 @@ import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/utils"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // BytesSignedMsg contains the value and its signature in Hex representation
@@ -42,6 +43,15 @@ type SetRootMsg struct {
 	KSignPk   *utils.PublicKey       `binding:"required"`
 	Timestamp int64                  `binding:"required"`
 	Signature *utils.SignatureEthMsg `binding:"required"`
+}
+
+// SetRoot0Req contains the data to set the SetRootClaim
+type SetRoot0Req struct {
+	Root     *merkletree.Hash        `json:"root" binding:"required"`
+	ProofKOp *core.ProofClaimGenesis `json:"proofkop" binding:"required,dive"`
+	// TODO: Use date in the signature and define a protection against reply attacks
+	Date      int64                  `json:"date" binding:"required"`
+	Signature *babyjub.SignatureComp `json:"signature" binding:"required"` // signature of the Root
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex
