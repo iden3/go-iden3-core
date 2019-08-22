@@ -40,8 +40,26 @@ func (l *MemoryStorage) Get(key []byte) ([]byte, error) {
 	}
 	return nil, ErrNotFound
 }
-func (l *MemoryStorage) Iterate(f func([]byte, []byte)) error {
-	// FIXME: Implement this!
+
+func (l *MemoryStorage) Iterate(f func([]byte, []byte) (bool, error)) error {
+	kvs := make([]KV, 0)
+	for _, v := range l.kv {
+		if len(v.K) < len(l.prefix) || !bytes.Equal(v.K[:len(l.prefix)], l.prefix) {
+			continue
+		}
+		localkey := v.K[len(l.prefix):]
+		kvs = append(kvs, KV{localkey, v.V})
+
+	}
+	sort.SliceStable(kvs, func(i, j int) bool { return bytes.Compare(kvs[i].K, kvs[j].K) < 0 })
+
+	for _, kv := range kvs {
+		if cont, err := f(kv.K, kv.V); err != nil {
+			return err
+		} else if !cont {
+			break
+		}
+	}
 	return nil
 }
 
@@ -84,20 +102,13 @@ func (m *MemoryStorage) Close() {
 }
 
 func (l *MemoryStorage) List(limit int) ([]KV, error) {
-
-	ret := make([]KV, 0)
-	for _, v := range l.kv {
-
-		if len(v.K) < len(l.prefix) || !bytes.Equal(v.K[:len(l.prefix)], l.prefix) {
-			continue
+	ret := []KV{}
+	err := l.Iterate(func(key []byte, value []byte) (bool, error) {
+		ret = append(ret, KV{clone(key), clone(value)})
+		if len(ret) == limit {
+			return false, nil
 		}
-		localkey := v.K[len(l.prefix):]
-		ret = append(ret, KV{localkey, v.V})
-
-	}
-	sort.SliceStable(ret, func(i, j int) bool { return bytes.Compare(ret[i].K, ret[j].K) < 0 })
-	if len(ret) > limit {
-		ret = ret[:limit]
-	}
-	return ret, nil
+		return true, nil
+	})
+	return ret, err
 }

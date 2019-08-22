@@ -84,6 +84,48 @@ func testStorageWithPrefix(t *testing.T, sto Storage) {
 	assert.Equal(t, v2, []byte{8, 9})
 }
 
+func testIterate(t *testing.T, sto Storage) {
+	r := []KV{}
+	lister := func(k []byte, v []byte) (bool, error) {
+		r = append(r, KV{clone(k), clone(v)})
+		return true, nil
+	}
+
+	sto1 := sto.WithPrefix([]byte{1})
+	err := sto1.Iterate(lister)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(r))
+
+	sto1tx, _ := sto1.NewTx()
+	sto1tx.Put([]byte{1}, []byte{4})
+	sto1tx.Put([]byte{2}, []byte{5})
+	sto1tx.Put([]byte{3}, []byte{6})
+	assert.Nil(t, sto1tx.Commit())
+
+	sto2 := sto.WithPrefix([]byte{2})
+	sto2tx, _ := sto2.NewTx()
+	sto2tx.Put([]byte{1}, []byte{7})
+	sto2tx.Put([]byte{2}, []byte{8})
+	sto2tx.Put([]byte{3}, []byte{9})
+	assert.Nil(t, sto2tx.Commit())
+
+	r = []KV{}
+	err = sto1.Iterate(lister)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(r))
+	assert.Equal(t, KV{[]byte{1}, []byte{4}}, r[0])
+	assert.Equal(t, KV{[]byte{2}, []byte{5}}, r[1])
+	assert.Equal(t, KV{[]byte{3}, []byte{6}}, r[2])
+
+	r = []KV{}
+	err = sto2.Iterate(lister)
+	assert.Nil(t, err)
+	assert.Equal(t, 3, len(r))
+	assert.Equal(t, KV{[]byte{1}, []byte{7}}, r[0])
+	assert.Equal(t, KV{[]byte{2}, []byte{8}}, r[1])
+	assert.Equal(t, KV{[]byte{3}, []byte{9}}, r[2])
+}
+
 func testConcatTx(t *testing.T, sto Storage) {
 	k := []byte{9}
 
@@ -151,6 +193,7 @@ func TestLevelDb(t *testing.T) {
 	testStorageWithPrefix(t, levelDbStorage(t))
 	testConcatTx(t, levelDbStorage(t))
 	testList(t, levelDbStorage(t))
+	testIterate(t, levelDbStorage(t))
 }
 
 func TestMemory(t *testing.T) {
@@ -159,4 +202,5 @@ func TestMemory(t *testing.T) {
 	testStorageWithPrefix(t, NewMemoryStorage())
 	testConcatTx(t, NewMemoryStorage())
 	testList(t, NewMemoryStorage())
+	testIterate(t, NewMemoryStorage())
 }

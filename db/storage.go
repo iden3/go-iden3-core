@@ -18,7 +18,7 @@ type Storage interface {
 	List(int) ([]KV, error)
 	Close()
 	Info() string
-	Iterate(func([]byte, []byte)) error
+	Iterate(func([]byte, []byte) (bool, error)) error
 }
 
 type Tx interface {

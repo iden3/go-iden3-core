@@ -83,19 +83,24 @@ func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
 	return v, err
 }
 
-func (l *LevelDbStorage) Iterate(f func([]byte, []byte)) error {
+func (l *LevelDbStorage) Iterate(f func([]byte, []byte) (bool, error)) error {
 	// FIXME: Use the prefix!
 	snapshot, err := l.ldb.GetSnapshot()
 	if err != nil {
 		return err
 	}
-	iter := snapshot.NewIterator(nil, nil)
+	iter := snapshot.NewIterator(util.BytesPrefix(l.prefix), nil)
+	defer iter.Release()
 	for iter.Next() {
-		f(iter.Key(), iter.Value())
+		localKey := iter.Key()[len(l.prefix):]
+		if cont, err := f(localKey, iter.Value()); err != nil {
+			return err
+		} else if !cont {
+			break
+		}
 	}
 	iter.Release()
-	err = iter.Error()
-	return err
+	return iter.Error()
 }
 
 // Get retreives a value from a key in the mt.Lvl
@@ -155,14 +160,13 @@ func (l *LevelDbStorage) LevelDB() *leveldb.DB {
 }
 
 func (l *LevelDbStorage) List(limit int) ([]KV, error) {
-
-	iter := l.ldb.NewIterator(util.BytesPrefix(l.prefix), nil)
 	ret := []KV{}
-	for limit > 0 && iter.Next() {
-		localkey := iter.Key()[len(l.prefix):]
-		ret = append(ret, KV{concat(localkey), concat(iter.Value())})
-		limit--
-	}
-	iter.Release()
-	return ret, iter.Error()
+	err := l.Iterate(func(key []byte, value []byte) (bool, error) {
+		ret = append(ret, KV{clone(key), clone(value)})
+		if len(ret) == limit {
+			return false, nil
+		}
+		return true, nil
+	})
+	return ret, err
 }
