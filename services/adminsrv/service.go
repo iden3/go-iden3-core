@@ -6,12 +6,12 @@ import (
 
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/gin-gonic/gin"
-	"github.com/iden3/go-iden3-crypto/mimc7"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	merkletree "github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/claimsrv"
 	"github.com/iden3/go-iden3-core/services/rootsrv"
+	"github.com/iden3/go-iden3-crypto/mimc7"
 )
 
 type Service interface {
@@ -53,8 +53,9 @@ func (as *ServiceImpl) Info(id *core.ID) map[string]string {
 func (as *ServiceImpl) RawDump(c *gin.Context) {
 	// var out string
 	sto := as.mt.Storage()
-	sto.Iterate(func(key, value []byte) {
+	sto.Iterate(func(key, value []byte) (bool, error) {
 		c.String(200, common3.HexEncode(key)+", "+common3.HexEncode(value)+"\n")
+		return true, nil
 	})
 	return
 }
@@ -95,10 +96,11 @@ func (as *ServiceImpl) RawImport(raw map[string]string) (int, error) {
 func (as *ServiceImpl) ClaimsDump() map[string]string {
 	data := make(map[string]string)
 	sto := as.mt.Storage()
-	sto.Iterate(func(key, value []byte) {
+	sto.Iterate(func(key, value []byte) (bool, error) {
 		if value[0] == byte(merkletree.NodeTypeLeaf) {
 			data[common3.HexEncode(key)] = common3.HexEncode(value)
 		}
+		return true, nil
 	})
 	return data
 }

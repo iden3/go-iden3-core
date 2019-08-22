@@ -138,8 +138,13 @@ type Claim interface {
 	Entry() *Entry
 }
 
-func NewEntryFromBytes(b [ElemBytesLen * DataLen]byte) *Entry {
-	return &Entry{Data: *NewDataFromBytes(b)}
+func NewEntryFromBytes(b []byte) (*Entry, error) {
+	if len(b) != ElemBytesLen*DataLen {
+		return nil, fmt.Errorf("Invalid length for Entry Data")
+	}
+	var data [ElemBytesLen * DataLen]byte
+	copy(data[:], b)
+	return &Entry{Data: *NewDataFromBytes(data)}, nil
 }
 
 // HIndex calculates the hash of the Index of the entry, used to find the path

@@ -1,7 +1,8 @@
 package identityagentsrv
 
 import (
-	"encoding/hex"
+	// "encoding/hex"
+	// "fmt"
 	"io/ioutil"
 	"testing"
 
@@ -177,7 +178,7 @@ func TestGetClaimByHi(t *testing.T) {
 	require.Equal(t, c1.Bytes(), claim.Bytes())
 }
 
-func TestGetFullMT(t *testing.T) {
+func TestExportMT(t *testing.T) {
 	_, _, agent := createIdentityLoadAgent(t)
 
 	// create claims to be added
@@ -189,15 +190,11 @@ func TestGetFullMT(t *testing.T) {
 	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
 	require.Nil(t, err)
 
-	mt, err := agent.GetFullMT()
+	mt, err := agent.ExportMT()
 	require.Nil(t, err)
-	require.Equal(t, agent.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:]) // crop first 4 from mt map, as the first 2 are for '03' indicating the node type of the MerkleTree, the other 2 are for the '0x'
+	require.Equal(t, agent.mt.RootKey().Hex(), mt[0][0]) // crop first 4 from mt map, as the first 2 are for '03' indicating the node type of the MerkleTree, the other 2 are for the '0x'
 
-	count := 0
-	for _, _ = range mt {
-		count++
-	}
-	require.Equal(t, 7, count)
+	require.Equal(t, 5, len(mt))
 }
 
 func TestGetCurrentRoot(t *testing.T) {
@@ -212,10 +209,10 @@ func TestGetCurrentRoot(t *testing.T) {
 	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
 	require.Nil(t, err)
 
-	mt, err := agent.GetFullMT()
+	mt, err := agent.ExportMT()
 	require.Nil(t, err)
 
-	require.Equal(t, agent.mt.RootKey().Hex()[2:], mt["0x"+hex.EncodeToString([]byte("currentroot"))][4:])
+	require.Equal(t, agent.mt.RootKey().Hex(), mt[0][0])
 
 	root := agent.GetCurrentRoot()
 	require.Equal(t, agent.mt.RootKey().Hex(), root.Hex())
