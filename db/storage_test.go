@@ -2,13 +2,17 @@ package db
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+var rmDirs []string
+
 func levelDbStorage(t *testing.T) Storage {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		t.Fatal(err)
 		return nil
@@ -203,4 +207,12 @@ func TestMemory(t *testing.T) {
 	testConcatTx(t, NewMemoryStorage())
 	testList(t, NewMemoryStorage())
 	testIterate(t, NewMemoryStorage())
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }

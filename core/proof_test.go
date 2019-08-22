@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/iden3/go-iden3-core/db"
@@ -13,8 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var rmDirs []string
+
 func TestProof(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -147,6 +151,7 @@ func TestProofClaimGenesis(t *testing.T) {
 
 func TestGetPredicateProof(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -188,6 +193,7 @@ func TestGetPredicateProof(t *testing.T) {
 
 func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -222,6 +228,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 
 func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -291,4 +298,12 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])
 
 	assert.True(t, VerifyPredicateProof(predicateProof))
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }

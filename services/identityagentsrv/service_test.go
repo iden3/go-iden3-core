@@ -4,6 +4,7 @@ import (
 	// "encoding/hex"
 	// "fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -45,8 +46,11 @@ func createIdentityLoadAgent(t *testing.T) (*core.ID, *babyjub.PublicKey, *Agent
 
 var service *Service
 
+var rmDirs []string
+
 func NewTestingStorage() (db.Storage, error) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -216,4 +220,12 @@ func TestGetCurrentRoot(t *testing.T) {
 
 	root := agent.GetCurrentRoot()
 	require.Equal(t, agent.mt.RootKey().Hex(), root.Hex())
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }
