@@ -139,6 +139,9 @@ func TestAddClaims(t *testing.T) {
 
 func TestGetClaims(t *testing.T) {
 	_, kopPub, agent := createIdentityLoadAgent(t)
+	emittedClaimsAfterGenesis, err := agent.ClaimsEmitted()
+	require.Nil(t, err)
+
 	claimKOp := core.NewClaimAuthorizeKSignBabyJub(kopPub).Entry()
 
 	// create claims to be added
@@ -147,18 +150,26 @@ func TestGetClaims(t *testing.T) {
 	ethKey = common.HexToAddress("0x3d380182Cd261CdcD413e4B8D17c89c943c39b1A")
 	c1 := core.NewClaimAuthEthKey(ethKey, core.EthKeyTypeUpgrade).Entry()
 
-	err := agent.AddClaims([]*merkletree.Entry{c0, c1})
+	err = agent.AddClaims([]*merkletree.Entry{c0, c1})
 	require.Nil(t, err)
 
-	emittedClaims, err := agent.GetAllEmittedClaims()
+	emittedClaims, err := agent.ClaimsEmitted()
 	require.Nil(t, err)
-	receivedClaims, err := agent.GetAllReceivedClaims()
+	receivedClaims, err := agent.ClaimsReceived()
 	require.Nil(t, err)
 	require.Equal(t, c0.Bytes(), emittedClaims[0].Bytes())
 	require.Equal(t, claimKOp.Bytes(), emittedClaims[1].Bytes())
 	require.Equal(t, c1.Bytes(), emittedClaims[2].Bytes())
 	require.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
 	require.Equal(t, 0, len(receivedClaims))
+
+	genesisClaims, err := agent.ClaimsGenesis()
+	require.Nil(t, err)
+	require.Equal(t, 1, len(genesisClaims))
+
+	for i, claim := range emittedClaimsAfterGenesis {
+		require.Equal(t, claim.Bytes(), genesisClaims[i].Bytes())
+	}
 }
 
 func TestGetClaimByHi(t *testing.T) {

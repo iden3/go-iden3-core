@@ -17,8 +17,9 @@ import (
 
 // identityagentsrv is a service that can hold multiple IdentityAgents (one for each Identity)
 
-var PREFIX_EMITTEDCLAIMS = []byte("emittedclaims")
-var PREFIX_RECEIVEDCLAIMS = []byte("receivedclaims")
+var PREFIX_CLAIMSEMITTED = []byte("claimsemitted")
+var PREFIX_CLAIMSRECEIVED = []byte("claimsreceived")
+var PREFIX_CLAIMSGENESIS = []byte("claimsgenesis")
 
 // TODO: Move this to a generic place
 type ServerError struct {
@@ -32,28 +33,29 @@ func (e ServerError) Error() string {
 
 type RootUpdaterMock struct{}
 
-func (ru *RootUpdaterMock) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+func (ru *RootUpdaterMock) RootUpdate(id *core.ID, setRootReq claimsrv.SetRoot0Req) error {
 	return fmt.Errorf("mock mock")
 }
 
-func (ru *RootUpdaterMock) GetRootProof() (*core.ProofClaim, error) {
+func (ru *RootUpdaterMock) GetRootProof(id *core.ID) (*core.ProofClaim, error) {
 	return nil, fmt.Errorf("mock mock")
 }
+
+func (ru *RootUpdaterMock) ClaimAuthService() *merkletree.Entry { return nil }
 
 type RootUpdaterRelay struct {
 	RelayUrl string
 	RelayId  *core.ID
-	UserId   *core.ID
 	_client  *sling.Sling
 	validate *validator.Validate
 }
 
-func NewRootUpdaterRelay(relayUrl string, relayId, userId *core.ID) RootUpdaterRelay {
+func NewRootUpdaterRelay(relayUrl string, relayId *core.ID) RootUpdaterRelay {
 	if relayUrl[len(relayUrl)-1] != '/' {
 		relayUrl += "/"
 	}
 	client := sling.New().Base(relayUrl)
-	return RootUpdaterRelay{RelayUrl: relayUrl, RelayId: relayId, UserId: userId,
+	return RootUpdaterRelay{RelayUrl: relayUrl, RelayId: relayId,
 		_client: client, validate: validator.New()}
 }
 
@@ -75,26 +77,31 @@ func (ru *RootUpdaterRelay) request(s *sling.Sling, res interface{}) error {
 	return err
 }
 
-func (ru *RootUpdaterRelay) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+func (ru *RootUpdaterRelay) RootUpdate(id *core.ID, setRootReq claimsrv.SetRoot0Req) error {
 	var setRootClaim struct {
 		SetRootClaim *merkletree.Entry `json:"setRootClaim" validate:"required"`
 	}
-	path := fmt.Sprintf("ids/%s/setrootclaim", ru.UserId)
+	path := fmt.Sprintf("ids/%s/setrootclaim", id)
 	return ru.request(ru.client().Path(path).Post("").BodyJSON(setRootReq), &setRootClaim)
 }
 
-func (ru *RootUpdaterRelay) GetRootProof() (*core.ProofClaim, error) {
+func (ru *RootUpdaterRelay) GetRootProof(id *core.ID) (*core.ProofClaim, error) {
 	var proofClaim struct {
 		ProofClaim *core.ProofClaim `json:"proofClaim" validate:"required"`
 	}
-	path := fmt.Sprintf("ids/%s/setrootclaim", ru.UserId)
+	path := fmt.Sprintf("ids/%s/setrootclaim", id)
 	err := ru.request(ru.client().Path(path).Get(""), &proofClaim)
 	return proofClaim.ProofClaim, err
 }
 
+func (ru *RootUpdaterRelay) ClaimAuthService() *merkletree.Entry {
+	return core.NewClaimAuthorizeService(core.ServiceTypeRelay, ru.RelayId.String(), "", ru.RelayUrl).Entry()
+}
+
 type RootUpdater interface {
-	RootUpdate(setRootMsg claimsrv.SetRoot0Req) error
-	GetRootProof() (*core.ProofClaim, error)
+	RootUpdate(id *core.ID, setRootReq claimsrv.SetRoot0Req) error
+	GetRootProof(id *core.ID) (*core.ProofClaim, error)
+	ClaimAuthService() *merkletree.Entry
 }
 
 type Service struct {
@@ -112,6 +119,10 @@ func New(storage db.Storage, rootUpdater RootUpdater) *Service {
 // NewIdentity creates a new identity from the given claims
 func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	extraGenesisClaims []*merkletree.Entry) (*core.ID, *core.ProofClaim, error) {
+	claimAuthService := ia.rootUpdater.ClaimAuthService()
+	if claimAuthService != nil {
+		extraGenesisClaims = append(extraGenesisClaims)
+	}
 	// calculate new ID in a memorydb
 	id, proofKOp, err := core.CalculateIdGenesis(claimAuthKOp, extraGenesisClaims)
 	if err != nil {
@@ -126,12 +137,20 @@ func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 
 	// add claims into the stored MerkleTree & into the EmittedClaimsStorage
 	// for the moment a simple storage, in the future a storage that allows to query searches
-	tx, err := agent.storage.claims.emitted.NewTx()
-	err = agent.mt.Add(claimAuthKOp)
+	tx0, err := agent.storage.claims.genesis.NewTx()
 	if err != nil {
 		return nil, nil, err
 	}
-	tx.Put(claimAuthKOp.HIndex().Bytes(), claimAuthKOp.Bytes())
+	tx1, err := agent.storage.claims.emitted.NewTx()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = agent.mt.Add(claimAuthKOp); err != nil {
+		return nil, nil, err
+	}
+	tx0.Put(claimAuthKOp.HIndex().Bytes(), claimAuthKOp.Bytes())
+	tx1.Put(claimAuthKOp.HIndex().Bytes(), claimAuthKOp.Bytes())
 	for _, claim := range extraGenesisClaims {
 		// FIXME: If some agent.mt.Add fails, there will be an
 		// inconsistency between agent.mt and agent.storage.claims.emitted
@@ -139,10 +158,13 @@ func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 		if err != nil {
 			return nil, nil, err
 		}
-		tx.Put(claim.HIndex().Bytes(), claim.Bytes())
+		tx0.Put(claim.HIndex().Bytes(), claim.Bytes())
+		tx1.Put(claim.HIndex().Bytes(), claim.Bytes())
 	}
-	err = tx.Commit()
-	if err != nil {
+	if err = tx0.Commit(); err != nil {
+		return nil, nil, err
+	}
+	if err = tx1.Commit(); err != nil {
 		return nil, nil, err
 	}
 
@@ -157,27 +179,32 @@ type IdStorage struct {
 	claims struct {
 		emitted  db.Storage
 		received db.Storage
+		genesis  db.Storage
 	}
 }
 
 type Agent struct {
-	storage *IdStorage
-	mt      *merkletree.MerkleTree
-	id      *core.ID
+	rootUpdater RootUpdater
+	storage     *IdStorage
+	mt          *merkletree.MerkleTree
+	id          *core.ID
 }
 
 // LoadPrefixStorage returns the identity storages
 func (a *Agent) loadStorage(base db.Storage) error {
-	emittedClaims := base.WithPrefix(PREFIX_EMITTEDCLAIMS)
-	receivedClaims := base.WithPrefix(PREFIX_RECEIVEDCLAIMS)
+	emittedClaims := base.WithPrefix(PREFIX_CLAIMSEMITTED)
+	receivedClaims := base.WithPrefix(PREFIX_CLAIMSRECEIVED)
+	genesisClaims := base.WithPrefix(PREFIX_CLAIMSGENESIS)
 	a.storage = &IdStorage{
 		base: base,
 		claims: struct {
 			emitted  db.Storage
 			received db.Storage
+			genesis  db.Storage
 		}{
 			emitted:  emittedClaims,
 			received: receivedClaims,
+			genesis:  genesisClaims,
 		},
 	}
 	mt, err := merkletree.NewMerkleTree(base, 140)
@@ -186,9 +213,17 @@ func (a *Agent) loadStorage(base db.Storage) error {
 }
 
 func (s *Service) NewAgent(id *core.ID) (*Agent, error) {
-	agent := &Agent{id: id}
+	agent := &Agent{id: id, rootUpdater: s.rootUpdater}
 	err := agent.loadStorage(s.storage.WithPrefix(agent.id.Bytes()))
 	return agent, err
+}
+
+func (a *Agent) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+	return a.rootUpdater.RootUpdate(a.id, setRootReq)
+}
+
+func (a *Agent) GetRootProof(id *core.ID) (*core.ProofClaim, error) {
+	return a.rootUpdater.GetRootProof(a.id)
 }
 
 func (a *Agent) AddClaim(claim *merkletree.Entry) error {
@@ -235,7 +270,20 @@ func (a *Agent) AddClaims(claims []*merkletree.Entry) error {
 	return nil
 }
 
-func (a *Agent) GetAllReceivedClaims() ([]*merkletree.Entry, error) {
+func (a *Agent) ClaimsGenesis() ([]*merkletree.Entry, error) {
+	var genesisClaims []*merkletree.Entry
+	err := a.storage.claims.genesis.Iterate(func(key, value []byte) (bool, error) {
+		claim, err := merkletree.NewEntryFromBytes(value)
+		if err != nil {
+			return false, err
+		}
+		genesisClaims = append(genesisClaims, claim)
+		return true, err
+	})
+	return genesisClaims, err
+}
+
+func (a *Agent) ClaimsReceived() ([]*merkletree.Entry, error) {
 	var receivedClaims []*merkletree.Entry
 	err := a.storage.claims.received.Iterate(func(key, value []byte) (bool, error) {
 		claim, err := merkletree.NewEntryFromBytes(value)
@@ -248,7 +296,7 @@ func (a *Agent) GetAllReceivedClaims() ([]*merkletree.Entry, error) {
 	return receivedClaims, err
 }
 
-func (a *Agent) GetAllEmittedClaims() ([]*merkletree.Entry, error) {
+func (a *Agent) ClaimsEmitted() ([]*merkletree.Entry, error) {
 	// get emitted claims, and generate fresh proof with current Root
 	var emittedClaims []*merkletree.Entry
 	err := a.storage.claims.emitted.Iterate(func(key, value []byte) (bool, error) {
