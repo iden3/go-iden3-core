@@ -1,7 +1,7 @@
 package merkletree
 
 import (
-	// "encoding/hex"
+	"encoding/hex"
 	// "encoding/json"
 	// "fmt"
 	"math/big"
