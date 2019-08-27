@@ -51,6 +51,10 @@ func (id *ID) Bytes() []byte {
 	return id[:]
 }
 
+func (id1 *ID) Equal(id2 *ID) bool {
+	return bytes.Equal(id1[:], id2[:])
+}
+
 // func (id ID) MarshalJSON() ([]byte, error) {
 //         fmt.Println(id.String())
 //         return json.Marshal(id.String())
@@ -135,25 +139,33 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
+func IdGenesisFromRoot(root *merkletree.Hash) *ID {
+	var idGenesisBytes [27]byte
+	rootBytes := root.Bytes()
+	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
+	id := NewID(TypeBJM7, idGenesisBytes)
+	return &id
+}
+
 // CalculateIdGenesis calculates the ID given the input parameters.
 // Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(claimKOp merkletree.Claim, extraGenesisClaims []merkletree.Claim) (*ID, *ProofClaim, error) {
+func CalculateIdGenesis(claimKOp *merkletree.Entry, extraGenesisClaims []*merkletree.Entry) (*ID, *ProofClaim, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = mt.Add(claimKOp.Entry())
+	err = mt.Add(claimKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, claim := range extraGenesisClaims {
-		err = mt.Add(claim.Entry())
+		err = mt.Add(claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -161,7 +173,7 @@ func CalculateIdGenesis(claimKOp merkletree.Claim, extraGenesisClaims []merkletr
 
 	idGenesis := mt.RootKey()
 
-	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
+	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.HIndex())
 	if err != nil {
 		return nil, nil, err
 	}

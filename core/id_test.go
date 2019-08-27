@@ -144,7 +144,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	claimKOp := NewClaimAuthorizeKSignBabyJub(kopPub)
 
-	id, _, err := CalculateIdGenesis(claimKOp, []merkletree.Claim{})
+	id, _, err := CalculateIdGenesis(claimKOp.Entry(), []*merkletree.Entry{})
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -21,7 +21,7 @@ type ProofClaimPartial struct {
 	Mtp0 *merkletree.Proof `json:"mtp0" binding:"required"`
 	Mtp1 *merkletree.Proof `json:"mtp1" binding:"required"`
 	Root *merkletree.Hash  `json:"root" binding:"required"`
-	Aux  *SetRootAux       `json:"aux" binding:"required"`
+	Aux  *SetRootAux       `json:"aux" binding:"dive"`
 }
 
 func (pcp *ProofClaimPartial) String() string {
@@ -42,13 +42,15 @@ type SetRootAux struct {
 	Version uint32 `json:"version" binding:"required"`
 	Era     uint32 `json:"era" binding:"required"`
 	Id      ID     `json:"id" binding:"required"`
+	// TODO Add proof of claim authorize service by Id to relay Id.
+	// Probably this proof will be a genesis proof.
 }
 
 // ProofClaim is a complete proof of a claim that includes all the proofs of
 // existence and non-existence for mutliple levels from the leaf of a tree to
 // the signed root of possibly another tree whose root binding:"required".
 type ProofClaim struct {
-	Proofs    []ProofClaimPartial    `json:"proofs" binding:"required"`
+	Proofs    []ProofClaimPartial    `json:"proofs" binding:"required,dive"`
 	Leaf      *merkletree.Data       `json:"leaf" binding:"required"`
 	Date      int64                  `json:"date" binding:"required"`
 	Signature *babyjub.SignatureComp `json:"signature" binding:"required"` // signature of the Root of the Relay
@@ -67,6 +69,31 @@ func (pc *ProofClaim) String() string {
 		fmt.Fprintf(buf, "%v: { %v}\n", i, &proof)
 	}
 	return buf.String()
+}
+
+// ProofClaimGenesis is a proof that a claim belongs to the genesis tree of an
+// Id.
+type ProofClaimGenesis struct {
+	Claim *merkletree.Entry `json:"claim" binding:"required"`
+	Mtp   *merkletree.Proof `json:"mtp" binding:"required"`
+	Root  *merkletree.Hash  `json:"root" binding:"required"`
+	Id    *ID               `json:"id" binding:"required"`
+}
+
+// Verify that the claim belongs to the genesis tree with the specified root
+// which was used to generate the Id.
+func (p *ProofClaimGenesis) Verify() error {
+	if !p.Mtp.Existence {
+		return fmt.Errorf("Mtp is a non-existence proof")
+	}
+	rootId := IdGenesisFromRoot(p.Root)
+	if !p.Id.Equal(rootId) {
+		return fmt.Errorf("Id was not calculated from Root")
+	}
+	if !merkletree.VerifyProof(p.Root, p.Mtp, p.Claim.HIndex(), p.Claim.HValue()) {
+		return fmt.Errorf("Mtp doesn't match with the Root")
+	}
+	return nil
 }
 
 // CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.

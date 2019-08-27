@@ -52,7 +52,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
 	if !ok {
 		return fmt.Errorf("Invalid claim type in payload.proofksign.leaf," +
-			"expected ClaimAuthorizeKSignSecp256k1")
+			"expected ClaimAuthorizeKSignBabyJub")
 	}
 	claimAuthorizeKSignPkComp := babyjub.PublicKeyComp(
 		babyjub.PackPoint(claimAuthorizeKSign.Ay, claimAuthorizeKSign.Sign))

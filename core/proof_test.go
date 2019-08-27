@@ -5,15 +5,20 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 
+var rmDirs []string
+
 func TestProof(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -95,8 +100,58 @@ func TestClaimProof(t *testing.T) {
 		hex.EncodeToString(mtp.Proofs[0].Mtp1.Bytes()))
 }
 
+func TestProofClaimGenesis(t *testing.T) {
+	kOpStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	var kOp babyjub.PublicKey
+	err := kOp.UnmarshalText([]byte(kOpStr))
+	assert.Nil(t, err)
+
+	claimKOp := NewClaimAuthorizeKSignBabyJub(&kOp).Entry()
+
+	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []*merkletree.Entry{})
+	assert.Nil(t, err)
+
+	proofClaimGenesis := ProofClaimGenesis{
+		Claim: claimKOp,
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    id,
+	}
+	assert.Nil(t, proofClaimGenesis.Verify())
+
+	// Invalid Id
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: claimKOp,
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
+
+	// Invalid Mtp of non-existence
+	claimKOp2 := NewClaimAuthorizeKSignBabyJub(&kOp)
+	claimKOp2.Version = 1
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: claimKOp2.Entry(),
+		Mtp:   proofClaimKOp.Proofs[0].Mtp1,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
+
+	// Invalid Claim
+	proofClaimGenesis = ProofClaimGenesis{
+		Claim: NewClaimBasic([50]byte{}, [62]byte{}).Entry(),
+		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
+		Root:  proofClaimKOp.Proofs[0].Root,
+		Id:    &ID{},
+	}
+	assert.NotNil(t, proofClaimGenesis.Verify())
+}
+
 func TestGetPredicateProof(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -138,6 +193,7 @@ func TestGetPredicateProof(t *testing.T) {
 
 func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -172,6 +228,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 
 func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
 	sto, err := db.NewLevelDbStorage(dir, false)
 	assert.Nil(t, err)
@@ -241,4 +298,12 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])
 
 	assert.True(t, VerifyPredicateProof(predicateProof))
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }

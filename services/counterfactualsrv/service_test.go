@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -95,8 +96,11 @@ func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
 	return relayPubKey
 }
 
+var rmDirs []string
+
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}
@@ -107,4 +111,12 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 
 	mt, err := merkletree.NewMerkleTree(sto, numLevels)
 	return mt, err
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }

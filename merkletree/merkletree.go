@@ -58,14 +58,14 @@ func (d1 *Data) Equal(d2 *Data) bool {
 		bytes.Equal(d1[2][:], d2[2][:]) && bytes.Equal(d1[3][:], d2[3][:])
 }
 
-func (d *Data) MarshalJSON() ([]byte, error) {
+func (d *Data) MarshalText() ([]byte, error) {
 	dataBytes := d.Bytes()
-	return json.Marshal(common3.HexEncode(dataBytes[:]))
+	return []byte(common3.HexEncode(dataBytes[:])), nil
 }
 
-func (d *Data) UnmarshalJSON(bs []byte) error {
+func (d *Data) UnmarshalText(text []byte) error {
 	var dataBytes [ElemBytesLen * DataLen]byte
-	err := common3.UnmarshalJSONHexDecodeInto(dataBytes[:], bs)
+	err := common3.HexDecodeInto(dataBytes[:], text)
 	if err != nil {
 		return err
 	}
@@ -139,6 +139,15 @@ type Claim interface {
 	Entry() *Entry
 }
 
+func NewEntryFromBytes(b []byte) (*Entry, error) {
+	if len(b) != ElemBytesLen*DataLen {
+		return nil, fmt.Errorf("Invalid length for Entry Data")
+	}
+	var data [ElemBytesLen * DataLen]byte
+	copy(data[:], b)
+	return &Entry{Data: *NewDataFromBytes(data)}, nil
+}
+
 // HIndex calculates the hash of the Index of the entry, used to find the path
 // from the root to the leaf in the MT.
 func (e *Entry) HIndex() *Hash {
@@ -157,15 +166,20 @@ func (e *Entry) HValue() *Hash {
 }
 
 func (e *Entry) Bytes() []byte {
-	var b [ElemBytesLen * DataLen]byte
-	for i := 0; i < DataLen; i++ {
-		copy(b[ElemBytesLen*i:], e.Data[i][:])
-	}
+	b := e.Data.Bytes()
 	return b[:]
 }
 
-func (e *Entry) MarshalJSON() ([]byte, error) {
-	return json.Marshal(common3.HexEncode(e.Bytes()))
+func (e1 *Entry) Equal(e2 *Entry) bool {
+	return e1.Data.Equal(&e2.Data)
+}
+
+func (e *Entry) MarshalText() ([]byte, error) {
+	return []byte(common3.HexEncode(e.Bytes())), nil
+}
+
+func (e *Entry) UnmarshalText(text []byte) error {
+	return e.Data.UnmarshalText(text)
 }
 
 //MerkleTree is the struct with the main elements of the Merkle Tree

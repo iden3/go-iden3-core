@@ -6,19 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	// "time"
 
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/signsrv"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 
 	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/ipfsconsortium/go-ipfsc/config"
@@ -87,8 +88,11 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 // 	return relayPubKey
 // }
 
+var rmDirs []string
+
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}
@@ -409,6 +413,14 @@ func TestGetClaimProof(t *testing.T) {
 	//assert.Nil(t, err)
 	//verified = merkletree.VerifyProof(&setRootClaimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
 	//assert.True(t, verified)
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }
 
 /*

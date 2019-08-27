@@ -4,6 +4,7 @@ import (
 	// "crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	// "time"
@@ -85,8 +86,11 @@ func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
 // 	return relayPubKey
 // }
 
+var rmDirs []string
+
 func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	dir, err := ioutil.TempDir("", "db")
+	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		return &merkletree.MerkleTree{}, err
 	}
@@ -201,4 +205,12 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
+}
+
+func TestMain(m *testing.M) {
+	result := m.Run()
+	for _, dir := range rmDirs {
+		os.RemoveAll(dir)
+	}
+	os.Exit(result)
 }
