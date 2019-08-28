@@ -2,6 +2,8 @@ package keystore
 
 import (
 	"crypto/rand"
+	"time"
+
 	// "encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/gofrs/flock"
 	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/mimc7"
 	i3cryptoutils "github.com/iden3/go-iden3-crypto/utils"
@@ -43,6 +46,14 @@ const (
 
 	scryptR     = 8
 	scryptDKLen = 32
+)
+
+// prefixes for msg to be signed
+type PrefixType []byte
+
+var (
+	// PrefixMinorUpdate is for signatures related to update the root of an identity as minor update
+	PrefixMinorUpdate = []byte("minorupdate")
 )
 
 // KeyStoreParams are the Key Store parameters
@@ -342,8 +353,18 @@ func mimc7HashBytes(msg []byte) mimc7.RElem {
 }
 
 // Sign uses the key corresponding to the public key pk to sign the mimc7 hash
+// of the [prefix | date | msg] byte slice.
+func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []byte) (*babyjub.SignatureComp, int64, error) {
+	date := time.Now()
+	msg := append(prefix, utils.Uint64ToEthBytes(uint64(date.Unix()))...)
+	msg = append(msg, rawMsg...)
+	sig, err := ks.SignRaw(pk, msg)
+	return sig, date.Unix(), err
+}
+
+// SignRaw uses the key corresponding to the public key pk to sign the mimc7 hash
 // of the msg byte slice.
-func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
+func (ks *KeyStore) SignRaw(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
 	h := mimc7HashBytes(msg)
 	return ks.SignElem(pk, h)
 }
@@ -363,9 +384,17 @@ func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg mimc7.RElem, sigComp
 	return pk.VerifyMimc7(msg, sig), nil
 }
 
-// VerifySignatureElem verifies that the signature sigComp of the mimc7 hash of
+// VerifySignature verifies that the signature sigComp of the mimc7 hash of
+// the [prefix | date | msg] byte slice was signed with the public key pkComp.
+func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, prefix PrefixType, date int64, rawMsg []byte) (bool, error) {
+	msg := append(prefix, utils.Uint64ToEthBytes(uint64(date))...)
+	msg = append(msg, rawMsg...)
+	return VerifySignatureRaw(pkComp, sigComp, msg)
+}
+
+// VerifySignatureRaw verifies that the signature sigComp of the mimc7 hash of
 // the msg byte slice was signed with the public key pkComp.
-func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
+func VerifySignatureRaw(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
 	h := mimc7HashBytes(msg)
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

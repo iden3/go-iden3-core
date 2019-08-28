@@ -83,7 +83,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 	// proof, first we verify signature with ksign, and then we verify the
 	// merkle tree proofs.
 	kSignComp := jws.Payload.KSign.Compress()
-	if ok, err := babykeystore.VerifySignature(&kSignComp, jws.Signature, jws.SignedBytes); !ok {
+	if ok, err := babykeystore.VerifySignatureRaw(&kSignComp, jws.Signature, jws.SignedBytes); !ok {
 		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign: %v", err)
 	}
 

@@ -6,9 +6,9 @@ import (
 	// "fmt"
 	"time"
 
-	"github.com/iden3/go-iden3-crypto/babyjub"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/utils"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 type Service struct {
@@ -32,7 +32,7 @@ func (s *Service) SignEthMsg(msg []byte) (*babyjub.SignatureComp, error) {
 	// fmt.Println("signature", sig.String())
 	// fmt.Println("msg", hex.EncodeToString(msg))
 	// return sig, err
-	return s.ks.Sign(&s.pkComp, msg)
+	return s.ks.SignRaw(&s.pkComp, msg)
 }
 
 func (s *Service) SignEthMsgDate(msg []byte) (*babyjub.SignatureComp, int64, error) {

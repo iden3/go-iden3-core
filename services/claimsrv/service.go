@@ -83,7 +83,8 @@ func (cs *ServiceImpl) UpdateSetRootClaim(id *core.ID, root *merkletree.Hash, pr
 
 	//// 3. Verify that sig(kOp, root) == signature
 	kSignComp := claimAuthorizeKSign.PublicKeyComp()
-	if ok, err := babykeystore.VerifySignature(kSignComp, signature, root[:]); !ok {
+	// TODO VerifySignature with prefix and date
+	if ok, err := babykeystore.VerifySignatureRaw(kSignComp, signature, root[:]); !ok {
 		return nil, fmt.Errorf("root signature doesn't match with kOp from proofKOp.Claim: %v", err)
 	}
 	//// 4. Verify proofKOp
