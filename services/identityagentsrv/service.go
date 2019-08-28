@@ -243,30 +243,6 @@ func (a *Agent) AddClaims(claims []*merkletree.Entry) error {
 	if err != nil {
 		return err
 	}
-
-	// TODO send identity Root to RootUpdater (Relay)
-	// this will be implemented when the Connection with RootUpdater is ready
-
-	// TODO: @arnaucube: what is this?
-	// cBytes := claims[0].Entry().Bytes()
-
-	// var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
-	// copy(leafBytes[:], cBytes[:merkletree.ElemBytesLen*merkletree.DataLen])
-	// leafData := merkletree.NewDataFromBytes(leafBytes)
-	// // leafDataBytes := leafData.Bytes()
-
-	// // assert.Equal(t, cBytes, leafDataBytes[:])
-	// // assert.Equal(t, cBytes, leafBytes[:])
-
-	// entry := merkletree.Entry{
-	// 	Data: *leafData,
-	// }
-	// for _, elemBytes := range entry.Data {
-	// 	if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
@@ -374,8 +350,30 @@ func (a *Agent) ExportMT() ([][2]string, error) {
 	return mt, err
 }
 
+type CurrentRoot struct {
+	Local     *merkletree.Hash `json:"local"`
+	Published *merkletree.Hash `json:"published"`
+}
+
 // GetCurrentRoot is used from wallet to check if it is syncronized with the
 // MerkleTree in the IdentityAgent
-func (a *Agent) GetCurrentRoot() *merkletree.Hash {
-	return a.mt.RootKey()
+func (a *Agent) GetCurrentRoot() (*CurrentRoot, error) {
+	proofClaim, err := a.rootUpdater.GetRootProof(a.id)
+	if err != nil {
+		return nil, err
+	}
+
+	claim, err := core.NewClaimFromEntry(&merkletree.Entry{Data: *proofClaim.Leaf})
+	if err != nil {
+		return nil, fmt.Errorf("Error parsing proofClaim.leaf: %v", err)
+	}
+	claimSetRootKey, ok := claim.(*core.ClaimSetRootKey)
+	if !ok {
+		return nil, fmt.Errorf("Error casting claim type for claim parsed from proofClaim.leaf")
+	}
+
+	return &CurrentRoot{
+		Local:     a.mt.RootKey(),
+		Published: &claimSetRootKey.RootKey,
+	}, nil
 }
