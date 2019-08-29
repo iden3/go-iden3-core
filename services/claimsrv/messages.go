@@ -47,11 +47,11 @@ type SetRootMsg struct {
 
 // SetRoot0Req contains the data to set the SetRootClaim
 type SetRoot0Req struct {
-	Root     *merkletree.Hash        `json:"root" binding:"required"`
-	ProofKOp *core.ProofClaimGenesis `json:"proofkop" binding:"required,dive"`
-	// TODO: Use date in the signature and define a protection against reply attacks
-	Date      int64                  `json:"date" binding:"required"`
-	Signature *babyjub.SignatureComp `json:"signature" binding:"required"` // signature of the Root
+	OldRoot   *merkletree.Hash        `json:"oldRoot" binding:"required"`
+	NewRoot   *merkletree.Hash        `json:"newRoot" binding:"required"`
+	ProofKOp  *core.ProofClaimGenesis `json:"proofKOp" binding:"required,dive"`
+	Date      int64                   `json:"date" binding:"required"`
+	Signature *babyjub.SignatureComp  `json:"signature" binding:"required"` // signature of the Root
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex

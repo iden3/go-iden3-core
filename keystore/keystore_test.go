@@ -3,10 +3,11 @@ package keystore
 import (
 	"encoding/hex"
 	"fmt"
-	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEncryptDecrypt(t *testing.T) {
@@ -63,11 +64,15 @@ func TestSignVerify(t *testing.T) {
 	assert.Equal(t, nil, err)
 
 	ks.UnlockKey(pk, pass)
-	sig, err := ks.Sign(pk, msg)
+	sig, date, err := ks.Sign(pk, PrefixMinorUpdate, msg)
 	assert.Equal(t, nil, err)
-	ok, err := VerifySignature(pk, sig, msg)
+	ok, err := VerifySignature(pk, sig, PrefixMinorUpdate, date, msg)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, ok)
+	// check that with a different date the verification gives error
+	ok, err = VerifySignature(pk, sig, PrefixMinorUpdate, date+1, msg)
+	assert.Equal(t, nil, err)
+	assert.Equal(t, false, ok)
 }
 
 func TestHash(t *testing.T) {
