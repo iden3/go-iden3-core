@@ -1,9 +1,6 @@
 package identityagentsrv
 
 import (
-	// "bytes"
-	// "encoding/hex"
-	// "errors"
 	"fmt"
 
 	"github.com/dghubble/sling"
@@ -116,7 +113,7 @@ func New(storage db.Storage, rootUpdater RootUpdater) *Service {
 	}
 }
 
-// NewIdentity creates a new identity from the given claims
+// CreateIdentity creates a new identity from the given claims
 func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 	extraGenesisClaims []*merkletree.Entry) (*core.ID, *core.ProofClaim, error) {
 	claimAuthService := ia.rootUpdater.ClaimAuthService()
@@ -218,16 +215,18 @@ func (s *Service) NewAgent(id *core.ID) (*Agent, error) {
 	return agent, err
 }
 
+// RootUpdate checks the signature and send the
 func (a *Agent) RootUpdate(setRootReq claimsrv.SetRoot0Req) error {
+	ok, err := claimsrv.CheckSetRootParams(a.id, setRootReq)
+	if err != nil || !ok {
+		return fmt.Errorf("SetRoot params verification not passed, " + err.Error())
+	}
+
 	return a.rootUpdater.RootUpdate(a.id, setRootReq)
 }
 
 func (a *Agent) GetRootProof(id *core.ID) (*core.ProofClaim, error) {
 	return a.rootUpdater.GetRootProof(a.id)
-}
-
-func (a *Agent) AddClaim(claim *merkletree.Entry) error {
-	return a.AddClaims([]*merkletree.Entry{claim})
 }
 
 func (a *Agent) AddClaims(claims []*merkletree.Entry) error {

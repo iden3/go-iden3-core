@@ -102,22 +102,6 @@ func TestNewIdentity(t *testing.T) {
 	require.True(t, proofKOpVerified)
 }
 
-func TestAddClaim(t *testing.T) {
-	_, _, agent := createIdentityLoadAgent(t)
-
-	// create claim to be added
-	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	ethKeyType := core.EthKeyTypeUpgrade
-	c0 := core.NewClaimAuthEthKey(ethKey, ethKeyType).Entry()
-
-	err := agent.AddClaim(c0)
-	require.Nil(t, err)
-
-	// should give collision error when adding the claim already added
-	err = agent.AddClaim(c0)
-	require.Equal(t, merkletree.ErrEntryIndexAlreadyExists, err)
-}
-
 func TestAddClaims(t *testing.T) {
 	_, _, agent := createIdentityLoadAgent(t)
 
