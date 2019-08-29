@@ -20,7 +20,7 @@ type Service interface {
 	RawImport(raw map[string]string) (int, error)
 	ClaimsDump() map[string]string
 	Mimc7(data []*big.Int) (*big.Int, error)
-	AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error)
+	// AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error)
 }
 
 type ServiceImpl struct {
@@ -43,7 +43,9 @@ func (as *ServiceImpl) Info(id *core.ID) map[string]string {
 	if err != nil {
 		o["root_contract"] = "error getting root from contract"
 	} else {
-		o["root_contract"] = common3.HexEncode(root[:])
+		o["root_contract"] = root.Root.Hex()
+		o["root_block_number"] = fmt.Sprint(root.BlockN)
+		o["root_block_timestamp"] = fmt.Sprint(root.BlockTimestamp)
 	}
 
 	return o
@@ -112,26 +114,27 @@ func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
 
 }
 
-func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error) {
-	// TODO check if indexSlot and dataSlot fit inside R element
-	// var indexSlot [400 / 8]byte
-	// var dataSlot [496 / 8]byte
-	// copy(indexSlot[:], indexData[:400/8])
-	// copy(dataSlot[:], data[:496/8])
-	claim := core.NewClaimBasic(indexSlot, dataSlot)
-
-	err := as.mt.Add(claim.Entry())
-	if err != nil {
-		return nil, err
-	}
-
-	// update Relay Root in Smart Contract
-	as.rootsrv.SetRoot(*as.mt.RootKey())
-
-	proofClaim, err := as.claimsrv.GetClaimProofByHi(claim.Entry().HIndex())
-	if err != nil {
-		fmt.Println("err", err.Error())
-		return nil, err
-	}
-	return proofClaim, nil
-}
+// DECPRECATED
+// func (as *ServiceImpl) AddClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) (*core.ProofClaim, error) {
+// 	// TODO check if indexSlot and dataSlot fit inside R element
+// 	// var indexSlot [400 / 8]byte
+// 	// var dataSlot [496 / 8]byte
+// 	// copy(indexSlot[:], indexData[:400/8])
+// 	// copy(dataSlot[:], data[:496/8])
+// 	claim := core.NewClaimBasic(indexSlot, dataSlot)
+//
+// 	err := as.mt.Add(claim.Entry())
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	// update Relay Root in Smart Contract
+// 	as.rootsrv.SetRoot(*as.mt.RootKey())
+//
+// 	proofClaim, err := as.claimsrv.GetClaimProofByHi(claim.Entry().HIndex())
+// 	if err != nil {
+// 		fmt.Println("err", err.Error())
+// 		return nil, err
+// 	}
+// 	return proofClaim, nil
+// }

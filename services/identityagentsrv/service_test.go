@@ -96,8 +96,7 @@ func TestNewIdentity(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, "11985UJogKzXzCNvZNrta4Lk8Si6bDRhffmjDby3Ng", id.String())
-	var relayPk *babyjub.PublicKey
-	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
+	proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
 	require.Nil(t, err)
 	require.True(t, proofKOpVerified)
 }

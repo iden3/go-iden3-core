@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	// "encoding/json"
 	// "fmt"
+	"bytes"
 	"math/big"
 	"strings"
 
@@ -40,6 +41,10 @@ func (h *Hash) UnmarshalText(bs []byte) error {
 
 func ElemBytesToBigInt(elem ElemBytes) *big.Int {
 	return big.NewInt(0).SetBytes(elem[:])
+}
+
+func (h1 *Hash) Equals(h2 *Hash) bool {
+	return bytes.Equal(h1[:], h2[:])
 }
 
 func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {

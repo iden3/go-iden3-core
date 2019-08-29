@@ -184,6 +184,11 @@ func (e *Entry) UnmarshalText(text []byte) error {
 	return e.Data.UnmarshalText(text)
 }
 
+func (e *Entry) Clone() *Entry {
+	data := NewDataFromBytes(e.Data.Bytes())
+	return &Entry{Data: *data}
+}
+
 //MerkleTree is the struct with the main elements of the Merkle Tree
 type MerkleTree struct {
 	sync.RWMutex
@@ -700,6 +705,14 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 
 // VerifyProof verifies the Merkle Proof for the entry and root.
 func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
+	rootFromProof, err := RootFromProof(proof, hIndex, hValue)
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(rootKey[:], rootFromProof[:])
+}
+
+func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 	sibIdx := len(proof.Siblings) - 1
 	var midKey *Hash
 	if proof.Existence {
@@ -709,7 +722,7 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 			midKey = &HashZero
 		} else {
 			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
-				return false
+				return nil, fmt.Errorf("Non-existence proof being checked against hIndex equal to nodeAux")
 			}
 			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
 		}
@@ -729,7 +742,7 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 			midKey = NewNodeMiddle(midKey, siblingKey).Key()
 		}
 	}
-	return bytes.Equal(rootKey[:], midKey[:])
+	return midKey, nil
 }
 
 // GetNode gets a node by key from the MT.  Empty nodes are not stored in the

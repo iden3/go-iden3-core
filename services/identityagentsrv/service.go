@@ -335,7 +335,6 @@ func (a *Agent) GetClaimByHi(hi *merkletree.Hash) (*merkletree.Entry, *core.Proo
 		Mtp1: &merkletree.Proof{},
 		// FIXME: There is a data race here!
 		Root: a.mt.RootKey(),
-		Aux:  nil,
 	}
 	return entry, proof, nil
 }
@@ -362,7 +361,7 @@ func (a *Agent) GetCurrentRoot() (*CurrentRoot, error) {
 		return nil, err
 	}
 
-	claim, err := core.NewClaimFromEntry(&merkletree.Entry{Data: *proofClaim.Leaf})
+	claim, err := core.NewClaimFromEntry(proofClaim.Claim)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing proofClaim.leaf: %v", err)
 	}

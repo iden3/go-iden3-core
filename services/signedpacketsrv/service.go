@@ -11,8 +11,9 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/merkletree"
+	// "github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/discoverysrv"
+	"github.com/iden3/go-iden3-core/services/ethsrv"
 	"github.com/iden3/go-iden3-core/services/nameresolversrv"
 
 	// "github.com/iden3/go-iden3-core/utils"
@@ -20,13 +21,14 @@ import (
 )
 
 type SignedPacketVerifier struct {
-	DiscoverySrv    *discoverysrv.Service
+	discoverySrv    *discoverysrv.Service
 	nameResolverSrv *nameresolversrv.Service
+	ethSrv          ethsrv.Service
 }
 
 func NewSignedPacketVerifier(discoverySrv *discoverysrv.Service,
-	nameResolverSrv *nameresolversrv.Service) *SignedPacketVerifier {
-	return &SignedPacketVerifier{DiscoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv}
+	nameResolverSrv *nameresolversrv.Service, ethSrv ethsrv.Service) *SignedPacketVerifier {
+	return &SignedPacketVerifier{discoverySrv: discoverySrv, nameResolverSrv: nameResolverSrv, ethSrv: ethSrv}
 }
 
 // VerifySignedPacketV02 verifies a SIGV02 signed packet.
@@ -45,7 +47,7 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 	}
 
 	// 4. Verify that jwsPayload.ksign is in jwsPayload.proofKSign.leaf
-	claim, err := core.NewClaimFromEntry(&merkletree.Entry{Data: *jws.Payload.ProofKSign.Leaf})
+	claim, err := core.NewClaimFromEntry(jws.Payload.ProofKSign.Claim)
 	if err != nil {
 		return err
 	}
@@ -60,21 +62,8 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 		return fmt.Errorf("Pub key in payload.proofksign doesn't match payload.ksign")
 	}
 
-	// X. check that 1 <= jwsPayload.proofKSign.proofs.length <= 2
-	if len(jws.Payload.ProofKSign.Proofs) < 1 {
-		return fmt.Errorf("No proofs found in payload.proofKSign")
-	} else if len(jws.Payload.ProofKSign.Proofs) > 2 {
-		return fmt.Errorf("Authorize KSign claim proofs of depth > 2 not allowed yet")
-	}
-
-	if len(jws.Payload.ProofKSign.Proofs) > 1 {
-		// 5. Verify that jwsHeader.iss is in jwsPayload.proofKSign.
-		if jws.Payload.ProofKSign.Proofs[0].Aux == nil {
-			return fmt.Errorf("payload.proofksign.proofs[0].aux is nil")
-		}
-		if jws.Header.Issuer != jws.Payload.ProofKSign.Proofs[0].Aux.Id {
-			return fmt.Errorf("header.iss doesn't match with id in proofksign set root claim")
-		}
+	if !jws.Header.Issuer.Equals(jws.Payload.ProofKSign.ID) {
+		return fmt.Errorf("header.iss doesn't match with id in proofksign set root claim")
 	}
 
 	// 6. Verify that signature of JWS(jwsHeader, jwsPayload) is by jwsPayload.ksign
@@ -87,29 +76,8 @@ func (ss *SignedPacketVerifier) VerifySignedPacketV02(jws *SignedPacket) error {
 		return fmt.Errorf("JWS signature doesn't match with pub key in payload.ksign: %v", err)
 	}
 
-	// 7a. Get the operational key from the signer and in case it's a
-	// relay, check if it's trusted.
-	signerId := jws.Payload.ProofKSign.Signer
-	signer, err := ss.DiscoverySrv.GetEntity(signerId)
-	if err != nil {
-		return fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
-	}
-	if len(jws.Payload.ProofKSign.Proofs) > 1 {
-		if !signer.Trusted.Relay {
-			return fmt.Errorf("payload.proofKSign.signer is not a trusted relay")
-		}
-	}
-
-	// NOTE: For now we accept self signed auth ksign claims (the signer
-	// has the claim in its own merkle tree) as long as the signer identity
-	// details are found via the discovery, which we considered trusted for
-	// now.  In the future the claims will be verified by checking the
-	// proof from the entry to the root of a tree that's on the blockchain,
-	// so no signature verification will be necessary and signing entities
-	// won't be able to sign contradicting claims.
-
-	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
+	// 7b. VerifyProofClaim(jwsPayload.proofOfKSign)
+	if ok, err := ss.ethSrv.VerifyProofClaim(&jws.Payload.ProofKSign); !ok {
 		return fmt.Errorf("Invalid proofKSign: %v", err)
 	}
 
@@ -168,7 +136,7 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	}
 
 	// 4. Verify that jwsHeader.iss and jwsPayload.form.ethName are in jwsPayload.form.proofAssignName.leaf
-	claim, err := core.NewClaimFromEntry(&merkletree.Entry{Data: *form.ProofAssignName.Leaf})
+	claim, err := core.NewClaimFromEntry(form.ProofAssignName.Claim)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing form.proofAssignNam.leaf: %v", err)
 	}
@@ -192,27 +160,21 @@ func (ss *SignedPacketVerifier) VerifyIdenAssertV01(nonceDb *core.NonceDb, origi
 	}
 
 	// 5b. Resolve name to obtain name server id and verify that it matches the signer id
-	if len(form.ProofAssignName.Proofs) != 1 {
+	if form.ProofAssignName.RelayAux != nil {
 		return nil, fmt.Errorf("Assign Name claim cannot be delegated to a child entity tree")
 	}
 	nameServerId, err := ss.nameResolverSrv.Resolve(domain)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to resolve %v: %v", domain, err)
 	}
-	signerId := form.ProofAssignName.Signer
-	if *nameServerId != signerId {
+	signerId := form.ProofAssignName.ID
+	if !nameServerId.Equals(signerId) {
 		return nil, fmt.Errorf("Resolved id (%v) doesn't match signer id (%v)",
 			common3.HexEncode(nameServerId[:]), common3.HexEncode(signerId[:]))
 	}
 
-	// 5c. Get the operational key from the signer (name server).
-	signer, err := ss.DiscoverySrv.GetEntity(signerId)
-	if err != nil {
-		return nil, fmt.Errorf("Unable to get payload.proofKSign.signer entity data: %v", err)
-	}
-
 	// 5d. VerifyProofClaim(jwsPayload.form.proofAssignName, signerOperational)
-	if ok, err := core.VerifyProofClaim(signer.OperationalPk, &jws.Payload.ProofKSign); !ok {
+	if ok, err := ss.ethSrv.VerifyProofClaim(&jws.Payload.ProofKSign); !ok {
 		return nil, fmt.Errorf("form.proofAssignName not verified: %v", err)
 	}
 

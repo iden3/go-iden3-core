@@ -23,15 +23,15 @@ type ClaimSetRootKey struct {
 
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
-func NewClaimSetRootKey(id ID, rootKey merkletree.Hash) (*ClaimSetRootKey, error) {
-	if ok := cryptoUtils.CheckBigIntArrayInField(merkletree.ElemBytesToBigInts(merkletree.ElemBytes(rootKey)), cryptoConstants.Q); !ok {
+func NewClaimSetRootKey(id *ID, rootKey *merkletree.Hash) (*ClaimSetRootKey, error) {
+	if ok := cryptoUtils.CheckBigIntArrayInField(merkletree.ElemBytesToBigInts(merkletree.ElemBytes(*rootKey)), cryptoConstants.Q); !ok {
 		return nil, errors.New("Elements not in the Finite Field over R")
 	}
 	return &ClaimSetRootKey{
 		Version: 0,
 		Era:     0,
-		Id:      id,
-		RootKey: rootKey,
+		Id:      *id,
+		RootKey: *rootKey,
 	}, nil
 }
 

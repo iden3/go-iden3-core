@@ -2,10 +2,10 @@ package counterfactualsrv
 
 import (
 	"bytes"
-	"crypto/ecdsa"
+	// "crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
+	// "fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,8 +16,7 @@ import (
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/services/claimsrv"
 	"github.com/iden3/go-iden3-core/utils"
-
-	log "github.com/sirupsen/logrus"
+	// log "github.com/sirupsen/logrus"
 )
 
 const CompressedPkLen = 33
@@ -28,7 +27,7 @@ type Service interface {
 	Deploy(counterfactual *Counterfactual) (common.Address, *types.Transaction, error)
 	IsDeployed(ethAddr common.Address) (bool, error)
 	Info(ethAddr common.Address) (*Info, error)
-	Forward(id core.ID, ethAddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
+	// Forward(id core.ID, ethAddr common.Address, ksignpk *ecdsa.PublicKey, to common.Address, data []byte, value *big.Int, gas uint64, sig []byte) (common.Hash, error)
 	Add(id core.ID, counterfactual *Counterfactual) (*core.ProofClaim, error)
 	List(limit int) ([]common.Address, error)
 	Get(ethAddr common.Address) (*Counterfactual, error)
@@ -194,86 +193,88 @@ func (is *ServiceImpl) Info(ethAddr common.Address) (*Info, error) {
 
 }
 
-func (is *ServiceImpl) Forward(
-	id core.ID,
-	ethAddr common.Address,
-	ksignpk *ecdsa.PublicKey,
-	to common.Address,
-	data []byte,
-	value *big.Int,
-	gas uint64,
-	sig []byte,
-) (common.Hash, error) {
+// DEPRECATED
+// func (is *ServiceImpl) Forward(
+// 	id core.ID,
+// 	ethAddr common.Address,
+// 	ksignpk *ecdsa.PublicKey,
+// 	to common.Address,
+// 	data []byte,
+// 	value *big.Int,
+// 	gas uint64,
+// 	sig []byte,
+// ) (common.Hash, error) {
+//
+// 	ksignclaim := core.NewClaimAuthorizeKSignSecp256k1(ksignpk)
+// 	proof, err := is.cs.GetClaimProofUserByHiOld(id, *ksignclaim.Entry().HIndex())
+// 	if err != nil {
+// 		log.Warn("Error retieving proof ", err)
+// 		return common.Hash{}, err
+// 	}
+//
+// 	auth := packAuth(
+// 		proof.ClaimProof.Leaf,
+// 		proof.ClaimProof.Root[:],
+// 		proof.ClaimProof.Proof,
+// 		proof.ClaimNonRevocationProof.Proof,
+//
+// 		proof.SetRootClaimProof.Leaf,
+// 		proof.SetRootClaimProof.Root[:],
+// 		proof.SetRootClaimProof.Proof,
+// 		proof.SetRootClaimNonRevocationProof.Proof,
+//
+// 		proof.Date, proof.Signature,
+// 	)
+// 	proxy := is.impl.At(&ethAddr)
+//
+// 	tx, err := proxy.SendTransaction(
+// 		big.NewInt(0), 4000000,
+// 		"forward",
+// 		to, data, value, big.NewInt(int64(gas)), sig, auth,
+// 	)
+// 	if err == nil {
+// 		_, err = proxy.Client().WaitReceipt(tx.Hash())
+// 		return tx.Hash(), err
+// 	}
+//
+// 	return common.Hash{}, err
+//
+// }
 
-	ksignclaim := core.NewClaimAuthorizeKSignSecp256k1(ksignpk)
-	proof, err := is.cs.GetClaimProofUserByHiOld(id, *ksignclaim.Entry().HIndex())
-	if err != nil {
-		log.Warn("Error retieving proof ", err)
-		return common.Hash{}, err
-	}
-
-	auth := packAuth(
-		proof.ClaimProof.Leaf,
-		proof.ClaimProof.Root[:],
-		proof.ClaimProof.Proof,
-		proof.ClaimNonRevocationProof.Proof,
-
-		proof.SetRootClaimProof.Leaf,
-		proof.SetRootClaimProof.Root[:],
-		proof.SetRootClaimProof.Proof,
-		proof.SetRootClaimNonRevocationProof.Proof,
-
-		proof.Date, proof.Signature,
-	)
-	proxy := is.impl.At(&ethAddr)
-
-	tx, err := proxy.SendTransaction(
-		big.NewInt(0), 4000000,
-		"forward",
-		to, data, value, big.NewInt(int64(gas)), sig, auth,
-	)
-	if err == nil {
-		_, err = proxy.Client().WaitReceipt(tx.Hash())
-		return tx.Hash(), err
-	}
-
-	return common.Hash{}, err
-
-}
-
+// DEPRECATED
 // Add creates a merkle tree of a new user in the relay, given the identity
 // data of the user.
-func (is *ServiceImpl) Add(id core.ID, counterfactual *Counterfactual) (*core.ProofClaim, error) {
-	var err error
-
-	ethAddr, _, err := is.codeAndAddress(counterfactual)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := is.sto.Get(ethAddr[:]); err == nil {
-		return nil, fmt.Errorf("the counterfactual %v with ethAddr %+v already exists in the Relay", ethAddr, *counterfactual)
-	}
-
-	tx, err := is.sto.NewTx()
-	if err != nil {
-		return nil, err
-	}
-
-	// store counterfactual
-	tx.Put(ethAddr[:], counterfactual.Encode())
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	claim := core.NewClaimAuthorizeKSignSecp256k1(&counterfactual.OperationalPk.PublicKey)
-	err = is.cs.AddClaimAuthorizeKSignSecp256k1First(id, *claim)
-	if err != nil {
-		return nil, err
-	}
-
-	return is.cs.GetClaimProofUserByHi(id, claim.Entry().HIndex())
-}
+// func (is *ServiceImpl) Add(id core.ID, counterfactual *Counterfactual) (*core.ProofClaim, error) {
+// 	var err error
+//
+// 	ethAddr, _, err := is.codeAndAddress(counterfactual)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	if _, err := is.sto.Get(ethAddr[:]); err == nil {
+// 		return nil, fmt.Errorf("the counterfactual %v with ethAddr %+v already exists in the Relay", ethAddr, *counterfactual)
+// 	}
+//
+// 	tx, err := is.sto.NewTx()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	// store counterfactual
+// 	tx.Put(ethAddr[:], counterfactual.Encode())
+// 	if err = tx.Commit(); err != nil {
+// 		return nil, err
+// 	}
+//
+// 	claim := core.NewClaimAuthorizeKSignSecp256k1(&counterfactual.OperationalPk.PublicKey)
+// 	err = is.cs.AddClaimAuthorizeKSignSecp256k1First(&id, *claim)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return is.cs.GetClaimProofUserByHi(id, claim.Entry().HIndex())
+// }
 
 func (is *ServiceImpl) List(limit int) ([]common.Address, error) {
 

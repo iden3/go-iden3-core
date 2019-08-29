@@ -10,16 +10,12 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-type Service interface {
-	CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error)
+type Service struct {
+	cs *claimsrv.Service
 }
 
-type ServiceImpl struct {
-	cs claimsrv.Service
-}
-
-func New(cs claimsrv.Service) *ServiceImpl {
-	return &ServiceImpl{
+func New(cs *claimsrv.Service) *Service {
+	return &Service{
 		cs: cs,
 	}
 }
@@ -27,7 +23,7 @@ func New(cs claimsrv.Service) *ServiceImpl {
 // CreateIdGenesis initializes the id MerkleTree with the given the kop, kdisable,
 // kreenable and kupdateRoots public keys. Where the id is calculated a MerkleTree containing
 // that initial data, calculated in the function CalculateIdGenesis()
-func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
+func (is *Service) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
 
 	id, proofClaims, err := core.CalculateIdGenesisFrom4Keys(kop, kdis, kreen, kupdateRoot)
 	if err != nil {
@@ -44,14 +40,14 @@ func (is *ServiceImpl) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupd
 	proofClaimsList := []core.ProofClaim{proofClaims.KOp, proofClaims.KDis,
 		proofClaims.KReen, proofClaims.KUpdateRoot}
 	for _, proofClaim := range proofClaimsList {
-		err = userMT.Add(&merkletree.Entry{Data: *proofClaim.Leaf})
+		err = userMT.Add(proofClaim.Claim)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(*id, *userMT.RootKey())
+	claimSetRootKey, err := core.NewClaimSetRootKey(id, userMT.RootKey())
 	if err != nil {
 		return nil, nil, err
 	}
