@@ -13,7 +13,6 @@ import (
 	"github.com/iden3/go-iden3-core/services/rootsrv"
 	"github.com/iden3/go-iden3-core/services/signsrv"
 	"github.com/iden3/go-iden3-core/utils"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -34,8 +33,7 @@ type Service interface {
 	MT() *merkletree.MerkleTree
 	RootSrv() rootsrv.Service
 	GetSetRootClaim(id core.ID) (*core.ProofClaim, error)
-	UpdateSetRootClaim(id *core.ID, root *merkletree.Hash, proofKOp *core.ProofClaimGenesis,
-		date int64, signature *babyjub.SignatureComp) (*core.ClaimSetRootKey, error)
+	UpdateSetRootClaim(id *core.ID, setRootReq SetRoot0Req) (*core.ClaimSetRootKey, error)
 }
 
 type ServiceImpl struct {
@@ -60,42 +58,53 @@ func (cs *ServiceImpl) RootSrv() rootsrv.Service {
 	return cs.rootsrv
 }
 
-func (cs *ServiceImpl) UpdateSetRootClaim(id *core.ID, root *merkletree.Hash, proofKOp *core.ProofClaimGenesis,
-	date int64, signature *babyjub.SignatureComp) (*core.ClaimSetRootKey, error) {
-	// TODO: Use the date in the signature and define a protection against reply attacks
-	// TODO: For now the date is ignored!
+// CheckSetRootParams checks the params corresponding to the SetRoot0Req.
+// 1. Check that id and proofKOp.Id match
+// 2. Parse proofKOp.Claim to get kOp
+// 3. Verify that sig(kOp, oldRoot+newRoot) == signature
+// 4. Verify proofKOp
+func CheckSetRootParams(id *core.ID, setRootReq SetRoot0Req) (bool, error) {
 
 	//// 1. Check that id and proofKOp.Id match
-	if !id.Equal(proofKOp.Id) {
-		return nil, fmt.Errorf("id and proofKOp.Id don't match")
+	if !id.Equal(setRootReq.ProofKOp.Id) {
+		return false, fmt.Errorf("id and proofKOp.Id don't match")
 	}
 
 	//// 2. Parse proofKOp.Claim to get kOp
-	claim, err := core.NewClaimFromEntry(proofKOp.Claim)
+	claim, err := core.NewClaimFromEntry(setRootReq.ProofKOp.Claim)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing proofKOp.Claim: %v", err)
+		return false, fmt.Errorf("Error parsing proofKOp.Claim: %v", err)
 	}
 	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
 	if !ok {
-		return nil, fmt.Errorf("Invalid claim type in proofKOp.Claim," +
+		return false, fmt.Errorf("Invalid claim type in proofKOp.Claim," +
 			"expected ClaimAuthorizeKSignBabyJub")
 	}
 
-	//// 3. Verify that sig(kOp, root) == signature
+	//// 3. Verify that sig(kOp, oldRoot+newRoot) == signature
 	kSignComp := claimAuthorizeKSign.PublicKeyComp()
-	// TODO VerifySignature with prefix and date
-	if ok, err := babykeystore.VerifySignatureRaw(kSignComp, signature, root[:]); !ok {
-		return nil, fmt.Errorf("root signature doesn't match with kOp from proofKOp.Claim: %v", err)
+	msg := append(setRootReq.OldRoot[:], setRootReq.NewRoot[:]...)
+	// check the signature with PrefixMinorUpdate
+	if ok, err := babykeystore.VerifySignature(kSignComp, setRootReq.Signature, msg, setRootReq.Date, babykeystore.PrefixMinorUpdate); !ok {
+		return false, fmt.Errorf("root signature doesn't match with kOp from proofKOp.Claim: %v", err)
 	}
 	//// 4. Verify proofKOp
-	if err := proofKOp.Verify(); err != nil {
-		return nil, fmt.Errorf("Verification of proofKOp failed: %v", err)
+	if err := setRootReq.ProofKOp.Verify(); err != nil {
+		return false, fmt.Errorf("Verification of proofKOp failed: %v", err)
+	}
+	return true, nil
+}
+
+func (cs *ServiceImpl) UpdateSetRootClaim(id *core.ID, setRootReq SetRoot0Req) (*core.ClaimSetRootKey, error) {
+	ok, err := CheckSetRootParams(id, setRootReq)
+	if err != nil || !ok {
+		return nil, fmt.Errorf("SetRoot params verification not passed, " + err.Error())
 	}
 
-	//// 5. Add new SetRootClaim with id -> root
+	// Add new SetRootClaim with id -> setRootReq.NewRoot
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(*id, *root)
+	claimSetRootKey, err := core.NewClaimSetRootKey(*id, *setRootReq.NewRoot)
 	if err != nil {
 		return nil, err
 	}
