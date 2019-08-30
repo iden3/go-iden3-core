@@ -35,7 +35,7 @@ func createIdentityLoadAgent(t *testing.T) (*core.ID, *babyjub.PublicKey, *Agent
 
 	id, _, err := ia.CreateIdentity(claimKOp, nil)
 	require.Nil(t, err)
-	require.Equal(t, "119h9u2nXbtg5TmPsMm8W5bDkmVZhdS6TgKMvNWPU3", id.String())
+	require.Equal(t, "11414rGP5c3hZuHXQ2xWmcxoaxt5y1CdnbppCME2w8", id.String())
 
 	agent, err := ia.NewAgent(id)
 	require.Nil(t, err)
@@ -95,7 +95,7 @@ func TestNewIdentity(t *testing.T) {
 	id, proofKOp, err := ia.CreateIdentity(claimKOp, []*merkletree.Entry{claimKDis, claimKReen, claimKUpdateRoot})
 	require.Nil(t, err)
 
-	require.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
+	require.Equal(t, "11985UJogKzXzCNvZNrta4Lk8Si6bDRhffmjDby3Ng", id.String())
 	var relayPk *babyjub.PublicKey
 	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
 	require.Nil(t, err)
@@ -141,9 +141,9 @@ func TestGetClaims(t *testing.T) {
 	require.Nil(t, err)
 	receivedClaims, err := agent.ClaimsReceived()
 	require.Nil(t, err)
-	require.Equal(t, c0.Bytes(), emittedClaims[0].Bytes())
-	require.Equal(t, claimKOp.Bytes(), emittedClaims[1].Bytes())
-	require.Equal(t, c1.Bytes(), emittedClaims[2].Bytes())
+	require.Equal(t, c0.Bytes(), emittedClaims[1].Bytes())
+	require.Equal(t, claimKOp.Bytes(), emittedClaims[2].Bytes())
+	require.Equal(t, c1.Bytes(), emittedClaims[0].Bytes())
 	require.Equal(t, 3, len(emittedClaims)) // 3 emitted claims, 1 on genesistree, and 2 after genesistree
 	require.Equal(t, 0, len(receivedClaims))
 

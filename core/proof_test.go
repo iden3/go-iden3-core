@@ -292,7 +292,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 
 	_, v := getClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(3), v)
-	assert.Equal(t, "0x1ca5dadd000f7e5874fe434888d916fbe81c9a3376675184dde0a213ab286d63", predicateProof.OldRoot.Hex())
+	assert.Equal(t, "0x0d483788632a5ae75b61f005426cebdb6ba3f29d1cf0338fe3ff177d1a442d2e", predicateProof.OldRoot.Hex())
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())
 
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])

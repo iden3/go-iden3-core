@@ -23,10 +23,10 @@ func TestClaimSetRootKey(t *testing.T) {
 	c0.Era = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x18401636bb62be35476e292834b24b85527131ce434d6ffa43b95f0a8b1f4586",
+		"0x14bbbe339ff9edc1613765254ab65251b1a74d7426c2aa40c9d68613236316d2",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x01705b25f2cf7cda34d836f09e9b0dd1777bdc16752657cd9d1ae5f6286525ba",
+		"0x23af6c51c0ffe40d81508bf39e0360f884c9a1766895a8897a5e78da7bb611fa",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+

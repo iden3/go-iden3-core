@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-crypto/mimc7"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 // Hash is the type used to represent a hash used in the MT.
@@ -60,22 +60,27 @@ func BigIntToHash(e *big.Int) (h Hash) {
 // HashElems performs a mimc7 hash over the array of ElemBytes.
 func HashElems(elems ...ElemBytes) *Hash {
 	bigints := ElemBytesToBigInts(elems...)
-	mimcHash, err := mimc7.Hash(bigints, nil)
+	// mimcHash, err := mimc7.Hash(bigints, nil)
+	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {
 		panic(err)
 	}
-	h := BigIntToHash(mimcHash)
+	h := BigIntToHash(poseidonHash)
 	return &h
 }
 
 // HashElemsKey performs a mimc7 hash over the array of ElemBytes.
 func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
 	bigints := ElemBytesToBigInts(elems...)
-	mimcHash, err := mimc7.Hash(bigints, key)
+	// mimcHash, err := mimc7.Hash(bigints, key)
+	if key != nil {
+		bigints = append([]*big.Int{key}, bigints...)
+	}
+	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {
 		panic(err)
 	}
-	h := BigIntToHash(mimcHash)
+	h := BigIntToHash(poseidonHash)
 	return &h
 }
 
