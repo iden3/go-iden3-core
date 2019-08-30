@@ -131,6 +131,8 @@ github.com/iden3/go-iden3-crypto v0.0.0-20190625134645-7b219e15ecda h1:7PX5Wadr/
 github.com/iden3/go-iden3-crypto v0.0.0-20190625134645-7b219e15ecda/go.mod h1:/RYuEGiEgMTB2+4eoP6oZ0S0dnMeeQoHvLrrUJBGWvA=
 github.com/iden3/go-iden3-crypto v0.0.0-20190626134645-16423cc3150f h1:i1bPDVEcyfpVg7y4bHrMvCLCDbvxq142ohhhciqIsVU=
 github.com/iden3/go-iden3-crypto v0.0.0-20190626134645-16423cc3150f/go.mod h1:LLcgB7DLWAUs+8eBSKne+ZHy5z7xtAmlYlEz0M9M8gE=
+github.com/iden3/go-iden3-crypto v0.0.2 h1:dDZtrCGttkD/wwPIF94AOsYjMG5jz8Rza3AndvhXYlE=
+github.com/iden3/go-iden3-crypto v0.0.2/go.mod h1:LLcgB7DLWAUs+8eBSKne+ZHy5z7xtAmlYlEz0M9M8gE=
 github.com/ipfs/go-ipfs-api v0.0.1/go.mod h1:0FhXgCzrLu7qNmdxZvgYqD9jFzJxzz1NAVt3OQ0WOIc=
 github.com/ipfs/go-ipfs-files v0.0.1/go.mod h1:INEFm0LL2LWXBhNJ2PMIIb2w45hpXgPjNoE7yA8Y1d4=
 github.com/ipfs/go-ipfs-util v0.0.1/go.mod h1:spsl5z8KUnrve+73pOhSVZND1SIxPW5RyBCNzQxlJBc=

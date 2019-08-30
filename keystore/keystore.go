@@ -322,7 +322,7 @@ func (ks *KeyStore) UnlockKey(pk *babyjub.PublicKeyComp, pass []byte) error {
 
 // SignElem uses the key corresponding to the public key pk to sign the field
 // element msg.
-func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg mimc7.RElem) (*babyjub.SignatureComp, error) {
+func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg *big.Int) (*babyjub.SignatureComp, error) {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
 	sk, ok := ks.cache[*pk]
@@ -336,9 +336,9 @@ func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg mimc7.RElem) (*babyj
 
 // mimc7HashBytes hashes a msg byte slice by blocks of 31 bytes encoded as
 // little-endian.
-func mimc7HashBytes(msg []byte) mimc7.RElem {
+func mimc7HashBytes(msg []byte) (*big.Int, error) {
 	n := 31
-	msgElems := make([]mimc7.RElem, 0, len(msg)/n+1)
+	msgElems := make([]*big.Int, 0, len(msg)/n+1)
 	for i := 0; i < len(msg)/n; i++ {
 		v := new(big.Int)
 		i3cryptoutils.SetBigIntFromLEBytes(v, msg[n*i:n*(i+1)])
@@ -365,13 +365,16 @@ func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []
 // SignRaw uses the key corresponding to the public key pk to sign the mimc7 hash
 // of the msg byte slice.
 func (ks *KeyStore) SignRaw(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
-	h := mimc7HashBytes(msg)
+	h, err := mimc7HashBytes(msg)
+	if err != nil {
+		return nil, err
+	}
 	return ks.SignElem(pk, h)
 }
 
 // VerifySignatureElem verifies that the signature sigComp of the field element
 // msg was signed with the public key pkComp.
-func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg mimc7.RElem, sigComp *babyjub.SignatureComp) (bool, error) {
+func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg *big.Int, sigComp *babyjub.SignatureComp) (bool, error) {
 	pkPoint, err := babyjub.NewPoint().Decompress(*pkComp)
 	if err != nil {
 		return false, err
@@ -395,6 +398,9 @@ func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureCo
 // VerifySignatureRaw verifies that the signature sigComp of the mimc7 hash of
 // the msg byte slice was signed with the public key pkComp.
 func VerifySignatureRaw(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
-	h := mimc7HashBytes(msg)
+	h, err := mimc7HashBytes(msg)
+	if err != nil {
+		return false, err
+	}
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

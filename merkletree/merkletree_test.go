@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/db"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -782,9 +784,8 @@ func TestEntryToBytesToEntry(t *testing.T) {
 		Data: *leafData,
 	}
 	for _, elemBytes := range entry.Data {
-		if _, err := ElemBytesToRElem(elemBytes); err != nil {
-			assert.Nil(t, err)
-		}
+		bigints := ElemBytesToBigInt(elemBytes)
+		ok := cryptoUtils.CheckBigIntInField(bigints, cryptoConstants.Q)
+		assert.True(t, ok)
 	}
-
 }

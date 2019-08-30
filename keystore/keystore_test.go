@@ -77,7 +77,8 @@ func TestSignVerify(t *testing.T) {
 
 func TestHash(t *testing.T) {
 	msg := []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
-	h := mimc7HashBytes(msg)
+	h, err := mimc7HashBytes(msg)
+	assert.Nil(t, err)
 	assert.Equal(t, "16855787120419064316734350414336285711017110414939748784029922801367685456065",
 		(*big.Int)(h).String())
 }

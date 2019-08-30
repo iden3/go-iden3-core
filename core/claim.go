@@ -6,6 +6,8 @@ import (
 
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/utils"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
@@ -18,7 +20,7 @@ func copyToElemBytes(e *merkletree.ElemBytes, start int, src []byte) {
 }
 
 // ClearMostSigByte sets the most significant byte of the element to 0 to make sure it fits
-// inside a merkletree.RElement.
+// inside the FiniteField over R.
 func ClearMostSigByte(e [256 / 8]byte) merkletree.ElemBytes {
 	e[0] = 0
 	return merkletree.ElemBytes(e)
@@ -117,8 +119,10 @@ const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Claim, error) {
 	for _, elemBytes := range e.Data {
-		if _, err := merkletree.ElemBytesToRElem(elemBytes); err != nil {
-			return nil, err
+		bigints := merkletree.ElemBytesToBigInt(elemBytes)
+		ok := cryptoUtils.CheckBigIntInField(bigints, cryptoConstants.Q)
+		if !ok {
+			return nil, errors.New("Elements not in the Finite Field over R")
 		}
 	}
 	claimType, _ := getClaimTypeVersion(e)

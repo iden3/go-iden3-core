@@ -38,54 +38,44 @@ func (h *Hash) UnmarshalText(bs []byte) error {
 	return common3.HexDecodeInto(h[:], bs)
 }
 
-// ElemsBytesToRElemsPanic converts an array of ElemBytes to an array of
-// mimc7.RElem.  This function assumes that ElemBytes are properly constructed,
-// and will panic if they are not.
-func ElemsBytesToRElemsPanic(elems ...ElemBytes) []mimc7.RElem {
-	relems, err := ElemsBytesToRElems(elems...)
-	if err != nil {
-		panic(err)
-	}
-	return relems
+func ElemBytesToBigInt(elem ElemBytes) *big.Int {
+	return big.NewInt(0).SetBytes(elem[:])
 }
 
-// ElemsBytesToRElems converts an array of ElemBytes to an array of mimc7.RElem.
-// This function returns an error if any ElemBytes are invalid (they are bigger
-// than the RElement field).
-func ElemsBytesToRElems(elems ...ElemBytes) ([]mimc7.RElem, error) {
+func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 	ints := make([]*big.Int, len(elems))
 	for i, elem := range elems {
 		ints[i] = big.NewInt(0).SetBytes(elem[:])
 	}
-	return mimc7.BigIntsToRElems(ints)
+	return ints
 }
 
-// ElemBytesToRElem converts an ElemBytes to a mimc7.RElem.
-// This function returns an error if the ElemBytes is invalid (it's bigger than
-// the RElement field).
-func ElemBytesToRElem(elem ElemBytes) (mimc7.RElem, error) {
-	bigInt := big.NewInt(0).SetBytes(elem[:])
-	return mimc7.BigIntToRElem(bigInt)
-}
-
-// RElemToHash converts a mimc7.RElem to a Hash.
-func RElemToHash(relem mimc7.RElem) (h Hash) {
-	bs := (*big.Int)(relem).Bytes()
+// BigIntToHash converts a *big.Int to a Hash.
+func BigIntToHash(e *big.Int) (h Hash) {
+	bs := e.Bytes()
 	copy(h[ElemBytesLen-len(bs):], bs)
 	return h
 }
 
 // HashElems performs a mimc7 hash over the array of ElemBytes.
 func HashElems(elems ...ElemBytes) *Hash {
-	relems := ElemsBytesToRElemsPanic(elems...)
-	h := RElemToHash(mimc7.Hash(relems, nil))
+	bigints := ElemBytesToBigInts(elems...)
+	mimcHash, err := mimc7.Hash(bigints, nil)
+	if err != nil {
+		panic(err)
+	}
+	h := BigIntToHash(mimcHash)
 	return &h
 }
 
 // HashElemsKey performs a mimc7 hash over the array of ElemBytes.
 func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
-	relems := ElemsBytesToRElemsPanic(elems...)
-	h := RElemToHash(mimc7.Hash(relems, key))
+	bigints := ElemBytesToBigInts(elems...)
+	mimcHash, err := mimc7.Hash(bigints, key)
+	if err != nil {
+		panic(err)
+	}
+	h := BigIntToHash(mimcHash)
 	return &h
 }
 

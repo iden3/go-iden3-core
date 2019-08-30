@@ -107,12 +107,8 @@ func (as *ServiceImpl) ClaimsDump() map[string]string {
 
 // Mimc7 performs the MIMC7 hash over a given data
 func (as *ServiceImpl) Mimc7(data []*big.Int) (*big.Int, error) {
-	ielements, err := mimc7.BigIntsToRElems(data)
-	if err != nil {
-		return &big.Int{}, err
-	}
-	helement := mimc7.Hash(ielements, nil)
-	return (*big.Int)(helement), nil
+	helement, err := mimc7.Hash(data, nil)
+	return (*big.Int)(helement), err
 
 }
 
