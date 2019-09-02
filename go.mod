@@ -17,7 +17,7 @@ require (
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/gofrs/flock v0.7.1
-	github.com/iden3/go-iden3-crypto v0.0.0-20190626134645-16423cc3150f
+	github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161
 	github.com/ipfs/go-ipfs-api v0.0.1
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
 	github.com/jamesruan/sodium v0.0.0-20181216154042-9620b83ffeae

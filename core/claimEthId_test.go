@@ -29,10 +29,10 @@ func TestClaimEthId(t *testing.T) {
 
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x07f139661fb6c709668e5cbbaad48f63358c096fbb60f17c84b26004ef2624ba",
+		"0x0b5b82e860b79773d3c43b10c35aba533c19f397e7fa7f819fe71cbbed577b12",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x1063d112ef1c8b044c29c351aa0e84a234e44979624673aa76982b87c293ecf3",
+		"0x236091f7343e91001d6eabc93eaa1b097ca7feeab77933e2344449a59c02fff2",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+

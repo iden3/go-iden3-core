@@ -12,6 +12,8 @@ import (
 
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/db"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes
@@ -370,9 +372,10 @@ func (mt *MerkleTree) Add(e *Entry) error {
 		return ErrNotWritable
 	}
 	// verfy that the ElemBytes are valid and fit inside the mimc7 field.
-	_, err := ElemsBytesToRElems(e.Data[:]...)
-	if err != nil {
-		return err
+	bigints := ElemBytesToBigInts(e.Data[:]...)
+	ok := cryptoUtils.CheckBigIntArrayInField(bigints, cryptoConstants.Q)
+	if !ok {
+		return errors.New("Elements not inside the Finite Field over R")
 	}
 	tx, err := mt.storage.NewTx()
 	if err != nil {

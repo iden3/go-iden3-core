@@ -17,10 +17,10 @@ func TestClaimAuthorizeService(t *testing.T) {
 	c0 := NewClaimAuthorizeService(ServiceTypeRelay, ethAddr.Hex(), pubKstr, "relay.iden3.io")
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x0ee7fb1c970abca8667607eca3974704783f8812bc7f745c1c7ee49a2faf7927",
+		"0x0b04140cba5c58acfac4fc9ea5d6968bf4ad7e29b6a93eca4a6e7acef1d52b95",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x2ac15c5d5a255d7d92d84580c9a19b2e6beed42cfd26978b448d6b4abfa6d017",
+		"0x118355a85b534ada56e3d7d7238ed3d1b99ad6a2b09287ee026f1cb03a80986c",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+

@@ -2,8 +2,11 @@ package core
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/iden3/go-iden3-core/merkletree"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 // HashType defines the type of hash used in objectHash.
@@ -65,11 +68,11 @@ func minInt(a int, b int) int {
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
 func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, id ID,
 	objectHash [256 / 8]byte, auxData [256 / 8]byte) (*ClaimLinkObjectIdentity, error) {
-	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(objectHash)); err != nil {
-		return nil, err
+	if ok := cryptoUtils.CheckBigIntArrayInField(merkletree.ElemBytesToBigInts(objectHash), cryptoConstants.Q); !ok {
+		return nil, errors.New("objectHash not in the Finite Field over R")
 	}
-	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(auxData)); err != nil {
-		return nil, err
+	if ok := cryptoUtils.CheckBigIntArrayInField(merkletree.ElemBytesToBigInts(auxData), cryptoConstants.Q); !ok {
+		return nil, errors.New("auxData not in the Finite Field over R")
 	}
 	return &ClaimLinkObjectIdentity{
 		Version:     0,

@@ -196,7 +196,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "117aFcVWPyypFbjCuHRKaAaTV7nN3yT9q6PthJpm96", id.String())
+	assert.Equal(t, "11985UJogKzXzCNvZNrta4Lk8Si6bDRhffmjDby3Ng", id.String())
 
 	id2, _, err := core.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
 	assert.Nil(t, err)

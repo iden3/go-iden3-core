@@ -2,8 +2,11 @@ package core
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/iden3/go-iden3-core/merkletree"
+	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 // ClaimSetRootKey is a claim of the root key of a merkle tree that goes into the relay.
@@ -21,8 +24,8 @@ type ClaimSetRootKey struct {
 // NewClaimSetRootKey returns a ClaimSetRootKey with the given Eth ID and
 // merklee tree root key.
 func NewClaimSetRootKey(id ID, rootKey merkletree.Hash) (*ClaimSetRootKey, error) {
-	if _, err := merkletree.ElemBytesToRElem(merkletree.ElemBytes(rootKey)); err != nil {
-		return nil, err
+	if ok := cryptoUtils.CheckBigIntArrayInField(merkletree.ElemBytesToBigInts(merkletree.ElemBytes(rootKey)), cryptoConstants.Q); !ok {
+		return nil, errors.New("Elements not in the Finite Field over R")
 	}
 	return &ClaimSetRootKey{
 		Version: 0,
