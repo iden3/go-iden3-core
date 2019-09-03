@@ -34,10 +34,23 @@ func newTestingMerkle(f Fatalable, numLevels int) *MerkleTree {
 	return mt
 }
 
+func newTestingMerkleWithPrefix(f Fatalable, numLevels int) *MerkleTree {
+	mt, err := NewMerkleTreeWithPrefix(db.NewMemoryStorage(), numLevels, []byte("testingprefix"))
+	if err != nil {
+		f.Fatal(err)
+		return nil
+	}
+	return mt
+}
+
 func TestNewMT(t *testing.T) {
 	//create a new MT
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
+	assert.Equal(t,
+		"0x0000000000000000000000000000000000000000000000000000000000000000",
+		mt.RootKey().Hex())
+	mt = newTestingMerkleWithPrefix(t, 140)
 	assert.Equal(t,
 		"0x0000000000000000000000000000000000000000000000000000000000000000",
 		mt.RootKey().Hex())

@@ -201,7 +201,12 @@ var PREFIX_MERKLETREE = []byte("merkletree")
 
 // NewMerkleTree generates a new Merkle Tree
 func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
-	mtSto := storage.WithPrefix(PREFIX_MERKLETREE)
+	return NewMerkleTreeWithPrefix(storage, maxLevels, PREFIX_MERKLETREE)
+}
+
+// NewMerkleTreeWithPrefix generates a new merkle tree with the given prefix
+func NewMerkleTreeWithPrefix(storage db.Storage, maxLevels int, prefix []byte) (*MerkleTree, error) {
+	mtSto := storage.WithPrefix(prefix)
 	mt := MerkleTree{storage: mtSto, maxLevels: maxLevels, writable: true}
 	_, gettedRoot, err := mt.dbGet(rootNodeValue)
 	if err != nil {
