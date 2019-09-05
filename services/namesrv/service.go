@@ -19,12 +19,12 @@ type Service interface {
 }
 
 type ServiceImpl struct {
-	claimsrv claimsrv.Service
+	claimsrv *claimsrv.Service
 	signer   signsrv.Service
 	domain   string
 }
 
-func New(claimsrv claimsrv.Service, signer signsrv.Service, domain string) *ServiceImpl {
+func New(claimsrv *claimsrv.Service, signer signsrv.Service, domain string) *ServiceImpl {
 	return &ServiceImpl{claimsrv, signer, domain}
 }
 

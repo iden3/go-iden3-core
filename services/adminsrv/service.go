@@ -26,10 +26,10 @@ type Service interface {
 type ServiceImpl struct {
 	mt       *merkletree.MerkleTree
 	rootsrv  rootsrv.Service
-	claimsrv claimsrv.Service
+	claimsrv *claimsrv.Service
 }
 
-func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv claimsrv.Service) *ServiceImpl {
+func New(mt *merkletree.MerkleTree, rootsrv rootsrv.Service, claimsrv *claimsrv.Service) *ServiceImpl {
 	return &ServiceImpl{mt, rootsrv, claimsrv}
 }
 
