@@ -15,6 +15,8 @@ import (
 	"github.com/iden3/go-iden3-core/utils"
 )
 
+var PREFIX_MERKLETREE = []byte("merkletree")
+
 var (
 	ErrNotFound = errors.New("value not found")
 )
@@ -112,7 +114,7 @@ func (cs *Service) UpdateSetRootClaim(id *core.ID, setRootReq SetRoot0Req) (*cor
 func (cs *Service) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash,
 	timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
-	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -175,7 +177,7 @@ func (cs *Service) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root me
 //func (cs *Service) AddClaimAuthorizeKSignSecp256k1(id common.Address, claimAuthorizeKSignMsg ClaimAuthorizeKSignMsg) error {
 //
 //	// get the user's id storage, using the user id prefix (the id itself)
-//	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+// 	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 //
 //	// open the MerkleTree of the user
 //	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -233,7 +235,7 @@ func (cs *Service) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error {
 
 	// get the user's id storage, using the user id prefix (the id itself)
-	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -275,7 +277,7 @@ func (cs *Service) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 // AddUserIdClaim adds a claim into the Id's merkle tree, and with the Id's root, creates a new ClaimSetRootKey and adds it to the Relay's merkletree
 func (cs *Service) AddUserIdClaim(id *core.ID, claimValueMsg ClaimValueMsg) error {
 	// get the user's id storage, using the user id prefix (the id itself)
-	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -337,7 +339,7 @@ func (cs *Service) AddClaim(claim merkletree.Claim) error {
 // GetIdRoot returns the root of an Id tree, and the proof of that Root Id tree in the Relay Merkle Tree
 func (cs *Service) GetIdRoot(id *core.ID) (merkletree.Hash, []byte, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
-	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -387,7 +389,7 @@ func (cs *Service) GetSetRootClaim(id *core.ID) (*core.ProofClaim, error) {
 // GetClaimProofUserByHiOld given a Hash(index) (Hi) and an Id, returns the Claim in that Hi position inside the Id's merkletree, and the ClaimSetRootKey with the Id's root in the Relay's merkletree
 func (cs *Service) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash) (*ProofClaimUser, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
-	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes())
+	stoUserId := cs.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
@@ -652,7 +654,7 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi *merkletree.Hash) (uint32, err
 // NewMerkleTreeUser creates a new user merkle tree by using an storage with
 // the user addres prefix.
 func NewMerkleTreeUser(id *core.ID, storage db.Storage, levels int) (*merkletree.MerkleTree, error) {
-	stoUserId := storage.WithPrefix(id.Bytes())
+	stoUserId := storage.WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 	if userMT, err := merkletree.NewMerkleTree(stoUserId, levels); err != nil {
 		return nil, err
 	} else {

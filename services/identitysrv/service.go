@@ -10,6 +10,8 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+var PREFIX_MERKLETREE = []byte("merkletree")
+
 type Service struct {
 	cs *claimsrv.Service
 }
@@ -31,7 +33,7 @@ func (is *Service) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateR
 	}
 
 	// add the claims into the storage merkletree of that identity
-	stoUserId := is.cs.MT().Storage().WithPrefix(id.Bytes())
+	stoUserId := is.cs.MT().Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
 	if err != nil {
 		return nil, nil, err
