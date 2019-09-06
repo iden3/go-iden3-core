@@ -26,7 +26,7 @@ func NewClaimAssignName(name string, id ID) *ClaimAssignName {
 // NewClaimAssignNameFromEntry deserializes a ClaimAssignName from an Entry.
 func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 	c := &ClaimAssignName{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	copyFromElemBytes(c.NameHash[:], 0, &e.Data[2])
 	copyFromElemBytes(c.Id[:], 0, &e.Data[1])
 	return c
@@ -35,7 +35,7 @@ func NewClaimAssignNameFromEntry(e *merkletree.Entry) *ClaimAssignName {
 // Entry serializes the claim into an Entry.
 func (c *ClaimAssignName) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.NameHash[:])
 	copyToElemBytes(&e.Data[1], 0, c.Id[:31])
 	return e

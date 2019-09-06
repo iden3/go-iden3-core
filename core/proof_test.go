@@ -214,7 +214,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	predicateProof, err := GetPredicateProof(mt, oldRoot, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	_, v := getClaimTypeVersion(predicateProof.LeafEntry)
+	_, v := GetClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(0), v)
 	assert.Equal(t, predicateProof.OldRoot.Hex(), "0x0000000000000000000000000000000000000000000000000000000000000000")
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())
@@ -286,7 +286,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	predicateProof, err := GetPredicateProof(mt, oldRoot, claim3.Entry().HIndex())
 	assert.Nil(t, err)
 
-	_, v := getClaimTypeVersion(predicateProof.LeafEntry)
+	_, v := GetClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(3), v)
 	assert.Equal(t, "0x0d483788632a5ae75b61f005426cebdb6ba3f29d1cf0338fe3ff177d1a442d2e", predicateProof.OldRoot.Hex())
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())

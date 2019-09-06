@@ -344,7 +344,7 @@ func GetPredicateProof(mt *merkletree.MerkleTree, oldRoot, hi *merkletree.Hash) 
 
 	// checks 3 and 4 are necessary if the claim.Version != 0
 	var mtpExistPrevVersion *merkletree.Proof
-	_, v := getClaimTypeVersion(&entry)
+	_, v := GetClaimTypeVersion(&entry)
 	if v != 0 {
 		// version is not 0 (v!=0), so we need to provide proof_3 and proof_4
 
@@ -424,7 +424,7 @@ func VerifyPredicateProof(p *PredicateProof) bool {
 	}
 
 	// checks 3 and 4 are necessary if the claim.Version != 0
-	_, v := getClaimTypeVersion(p.LeafEntry)
+	_, v := GetClaimTypeVersion(p.LeafEntry)
 	if v == 0 {
 		// if version == 0, return true expected checks have passed
 		return true

@@ -87,7 +87,7 @@ func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, id ID
 // NewClaimLinkObjectIdentityFromEntry deserializes a ClaimLinkObjectIdentity from an Entry.
 func NewClaimLinkObjectIdentityFromEntry(entry *merkletree.Entry) *ClaimLinkObjectIdentity {
 	claim := &ClaimLinkObjectIdentity{}
-	_, claim.Version = getClaimTypeVersion(entry)
+	_, claim.Version = GetClaimTypeVersion(entry)
 	var objectType [32 / 8]byte
 	var objectIndex [16 / 8]byte
 	var indexLen = ClaimTypeVersionLen
@@ -112,7 +112,7 @@ func (claim *ClaimLinkObjectIdentity) Entry() *merkletree.Entry {
 	entry := &merkletree.Entry{}
 	var indexLen = ClaimTypeVersionLen
 	// type and version
-	setClaimTypeVersion(entry, claim.Type(), claim.Version)
+	SetClaimTypeVersion(entry, claim.Type(), claim.Version)
 	// object type
 	var objectType [32 / 8]byte
 	binary.BigEndian.PutUint32(objectType[:], uint32(claim.ObjectType))

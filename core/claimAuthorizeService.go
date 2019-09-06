@@ -57,7 +57,7 @@ func NewClaimAuthorizeService(serviceType *ServiceType, serviceAddr, servicePubK
 // NewClaimAuthorizeServiceFromEntry deserializes a ClaimAuthorizeService from an Entry.
 func NewClaimAuthorizeServiceFromEntry(e *merkletree.Entry) *ClaimAuthorizeService {
 	c := &ClaimAuthorizeService{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	var serviceType [64 / 8]byte
 	copyFromElemBytes(serviceType[:], ClaimTypeVersionLen, &e.Data[3])
 	c.ServiceType = NewServiceType(binary.BigEndian.Uint64(serviceType[:]))
@@ -70,7 +70,7 @@ func NewClaimAuthorizeServiceFromEntry(e *merkletree.Entry) *ClaimAuthorizeServi
 // Entry serializes the claim into an Entry.
 func (c *ClaimAuthorizeService) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.ServiceType[:])
 	copyToElemBytes(&e.Data[2], 0, c.ServiceAddr[:])
 	copyToElemBytes(&e.Data[1], 0, c.ServicePubK[:])
