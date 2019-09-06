@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	common3 "github.com/iden3/go-iden3-core/common"
+	// common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-crypto/babyjub"
+	// "github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -21,147 +21,180 @@ type ProofClaimPartial struct {
 	Mtp0 *merkletree.Proof `json:"mtp0" binding:"required"`
 	Mtp1 *merkletree.Proof `json:"mtp1" binding:"required"`
 	Root *merkletree.Hash  `json:"root" binding:"required"`
-	Aux  *SetRootAux       `json:"aux" binding:"dive"`
+}
+
+// Returns either (false, nil) or (true, error)
+func (p *ProofClaimPartial) Verify(claim *merkletree.Entry) (bool, error) {
+	// Proof of existence verification
+	if !p.Mtp0.Existence {
+		return false, fmt.Errorf("Mtp0 is a non-existence proof")
+	}
+	if !merkletree.VerifyProof(p.Root, p.Mtp0, claim.HIndex(), claim.HValue()) {
+		return false, fmt.Errorf("Mtp0 doesn't match with the root")
+	}
+
+	// Proof of non-existence of next version (revocation) verification
+	if p.Mtp1.Existence {
+		return false, fmt.Errorf("Mtp1 is an existence proof")
+	}
+	// Make a copy of the claim and increase the version
+	claimNext := claim.Clone()
+	claimType, claimVer := GetClaimTypeVersionFromData(&claimNext.Data)
+	SetClaimTypeVersionInData(&claimNext.Data, claimType, claimVer+1)
+	if !merkletree.VerifyProof(p.Root, p.Mtp1, claimNext.HIndex(), claimNext.HValue()) {
+		return false, fmt.Errorf("Mtp1 doesn't match with the root")
+	}
+	return true, nil
 }
 
 func (pcp *ProofClaimPartial) String() string {
 	buf := bytes.NewBufferString("ProofClaimPartial:\n")
 	fmt.Fprintf(buf, "mtp0: %v\n", pcp.Mtp0)
 	fmt.Fprintf(buf, "mtp0: %v\n", pcp.Mtp1)
-	fmt.Fprintf(buf, "root: %v\n", pcp.Root)
-	if pcp.Aux != nil {
-		fmt.Fprintf(buf, "aux: Version:%v Era:%v Id:%v\n", pcp.Aux.Version, pcp.Aux.Era,
-			common3.HexEncode(pcp.Aux.Id[:]))
-	}
+	fmt.Fprintf(buf, "root: %v", pcp.Root)
 	return buf.String()
 }
 
-// SetRootAux is the auxiliary data to build the set root claim from a root in
-// a partial proof of claim.
-type SetRootAux struct {
+// RelayAux is auxiliary data used to check a proof when the identity publishes
+// roots via a Relay.
+type RelayAux struct {
+	// Version is SetRootClaim.Version
 	Version uint32 `json:"version" binding:"required"`
-	Era     uint32 `json:"era" binding:"required"`
-	Id      ID     `json:"id" binding:"required"`
-	// TODO Add proof of claim authorize service by Id to relay Id.
-	// Probably this proof will be a genesis proof.
+	// Era is SetRootClaim.Era
+	Era uint32 `json:"era" binding:"required"`
+	// Proof is the ProofClaimPartial of the SetRootClaim in the Relay MT
+	Proof ProofClaimPartial `json:"proof" binding:"required"`
+
+	// RelayID is the ID of the Relay authorized by the Identity
+	RelayID *ID `json:"relayId" binding:"required"`
+
+	// GenesisRoot is the Genesis Root of the Identity
+	// GenesisRoot *merkletree.Hash `json:"genesisRoot" binding:"required"`
+	// MtpClaimAuthRelay is the mtp of the Identity Genesis ClaimAuthService authorizing the Relay
+	MtpClaimAuthRelay *merkletree.Proof `json:"mtpAuthRelay" binding:"required"`
+}
+
+func (ra *RelayAux) ProofClaimAuthRelay(id *ID) *ProofClaimGenesis {
+	return &ProofClaimGenesis{
+		Mtp: ra.MtpClaimAuthRelay,
+		Id:  id,
+	}
+}
+
+func (ra *RelayAux) ClaimAuthRelay() *merkletree.Entry {
+	return NewClaimAuthorizeService(ServiceTypeRelay, ra.RelayID.String(), "", "").Entry()
+}
+
+type RootData struct {
+	BlockN         uint64
+	BlockTimestamp int64
+	Root           *merkletree.Hash
 }
 
 // ProofClaim is a complete proof of a claim that includes all the proofs of
-// existence and non-existence for mutliple levels from the leaf of a tree to
+// existence and non-existence for mutliple levels from the claim of a tree to
 // the signed root of possibly another tree whose root binding:"required".
 type ProofClaim struct {
-	Proofs    []ProofClaimPartial    `json:"proofs" binding:"required,dive"`
-	Leaf      *merkletree.Data       `json:"leaf" binding:"required"`
-	Date      int64                  `json:"date" binding:"required"`
-	Signature *babyjub.SignatureComp `json:"signature" binding:"required"` // signature of the Root of the Relay
-	Signer    ID                     `json:"signer" binding:"required"`
+	Claim          *merkletree.Entry `json:"claim" binding:"required"`
+	ID             *ID               `json:"id" binding:"required"`
+	BlockN         uint64            `json:"blockN" binding:"required"`
+	BlockTimestamp int64             `json:"blockTS" binding:"required"`
+	Proof          ProofClaimPartial `json:"proof" binding:"required,dive"`
+
+	RelayAux *RelayAux `json:"relayAux"`
 }
 
 func (pc *ProofClaim) String() string {
 	buf := bytes.NewBufferString("ProofClaim:\n")
-	if pc.Signature != nil {
-		fmt.Fprintf(buf, "signature: %v\n", common3.HexEncode(pc.Signature[:]))
-	}
-	fmt.Fprintf(buf, "date: %v\n", time.Unix(pc.Date, 0))
-	fmt.Fprintf(buf, "leaf: %v\n", pc.Leaf)
-	fmt.Fprintf(buf, "proofs:\n")
-	for i, proof := range pc.Proofs {
-		fmt.Fprintf(buf, "%v: { %v}\n", i, &proof)
+	fmt.Fprintf(buf, "blockTS: %v\n", time.Unix(pc.BlockTimestamp, 0))
+	fmt.Fprintf(buf, "blockN: %v\n", pc.BlockN)
+	fmt.Fprintf(buf, "claim: %v\n", pc.Claim)
+	if pc.RelayAux != nil {
+		fmt.Fprintf(buf, "relayAux: %v", *pc.RelayAux)
 	}
 	return buf.String()
+}
+
+// PublishedData returns the id of the root publisher with the corresponding
+// block number and block timestamp linked to publish the root.
+func (pc *ProofClaim) PublishedData() (*ID, uint64, int64) {
+	var publisherID *ID
+	if pc.RelayAux != nil {
+		publisherID = pc.RelayAux.RelayID
+	} else {
+		publisherID = pc.ID
+	}
+	return publisherID, pc.BlockN, pc.BlockTimestamp
+
+}
+
+// CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
+// Returns either (false, nil) or (true, error)
+// TODO Check id-root in the blockchain!
+func (pc *ProofClaim) Verify(publishedRoot *merkletree.Hash) (bool, error) {
+	var publisherClaim *merkletree.Entry
+	if pc.RelayAux != nil {
+		relayAux := pc.RelayAux
+		// Verify that the identity has authorized the relay ID in a genesis claim
+		proofClaimAuthRelay := relayAux.ProofClaimAuthRelay(pc.ID)
+		if ok, err := proofClaimAuthRelay.Verify(relayAux.ClaimAuthRelay()); ok != true {
+			return false, fmt.Errorf("verification of ProofClaim.RelayAux.ProofClaimAuthRelay failed: %v", err)
+		}
+		// Verify that the claim is under the identity MT
+		if ok, err := relayAux.Proof.Verify(pc.Claim); ok != true {
+			return false, fmt.Errorf("verification of ProofClaim.RelayAux.Proof failed: %v", err)
+		}
+		// Construct setRootClaim from the identity root
+		setRootClaim, err := NewClaimSetRootKey(pc.ID, relayAux.Proof.Root)
+		if err != nil {
+			return false, err
+		}
+		setRootClaim.Version = relayAux.Version
+		setRootClaim.Era = relayAux.Era
+		publisherClaim = setRootClaim.Entry()
+	} else {
+		publisherClaim = pc.Claim
+	}
+
+	// Verify that the publisherClaim is in the publisher MT
+	if ok, err := pc.Proof.Verify(publisherClaim); ok != true {
+		return false, fmt.Errorf("verification of ProofClaim.Proof failed: %v", err)
+	}
+
+	// Verify that the root matches with the published root passed as argument
+	if !pc.Proof.Root.Equals(publishedRoot) {
+		return false, fmt.Errorf("ProofClaim root doesn't match the expected published root")
+	}
+
+	return true, nil
+}
+
+func VerifyGenesisMTProof(id *ID, proof *merkletree.Proof, hIndex, hValue *merkletree.Hash) (bool, error) {
+	root, err := merkletree.RootFromProof(proof, hIndex, hValue)
+	if err != nil {
+		return false, err
+	}
+	if eq := bytes.Equal(id[:], IdGenesisFromRoot(root)[:]); !eq {
+		return false, fmt.Errorf("calclated root doesn't match proof root")
+	}
+	return true, nil
 }
 
 // ProofClaimGenesis is a proof that a claim belongs to the genesis tree of an
 // Id.
 type ProofClaimGenesis struct {
-	Claim *merkletree.Entry `json:"claim" binding:"required"`
-	Mtp   *merkletree.Proof `json:"mtp" binding:"required"`
-	Root  *merkletree.Hash  `json:"root" binding:"required"`
-	Id    *ID               `json:"id" binding:"required"`
+	Mtp *merkletree.Proof `json:"mtp" binding:"required"`
+	Id  *ID               `json:"id" binding:"required"`
 }
 
 // Verify that the claim belongs to the genesis tree with the specified root
 // which was used to generate the Id.
-func (p *ProofClaimGenesis) Verify() error {
+func (p *ProofClaimGenesis) Verify(claim *merkletree.Entry) (bool, error) {
 	if !p.Mtp.Existence {
-		return fmt.Errorf("Mtp is a non-existence proof")
+		return false, fmt.Errorf("Mtp is a non-existence proof")
 	}
-	rootId := IdGenesisFromRoot(p.Root)
-	if !p.Id.Equal(rootId) {
-		return fmt.Errorf("Id was not calculated from Root")
-	}
-	if !merkletree.VerifyProof(p.Root, p.Mtp, p.Claim.HIndex(), p.Claim.HValue()) {
-		return fmt.Errorf("Mtp doesn't match with the Root")
-	}
-	return nil
-}
-
-// CheckProofClaim checks the claim proofs from the bottom to the top are valid and not revoked, and that the top root is signed by relayAddr.
-// WARNING TODO currently the Root signature verification is disabled, see comment in line 82
-func VerifyProofClaim(operationalPk *babyjub.PublicKey, pc *ProofClaim) (bool, error) {
-	// For now we only allow proof verification of Nameserver (one level) and
-	// Relay (two levels: relay + user)
-	if len(pc.Proofs) > 2 || len(pc.Proofs) < 1 {
-		return false, fmt.Errorf("Invalid number of partial proofs")
-	}
-
-	// TODO currently this is verifying with relayAddr, that comes directly from privateKey
-	// in next iteration needs to verify that the signature is performed
-	// by a private key authorized in a claim under the ID merkle tree
-	// or even not verify the signature in this function, and check that the Root is in the blockchain for the relayID, if is there will mean that is made by that relay (as the relay needs to sign it to perform the transaction)
-	// if is this last option, somewhere need to check that 'relayAddr' is equal to the ProofClaim emiter address, or remove that input as is checked outside this function
-	/*
-		if pc.Signature == nil {
-			return false, fmt.Errorf("No signature in the ProofClaim")
-		}
-		// Top root signature (by Relay) verification
-			if !utils.VerifySigEthMsgDate(relayAddr, pc.Signature, pc.Proofs[len(pc.Proofs)-1].Root[:], pc.Date) {
-				return false, fmt.Errorf("Invalid signature")
-			}
-	*/
-
-	leaf := &merkletree.Entry{Data: *pc.Leaf}
-	leafNext := &merkletree.Entry{}
-	rootKey := &merkletree.Hash{}
-	for i, proof := range pc.Proofs {
-		mtpEx := proof.Mtp0
-		mtpNoEx := proof.Mtp1
-		rootKey = proof.Root
-
-		*leafNext = *leaf
-
-		// Proof of existence verification
-		if !mtpEx.Existence {
-			return false, fmt.Errorf("Mtp0 at lvl %v is a non-existence proof", i)
-		}
-		if !merkletree.VerifyProof(rootKey, mtpEx, leaf.HIndex(), leaf.HValue()) {
-			return false, fmt.Errorf("Mtp0 at lvl %v doesn't match with the root", i)
-		}
-
-		// Proof of non-existence of next version (revocation) verification
-		if mtpNoEx.Existence {
-			return false, fmt.Errorf("Mtp1 at lvl %v is an existence proof", i)
-		}
-		claimType, claimVer := GetClaimTypeVersionFromData(&leafNext.Data)
-		SetClaimTypeVersionInData(&leafNext.Data, claimType, claimVer+1)
-		if !merkletree.VerifyProof(rootKey, mtpNoEx, leafNext.HIndex(), leafNext.HValue()) {
-			return false, fmt.Errorf("Mtp1 at lvl %v doesn't match with the root", i)
-		}
-
-		if i == len(pc.Proofs)-1 {
-			break
-		} else if proof.Aux == nil {
-			return false, fmt.Errorf("partial proof at lvl %v doesn't contain auxiliary data", i)
-		}
-
-		// Create the set root key claim for the next level
-		claim, err := NewClaimSetRootKey(proof.Aux.Id, *rootKey)
-		if err != nil {
-			return false, err
-		}
-		claim.Version = proof.Aux.Version
-		claim.Era = proof.Aux.Era
-		leaf = claim.Entry()
+	if ok, err := VerifyGenesisMTProof(p.Id, p.Mtp, claim.HIndex(), claim.HValue()); !ok {
+		return false, fmt.Errorf("Mtp doesn't match with the genesis Id: %v", err)
 	}
 	return true, nil
 }
@@ -217,13 +250,14 @@ func GetClaimProofByHi(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*ProofCl
 		Mtp0: mtpExist,
 		Mtp1: mtpNonExist,
 		Root: rootKey,
-		Aux:  nil,
 	}
 	proofClaim := ProofClaim{
-		Proofs:    []ProofClaimPartial{proofClaimPartial},
-		Leaf:      leafData,
-		Date:      0,
-		Signature: nil,
+		Claim:          &merkletree.Entry{Data: *leafData},
+		ID:             nil,
+		BlockN:         0,
+		BlockTimestamp: 0,
+		Proof:          proofClaimPartial,
+		RelayAux:       nil,
 	}
 
 	return &proofClaim, nil

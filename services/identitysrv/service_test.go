@@ -19,6 +19,7 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/claimsrv"
+	rootsrvmock "github.com/iden3/go-iden3-core/services/rootsrv/mock"
 	"github.com/iden3/go-iden3-core/services/signsrv"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
@@ -36,28 +37,6 @@ var relaySk babyjub.PrivateKey
 var relayPkComp *babyjub.PublicKeyComp
 var relayPk *babyjub.PublicKey
 var relayId core.ID
-
-type RootServiceMock struct {
-	mock.Mock
-}
-
-func (m *RootServiceMock) Start() {
-
-}
-
-func (m *RootServiceMock) StopAndJoin() {
-
-}
-
-func (m *RootServiceMock) GetRoot(id *core.ID) (merkletree.Hash, error) {
-	args := m.Called(id)
-	return args.Get(0).(merkletree.Hash), args.Error(1)
-}
-
-func (m *RootServiceMock) SetRoot(hash merkletree.Hash) {
-	m.Called(hash)
-	return
-}
 
 // type SignServiceMock struct {
 // 	mock.Mock
@@ -102,7 +81,8 @@ func newTestingMerkle(numLevels int) (*merkletree.MerkleTree, error) {
 	mt, err := merkletree.NewMerkleTree(sto, numLevels)
 	return mt, err
 }
-func initializeIdService(t *testing.T) *ServiceImpl {
+
+func initializeIdService(t *testing.T) *Service {
 	relayId, err := core.IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
 	if err != nil {
 		t.Error(err)
@@ -114,8 +94,8 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 		t.Error(err)
 	}
 	// sto := db.NewMemoryStorage()
-	rootservicemock := &RootServiceMock{}
-	rootservicemock.On("SetRoot", mock.Anything).Return()
+	rootServiceMock := rootsrvmock.New()
+	rootServiceMock.On("SetRoot", mock.Anything).Return()
 
 	pass := []byte("my passphrase")
 	storage := babykeystore.MemStorage([]byte{})
@@ -139,7 +119,7 @@ func initializeIdService(t *testing.T) *ServiceImpl {
 
 	signSrv := signsrv.New(keyStore, *relayPk)
 
-	claimService := claimsrv.New(relayId, mt, rootservicemock, *signSrv)
+	claimService := claimsrv.New(&relayId, mt, rootServiceMock, *signSrv)
 	idService := New(claimService)
 
 	return idService
@@ -167,7 +147,7 @@ func TestCreateIdGenesisRandomLoop(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, id, id2)
 
-			proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
+			proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
 			assert.Nil(t, err)
 			assert.True(t, proofKOpVerified)
 		}
@@ -202,7 +182,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id, id2)
 
-	proofKOpVerified, err := core.VerifyProofClaim(relayPk, proofKOp)
+	proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
 	assert.Nil(t, err)
 	assert.True(t, proofKOpVerified)
 }

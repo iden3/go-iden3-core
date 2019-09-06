@@ -47,11 +47,12 @@ type SetRootMsg struct {
 
 // SetRoot0Req contains the data to set the SetRootClaim
 type SetRoot0Req struct {
-	OldRoot   *merkletree.Hash        `json:"oldRoot" binding:"required"`
-	NewRoot   *merkletree.Hash        `json:"newRoot" binding:"required"`
-	ProofKOp  *core.ProofClaimGenesis `json:"proofKOp" binding:"required,dive"`
-	Date      int64                   `json:"date" binding:"required"`
-	Signature *babyjub.SignatureComp  `json:"signature" binding:"required"` // signature of the Root
+	OldRoot           *merkletree.Hash        `json:"oldRoot" binding:"required"`
+	NewRoot           *merkletree.Hash        `json:"newRoot" binding:"required"`
+	ClaimAuthKOp      *merkletree.Entry       `json:"claimKOp" binding:"required"`
+	ProofClaimAuthKOp *core.ProofClaimGenesis `json:"proofKOp" binding:"required,dive"`
+	Date              int64                   `json:"date" binding:"required"`
+	Signature         *babyjub.SignatureComp  `json:"signature" binding:"required"` // signature of the Root
 }
 
 // ClaimValueMsg contains a core.ClaimValue with its signature in Hex

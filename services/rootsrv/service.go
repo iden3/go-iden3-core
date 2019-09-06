@@ -11,9 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/eth"
+	// "github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/services/ethsrv"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,7 +22,7 @@ type Service interface {
 	Start()
 	StopAndJoin()
 	// GetRoot(addr common.Address) (merkletree.Hash, error)
-	GetRoot(id *core.ID) (merkletree.Hash, error)
+	GetRoot(id *core.ID) (*core.RootData, error)
 	SetRoot(hash merkletree.Hash)
 }
 
@@ -31,18 +32,18 @@ type ServiceImpl struct {
 	stopch        chan (interface{})
 	stoppedch     chan (interface{})
 	// rootcommits    *eth.Contract
-	client         *eth.Client2
+	ethsrv.Service
 	id             *core.ID
 	kUpdateRootMtp []byte
 	contractAddr   common.Address
 }
 
-func New(client *eth.Client2, id *core.ID, kUpdateRootMtp []byte, contractAddr common.Address) *ServiceImpl {
+func New(ethsrv ethsrv.Service, id *core.ID, kUpdateRootMtp []byte, contractAddr common.Address) *ServiceImpl {
 	return &ServiceImpl{
 		stopch:         make(chan (interface{})),
 		stoppedch:      make(chan (interface{})),
 		lastRoot:       merkletree.Hash{},
-		client:         client,
+		Service:        ethsrv,
 		id:             id,
 		kUpdateRootMtp: kUpdateRootMtp,
 		contractAddr:   contractAddr,
@@ -76,25 +77,6 @@ func (s *ServiceImpl) Start() {
 	}()
 }
 
-// func (s *ServiceImpl) GetRootOld(addr common.Address) (merkletree.Hash, error) {
-// 	var res merkletree.Hash
-// 	err := s.rootcommits.Call(&res, "getRoot", addr)
-// 	return res, err
-// }
-
-func (s *ServiceImpl) GetRoot(id *core.ID) (merkletree.Hash, error) {
-	var res [32]byte
-	err := s.client.Call(func(c *ethclient.Client) error {
-		rootcommits, err := contracts.NewRootCommits(s.contractAddr, c)
-		if err != nil {
-			return err
-		}
-		res, err = rootcommits.GetRoot(nil, *id)
-		return err
-	})
-	return res, err
-}
-
 func (s *ServiceImpl) SetRoot(hash merkletree.Hash) {
 	s.lastRootMutex.Lock()
 	s.lastRoot = hash
@@ -108,7 +90,7 @@ func (s *ServiceImpl) getLastRoot() (hash merkletree.Hash) {
 }
 
 func (s *ServiceImpl) updateRoot(hash merkletree.Hash) error {
-	if tx, err := s.client.CallAuth(
+	if tx, err := s.Client().CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			rootcommits, err := contracts.NewRootCommits(s.contractAddr, c)
 			if err != nil {
@@ -119,7 +101,7 @@ func (s *ServiceImpl) updateRoot(hash merkletree.Hash) error {
 	); err != nil {
 		return fmt.Errorf("Failed to add root: %v", err)
 	} else {
-		_, err = s.client.WaitReceipt(tx)
+		_, err = s.Client().WaitReceipt(tx)
 		if err != nil {
 			return fmt.Errorf("Error waiting for receipt: %v", err)
 		}

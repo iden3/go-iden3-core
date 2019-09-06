@@ -33,7 +33,7 @@ func TestProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0, err := NewClaimSetRootKey(id0, rootKey0)
+	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
@@ -45,19 +45,19 @@ func TestProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b})
-	claim1, err := NewClaimSetRootKey(id1, rootKey1)
+	claim1, err := NewClaimSetRootKey(&id1, &rootKey1)
 	assert.Nil(t, err)
 	err = mt.Add(claim1.Entry())
 	assert.Nil(t, err)
 
-	mtp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
+	cp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	// j, err := json.Marshal(mtp)
+	// j, err := json.Marshal(cp)
 	// assert.Nil(t, err)
 
 	// id := ID{}
-	verified, err := VerifyProofClaim(nil, mtp)
+	verified, err := cp.Verify(cp.Proof.Root)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 }
@@ -95,9 +95,9 @@ func TestClaimProof(t *testing.T) {
 	mtp, err := GetClaimProofByHi(mt, claim1.HIndex())
 	assert.Nil(t, err)
 
-	fmt.Println("mtp", mtp.Leaf,
-		hex.EncodeToString(mtp.Proofs[0].Mtp0.Bytes()),
-		hex.EncodeToString(mtp.Proofs[0].Mtp1.Bytes()))
+	fmt.Println("mtp", mtp.Claim,
+		hex.EncodeToString(mtp.Proof.Mtp0.Bytes()),
+		hex.EncodeToString(mtp.Proof.Mtp1.Bytes()))
 }
 
 func TestProofClaimGenesis(t *testing.T) {
@@ -112,41 +112,37 @@ func TestProofClaimGenesis(t *testing.T) {
 	assert.Nil(t, err)
 
 	proofClaimGenesis := ProofClaimGenesis{
-		Claim: claimKOp,
-		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
-		Root:  proofClaimKOp.Proofs[0].Root,
-		Id:    id,
+		Mtp: proofClaimKOp.Proof.Mtp0,
+		Id:  id,
 	}
-	assert.Nil(t, proofClaimGenesis.Verify())
+	_, err = proofClaimGenesis.Verify(claimKOp)
+	assert.Nil(t, err)
 
 	// Invalid Id
 	proofClaimGenesis = ProofClaimGenesis{
-		Claim: claimKOp,
-		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
-		Root:  proofClaimKOp.Proofs[0].Root,
-		Id:    &ID{},
+		Mtp: proofClaimKOp.Proof.Mtp0,
+		Id:  &ID{},
 	}
-	assert.NotNil(t, proofClaimGenesis.Verify())
+	_, err = proofClaimGenesis.Verify(claimKOp)
+	assert.NotNil(t, err)
 
 	// Invalid Mtp of non-existence
 	claimKOp2 := NewClaimAuthorizeKSignBabyJub(&kOp)
 	claimKOp2.Version = 1
 	proofClaimGenesis = ProofClaimGenesis{
-		Claim: claimKOp2.Entry(),
-		Mtp:   proofClaimKOp.Proofs[0].Mtp1,
-		Root:  proofClaimKOp.Proofs[0].Root,
-		Id:    &ID{},
+		Mtp: proofClaimKOp.Proof.Mtp1,
+		Id:  &ID{},
 	}
-	assert.NotNil(t, proofClaimGenesis.Verify())
+	_, err = proofClaimGenesis.Verify(claimKOp2.Entry())
+	assert.NotNil(t, err)
 
 	// Invalid Claim
 	proofClaimGenesis = ProofClaimGenesis{
-		Claim: NewClaimBasic([50]byte{}, [62]byte{}).Entry(),
-		Mtp:   proofClaimKOp.Proofs[0].Mtp0,
-		Root:  proofClaimKOp.Proofs[0].Root,
-		Id:    &ID{},
+		Mtp: proofClaimKOp.Proof.Mtp0,
+		Id:  &ID{},
 	}
-	assert.NotNil(t, proofClaimGenesis.Verify())
+	_, err = proofClaimGenesis.Verify(NewClaimBasic([50]byte{}, [62]byte{}).Entry())
+	assert.NotNil(t, err)
 }
 
 func TestGetPredicateProof(t *testing.T) {
@@ -166,17 +162,17 @@ func TestGetPredicateProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0, err := NewClaimSetRootKey(id0, rootKey0)
+	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 	oldRoot := mt.RootKey()
 
-	mtp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
+	cp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
 	// id := ID{}
-	verified, err := VerifyProofClaim(nil, mtp)
+	verified, err := cp.Verify(cp.Proof.Root)
 	assert.Nil(t, err)
 	assert.True(t, verified)
 
@@ -208,7 +204,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0, err := NewClaimSetRootKey(id0, rootKey0)
+	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
 	oldRoot := mt.RootKey()
@@ -243,7 +239,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
-	claim0, err := NewClaimSetRootKey(id0, rootKey0)
+	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	err = mt.Add(claim0.Entry())
 	assert.Nil(t, err)
 

@@ -73,6 +73,10 @@ func (id *ID) UnmarshalText(b []byte) error {
 	return err
 }
 
+func (id1 *ID) Equals(id2 *ID) bool {
+	return bytes.Equal(id1[:], id2[:])
+}
+
 // IDFromString returns the ID from a given string
 func IDFromString(s string) (ID, error) {
 	b := base58.Decode(s)

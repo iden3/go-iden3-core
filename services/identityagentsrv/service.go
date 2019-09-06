@@ -17,6 +17,7 @@ import (
 var PREFIX_CLAIMSEMITTED = []byte("claimsemitted")
 var PREFIX_CLAIMSRECEIVED = []byte("claimsreceived")
 var PREFIX_CLAIMSGENESIS = []byte("claimsgenesis")
+var PREFIX_MERKLETREE = []byte("merkletree")
 
 // TODO: Move this to a generic place
 type ServerError struct {
@@ -172,7 +173,6 @@ func (ia *Service) CreateIdentity(claimAuthKOp *merkletree.Entry,
 }
 
 type IdStorage struct {
-	base   db.Storage
 	claims struct {
 		emitted  db.Storage
 		received db.Storage
@@ -192,8 +192,8 @@ func (a *Agent) loadStorage(base db.Storage) error {
 	emittedClaims := base.WithPrefix(PREFIX_CLAIMSEMITTED)
 	receivedClaims := base.WithPrefix(PREFIX_CLAIMSRECEIVED)
 	genesisClaims := base.WithPrefix(PREFIX_CLAIMSGENESIS)
+	mtStorage := base.WithPrefix(PREFIX_MERKLETREE)
 	a.storage = &IdStorage{
-		base: base,
 		claims: struct {
 			emitted  db.Storage
 			received db.Storage
@@ -204,7 +204,7 @@ func (a *Agent) loadStorage(base db.Storage) error {
 			genesis:  genesisClaims,
 		},
 	}
-	mt, err := merkletree.NewMerkleTree(base, 140)
+	mt, err := merkletree.NewMerkleTree(mtStorage, 140)
 	a.mt = mt
 	return err
 }
@@ -335,7 +335,6 @@ func (a *Agent) GetClaimByHi(hi *merkletree.Hash) (*merkletree.Entry, *core.Proo
 		Mtp1: &merkletree.Proof{},
 		// FIXME: There is a data race here!
 		Root: a.mt.RootKey(),
-		Aux:  nil,
 	}
 	return entry, proof, nil
 }
@@ -362,7 +361,7 @@ func (a *Agent) GetCurrentRoot() (*CurrentRoot, error) {
 		return nil, err
 	}
 
-	claim, err := core.NewClaimFromEntry(&merkletree.Entry{Data: *proofClaim.Leaf})
+	claim, err := core.NewClaimFromEntry(proofClaim.Claim)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing proofClaim.leaf: %v", err)
 	}
