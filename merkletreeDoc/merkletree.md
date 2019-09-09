@@ -78,7 +78,7 @@ if err != nil {
 
 ## Generate merkle proof
 
-Now we can generat the merkle proof of this claim:
+Now we can generate the merkle proof of this claim:
 ```go
 mp, err := mt.GenerateProof(claimEntry0.HIndex(), nil)
 if err != nil {
