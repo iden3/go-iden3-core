@@ -26,7 +26,7 @@ func NewClaimBasic(indexSlot [400 / 8]byte, dataSlot [496 / 8]byte) *ClaimBasic 
 // NewClaimBasicFromEntry deserializes a ClaimBasic from an Entry.
 func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
 	c := &ClaimBasic{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	copyFromElemBytes(c.IndexSlot[len(c.IndexSlot)-152/8:], ClaimTypeVersionLen, &e.Data[3])
 	copyFromElemBytes(c.IndexSlot[:248/8], 0, &e.Data[2])
 	copyFromElemBytes(c.DataSlot[248/8:], 0, &e.Data[1])
@@ -37,7 +37,7 @@ func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
 // Entry serializes the claim into an Entry.
 func (c *ClaimBasic) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, c.IndexSlot[len(c.IndexSlot)-152/8:])
 	copyToElemBytes(&e.Data[2], 0, c.IndexSlot[:248/8])
 	copyToElemBytes(&e.Data[1], 0, c.DataSlot[248/8:])

@@ -33,9 +33,9 @@ func copyFromElemBytes(dst []byte, start int, e *merkletree.ElemBytes) {
 	copy(dst, e[merkletree.ElemBytesLen-start-len(dst):])
 }
 
-// setClaimTypeVersion is a helper function to set the type and version of a
+// SetClaimTypeVersion is a helper function to set the type and version of a
 // claim.
-func setClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint32) {
+func SetClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint32) {
 	SetClaimTypeVersionInData(&e.Data, claimType, version)
 }
 
@@ -46,9 +46,9 @@ func SetClaimTypeVersionInData(d *merkletree.Data, claimType ClaimType, version 
 	binary.BigEndian.PutUint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
 }
 
-// getClaimTypeVersion is a helper function to get the type and version from a
+// GetClaimTypeVersion is a helper function to get the type and version from a
 // claim.
-func getClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
+func GetClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
 	return GetClaimTypeVersionFromData(&e.Data)
 }
 
@@ -125,7 +125,7 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Claim, error) {
 			return nil, errors.New("Elements not in the Finite Field over R")
 		}
 	}
-	claimType, _ := getClaimTypeVersion(e)
+	claimType, _ := GetClaimTypeVersion(e)
 	switch claimType {
 	case *ClaimTypeBasic:
 		c := NewClaimBasicFromEntry(e)

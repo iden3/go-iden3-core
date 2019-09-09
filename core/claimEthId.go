@@ -31,7 +31,7 @@ func NewClaimEthId(addr, identityFactory common.Address) *ClaimEthId {
 // NewClaimEthId deserializes a ClaimEthId from an Entry.
 func NewClaimEthIdFromEntry(e *merkletree.Entry) *ClaimEthId {
 	c := &ClaimEthId{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	copyFromElemBytes(c.Address[:], 0, &e.Data[2])
 	copyFromElemBytes(c.IdentityFactory[:], 0, &e.Data[1])
 	return c
@@ -40,7 +40,7 @@ func NewClaimEthIdFromEntry(e *merkletree.Entry) *ClaimEthId {
 // Entry serializes the claim into an Entry.
 func (c *ClaimEthId) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.Address[:])
 	copyToElemBytes(&e.Data[1], 0, c.IdentityFactory[:])
 	return e

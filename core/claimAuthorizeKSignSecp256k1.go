@@ -27,7 +27,7 @@ func NewClaimAuthorizeKSignSecp256k1(pk *ecdsa.PublicKey) *ClaimAuthorizeKSignSe
 // NewClaimAuthorizeKSignSecp256k1FromEntry deserializes a ClaimAuthorizeKSignSecp256k1 from an Entry.
 func NewClaimAuthorizeKSignSecp256k1FromEntry(e *merkletree.Entry) (*ClaimAuthorizeKSignSecp256k1, error) {
 	c := &ClaimAuthorizeKSignSecp256k1{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	var cpk [33]byte
 	copyFromElemBytes(cpk[len(cpk)-2:], ClaimTypeVersionLen, &e.Data[3])
 	copyFromElemBytes(cpk[:len(cpk)-2], 0, &e.Data[2])
@@ -42,7 +42,7 @@ func NewClaimAuthorizeKSignSecp256k1FromEntry(e *merkletree.Entry) (*ClaimAuthor
 // Entry serializes the claim into an Entry.
 func (c *ClaimAuthorizeKSignSecp256k1) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	cpk := crypto.CompressPubkey(c.PubKey)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, cpk[len(cpk)-2:])
 	copyToElemBytes(&e.Data[2], 0, cpk[:len(cpk)-2])

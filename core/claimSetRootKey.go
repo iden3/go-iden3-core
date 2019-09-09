@@ -38,7 +38,7 @@ func NewClaimSetRootKey(id *ID, rootKey *merkletree.Hash) (*ClaimSetRootKey, err
 // NewClaimSetRootKeyFromEntry deserializes a ClaimSetRootKey from an Entry.
 func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 	c := &ClaimSetRootKey{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	var era [32 / 8]byte
 	copyFromElemBytes(era[:], ClaimTypeVersionLen, &e.Data[3])
 	c.Era = binary.BigEndian.Uint32(era[:])
@@ -50,7 +50,7 @@ func NewClaimSetRootKeyFromEntry(e *merkletree.Entry) *ClaimSetRootKey {
 // Entry serializes the claim into an Entry.
 func (c *ClaimSetRootKey) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	var era [32 / 8]byte
 	binary.BigEndian.PutUint32(era[:], c.Era)
 	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, era[:])

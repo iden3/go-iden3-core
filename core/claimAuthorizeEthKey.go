@@ -53,7 +53,7 @@ func NewClaimAuthEthKey(ethKey common.Address, typ EthKeyType) *ClaimAuthEthKey 
 // NewClaimAuthEthKey deserializes a ClaimAuthEthKey from an Entry
 func NewClaimAuthEthKeyFromEntry(e *merkletree.Entry) *ClaimAuthEthKey {
 	c := &ClaimAuthEthKey{}
-	_, c.Version = getClaimTypeVersion(e)
+	_, c.Version = GetClaimTypeVersion(e)
 	copyFromElemBytes(c.EthKey[:], 0, &e.Data[2])
 	var typ [EthKeyTypeLen]byte
 	copyFromElemBytes(typ[:], 20, &e.Data[2])
@@ -64,7 +64,7 @@ func NewClaimAuthEthKeyFromEntry(e *merkletree.Entry) *ClaimAuthEthKey {
 // Entry serializes the claim into an Entry
 func (c *ClaimAuthEthKey) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	setClaimTypeVersion(e, c.Type(), c.Version)
+	SetClaimTypeVersion(e, c.Type(), c.Version)
 	copyToElemBytes(&e.Data[2], 0, c.EthKey[:])
 	var typ [EthKeyTypeLen]byte
 	binary.BigEndian.PutUint32(typ[:], c.EthKeyType)
