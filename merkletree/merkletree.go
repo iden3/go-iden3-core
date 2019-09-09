@@ -202,12 +202,9 @@ type MerkleTree struct {
 	writable bool
 }
 
-var PREFIX_MERKLETREE = []byte("merkletree")
-
 // NewMerkleTree generates a new Merkle Tree
 func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
-	mtSto := storage.WithPrefix(PREFIX_MERKLETREE)
-	mt := MerkleTree{storage: mtSto, maxLevels: maxLevels, writable: true}
+	mt := MerkleTree{storage: storage, maxLevels: maxLevels, writable: true}
 	_, gettedRoot, err := mt.dbGet(rootNodeValue)
 	if err != nil {
 		tx, err := mt.storage.NewTx()
