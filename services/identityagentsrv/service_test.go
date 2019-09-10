@@ -35,7 +35,7 @@ func createIdentityLoadAgent(t *testing.T) (*core.ID, *babyjub.PublicKey, *Agent
 
 	id, _, err := ia.CreateIdentity(claimKOp, nil)
 	require.Nil(t, err)
-	require.Equal(t, "11414rGP5c3hZuHXQ2xWmcxoaxt5y1CdnbppCME2w8", id.String())
+	require.Equal(t, "1Fd82nW1QsL3dUi3749S37AX5yoBpqExAR7EKTAfZ", id.String())
 
 	agent, err := ia.NewAgent(id)
 	require.Nil(t, err)
@@ -95,7 +95,7 @@ func TestNewIdentity(t *testing.T) {
 	id, proofKOp, err := ia.CreateIdentity(claimKOp, []*merkletree.Entry{claimKDis, claimKReen, claimKUpdateRoot})
 	require.Nil(t, err)
 
-	require.Equal(t, "11985UJogKzXzCNvZNrta4Lk8Si6bDRhffmjDby3Ng", id.String())
+	require.Equal(t, "1Lk8epvc8pATva7CSxXEUV74Zoop34JqEN2FaCB77", id.String())
 	proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
 	require.Nil(t, err)
 	require.True(t, proofKOpVerified)
