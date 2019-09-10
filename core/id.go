@@ -14,9 +14,15 @@ import (
 var (
 	// TypeBJM7 specifies the BJ-M7
 	// - first 2 bytes: `00000000 00000000`
-	// - curve of k_op: babyjub
+	// - curve of k_op: babyjubjub
 	// - hash function: `MIMC7`
 	TypeBJM7 = [2]byte{0x00, 0x00}
+
+	// TypeBJP0 specifies the BJ-P0
+	// - first 2 bytes: `00000000 00000001`
+	// - curve of k_op: babyjubjub
+	// - hash function: `Poseidon` v0
+	TypeBJP0 = [2]byte{0x00, 0x01}
 
 	// TypeS2M7 specifies the S2-M7
 	// - first 2 bytes: `00000000 00000100`
@@ -147,7 +153,7 @@ func IdGenesisFromRoot(root *merkletree.Hash) *ID {
 	var idGenesisBytes [27]byte
 	rootBytes := root.Bytes()
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
-	id := NewID(TypeBJM7, idGenesisBytes)
+	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id
 }
 
@@ -184,7 +190,7 @@ func CalculateIdGenesis(claimKOp *merkletree.Entry, extraGenesisClaims []*merkle
 
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
-	id := NewID(TypeBJM7, idGenesisBytes)
+	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id, proofClaimKOp, nil
 }
 
@@ -245,7 +251,7 @@ func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoo
 
 	var idGenesisBytes [27]byte
 	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
-	id := NewID(TypeBJM7, idGenesisBytes)
+	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id, &GenesisProofClaims{
 		KOp:         *proofClaimKOp,
 		KDis:        *proofClaimKDis,
