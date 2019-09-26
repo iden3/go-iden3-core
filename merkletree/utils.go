@@ -79,7 +79,7 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
 	bigints := ElemBytesToBigInts(elems...)
 	// mimcHash, err := mimc7.Hash(bigints, key)
 	if key != nil {
-		bigints = append([]*big.Int{key}, bigints...)
+		bigints = append(bigints, []*big.Int{key}...)
 	}
 	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {

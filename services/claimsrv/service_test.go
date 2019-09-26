@@ -202,7 +202,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 		"0x03000000000000000000000000000000000000000000000000000000000000002d3258815847168fd948039e4c3295028c06300755badb5c7a7a19076e175328021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
 		common3.HexEncode(claimProof.Proof))
 	require.Equal(t,
-		"0x0d1bbddcc8745659d16dcfb7f3db7f6d85a9b1d432c362a65562629f730cc26e",
+		"0x1ba11fb41fcdfff061db7bfb1d89a5e27eca53ea2b7c471bdf69360151dcf4f4",
 		claimProof.Root.Hex())
 
 	proof, err := merkletree.NewProofFromBytes(claimProof.Proof)

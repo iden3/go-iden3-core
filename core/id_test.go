@@ -132,7 +132,7 @@ func TestCalculateIdGenesisFrom4Keys(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1LRyi8qrSSTAnFWjZvbm9xTy2ME9DcRwv4k6GuusA", id.String())
+	assert.Equal(t, "1LzwQet8DMLnYKBz2WgUvL3WDfjbbPrkAmcekMSUP", id.String())
 }
 
 func TestCalculateIdGenesis(t *testing.T) {
@@ -150,5 +150,5 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1Fd82nW1QsL3dUi3749S37AX5yoBpqExAR7EKTAfZ", id.String())
+	assert.Equal(t, "1GURWwRa5YQA8KA2AdmGANhXSpAupfpy2VsHse2QU", id.String())
 }
