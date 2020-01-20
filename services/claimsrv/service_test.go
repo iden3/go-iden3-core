@@ -289,48 +289,6 @@ func TestGetClaimProof(t *testing.T) {
 		panic(err)
 	}
 
-	// DEPRECATED
-
-	// proofClaimUser, err := service.GetClaimProofUserByHi(id, claimBasic.Entry().HIndex())
-	// require.Nil(t, err)
-	// p, err = json.Marshal(proofClaimUser)
-	// if debug {
-	// 	fmt.Printf("\n\tclaim basic claim proof\n\n")
-	// 	fmt.Println(string(p))
-	// }
-
-	// ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
-	// require.Equal(t, ok, true)
-	// require.Nil(t, err)
-
-	// proofClaimUser2, err := service.GetClaimProofUserByHi(id, claimAuthKSign.Entry().HIndex())
-	// require.Nil(t, err)
-	// p, err = json.Marshal(proofClaimUser2)
-	// if debug {
-	// 	fmt.Printf("\n\tclaim authorize ksign secp256k1 claim proof\n\n")
-	// 	fmt.Println("id", id.String())
-	// 	fmt.Println("pk", common3.HexEncode(crypto.CompressPubkey(pk)))
-	// 	fmt.Println(string(p))
-	// }
-
-	// ok, err = core.VerifyProofClaim(relayPk, proofClaimUser2)
-	// require.Equal(t, ok, true)
-	// require.Nil(t, err)
-
-	// ok, err = core.VerifyProofClaim(relayPk, proofClaimUser)
-	// require.Equal(t, ok, true)
-	// require.Nil(t, err)
-
-	// proofClaimUser3, err := service.GetClaimProofUserByHi(id, claimAuthKSignBabyJub.Entry().HIndex())
-	// require.Nil(t, err)
-	// p, err = json.Marshal(proofClaimUser3)
-	// if debug {
-	// 	fmt.Printf("\n\tclaim authorize ksign babyjub claim proof\n\n")
-	// 	fmt.Println("id", id.String())
-	// 	fmt.Println("pk", kSignPk)
-	// 	fmt.Println(string(p))
-	// }
-
 	// ClaimAssignName
 	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	// require.Nil(t, err)
