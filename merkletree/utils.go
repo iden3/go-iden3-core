@@ -98,19 +98,9 @@ func getPath(numLevels int, hIndex *Hash) []bool {
 	return path
 }
 
-// setBit sets the bit n in the bitmap to 1.
-func setBit(bitmap []byte, n uint) {
-	bitmap[n/8] |= 1 << (n % 8)
-}
-
 // setBitBigEndian sets the bit n in the bitmap to 1, in Big Endian.
 func setBitBigEndian(bitmap []byte, n uint) {
 	bitmap[uint(len(bitmap))-n/8-1] |= 1 << (n % 8)
-}
-
-// testBit tests whether the bit n in bitmap is 1.
-func testBit(bitmap []byte, n uint) bool {
-	return bitmap[n/8]&(1<<(n%8)) != 0
 }
 
 // testBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
