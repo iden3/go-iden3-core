@@ -23,14 +23,11 @@ Go Modules documentation:
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/crypto?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/crypto) crypto
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/merkletree?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/merkletree) merkletree
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/utils?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/utils) utils
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/backupsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/backupsrv) services/backupsrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/centrauthsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/centrauthsrv) services/centrauthsrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/claimsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/claimsrv) services/claimsrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/identitysrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/identitysrv) services/identitysrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/mongosrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/mongosrv) services/mongosrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/namesrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/namesrv) services/namesrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/rootsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/rootsrv) services/rootsrv
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/signsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/signsrv) services/signsrv
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/identitysrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/idenadminutils) components/idenadminutils
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/mongosrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/idenmanager) components/idenmanager
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/namesrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/idenstatereader) components/idenstatereader
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/signsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/idensigner) components/idensigner
+- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/services/rootsrv?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/services/idenstatewriter) services/idenstatewriter
 
 ## Testing
 `go test ./...`

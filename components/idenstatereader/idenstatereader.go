@@ -1,4 +1,4 @@
-package ethsrv
+package idenstatereader
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
-type Service interface {
+type IdenStateReader interface {
 	// Smart contract calls
 	GetRoot(id *core.ID) (*core.RootData, error)
 	GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
@@ -24,19 +24,19 @@ type ContractAddresses struct {
 	RootCommits common.Address
 }
 
-type ServiceImpl struct {
+type IdenStateRead struct {
 	client    *eth.Client2
 	addresses ContractAddresses
 }
 
-func New(client *eth.Client2, addresses ContractAddresses) *ServiceImpl {
-	return &ServiceImpl{
+func New(client *eth.Client2, addresses ContractAddresses) *IdenStateRead {
+	return &IdenStateRead{
 		client:    client,
 		addresses: addresses,
 	}
 }
 
-func (s *ServiceImpl) GetRoot(id *core.ID) (*core.RootData, error) {
+func (s *IdenStateRead) GetRoot(id *core.ID) (*core.RootData, error) {
 	var root [32]byte
 	var blockN uint64
 	var blockTS uint64
@@ -55,7 +55,7 @@ func (s *ServiceImpl) GetRoot(id *core.ID) (*core.RootData, error) {
 	}, err
 }
 
-func (s *ServiceImpl) GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
+func (s *IdenStateRead) GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
 	var root [32]byte
 	err := s.client.Call(func(c *ethclient.Client) error {
 		rootcommits, err := contracts.NewRootCommits(s.addresses.RootCommits, c)
@@ -68,7 +68,7 @@ func (s *ServiceImpl) GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Has
 	return merkletree.Hash(root), err
 }
 
-func (s *ServiceImpl) GetRootByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error) {
+func (s *IdenStateRead) GetRootByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error) {
 	var root [32]byte
 	err := s.client.Call(func(c *ethclient.Client) error {
 		rootcommits, err := contracts.NewRootCommits(s.addresses.RootCommits, c)
@@ -81,7 +81,7 @@ func (s *ServiceImpl) GetRootByTime(id *core.ID, blockTimestamp int64) (merkletr
 	return merkletree.Hash(root), err
 }
 
-func (s *ServiceImpl) VerifyProofClaim(pc *core.ProofClaim) (bool, error) {
+func (s *IdenStateRead) VerifyProofClaim(pc *core.ProofClaim) (bool, error) {
 	if ok, err := pc.Verify(pc.Proof.Root); !ok {
 		return false, err
 	}
@@ -106,6 +106,6 @@ func (s *ServiceImpl) VerifyProofClaim(pc *core.ProofClaim) (bool, error) {
 	return true, nil
 }
 
-func (s *ServiceImpl) Client() *eth.Client2 {
+func (s *IdenStateRead) Client() *eth.Client2 {
 	return s.client
 }

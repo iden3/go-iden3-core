@@ -1,4 +1,4 @@
-package rootsrv
+package idenstatewriter
 
 import (
 	"fmt"
@@ -12,13 +12,13 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	// "github.com/iden3/go-iden3-core/eth"
+	"github.com/iden3/go-iden3-core/components/idenstatereader"
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/services/ethsrv"
 	log "github.com/sirupsen/logrus"
 )
 
-type Service interface {
+type IdenStateWriter interface {
 	Start()
 	StopAndJoin()
 	// GetRoot(addr common.Address) (merkletree.Hash, error)
@@ -26,31 +26,31 @@ type Service interface {
 	SetRoot(hash merkletree.Hash)
 }
 
-type ServiceImpl struct {
+type IdenStateWrite struct {
 	lastRoot      merkletree.Hash
 	lastRootMutex sync.RWMutex
 	stopch        chan (interface{})
 	stoppedch     chan (interface{})
 	// rootcommits    *eth.Contract
-	ethsrv.Service
+	idenstatereader.IdenStateReader
 	id             *core.ID
 	kUpdateRootMtp []byte
 	contractAddr   common.Address
 }
 
-func New(ethsrv ethsrv.Service, id *core.ID, kUpdateRootMtp []byte, contractAddr common.Address) *ServiceImpl {
-	return &ServiceImpl{
-		stopch:         make(chan (interface{})),
-		stoppedch:      make(chan (interface{})),
-		lastRoot:       merkletree.Hash{},
-		Service:        ethsrv,
-		id:             id,
-		kUpdateRootMtp: kUpdateRootMtp,
-		contractAddr:   contractAddr,
+func New(idenStateReader idenstatereader.IdenStateReader, id *core.ID, kUpdateRootMtp []byte, contractAddr common.Address) *IdenStateWrite {
+	return &IdenStateWrite{
+		stopch:          make(chan (interface{})),
+		stoppedch:       make(chan (interface{})),
+		lastRoot:        merkletree.Hash{},
+		IdenStateReader: idenStateReader,
+		id:              id,
+		kUpdateRootMtp:  kUpdateRootMtp,
+		contractAddr:    contractAddr,
 	}
 }
 
-func (s *ServiceImpl) Start() {
+func (s *IdenStateWrite) Start() {
 	go func() {
 		lastRoot := s.getLastRoot()
 		log.Info("Starting root publisher")
@@ -77,19 +77,19 @@ func (s *ServiceImpl) Start() {
 	}()
 }
 
-func (s *ServiceImpl) SetRoot(hash merkletree.Hash) {
+func (s *IdenStateWrite) SetRoot(hash merkletree.Hash) {
 	s.lastRootMutex.Lock()
 	s.lastRoot = hash
 	s.lastRootMutex.Unlock()
 }
 
-func (s *ServiceImpl) getLastRoot() (hash merkletree.Hash) {
+func (s *IdenStateWrite) getLastRoot() (hash merkletree.Hash) {
 	s.lastRootMutex.RLock()
 	defer s.lastRootMutex.RUnlock()
 	return s.lastRoot
 }
 
-func (s *ServiceImpl) updateRoot(hash merkletree.Hash) error {
+func (s *IdenStateWrite) updateRoot(hash merkletree.Hash) error {
 	if tx, err := s.Client().CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			rootcommits, err := contracts.NewRootCommits(s.contractAddr, c)
@@ -109,7 +109,7 @@ func (s *ServiceImpl) updateRoot(hash merkletree.Hash) error {
 	return nil
 }
 
-func (s *ServiceImpl) StopAndJoin() {
+func (s *IdenStateWrite) StopAndJoin() {
 	go func() {
 		s.stopch <- nil
 	}()

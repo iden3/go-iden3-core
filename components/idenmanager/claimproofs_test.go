@@ -1,4 +1,4 @@
-package claimsrv
+package idenmanager
 
 import "testing"
 

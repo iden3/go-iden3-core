@@ -1,4 +1,4 @@
-package claimsrv
+package idenmanager
 
 import (
 	"crypto/ecdsa"
@@ -11,28 +11,28 @@ import (
 
 	// "time"
 
-	// "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/components/idensigner"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
-	rootsrvmock "github.com/iden3/go-iden3-core/services/rootsrv/mock"
-	"github.com/iden3/go-iden3-core/services/signsrv"
+	idenstatewritemock "github.com/iden3/go-iden3-core/services/idenstatewriter/mock"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
 	// "github.com/iden3/go-iden3-core/utils"
 	"github.com/ipfsconsortium/go-ipfsc/config"
 	// "github.com/stretchr/testify/assert"
-	// "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 var debug = true
 
-var service *Service
-var rootService *rootsrvmock.RootServiceMock
+var service *IdenManager
+var idenStateWriter *idenstatewritemock.IdenStateWriteMock
 var mt *merkletree.MerkleTree
 var c config.Config
 
@@ -44,33 +44,7 @@ var keyStore *babykeystore.KeyStore
 var relaySk babyjub.PrivateKey
 var relayPkComp *babyjub.PublicKeyComp
 var relayPk *babyjub.PublicKey
-
-// type SignServiceMock struct {
-// 	mock.Mock
-// }
-//
-// func (m *SignServiceMock) SignEthMsg(msg []byte) (*utils.SignatureEthMsg, error) {
-// 	h := utils.EthHash(msg)
-// 	sig, err := crypto.Sign(h[:], relaySecKey)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	sig[64] += 27
-// 	sigEthMsg := &utils.SignatureEthMsg{}
-// 	copy(sigEthMsg[:], sig)
-// 	return sigEthMsg, nil
-// }
-//
-// func (m *SignServiceMock) SignEthMsgDate(msg []byte) (*utils.SignatureEthMsg, int64, error) {
-// 	dateInt64 := time.Now().Unix()
-// 	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
-// 	sig, err := m.SignEthMsg(append(msg, dateBytes...))
-// 	return sig, dateInt64, err
-// }
-//
-// func (m *SignServiceMock) PublicKey() *ecdsa.PublicKey {
-// 	return relayPubKey
-// }
+var relayId core.ID
 
 var rmDirs []string
 
@@ -128,14 +102,14 @@ func initializeEnvironment(t *testing.T) {
 		panic(err)
 	}
 
-	signSrv := signsrv.New(keyStore, *relayPk)
+	signer := idensigner.New(keyStore, *relayPk)
 
 	relayID, err = core.IDFromString(relayIdHex)
 	if err != nil {
 		panic(err)
 	}
-	rootService = rootsrvmock.New()
-	service = New(&relayID, mt, rootService, *signSrv)
+	idenStateWriter = idenstatewritemock.New()
+	service = New(&relayID, mt, idenStateWriter, *signer)
 }
 
 func TestGetNextVersion(t *testing.T) {
@@ -273,7 +247,7 @@ func TestGetClaimProof(t *testing.T) {
 	err = mt.Add(setRootClaim.Entry())
 	require.Nil(t, err)
 
-	rootService.On("GetRoot", &relayID).Return(
+	idenStateWriter.On("GetRoot", &relayID).Return(
 		&core.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
 	proofClaim, err := service.GetClaimProofByHiBlockchain(setRootClaim.Entry().HIndex())
 	require.Nil(t, err)
@@ -297,7 +271,7 @@ func TestGetClaimProof(t *testing.T) {
 	err = mt.Add(claimAssignName.Entry())
 	require.Nil(t, err)
 	fmt.Printf("> A %+v\n", mt.RootKey().String())
-	rootService.On("GetRoot", &relayID).Return(
+	idenStateWriter.On("GetRoot", &relayID).Return(
 		&core.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
 	fmt.Printf("> R %+v\n", mt.RootKey().String())
 	proofClaimAssignName, err := service.GetClaimProofByHiBlockchain(claimAssignName.Entry().HIndex())
@@ -361,6 +335,108 @@ func TestGetClaimProof(t *testing.T) {
 	//require.Nil(t, err)
 	//verified = merkletree.VerifyProof(&setRootClaimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
 	//require.True(t, verified)
+}
+
+func initializeIdService(t *testing.T) *IdenManager {
+	relayId, err := core.IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+	if err != nil {
+		t.Error(err)
+	}
+
+	// MerkleTree leveldb
+	mt, err := newTestingMerkle(140)
+	if err != nil {
+		t.Error(err)
+	}
+	// sto := db.NewMemoryStorage()
+	idenStateWriteMock := idenstatewritemock.New()
+	idenStateWriteMock.On("SetRoot", mock.Anything).Return()
+
+	pass := []byte("my passphrase")
+	storage := babykeystore.MemStorage([]byte{})
+	keyStore, err := babykeystore.NewKeyStore(&storage, babykeystore.LightKeyStoreParams)
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := hex.Decode(relaySk[:], []byte(relaySkHex)); err != nil {
+		panic(err)
+	}
+	if relayPkComp, err = keyStore.ImportKey(relaySk, pass); err != nil {
+		panic(err)
+	}
+	if err := keyStore.UnlockKey(relayPkComp, pass); err != nil {
+		panic(err)
+	}
+	if relayPk, err = relayPkComp.Decompress(); err != nil {
+		panic(err)
+	}
+
+	signer := idensigner.New(keyStore, *relayPk)
+
+	return New(&relayId, mt, idenStateWriteMock, *signer)
+}
+
+func TestCreateIdGenesisRandomLoop(t *testing.T) {
+	idsrv := initializeIdService(t)
+
+	// turn this to 'true' to compute this test. Currently disabled as needs more than 100s to compute
+	if false {
+		for i := 0; i < 1024; i++ {
+			kOpSk := babyjub.NewRandPrivKey()
+			kop := kOpSk.Public()
+			if debug {
+				fmt.Println("kop", kop)
+			}
+			kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+			kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+			kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+			id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen, kUpdateRoot)
+			require.Nil(t, err)
+
+			id2, _, err := core.CalculateIdGenesisFrom4Keys(kop, kDis, kReen, kUpdateRoot)
+			require.Nil(t, err)
+			require.Equal(t, id, id2)
+
+			proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
+			require.Nil(t, err)
+			require.True(t, proofKOpVerified)
+		}
+	}
+}
+
+func TestCreateIdGenesisHardcoded(t *testing.T) {
+	idsrv := initializeIdService(t)
+
+	kopStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	// krecStr := "0x03f9737be33b5829e3da80160464b2891277dae7d7c23609f9bb34bd4ede397bbf"
+	// krevStr := "0x02d2da59d3022b4c1589e4910baa6cbaddd01f95ed198fdc3068d9dc1fb784a9a4"
+
+	var kopComp babyjub.PublicKeyComp
+	err := kopComp.UnmarshalText([]byte(kopStr))
+	require.Nil(t, err)
+	kopPub, err := kopComp.Decompress()
+	require.Nil(t, err)
+	kDis := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kReen := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	kUpdateRoot := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+
+	id, proofKOp, err := idsrv.CreateIdGenesis(kopPub, kDis, kReen, kUpdateRoot)
+	require.Nil(t, err)
+	if debug {
+		fmt.Println("id", id)
+		fmt.Println("id (hex)", id.String())
+	}
+	require.Equal(t, "1FJS9Bb6LE5GFpnNAyuS657jmpdjSc1MVHts54FUP", id.String())
+
+	id2, _, err := core.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
+	require.Nil(t, err)
+	require.Equal(t, id, id2)
+
+	proofKOpVerified, err := proofKOp.Verify(proofKOp.Proof.Root)
+	require.Nil(t, err)
+	require.True(t, proofKOpVerified)
 }
 
 func TestMain(m *testing.M) {
