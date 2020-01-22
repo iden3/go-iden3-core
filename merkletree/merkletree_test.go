@@ -61,7 +61,7 @@ func TestAddEntry1(t *testing.T) {
 	defer mt.Storage().Close()
 
 	e := NewEntryFromInts(12, 45, 78, 41)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t,
@@ -74,11 +74,11 @@ func TestAddEntry2(t *testing.T) {
 	defer mt.Storage().Close()
 
 	e := NewEntryFromInts(12, 45, 78, 41)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 	e = NewEntryFromInts(33, 44, 55, 66)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t,
@@ -91,7 +91,7 @@ func TestAddEntry16(t *testing.T) {
 	defer mt1.Storage().Close()
 	for i := 0; i < 16; i++ {
 		e := NewEntryFromInts(0, int64(i), 0, int64(i))
-		if err := mt1.Add(&e); err != nil {
+		if err := mt1.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -100,7 +100,7 @@ func TestAddEntry16(t *testing.T) {
 	defer mt2.Storage().Close()
 	for i := 16 - 1; i >= 0; i-- {
 		e := NewEntryFromInts(0, int64(i), 0, int64(i))
-		if err := mt2.Add(&e); err != nil {
+		if err := mt2.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -115,11 +115,11 @@ func TestAddEntryRepeatIndex(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 	e0 := NewEntryFromInts(0, 12, 0, 3)
-	if err := mt.Add(&e0); err != nil {
+	if err := mt.AddEntry(&e0); err != nil {
 		t.Fatal(err)
 	}
 	e1 := NewEntryFromInts(0, 45, 0, 3)
-	err := mt.Add(&e1)
+	err := mt.AddEntry(&e1)
 	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
 }
 
@@ -140,11 +140,11 @@ func TestGetEntry2(t *testing.T) {
 	defer mt.Storage().Close()
 
 	e := NewEntryFromInts(12, 45, 78, 41)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 	e = NewEntryFromInts(33, 44, 55, 66)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 
@@ -162,7 +162,7 @@ func TestGenerateProof1(t *testing.T) {
 	defer mt.Storage().Close()
 
 	e := NewEntryFromInts(0, int64(42), 0, 0)
-	if err := mt.Add(&e); err != nil {
+	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 
@@ -181,7 +181,7 @@ func TestGenerateProof4(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -213,7 +213,7 @@ func TestGenerateProof64(t *testing.T) {
 
 	for i := 0; i < 64; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -250,7 +250,7 @@ func TestVerifyProof1(t *testing.T) {
 
 	for i := 0; i < 64; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -282,7 +282,7 @@ func TestVerifyProofEmpty(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -312,7 +312,7 @@ func TestVerifyProofCases(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -386,7 +386,7 @@ func TestVerifyProofFalse(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -421,7 +421,7 @@ func TestProofFromBytesSmall(t *testing.T) {
 	defer mt.Storage().Close()
 
 	e0 := NewEntryFromInts(0, 0, 0, 0)
-	if err := mt.Add(&e0); err != nil {
+	if err := mt.AddEntry(&e0); err != nil {
 		t.Fatal(err)
 	}
 
@@ -451,7 +451,7 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	for i := 0; i < 16; i++ {
 		e := NewEntryFromInts(0, int64(i), 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -494,7 +494,7 @@ func BenchmarkAddEntry(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			b.Fatal(err)
 		}
 	}
@@ -540,7 +540,7 @@ func TestMerkleTreeRootStored(t *testing.T) {
 	assert.Nil(t, err)
 
 	e := NewEntryFromInts(12, 45, 78, 41)
-	err = userMT.Add(&e)
+	err = userMT.AddEntry(&e)
 	assert.Nil(t, err)
 
 	// reopen the MerkleTree of the user
@@ -577,7 +577,7 @@ func TestMTWalk(t *testing.T) {
 
 	for i := 0; i < 16; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -600,7 +600,7 @@ func TestMTWalkGraphViz(t *testing.T) {
 
 	for i := 0; i < 16; i++ {
 		e := NewEntryFromInts(0, 0, 0, int64(i))
-		if err := mt.Add(&e); err != nil {
+		if err := mt.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -641,7 +641,7 @@ func TestMTWalkDumpClaims(t *testing.T) {
 		copy(dataSlot[:], rawData[:496/8])
 		e := newClaimBasicEntry(indexSlot, dataSlot)
 
-		if err := mt.Add(e); err != nil {
+		if err := mt.AddEntry(e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -695,7 +695,7 @@ func TestMTWalkDumpClaimsAndImportDumpedClaims(t *testing.T) {
 		copy(dataSlot[:], rawData[:496/8])
 		e := newClaimBasicEntry(indexSlot, dataSlot)
 
-		if err := mt.Add(e); err != nil {
+		if err := mt.AddEntry(e); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -720,11 +720,11 @@ func TestAddRepeatedClaim(t *testing.T) {
 
 	e := NewEntryFromInts(12, 45, 78, 41)
 
-	err := mt.Add(&e)
+	err := mt.AddEntry(&e)
 	assert.Nil(t, err)
-	err = mt.Add(&e)
+	err = mt.AddEntry(&e)
 	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
-	err = mt.Add(&e)
+	err = mt.AddEntry(&e)
 	assert.Equal(t, err, ErrEntryIndexAlreadyExists)
 
 	assert.Equal(t,
@@ -742,7 +742,7 @@ func TestAddBigIntEntries(t *testing.T) {
 		"0x0000000000000000000000000000000000004d59000000000000000000000004")
 	assert.Nil(t, err)
 
-	err = mt.Add(&e)
+	err = mt.AddEntry(&e)
 	assert.Nil(t, err)
 
 	assert.Equal(t,

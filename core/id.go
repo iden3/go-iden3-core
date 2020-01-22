@@ -162,20 +162,20 @@ func IdGenesisFromRoot(root *merkletree.Hash) *ID {
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is MIMC7
-func CalculateIdGenesis(claimKOp *merkletree.Entry, extraGenesisClaims []*merkletree.Entry) (*ID, *ProofClaim, error) {
+func CalculateIdGenesis(claimKOp merkletree.Entrier, extraGenesisClaims []*merkletree.Entry) (*ID, *ProofClaim, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = mt.Add(claimKOp)
+	err = mt.AddClaim(claimKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, claim := range extraGenesisClaims {
-		err = mt.Add(claim)
+		err = mt.AddEntry(claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -183,7 +183,7 @@ func CalculateIdGenesis(claimKOp *merkletree.Entry, extraGenesisClaims []*merkle
 
 	idGenesis := mt.RootKey()
 
-	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.HIndex())
+	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -209,23 +209,23 @@ func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoo
 	}
 
 	claimKOp := NewClaimAuthorizeKSignBabyJub(kop)
-	err = mt.Add(claimKOp.Entry())
+	err = mt.AddClaim(claimKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	claimKDis := NewClaimAuthEthKey(kdis, EthKeyTypeDisable)
-	err = mt.Add(claimKDis.Entry())
+	err = mt.AddClaim(claimKDis)
 	if err != nil {
 		return nil, nil, err
 	}
 	claimKReen := NewClaimAuthEthKey(kreen, EthKeyTypeReenable)
-	err = mt.Add(claimKReen.Entry())
+	err = mt.AddClaim(claimKReen)
 	if err != nil {
 		return nil, nil, err
 	}
 	claimKUpdateRoot := NewClaimAuthEthKey(kupdateRoot, EthKeyTypeUpdateRoot)
-	err = mt.Add(claimKUpdateRoot.Entry())
+	err = mt.AddClaim(claimKUpdateRoot)
 	if err != nil {
 		return nil, nil, err
 	}

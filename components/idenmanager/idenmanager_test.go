@@ -129,25 +129,25 @@ func TestGetNextVersion(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, uint32(0), version)
 	claim.Version = version
-	mt.Add(claim.Entry())
+	mt.AddClaim(claim)
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(1), version)
 
 	claim.Version = version
-	mt.Add(claim.Entry())
+	mt.AddClaim(claim)
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(2), version)
 
 	claim.Version = version
-	mt.Add(claim.Entry())
+	mt.AddClaim(claim)
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(3), version)
 
 	claim.Version = version
-	mt.Add(claim.Entry())
+	mt.AddClaim(claim)
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(4), version)
@@ -163,7 +163,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 	copy(dataSlot[:], data[:])
 	claim := core.NewClaimBasic(indexSlot, dataSlot)
 
-	err := mt.Add(claim.Entry())
+	err := mt.AddClaim(claim)
 	require.Nil(t, err)
 	version, err := GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
@@ -228,15 +228,15 @@ func TestGetClaimProof(t *testing.T) {
 	require.Nil(t, err)
 
 	// add claimBasic in User ID Merkle Tree
-	err = userMT.Add(claimBasic.Entry())
+	err = userMT.AddClaim(claimBasic)
 	require.Nil(t, err)
 
 	// add claimAuthKSign in User ID Merkle Tree
-	err = userMT.Add(claimAuthKSign.Entry())
+	err = userMT.AddClaim(claimAuthKSign)
 	require.Nil(t, err)
 
 	// add claimAuthKSignBabyJub in User ID Merkle Tree
-	err = userMT.Add(claimAuthKSignBabyJub.Entry())
+	err = userMT.AddClaim(claimAuthKSignBabyJub)
 	require.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
@@ -244,7 +244,7 @@ func TestGetClaimProof(t *testing.T) {
 	require.Nil(t, err)
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
-	err = mt.Add(setRootClaim.Entry())
+	err = mt.AddClaim(setRootClaim)
 	require.Nil(t, err)
 
 	idenStateWriter.On("GetRoot", &relayID).Return(
@@ -268,7 +268,7 @@ func TestGetClaimProof(t *testing.T) {
 	// require.Nil(t, err)
 	claimAssignName := core.NewClaimAssignName("testName@iden3.eth", id)
 	// add assignNameClaim in User ID Merkle Tree
-	err = mt.Add(claimAssignName.Entry())
+	err = mt.AddClaim(claimAssignName)
 	require.Nil(t, err)
 	fmt.Printf("> A %+v\n", mt.RootKey().String())
 	idenStateWriter.On("GetRoot", &relayID).Return(

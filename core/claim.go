@@ -117,7 +117,7 @@ const ClaimVersionLen = 32 / 8
 const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
 
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
-func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Claim, error) {
+func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	for _, elemBytes := range e.Data {
 		bigints := merkletree.ElemBytesToBigInt(elemBytes)
 		ok := cryptoUtils.CheckBigIntInField(bigints, cryptoConstants.Q)

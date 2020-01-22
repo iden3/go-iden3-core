@@ -7,18 +7,18 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
-type AuxClaim struct {
+type ClaimGeneric struct {
 	entry *merkletree.Entry
 }
 
-func (a AuxClaim) Entry() *merkletree.Entry {
+func (a ClaimGeneric) Entry() *merkletree.Entry {
 	return a.entry
 }
 
-func HexToClaim(h string) (merkletree.Claim, error) {
+func HexToClaimGeneric(h string) (ClaimGeneric, error) {
 	bytesValue, err := common3.HexDecode(h)
 	if err != nil {
-		return AuxClaim{}, err
+		return ClaimGeneric{}, err
 	}
 	var dataBytes [128]byte
 	copy(dataBytes[:], bytesValue)
@@ -26,16 +26,16 @@ func HexToClaim(h string) (merkletree.Claim, error) {
 	entry := merkletree.Entry{
 		Data: *data,
 	}
-	claim := AuxClaim{
+	entrier := ClaimGeneric{
 		entry: &entry,
 	}
-	return claim, nil
+	return entrier, nil
 }
 
-func HexArrayToClaimArray(arrH []string) ([]merkletree.Claim, error) {
-	var claims []merkletree.Claim
+func HexArrayToClaimGenericArray(arrH []string) ([]ClaimGeneric, error) {
+	var claims []ClaimGeneric
 	for _, h := range arrH {
-		claim, err := HexToClaim(h)
+		claim, err := HexToClaimGeneric(h)
 		if err != nil {
 			return claims, err
 		}
@@ -44,12 +44,12 @@ func HexArrayToClaimArray(arrH []string) ([]merkletree.Claim, error) {
 	return claims, nil
 }
 
-func ClaimToHex(c merkletree.Claim) string {
+func ClaimToHex(c merkletree.Entrier) string {
 	h := hex.EncodeToString(c.Entry().Bytes())
 	return h
 }
 
-func ClaimArrayToHexArray(claims []merkletree.Claim) []string {
+func ClaimArrayToHexArray(claims []merkletree.Entrier) []string {
 	var hexs []string
 	for _, c := range claims {
 		h := ClaimToHex(c)
@@ -59,9 +59,10 @@ func ClaimArrayToHexArray(claims []merkletree.Claim) []string {
 }
 
 type ClaimObj struct {
-	Claim merkletree.Claim
+	Claim merkletree.Entrier
 	Proof ProofClaimPartial // TODO once the RootUpdater is ready we can use here the proof part of the Relay (or direct from blockchain)
 }
+
 type ClaimObjHex struct {
 	Claim string
 	Proof ProofClaimPartial

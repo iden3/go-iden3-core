@@ -2,6 +2,8 @@ package merkletree
 
 import (
 	"encoding/hex"
+	"fmt"
+
 	// "encoding/json"
 	// "fmt"
 	"bytes"
@@ -124,6 +126,7 @@ func HexDecode(h string) ([]byte, error) {
 	}
 	return hex.DecodeString(h)
 }
+
 func NewEntryFromHexs(a, b, c, d string) (e Entry, err error) {
 	e.Data, err = HexsToData(a, b, c, d)
 	if err != nil {
@@ -131,6 +134,7 @@ func NewEntryFromHexs(a, b, c, d string) (e Entry, err error) {
 	}
 	return e, nil
 }
+
 func HexsToData(_a, _b, _c, _d string) (Data, error) {
 	aBytes, err := HexDecode(_a)
 	if err != nil {
@@ -157,6 +161,23 @@ func HexsToData(_a, _b, _c, _d string) (Data, error) {
 	d := new(big.Int).SetBytes(dBytes)
 
 	return BigIntsToData(a, b, c, d), nil
+}
+
+func NewDataFromBytes(b [ElemBytesLen * DataLen]byte) *Data {
+	d := &Data{}
+	for i := 0; i < DataLen; i++ {
+		copy(d[i][:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
+	}
+	return d
+}
+
+func NewEntryFromBytes(b []byte) (*Entry, error) {
+	if len(b) != ElemBytesLen*DataLen {
+		return nil, fmt.Errorf("Invalid length for Entry Data")
+	}
+	var data [ElemBytesLen * DataLen]byte
+	copy(data[:], b)
+	return &Entry{Data: *NewDataFromBytes(data)}, nil
 }
 
 func NewEntryFromInts(a, b, c, d int64) (e Entry) {
