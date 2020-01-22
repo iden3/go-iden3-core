@@ -102,7 +102,7 @@ func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq SetRoot0Req) (*
 	claimSetRootKey.Version = version
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
-	if err = m.mt.Add(claimSetRootKey.Entry()); err != nil {
+	if err = m.mt.AddClaim(claimSetRootKey); err != nil {
 		return nil, err
 	}
 
@@ -162,8 +162,7 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 	claimSetRootKey.Version = version
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
-	e := claimSetRootKey.Entry()
-	err = m.mt.Add(e)
+	err = m.mt.AddClaim(claimSetRootKey)
 	if err != nil {
 		return &core.ClaimSetRootKey{}, err
 	}
@@ -190,7 +189,7 @@ func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	}
 
 	// add ClaimAuthorizeKSign into the User's Id Merkle Tree
-	err = userMT.Add(claimAuthorizeKSignSecp256k1.Entry())
+	err = userMT.AddClaim(&claimAuthorizeKSignSecp256k1)
 	if err != nil {
 		return err
 	}
@@ -209,7 +208,7 @@ func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	claimSetRootKey.Version = version
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
-	err = m.mt.Add(claimSetRootKey.Entry())
+	err = m.mt.AddClaim(claimSetRootKey)
 	if err != nil {
 		return err
 	}
@@ -243,7 +242,7 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg ClaimValueMsg) e
 	}
 
 	// add claim in User Id Merkle Tree
-	err = userMT.Add(&claimValueMsg.ClaimValue)
+	err = userMT.AddEntry(&claimValueMsg.ClaimValue)
 	if err != nil {
 		return err
 	}
@@ -261,7 +260,7 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg ClaimValueMsg) e
 	claimSetRootKey.Version = version
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
-	err = m.mt.Add(claimSetRootKey.Entry())
+	err = m.mt.AddClaim(claimSetRootKey)
 	if err != nil {
 		return err
 	}
@@ -273,8 +272,8 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg ClaimValueMsg) e
 }
 
 // AddClaim adds a claim directly to the Relay merkletree
-func (m *IdenManager) AddClaim(claim merkletree.Claim) error {
-	err := m.mt.Add(claim.Entry())
+func (m *IdenManager) AddClaim(claim merkletree.Entrier) error {
+	err := m.mt.AddClaim(claim)
 	if err != nil {
 		return err
 	}
@@ -469,7 +468,7 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 	proofClaimsList := []core.ProofClaim{proofClaims.KOp, proofClaims.KDis,
 		proofClaims.KReen, proofClaims.KUpdateRoot}
 	for _, proofClaim := range proofClaimsList {
-		err = userMT.Add(proofClaim.Claim)
+		err = userMT.AddEntry(proofClaim.Claim)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -482,7 +481,7 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 	}
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
-	err = m.MT().Add(claimSetRootKey.Entry())
+	err = m.MT().AddClaim(claimSetRootKey)
 	if err != nil {
 		return nil, nil, err
 	}

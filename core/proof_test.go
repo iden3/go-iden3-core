@@ -35,7 +35,7 @@ func TestProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
-	err = mt.Add(claim0.Entry())
+	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 
 	id1, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
@@ -47,7 +47,7 @@ func TestProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b})
 	claim1, err := NewClaimSetRootKey(&id1, &rootKey1)
 	assert.Nil(t, err)
-	err = mt.Add(claim1.Entry())
+	err = mt.AddClaim(claim1)
 	assert.Nil(t, err)
 
 	cp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
@@ -84,15 +84,15 @@ func TestClaimProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
 
-	claim1 := NewEntryFromInts(33, 44, 55, 66)
-	claim2 := NewEntryFromInts(1111, 2222, 3333, 4444)
-	claim3 := NewEntryFromInts(5555, 6666, 7777, 8888)
+	entry1 := NewEntryFromInts(33, 44, 55, 66)
+	entry2 := NewEntryFromInts(1111, 2222, 3333, 4444)
+	entry3 := NewEntryFromInts(5555, 6666, 7777, 8888)
 
-	mt.Add(&claim1)
-	mt.Add(&claim2)
-	mt.Add(&claim3)
+	mt.AddEntry(&entry1)
+	mt.AddEntry(&entry2)
+	mt.AddEntry(&entry3)
 
-	mtp, err := GetClaimProofByHi(mt, claim1.HIndex())
+	mtp, err := GetClaimProofByHi(mt, entry1.HIndex())
 	assert.Nil(t, err)
 
 	fmt.Println("mtp", mtp.Claim,
@@ -106,7 +106,7 @@ func TestProofClaimGenesis(t *testing.T) {
 	err := kOp.UnmarshalText([]byte(kOpStr))
 	assert.Nil(t, err)
 
-	claimKOp := NewClaimAuthorizeKSignBabyJub(&kOp).Entry()
+	claimKOp := NewClaimAuthorizeKSignBabyJub(&kOp)
 
 	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []*merkletree.Entry{})
 	assert.Nil(t, err)
@@ -115,7 +115,7 @@ func TestProofClaimGenesis(t *testing.T) {
 		Mtp: proofClaimKOp.Proof.Mtp0,
 		Id:  id,
 	}
-	_, err = proofClaimGenesis.Verify(claimKOp)
+	_, err = proofClaimGenesis.Verify(claimKOp.Entry())
 	assert.Nil(t, err)
 
 	// Invalid Id
@@ -123,7 +123,7 @@ func TestProofClaimGenesis(t *testing.T) {
 		Mtp: proofClaimKOp.Proof.Mtp0,
 		Id:  &ID{},
 	}
-	_, err = proofClaimGenesis.Verify(claimKOp)
+	_, err = proofClaimGenesis.Verify(claimKOp.Entry())
 	assert.NotNil(t, err)
 
 	// Invalid Mtp of non-existence
@@ -164,7 +164,7 @@ func TestGetPredicateProof(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
-	err = mt.Add(claim0.Entry())
+	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 	oldRoot := mt.RootKey()
 
@@ -208,7 +208,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	assert.Nil(t, err)
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
 	oldRoot := mt.RootKey()
-	err = mt.Add(claim0.Entry())
+	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 
 	predicateProof, err := GetPredicateProof(mt, oldRoot, claim0.Entry().HIndex())
@@ -240,7 +240,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
 		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
-	err = mt.Add(claim0.Entry())
+	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 
 	// add the same claim, but with version 1
@@ -250,7 +250,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
-	err = mt.Add(claim1.Entry())
+	err = mt.AddClaim(claim1)
 	assert.Nil(t, err)
 	// add the same claim, but with version 2
 	claim2 := &ClaimSetRootKey{
@@ -259,7 +259,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
-	err = mt.Add(claim2.Entry())
+	err = mt.AddClaim(claim2)
 	assert.Nil(t, err)
 
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
@@ -272,7 +272,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 		Id:      claim0.Id,
 		RootKey: claim0.RootKey,
 	}
-	err = mt.Add(claim3.Entry())
+	err = mt.AddClaim(claim3)
 	assert.Nil(t, err)
 
 	// expect error, as we are trying to generate a proof of a claim which one the next version

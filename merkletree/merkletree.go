@@ -75,14 +75,6 @@ func (d *Data) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func NewDataFromBytes(b [ElemBytesLen * DataLen]byte) *Data {
-	d := &Data{}
-	for i := 0; i < DataLen; i++ {
-		copy(d[i][:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
-	}
-	return d
-}
-
 const (
 	// ElemBytesLen is the length in bytes of each element used for storing
 	// data and hashing.
@@ -137,17 +129,8 @@ type Entry struct {
 	hValue *Hash
 }
 
-type Claim interface {
+type Entrier interface {
 	Entry() *Entry
-}
-
-func NewEntryFromBytes(b []byte) (*Entry, error) {
-	if len(b) != ElemBytesLen*DataLen {
-		return nil, fmt.Errorf("Invalid length for Entry Data")
-	}
-	var data [ElemBytesLen * DataLen]byte
-	copy(data[:], b)
-	return &Entry{Data: *NewDataFromBytes(data)}, nil
 }
 
 // HIndex calculates the hash of the Index of the entry, used to find the path
@@ -367,8 +350,13 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 	}
 }
 
-// Add adds the Entry to the MerkleTree
-func (mt *MerkleTree) Add(e *Entry) error {
+// AddClaim adds the Claim that fullfills the Entrier interface to the MerkleTree
+func (mt *MerkleTree) AddClaim(e Entrier) error {
+	return mt.AddEntry(e.Entry())
+}
+
+// AddEntry adds the Entry to the MerkleTree
+func (mt *MerkleTree) AddEntry(e *Entry) error {
 	// verify that the MerkleTree is writable
 	if !mt.writable {
 		return ErrNotWritable
@@ -497,7 +485,7 @@ func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 			return err
 		}
 
-		err = mt.Add(&e)
+		err = mt.AddEntry(&e)
 		if err != nil {
 			return err
 		}

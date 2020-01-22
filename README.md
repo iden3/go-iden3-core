@@ -10,9 +10,6 @@ Go implementation of the iden3 system.
 $ go get github.com/iden3/go-iden3-core
 ```
 
-## Usage
-- MerkleTree Documentation: https://github.com/iden3/go-iden3-core/blob/master/merkletreeDoc/merkletree.md
-
 ## Documentation
 
 Go Modules documentation:
