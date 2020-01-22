@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/iden3/go-iden3-core/components/idenmanager/messages"
 	"github.com/iden3/go-iden3-core/components/idensigner"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
@@ -50,7 +51,7 @@ func (m *IdenManager) IdenStateWriter() idenstatewriter.IdenStateWriter {
 // 2. Parse ProofClaimAuthKOp.Claim to get kOp
 // 3. Verify that sig(kOp, oldRoot+newRoot) == signature
 // 4. Verify ProofClaimAuthKOp
-func CheckSetRootParams(id *core.ID, setRootReq SetRoot0Req) (bool, error) {
+func CheckSetRootParams(id *core.ID, setRootReq messages.SetRoot0Req) (bool, error) {
 
 	//// 1. Check that id and ProofClaimAuthKOp.Id match
 	if !id.Equal(setRootReq.ProofClaimAuthKOp.Id) {
@@ -82,7 +83,7 @@ func CheckSetRootParams(id *core.ID, setRootReq SetRoot0Req) (bool, error) {
 	return true, nil
 }
 
-func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq SetRoot0Req) (*core.ClaimSetRootKey, error) {
+func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoot0Req) (*core.ClaimSetRootKey, error) {
 	ok, err := CheckSetRootParams(id, setRootReq)
 	if err != nil || !ok {
 		return nil, fmt.Errorf("SetRoot params verification not passed, " + err.Error())
@@ -220,7 +221,7 @@ func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 }
 
 // AddUserIdClaim adds a claim into the Id's merkle tree, and with the Id's root, creates a new ClaimSetRootKey and adds it to the Relay's merkletree
-func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg ClaimValueMsg) error {
+func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg messages.ClaimValueReq) error {
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := m.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
@@ -332,7 +333,7 @@ func (m *IdenManager) GetSetRootClaim(id *core.ID) (*core.ProofClaim, error) {
 
 // TODO: Remove this
 // GetClaimProofUserByHiOld given a Hash(index) (Hi) and an Id, returns the Claim in that Hi position inside the Id's merkletree, and the ClaimSetRootKey with the Id's root in the Relay's merkletree
-func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash) (*ProofClaimUser, error) {
+func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash) (*messages.ProofClaimUserRes, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := m.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
@@ -365,7 +366,7 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 	}
 
 	leafBytes := leafData.Bytes()
-	claimProof := ProofTreeLeaf{
+	claimProof := messages.ProofTreeLeaf{
 		Leaf:  leafBytes[:],
 		Proof: idProof.Bytes(),
 		Root:  *userMT.RootKey(),
@@ -387,7 +388,7 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 	if err != nil {
 		return nil, err
 	}
-	claimSetRootKeyProof := ProofTreeLeaf{
+	claimSetRootKeyProof := messages.ProofTreeLeaf{
 		Leaf:  claimSetRootKey.Entry().Bytes(),
 		Proof: relayProof.Bytes(),
 		Root:  *m.mt.RootKey(),
@@ -409,13 +410,13 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 		return nil, err
 	}
 
-	proofClaim := ProofClaimUser{
-		claimProof,
-		claimNonRevocationProof,
-		claimSetRootKeyProof,
-		claimSetRootKeyNonRevocationProof,
-		date,
-		sig[:],
+	proofClaim := messages.ProofClaimUserRes{
+		ClaimProof:                     claimProof,
+		SetRootClaimProof:              *claimNonRevocationProof,
+		ClaimNonRevocationProof:        claimSetRootKeyProof,
+		SetRootClaimNonRevocationProof: *claimSetRootKeyNonRevocationProof,
+		Date:                           date,
+		Signature:                      sig[:],
 	}
 	return &proofClaim, nil
 }
@@ -493,19 +494,19 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 }
 
 // getNonRevocationProof returns the next version Hi (that don't exist in the tree, it's value is Empty) with merkleproof and root
-func getNonRevocationProof(mt *merkletree.MerkleTree, hi *merkletree.Hash) (ProofTreeLeaf, error) {
+func getNonRevocationProof(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*messages.ProofTreeLeaf, error) {
 	// var value merkletree.Value
 
 	// get claim value in bytes
 	leafData, err := mt.GetDataByIndex(hi)
 	if err != nil {
-		return ProofTreeLeaf{}, err
+		return nil, err
 	}
 
 	claimType, _ := core.GetClaimTypeVersionFromData(leafData)
 	nextVersion, err := GetNextVersion(mt, hi)
 	if err != nil {
-		return ProofTreeLeaf{}, err
+		return nil, err
 	}
 
 	core.SetClaimTypeVersionInData(leafData, claimType, nextVersion)
@@ -515,15 +516,15 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi *merkletree.Hash) (Proo
 	}
 	mp, err := mt.GenerateProof(entry.HIndex(), nil)
 	if err != nil {
-		return ProofTreeLeaf{}, err
+		return nil, err
 	}
 	leafBytes := entry.Bytes()
-	nonRevocationProof := ProofTreeLeaf{
+	nonRevocationProof := messages.ProofTreeLeaf{
 		Leaf:  leafBytes[:],
 		Proof: mp.Bytes(),
 		Root:  *mt.RootKey(),
 	}
-	return nonRevocationProof, nil
+	return &nonRevocationProof, nil
 }
 
 // GetNextVersion returns the next version of a claim, given a Hash(index)
