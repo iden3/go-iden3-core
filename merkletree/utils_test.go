@@ -26,32 +26,32 @@ func TestGetSetBitmap(t *testing.T) {
 }
 
 func TestHashElems(t *testing.T) {
-	d := IntsToData(0, 0, 0, 0)
+	d := IntsToData(0, 0, 0, 0, 0, 0, 0, 0)
 	h := HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
+		"0x0434edabe59b9e6a956cddfef69bdc81e04a02a8bbdef76cd66a055cd1c36f02",
 		h.Hex())
 
-	d = IntsToData(1, 0, 0, 0)
+	d = IntsToData(1, 0, 0, 0, 0, 0, 0, 0)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x050a05b5d53f6f01b1629db59138e94b0827e70cbf91b1f66255b90ca700450d",
+		"0x07247c8bc80d3e36fc190cb50c86d78bf84ce8611d812daccd8abbbb0fe1fc8e",
 		h.Hex())
 
-	d = IntsToData(0, 0, 0, 1)
+	d = IntsToData(0, 0, 0, 0, 0, 0, 0, 1)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x0f4fcef5783b61f7bb7424de30dd83476ef2cb9b60bb631cdad8822445ec00d9",
+		"0x1200c28eb34748270835b1f0bdad8ec34f82de6fa3147856b7aa12b59c477980",
 		h.Hex())
 
-	d = IntsToData(12, 45, 78, 41)
+	d = IntsToData(12, 45, 78, 41, 35, 80, 54, 42)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x149ce1812eb8bd8bf4b81a81f667faf0c89412705eadcb9153185cbe7ac246f6",
+		"0x08870f599860de1acc381a95a019dee7c89206247cf70507675da800515c77eb",
 		h.Hex())
 }
 
@@ -65,7 +65,7 @@ func hashTestOutput(h *Hash) {
 func BenchmarkHashElems(b *testing.B) {
 	ds := make([]Data, b.N)
 	for i := 0; i < b.N; i++ {
-		ds[i] = IntsToData(0, int64(i), 0, int64(i))
+		ds[i] = IntsToData(int64(i), 0, 0, 0, int64(i), 0, 0, 0)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

@@ -29,10 +29,10 @@ func TestClaimBasic(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x0f6cde1ae964e8a0ab0bbc869ee28c7543853b36b952d2b411300d281686ccdd",
+		"0x2098d4c06393bdab154c7c976ad33608126387f0fe643a8f742fa18664469c27",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x04ded2a4d7ae573c9db6686796e3a9f03a5142a684fccfc38f59fedee611c07d",
+		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+

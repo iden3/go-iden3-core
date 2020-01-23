@@ -66,7 +66,7 @@ func NewNodeFromBytes(b []byte) (*Node, error) {
 		copy(n.ChildL[:], b[:ElemBytesLen])
 		copy(n.ChildR[:], b[ElemBytesLen:ElemBytesLen*2])
 	case NodeTypeLeaf:
-		if len(b) != 4*ElemBytesLen {
+		if len(b) != DataLen*ElemBytesLen {
 			return nil, ErrNodeDataBadSize
 		}
 		n.Entry = &Entry{}

@@ -30,10 +30,10 @@ func TestClaimLinkObjectIdentity(t *testing.T) {
 	claim.Version = 1
 	entry := claim.Entry()
 	assert.Equal(t,
-		"0x00fae04c3095d6b40fc65da235a81f39adde687ed70530bc622c4addd47311aa",
+		"0x1b43ee36452e725d8e9990e888cb6bff71ad9071d773f2be52feabe78c3da143",
 		entry.HIndex().Hex())
 	assert.Equal(t,
-		"0x056fd73d70b5ece7889ceda6a161fb26f9cb33fc3cd1f9ca252a7665a43be70b",
+		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
 		entry.HValue().Hex())
 	dataTestOutput(&entry.Data)
 	assert.Equal(t, ""+

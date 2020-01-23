@@ -32,7 +32,7 @@ func TestClaimAuthEthKey(t *testing.T) {
 
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x0ce27cf2190dfa6ee36276e79335942c28a08dbc5ef8c564ed2f337d5c85b666",
+		"0x24a0ebf878a7167f6cc61afcc94a4fce97bbde912352042f99adf190491a1568",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",

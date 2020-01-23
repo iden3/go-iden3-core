@@ -173,17 +173,17 @@ func TestGetNonRevocationProof(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t,
-		"0x03000000000000000000000000000000000000000000000000000000000000002d3258815847168fd948039e4c3295028c06300755badb5c7a7a19076e175328021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
+		"0x03000000000000000000000000000000000000000000000000000000000000000671d5f238544c596f982c01ab4be7bf0c9652bda3af480ad6e20e15716b950a021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
 		common3.HexEncode(claimProof.Proof))
 	require.Equal(t,
-		"0x1ba11fb41fcdfff061db7bfb1d89a5e27eca53ea2b7c471bdf69360151dcf4f4",
+		"0x0b3f788dd53a622c6e26485bb34ee26b277c1bdf360785522b2f015deeec4b3d",
 		claimProof.Root.Hex())
 
 	proof, err := merkletree.NewProofFromBytes(claimProof.Proof)
 	require.Nil(t, err)
 
 	// VerifyProof with HIndex and HValue from claimProof.Leaf
-	var leafBytes [128]byte
+	var leafBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
 	copy(leafBytes[:], claimProof.Leaf)
 	dataNonE := merkletree.NewDataFromBytes(leafBytes)
 	claimProofEntry := merkletree.Entry{
@@ -428,7 +428,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	require.Equal(t, "1FJS9Bb6LE5GFpnNAyuS657jmpdjSc1MVHts54FUP", id.String())
+	require.Equal(t, "1KVNQLxwiiXyFzVwJqMPUhRMk6TeXEbzXhz2R6aw2", id.String())
 
 	id2, _, err := core.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
 	require.Nil(t, err)
