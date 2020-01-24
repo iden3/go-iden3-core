@@ -1,15 +1,30 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClaimEthId(t *testing.T) {
-	ethId := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-	identityFactoryAddr := common.HexToAddress("0x66D0c2F85F1B717168cbB508AfD1c46e07227130")
+	// If generateTest is true, the checked values will be used to generate a test vector
+	generateTest := false
+	// Init test
+	err := testgen.InitTest("claimEthId", generateTest)
+	if err != nil {
+		fmt.Println("error initializing test data:", err)
+		return
+	}
+	// Add input data to the test vector
+	if generateTest {
+		testgen.SetTestValue("idEthAddr", "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+		testgen.SetTestValue("idFactoryEthAddr", "0x66D0c2F85F1B717168cbB508AfD1c46e07227130")
+	}
+	ethId := common.HexToAddress(testgen.GetTestValue("idEthAddr").(string))
+	identityFactoryAddr := common.HexToAddress(testgen.GetTestValue("idFactoryEthAddr").(string))
 
 	c0 := NewClaimEthId(ethId, identityFactoryAddr)
 
@@ -28,17 +43,11 @@ func TestClaimEthId(t *testing.T) {
 	assert.Equal(t, c0.Entry().Bytes(), c2.Entry().Bytes())
 
 	e := c0.Entry()
-	assert.Equal(t,
-		"0x21c4885f4574ea1713b74656cfedef76402b8c8d83a8c8959dadff5b00384130",
-		e.HIndex().Hex())
-	assert.Equal(t,
-		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
-		e.HValue().Hex())
+	checkClaim(e, t)
 	dataTestOutput(&e.Data)
-	assert.Equal(t, ""+
-		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"00000000000000000000000066d0c2f85f1b717168cbb508afd1c46e07227130"+
-		"000000000000000000000000e0fbce58cfaa72812103f003adce3f284fe5fc7c"+
-		"0000000000000000000000000000000000000000000000000000000000000008",
-		e.Data.String())
+	// Stop test (write new test vector if needed)
+	err = testgen.StopTest()
+	if err != nil {
+		fmt.Println("Error stopping test:", err)
+	}
 }
