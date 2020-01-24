@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var debug = true
+var debug = false
 
 var service *IdenManager
 var idenStateWriter *idenstatewritemock.IdenStateWriteMock
@@ -428,7 +428,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	require.Equal(t, "1KVNQLxwiiXyFzVwJqMPUhRMk6TeXEbzXhz2R6aw2", id.String())
+	require.Equal(t, "117sKDpr1utuVXoKJEjij4Z4RczkRhbzpy7gzSsTCb", id.String())
 
 	id2, _, err := core.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
 	require.Nil(t, err)
