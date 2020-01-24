@@ -2,13 +2,27 @@ package core
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestClaimAuthEthKey(t *testing.T) {
+	// If generateTest is true, the checked values will be used to generate a test vector
+	generateTest := false
+	// Init test
+	err := testgen.InitTest("claimAuthorizeEthKey", generateTest)
+	if err != nil {
+		fmt.Println("error initializing test data:", err)
+		return
+	}
+	// Add input data to the test vector
+	if generateTest {
+		testgen.SetTestValue("addr", "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+	}
 	ethKey := common.HexToAddress("0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
 	ethKeyType := EthKeyTypeUpgrade
 
@@ -31,17 +45,12 @@ func TestClaimAuthEthKey(t *testing.T) {
 	assert.Equal(t, c0.Entry().Bytes(), c2.Entry().Bytes())
 
 	e := c0.Entry()
-	assert.Equal(t,
-		"0x24a0ebf878a7167f6cc61afcc94a4fce97bbde912352042f99adf190491a1568",
-		e.HIndex().Hex())
-	assert.Equal(t,
-		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
-		e.HValue().Hex())
+	// Check claim against test vector
+	checkClaim(e, t)
 	dataTestOutput(&e.Data)
-	assert.Equal(t, ""+
-		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"0000000000000000000000000000000000000000000000000000000000000000"+
-		"000000000000000000000002e0fbce58cfaa72812103f003adce3f284fe5fc7c"+
-		"0000000000000000000000000000000000000000000000000000000000000009",
-		e.Data.String())
+	// Stop test (write new test vector if needed)
+	err = testgen.StopTest()
+	if err != nil {
+		fmt.Println("Error stopping test:", err)
+	}
 }

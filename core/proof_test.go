@@ -10,13 +10,65 @@ import (
 
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/assert"
 )
 
 var rmDirs []string
 
+// WARNING:	all the functions must be executed when tested.º
+// First test function to be executed must call initializeTest
+// First test function to be executed must call finalizeTest
+
+// Avoids reinitializing tests
+var proofTestInitialized = false
+
+func initializeProofTest() {
+	// If generateTest is true, the checked values will be used to generate a test vector
+	generateTest := false
+	if !proofTestInitialized {
+		// Init test
+		err := testgen.InitTest("proof", generateTest)
+		if err != nil {
+			fmt.Println("error initializing test data:", err)
+			return
+		}
+		// Add input data to the test vector
+		if generateTest {
+			testgen.SetTestValue("idString0", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+			testgen.SetTestValue("idString1", "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+			testgen.SetTestValue("rootKey0", hex.EncodeToString([]byte{
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c}))
+			testgen.SetTestValue("rootKey1", hex.EncodeToString([]byte{
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b}))
+			testgen.SetTestValue("rootKey2", hex.EncodeToString([]byte{
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a}))
+			testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
+		}
+		proofTestInitialized = true
+	}
+}
+
+func finalizeProofTest() {
+	// Stop test (write new test vector if needed)
+	err := testgen.StopTest()
+	if err != nil {
+		fmt.Println("Error stopping test:", err)
+	}
+}
+
 func TestProof(t *testing.T) {
+	initializeProofTest()
 	dir, err := ioutil.TempDir("", "db")
 	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
@@ -25,26 +77,20 @@ func TestProof(t *testing.T) {
 
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
-
-	id0, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+	id0, err := IDFromString(testgen.GetTestValue("idString0").(string))
 	assert.Nil(t, err)
-	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
+
+	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey0").(string))
+
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 
-	id1, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+	//idString
+	id1, err := IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey1 := merkletree.Hash(merkletree.ElemBytes{
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b})
+	rootKey1 := hexStringToKey(testgen.GetTestValue("rootKey1").(string))
 	claim1, err := NewClaimSetRootKey(&id1, &rootKey1)
 	assert.Nil(t, err)
 	err = mt.AddClaim(claim1)
@@ -53,10 +99,6 @@ func TestProof(t *testing.T) {
 	cp, err := GetClaimProofByHi(mt, claim0.Entry().HIndex())
 	assert.Nil(t, err)
 
-	// j, err := json.Marshal(cp)
-	// assert.Nil(t, err)
-
-	// id := ID{}
 	verified, err := cp.Verify(cp.Proof.Root)
 	assert.Nil(t, err)
 	assert.True(t, verified)
@@ -101,7 +143,7 @@ func TestClaimProof(t *testing.T) {
 }
 
 func TestProofClaimGenesis(t *testing.T) {
-	kOpStr := "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796"
+	kOpStr := testgen.GetTestValue("kOp").(string)
 	var kOp babyjub.PublicKey
 	err := kOp.UnmarshalText([]byte(kOpStr))
 	assert.Nil(t, err)
@@ -155,13 +197,9 @@ func TestGetPredicateProof(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+	id0, err := IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
+	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	err = mt.AddClaim(claim0)
@@ -197,13 +235,9 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+	id0, err := IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
+	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
@@ -216,7 +250,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 
 	_, v := GetClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(0), v)
-	assert.Equal(t, predicateProof.OldRoot.Hex(), "0x0000000000000000000000000000000000000000000000000000000000000000")
+	testgen.CheckTestValue("predicateProof0", predicateProof.OldRoot.Hex(), t)
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())
 
 	assert.True(t, VerifyPredicateProof(predicateProof))
@@ -232,13 +266,9 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	mt, err := merkletree.NewMerkleTree(sto, 140)
 	assert.Nil(t, err)
 
-	id0, err := IDFromString("113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+	id0, err := IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := merkletree.Hash(merkletree.ElemBytes{
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-		0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a})
+	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := NewClaimSetRootKey(&id0, &rootKey0)
 	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
@@ -288,12 +318,13 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 
 	_, v := GetClaimTypeVersion(predicateProof.LeafEntry)
 	assert.Equal(t, uint32(3), v)
-	assert.Equal(t, "0x206516961dd38c872cb25e3190979942325f04ee9c719749e51a7ae75cd2eedb", predicateProof.OldRoot.Hex())
+	testgen.CheckTestValue("predicateProof1", predicateProof.OldRoot.Hex(), t)
 	assert.NotEqual(t, predicateProof.OldRoot.Hex(), predicateProof.Root.Hex())
 
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])
 
 	assert.True(t, VerifyPredicateProof(predicateProof))
+	finalizeProofTest()
 }
 
 func TestMain(m *testing.M) {
@@ -302,4 +333,10 @@ func TestMain(m *testing.M) {
 		os.RemoveAll(dir)
 	}
 	os.Exit(result)
+}
+
+func checkClaim(e *merkletree.Entry, t *testing.T) {
+	testgen.CheckTestValue("HIndex", e.HIndex().Hex(), t)
+	testgen.CheckTestValue("HValue", e.HValue().Hex(), t)
+	testgen.CheckTestValue("dataString", e.Data.String(), t)
 }
