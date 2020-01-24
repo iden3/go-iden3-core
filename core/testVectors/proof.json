@@ -1,0 +1,14 @@
+{
+  "Input": {
+    "idString0": "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+    "idString1": "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf",
+    "kOp": "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796",
+    "rootKey0": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0c",
+    "rootKey1": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "rootKey2": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0a"
+  },
+  "Output": {
+    "predicateProof0": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "predicateProof1": "0x206516961dd38c872cb25e3190979942325f04ee9c719749e51a7ae75cd2eedb"
+  }
+}

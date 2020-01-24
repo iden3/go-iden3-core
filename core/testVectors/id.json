@@ -1,0 +1,19 @@
+{
+  "Input": {
+    "addr": "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c",
+    "babyJub": "28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f",
+    "genesisUnhashedString0": "genesistest",
+    "genesisUnhashedString1": "changedgenesis",
+    "idStringInput": "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+    "kOp": "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796",
+    "typ0": "0000",
+    "typ1": "0001"
+  },
+  "Output": {
+    "idString0": "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+    "idString1": "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2Xh6",
+    "idString2": "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+    "idString3": "11e9FgPRnq5DUSTuyn4qyGpURwyTjkywswpNaCzXF",
+    "idString4": "11CPzb16TnErMXH6EhNJkMNyXMQaey7ASAcQFpHn2J"
+  }
+}
