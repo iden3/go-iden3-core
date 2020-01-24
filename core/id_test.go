@@ -79,7 +79,7 @@ func TestIDjsonParser(t *testing.T) {
 }
 
 func TestCheckChecksum(t *testing.T) {
-	typ := TypeS2M7
+	typ := TypeBJP0
 	var genesis [27]byte
 	genesis32bytes := utils.HashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
@@ -94,12 +94,12 @@ func TestCheckChecksum(t *testing.T) {
 
 	// check that if we change the checksum, returns false on CheckChecksum
 	id = NewID(typ, genesis)
-	copy(id[29:], []byte{0x00, 0x00})
+	copy(id[29:], []byte{0x00, 0x01})
 	assert.True(t, !CheckChecksum(id))
 
 	// check that if we change the type, returns false on CheckChecksum
 	id = NewID(typ, genesis)
-	copy(id[:2], []byte{0x00, 0x00})
+	copy(id[:2], []byte{0x00, 0x01})
 	assert.True(t, !CheckChecksum(id))
 
 	// check that if we change the genesis, returns false on CheckChecksum
@@ -132,7 +132,7 @@ func TestCalculateIdGenesisFrom4Keys(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1DGCSCWMbehhCdeZ3shWPRBQZ3ggZPb7SY7QYS8Fg", id.String())
+	assert.Equal(t, "11e9FgPRnq5DUSTuyn4qyGpURwyTjkywswpNaCzXF", id.String())
 }
 
 func TestCalculateIdGenesis(t *testing.T) {
@@ -150,5 +150,5 @@ func TestCalculateIdGenesis(t *testing.T) {
 		fmt.Println("id", id)
 		fmt.Println("id (hex)", id.String())
 	}
-	assert.Equal(t, "1Q23mXDPb4UqFUGsmTwQmXLTUWHsnjmbjChHnWukj", id.String())
+	assert.Equal(t, "11CPzb16TnErMXH6EhNJkMNyXMQaey7ASAcQFpHn2J", id.String())
 }
