@@ -127,40 +127,27 @@ func HexDecode(h string) ([]byte, error) {
 	return hex.DecodeString(h)
 }
 
-func NewEntryFromHexs(a, b, c, d string) (e Entry, err error) {
-	e.Data, err = HexsToData(a, b, c, d)
+func NewEntryFromHexs(a, b, c, d, e, f, g, h string) (entry Entry, err error) {
+	entry.Data, err = HexsToData(a, b, c, d, e, f, g, h)
 	if err != nil {
-		return e, err
+		return entry, err
 	}
-	return e, nil
+	return entry, nil
 }
 
-func HexsToData(_a, _b, _c, _d string) (Data, error) {
-	aBytes, err := HexDecode(_a)
-	if err != nil {
-		return Data{}, err
+func HexsToData(_a, _b, _c, _d, _e, _f, _g, _h string) (Data, error) {
+	var bints []*big.Int
+	aux := []string{_a, _b, _c, _d, _e, _f, _g, _h}
+	for _, v := range aux {
+		vBytes, err := HexDecode(v)
+		if err != nil {
+			return Data{}, err
+		}
+		el := new(big.Int).SetBytes(vBytes)
+		bints = append(bints, el)
 	}
-	a := new(big.Int).SetBytes(aBytes)
 
-	bBytes, err := HexDecode(_b)
-	if err != nil {
-		return Data{}, err
-	}
-	b := new(big.Int).SetBytes(bBytes)
-
-	cBytes, err := HexDecode(_c)
-	if err != nil {
-		return Data{}, err
-	}
-	c := new(big.Int).SetBytes(cBytes)
-
-	dBytes, err := HexDecode(_d)
-	if err != nil {
-		return Data{}, err
-	}
-	d := new(big.Int).SetBytes(dBytes)
-
-	return BigIntsToData(a, b, c, d), nil
+	return BigIntsToData(bints[0], bints[1], bints[2], bints[3], bints[4], bints[5], bints[6], bints[7]), nil
 }
 
 func NewDataFromBytes(b [ElemBytesLen * DataLen]byte) *Data {
@@ -180,18 +167,18 @@ func NewEntryFromBytes(b []byte) (*Entry, error) {
 	return &Entry{Data: *NewDataFromBytes(data)}, nil
 }
 
-func NewEntryFromInts(a, b, c, d int64) (e Entry) {
-	e.Data = IntsToData(a, b, c, d)
-	return e
+func NewEntryFromInts(a, b, c, d, e, f, g, h int64) (entry Entry) {
+	entry.Data = IntsToData(a, b, c, d, e, f, g, h)
+	return entry
 }
 
-func IntsToData(_a, _b, _c, _d int64) Data {
-	a, b, c, d := big.NewInt(_a), big.NewInt(_b), big.NewInt(_c), big.NewInt(_d)
-	return BigIntsToData(a, b, c, d)
+func IntsToData(_a, _b, _c, _d, _e, _f, _g, _h int64) Data {
+	a, b, c, d, e, f, g, h := big.NewInt(_a), big.NewInt(_b), big.NewInt(_c), big.NewInt(_d), big.NewInt(_e), big.NewInt(_f), big.NewInt(_g), big.NewInt(_h)
+	return BigIntsToData(a, b, c, d, e, f, g, h)
 }
 
-func BigIntsToData(a, b, c, d *big.Int) (data Data) {
-	di := []*big.Int{a, b, c, d}
+func BigIntsToData(a, b, c, d, e, f, g, h *big.Int) (data Data) {
+	di := []*big.Int{a, b, c, d, e, f, g, h}
 	for i, v := range di {
 		copy(data[i][(ElemBytesLen-len(v.Bytes())):], v.Bytes())
 	}

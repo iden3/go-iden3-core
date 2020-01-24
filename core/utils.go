@@ -20,7 +20,7 @@ func HexToClaimGeneric(h string) (ClaimGeneric, error) {
 	if err != nil {
 		return ClaimGeneric{}, err
 	}
-	var dataBytes [128]byte
+	var dataBytes [merkletree.ElemBytesLen * merkletree.DataLen]byte
 	copy(dataBytes[:], bytesValue)
 	data := merkletree.NewDataFromBytes(dataBytes)
 	entry := merkletree.Entry{

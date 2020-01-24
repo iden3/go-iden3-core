@@ -18,7 +18,7 @@ func TestClaimAuthorizeKSignBabyJub(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x1da8cb501998d7cdeb95ab0c65afc0277632ac87d2d74e7a68a0cdca4287649d",
+		"0x28450250bd0399e61e023927a17cf45e8a3c1f45c3d2f431f4df48fcb0ecbe98",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",

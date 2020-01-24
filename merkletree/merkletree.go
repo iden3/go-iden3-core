@@ -80,9 +80,9 @@ const (
 	// data and hashing.
 	ElemBytesLen = 32
 	// IndexLen indicates how many elements are used for the index.
-	IndexLen = 2
+	IndexLen = 4
 	// DataLen indicates how many elements are used for the data.
-	DataLen = 4
+	DataLen = 8
 )
 
 var (
@@ -138,14 +138,14 @@ type Entrier interface {
 func (e *Entry) HIndex() *Hash {
 	if e.hIndex == nil { // Cache the hIndex.
 		//e.hIndex = HashElems(e.Index()[:]...)
-		e.hIndex = HashElems(e.Data[2:]...)
+		e.hIndex = HashElems(e.Data[:IndexLen]...)
 	}
 	return e.hIndex
 }
 
 func (e *Entry) HValue() *Hash {
 	if e.hValue == nil { // Cache the hValue.
-		e.hValue = HashElems(e.Data[:2]...)
+		e.hValue = HashElems(e.Data[IndexLen:]...)
 	}
 	return e.hValue
 }
@@ -475,12 +475,12 @@ func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 		if strings.HasPrefix(c, "0x") {
 			c = c[2:]
 		}
-		if len(c) != 256 {
-			return errors.New("hex length different than 256")
+		if len(c) != 2*ElemBytesLen*DataLen { // 2*ElemBytesLen because is in Hexadecimal string, so each byte is represented by 2 char
+			return fmt.Errorf("hex length different than %d", 2*ElemBytesLen*DataLen)
 		}
 		var err error
 		var e Entry
-		e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:])
+		e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:256], c[256:320], c[320:384], c[384:448], c[448:512])
 		if err != nil {
 			return err
 		}

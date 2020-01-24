@@ -24,7 +24,7 @@ func TestClaimAuthorizeKSignSecp256k1(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x2a65c16ad6d4333877bb94e1753ef79f54b694771a8e46e3c67c1cc59e76985e",
+		"0x011006c8eb9349422ee77c7721563788ab5fb05e83fb7f070f4355e2e5fbe6e9",
 		e.HIndex().Hex())
 	assert.Equal(t,
 		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",

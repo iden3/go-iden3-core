@@ -19,10 +19,10 @@ func TestClaimAssignName(t *testing.T) {
 	c0.Version = 1
 	e := c0.Entry()
 	assert.Equal(t,
-		"0x16b32b9bc822ab5c1136eb099c7b05864914d7ee2cc531f932e6264c2d4b65e2",
+		"0x1ba59bde7b10fb76b401495acfe3063268d6f7b4d3cfea62f2d2c39bd016c02d",
 		e.HIndex().Hex())
 	assert.Equal(t,
-		"0x155f5c3e252fe5d439c197260fd9eddd627a4972f5e974482e62d2a81ba94264",
+		"0x021a76d5f2cdcf354ab66eff7b4dee40f02501545def7bb66b3502ae68e1b781",
 		e.HValue().Hex())
 	dataTestOutput(&e.Data)
 	assert.Equal(t, ""+
