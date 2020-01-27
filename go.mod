@@ -1,6 +1,6 @@
 module github.com/iden3/go-iden3-core
 
-go 1.12
+go 1.13
 
 require (
 	github.com/allegro/bigcache v1.2.1 // indirect
