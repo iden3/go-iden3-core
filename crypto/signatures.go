@@ -1,4 +1,4 @@
-package utils
+package crypto
 
 import (
 	"bytes"
@@ -43,8 +43,8 @@ func (s *SignatureEthMsg) MarshalJSON() ([]byte, error) {
 const web3SignaturePrefix = "\x19Ethereum Signed Message:\n"
 
 // Sign performs the signature over a Hash
-func Sign(h Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
-	return ks.SignHash(acc, h[:])
+func Sign(hash Hash, ks *keystore.KeyStore, acc accounts.Account) ([]byte, error) {
+	return ks.SignHash(acc, hash[:])
 }
 
 // SignEthMsg performs an ethereum message signature over a Hash.
@@ -77,7 +77,7 @@ func VerifySigEthMsg(addr common.Address, sig *SignatureEthMsg, msg []byte) bool
 // VerifySigEthMsgDate verifies the signature of a byte array with a date
 // appended given an ethereum address.
 func VerifySigEthMsgDate(addr common.Address, sig *SignatureEthMsg, msg []byte, date int64) bool {
-	dateBytes := Uint64ToEthBytes(uint64(date))
+	dateBytes := common3.Uint64ToEthBytes(uint64(date))
 	return VerifySigEthMsg(addr, sig, append(msg[:], dateBytes...))
 }
 

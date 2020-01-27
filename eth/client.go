@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/iden3/go-iden3-core/utils"
+	"github.com/iden3/go-iden3-core/crypto"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -212,7 +212,7 @@ func (c *Web3Client) Sign(data ...[]byte) ([3][32]byte, error) {
 	var ret [3][32]byte
 
 	// The produced signature is in the [R || S || V] format where V is 0 or 1.
-	sig, err := utils.SignEthMsg(c.ks, *c.account, data[0])
+	sig, err := crypto.SignEthMsg(c.ks, *c.account, data[0])
 	if err != nil {
 		return ret, err
 	}

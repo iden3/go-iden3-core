@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"errors"
 
+	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/utils"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
@@ -61,7 +61,7 @@ func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
 
 // HashString takes the first 31 bytes of a hash applied to string
 func HashString(s string) (stringHashed [248 / 8]byte) {
-	hash := utils.HashBytes([]byte(s))
+	hash := crypto.HashBytes([]byte(s))
 	copy(stringHashed[:], hash[len(hash)-248/8:])
 	return stringHashed
 }
@@ -75,7 +75,7 @@ type ClaimType [ClaimTypeLen]byte
 // NewClaimType creates a ClaimType from a type name.
 func NewClaimType(name string) *ClaimType {
 	t := &ClaimType{}
-	h := utils.HashBytes([]byte(name))
+	h := crypto.HashBytes([]byte(name))
 	copy(t[:ClaimTypeLen], h[len(h)-ClaimTypeLen:])
 	return t
 }
