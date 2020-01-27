@@ -13,10 +13,8 @@ func TestClaimBasic(t *testing.T) {
 	// If generateTest is true, the checked values will be used to generate a test vector
 	generateTest := false
 	// Init test
-	err := testgen.InitTest("claimBasic", generateTest)
-	if err != nil {
-		fmt.Println("error initializing test data:", err)
-		return
+	if err := testgen.InitTest("claimBasic", generateTest); err != nil {
+		panic(fmt.Errorf("error initializing test data: %w", err))
 	}
 	// Add input data to the test vector
 	if generateTest {
@@ -57,8 +55,7 @@ func TestClaimBasic(t *testing.T) {
 	assert.Equal(t, c0, c1)
 	assert.Equal(t, c0, c2)
 	// Stop test (write new test vector if needed)
-	err = testgen.StopTest()
-	if err != nil {
-		fmt.Println("Error stopping test:", err)
+	if err := testgen.StopTest(); err != nil {
+		panic(fmt.Errorf("Error stopping test: %w", err))
 	}
 }

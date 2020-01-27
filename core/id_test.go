@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -14,48 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// WARNING:	all the functions must be executed when tested.º
-// First test function to be executed must call initializeTest
-// First test function to be executed must call finalizeTest
-
-// Avoids reinitializing tests
-var testInitialized = false
-
-func initializeTest() {
-	// If generateTest is true, the checked values will be used to generate a test vector
-	generateTest := false
-	if !testInitialized {
-		// Init test
-		err := testgen.InitTest("id", generateTest)
-		if err != nil {
-			fmt.Println("error initializing test data:", err)
-			return
-		}
-		// Add input data to the test vector
-		if generateTest {
-			testgen.SetTestValue("genesisUnhashedString0", "genesistest")
-			testgen.SetTestValue("genesisUnhashedString1", "changedgenesis")
-			testgen.SetTestValue("typ0", hex.EncodeToString([]byte{0x00, 0x00}))
-			testgen.SetTestValue("typ1", hex.EncodeToString([]byte{0x00, 0x01}))
-			testgen.SetTestValue("babyJub", "28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f")
-			testgen.SetTestValue("addr", "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-			testgen.SetTestValue("idStringInput", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
-			testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
-		}
-		testInitialized = true
-	}
-}
-
-func finalizeTest() {
-	// Stop test (write new test vector if needed)
-	err := testgen.StopTest()
-	if err != nil {
-		fmt.Println("Error stopping test:", err)
-	}
-}
+var generateTest = false
 
 func TestIDparsers(t *testing.T) {
-	initializeTest()
 	// Generate ID0
 	var typ0 [2]byte
 	typ0Hex, _ := hex.DecodeString(testgen.GetTestValue("typ0").(string))
@@ -160,4 +122,34 @@ func TestCheckChecksum(t *testing.T) {
 	var empty [31]byte
 	_, err := IDFromBytes(empty[:])
 	assert.Equal(t, errors.New("IDFromBytes error: byte array empty"), err)
+}
+
+func initTest() {
+	// If generateTest is true, the checked values will be used to generate a test vector
+	// Init test
+	err := testgen.InitTest("id", generateTest)
+	if err != nil {
+		fmt.Println("error initializing test data:", err)
+		return
+	}
+	// Add input data to the test vector
+	if generateTest {
+		testgen.SetTestValue("genesisUnhashedString0", "genesistest")
+		testgen.SetTestValue("genesisUnhashedString1", "changedgenesis")
+		testgen.SetTestValue("typ0", hex.EncodeToString([]byte{0x00, 0x00}))
+		testgen.SetTestValue("typ1", hex.EncodeToString([]byte{0x00, 0x01}))
+		testgen.SetTestValue("babyJub", "28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f")
+		testgen.SetTestValue("addr", "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
+		testgen.SetTestValue("idStringInput", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+		testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
+	}
+}
+
+func TestMain(m *testing.M) {
+	initTest()
+	result := m.Run()
+	if err := testgen.StopTest(); err != nil {
+		panic(fmt.Errorf("Error stopping test: %w", err))
+	}
+	os.Exit(result)
 }

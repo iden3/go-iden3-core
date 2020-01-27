@@ -16,60 +16,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// If generateTest is true, the checked values will be used to generate a test vector
+var generateTest = false
+
 var rmDirs []string
 
-// WARNING:	all the functions must be executed when tested.º
-// First test function to be executed must call initializeTest
-// First test function to be executed must call finalizeTest
-
-// Avoids reinitializing tests
-var proofTestInitialized = false
-
-func initializeProofTest() {
-	// If generateTest is true, the checked values will be used to generate a test vector
-	generateTest := false
-	if !proofTestInitialized {
-		// Init test
-		err := testgen.InitTest("proof", generateTest)
-		if err != nil {
-			fmt.Println("error initializing test data:", err)
-			return
-		}
-		// Add input data to the test vector
-		if generateTest {
-			testgen.SetTestValue("idString0", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
-			testgen.SetTestValue("idString1", "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
-			testgen.SetTestValue("rootKey0", hex.EncodeToString([]byte{
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c}))
-			testgen.SetTestValue("rootKey1", hex.EncodeToString([]byte{
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b}))
-			testgen.SetTestValue("rootKey2", hex.EncodeToString([]byte{
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
-				0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a}))
-			testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
-		}
-		proofTestInitialized = true
-	}
-}
-
-func finalizeProofTest() {
-	// Stop test (write new test vector if needed)
-	err := testgen.StopTest()
-	if err != nil {
-		fmt.Println("Error stopping test:", err)
-	}
-}
-
 func TestProof(t *testing.T) {
-	initializeProofTest()
 	dir, err := ioutil.TempDir("", "db")
 	rmDirs = append(rmDirs, dir)
 	assert.Nil(t, err)
@@ -280,11 +232,44 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	assert.Equal(t, predicateProof.MtpNonExistInOldRoot.Siblings[0], predicateProof.MtpExist.Siblings[0])
 
 	assert.True(t, VerifyPredicateProof(predicateProof))
-	finalizeProofTest()
+}
+
+func initTest() {
+	// Init test
+	err := testgen.InitTest("proof", generateTest)
+	if err != nil {
+		fmt.Println("error initializing test data:", err)
+		return
+	}
+	// Add input data to the test vector
+	if generateTest {
+		testgen.SetTestValue("idString0", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+		testgen.SetTestValue("idString1", "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf")
+		testgen.SetTestValue("rootKey0", hex.EncodeToString([]byte{
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0c}))
+		testgen.SetTestValue("rootKey1", hex.EncodeToString([]byte{
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b}))
+		testgen.SetTestValue("rootKey2", hex.EncodeToString([]byte{
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b,
+			0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0b, 0x0a}))
+		testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
+	}
 }
 
 func TestMain(m *testing.M) {
+	initTest()
 	result := m.Run()
+	if err := testgen.StopTest(); err != nil {
+		panic(fmt.Errorf("Error stopping test: %w", err))
+	}
 	for _, dir := range rmDirs {
 		os.RemoveAll(dir)
 	}
