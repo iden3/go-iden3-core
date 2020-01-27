@@ -58,11 +58,15 @@ func TestSignVerify(t *testing.T) {
 	pk, err := ks.NewKey(pass)
 	assert.Equal(t, nil, err)
 	var sk [32]byte
-	hex.Decode(sk[:], []byte("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"))
+	if _, err := hex.Decode(sk[:], []byte("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")); err != nil {
+		panic(err)
+	}
 	_, err = ks.ImportKey(sk, pass)
 	assert.Equal(t, nil, err)
 
-	ks.UnlockKey(pk, pass)
+	if err := ks.UnlockKey(pk, pass); err != nil {
+		panic(err)
+	}
 	sig, date, err := ks.Sign(pk, PrefixMinorUpdate, msg)
 	assert.Equal(t, nil, err)
 	ok, err := VerifySignature(pk, sig, PrefixMinorUpdate, date, msg)

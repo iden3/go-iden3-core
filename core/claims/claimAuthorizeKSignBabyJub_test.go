@@ -24,7 +24,9 @@ func TestClaimAuthorizeKSignBabyJub(t *testing.T) {
 	// Create new claim
 	var k babyjub.PrivateKey
 	hexK := testgen.GetTestValue("privateKey").(string)
-	hex.Decode(k[:], []byte(hexK))
+	if _, err := hex.Decode(k[:], []byte(hexK)); err != nil {
+		panic(err)
+	}
 	pk := k.Public()
 	c0 := NewClaimAuthorizeKSignBabyJub(pk)
 	c0.Version = 1

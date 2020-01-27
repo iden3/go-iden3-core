@@ -336,6 +336,9 @@ func TestVerifyProofCases(t *testing.T) {
 	for i := 8; i < 32; i++ {
 		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
 		proof, err = mt.GenerateProof(e.HIndex(), nil)
+		if err != nil {
+			panic(err)
+		}
 		if debug {
 			fmt.Println(i, proof)
 		}
@@ -507,7 +510,9 @@ func TestDbInsertGet(t *testing.T) {
 	mt.Lock()
 	defer func() {
 		if err == nil {
-			tx.Commit()
+			if err = tx.Commit(); err != nil {
+				panic(err)
+			}
 		} else {
 			tx.Close()
 		}
@@ -516,7 +521,9 @@ func TestDbInsertGet(t *testing.T) {
 
 	key := []byte("key")
 	mt.dbInsert(tx, key, 9, []byte("value"))
-	tx.Commit()
+	if err = tx.Commit(); err != nil {
+		panic(err)
+	}
 
 	nodeType, data, err := mt.dbGet(key)
 	assert.Nil(t, err)

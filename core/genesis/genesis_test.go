@@ -23,7 +23,10 @@ var generateTest = false
 
 func TestCalculateIdGenesisFrom4Keys(t *testing.T) {
 	var sk babyjub.PrivateKey
-	hex.Decode(sk[:], []byte(testgen.GetTestValue("babyJub").(string)))
+	_, err := hex.Decode(sk[:], []byte(testgen.GetTestValue("babyJub").(string)))
+	if err != nil {
+		panic(err)
+	}
 	kopPub := sk.Public()
 	kDis := common.HexToAddress(testgen.GetTestValue("addr").(string))
 	kReen := kDis

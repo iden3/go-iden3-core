@@ -374,7 +374,9 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	mt.Lock()
 	defer func() {
 		if err == nil {
-			tx.Commit()
+			if err := tx.Commit(); err != nil {
+				tx.Close()
+			}
 		} else {
 			tx.Close()
 		}
@@ -407,8 +409,12 @@ func (mt *MerkleTree) walk(key *Hash, f func(*Node)) error {
 		f(n)
 	case NodeTypeMiddle:
 		f(n)
-		mt.walk(n.ChildL, f)
-		mt.walk(n.ChildR, f)
+		if err := mt.walk(n.ChildL, f); err != nil {
+			return err
+		}
+		if err := mt.walk(n.ChildR, f); err != nil {
+			return err
+		}
 	default:
 		return ErrInvalidNodeFound
 	}
@@ -442,7 +448,7 @@ node [fontname=Monospace,fontsize=10,shape=box]
 			fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
 		case NodeTypeMiddle:
 			lr := [2]string{n.ChildL.String(), n.ChildR.String()}
-			for i, _ := range lr {
+			for i := range lr {
 				if lr[i] == "00000000" {
 					lr[i] = fmt.Sprintf("empty%v", cnt)
 					fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
@@ -472,9 +478,7 @@ func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
 // DumpClaims function.
 func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 	for _, c := range dumpedClaims {
-		if strings.HasPrefix(c, "0x") {
-			c = c[2:]
-		}
+		c = strings.TrimPrefix(c, "0x")
 		if len(c) != 2*ElemBytesLen*DataLen { // 2*ElemBytesLen because is in Hexadecimal string, so each byte is represented by 2 char
 			return fmt.Errorf("hex length different than %d", 2*ElemBytesLen*DataLen)
 		}
