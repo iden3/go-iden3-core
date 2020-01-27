@@ -10,6 +10,9 @@ import (
 	"github.com/iden3/go-iden3-core/components/idenmanager/messages"
 	"github.com/iden3/go-iden3-core/components/idensigner"
 	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/claims"
+	"github.com/iden3/go-iden3-core/core/genesis"
+	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -59,11 +62,11 @@ func CheckSetRootParams(id *core.ID, setRootReq messages.SetRoot0Req) (bool, err
 	}
 
 	//// 2. Parse ClaimAuthKOp to get kOp
-	claim, err := core.NewClaimFromEntry(setRootReq.ClaimAuthKOp)
+	claim, err := claims.NewClaimFromEntry(setRootReq.ClaimAuthKOp)
 	if err != nil {
 		return false, fmt.Errorf("Error parsing ClaimAuthKOp: %v", err)
 	}
-	claimAuthorizeKSign, ok := claim.(*core.ClaimAuthorizeKSignBabyJub)
+	claimAuthorizeKSign, ok := claim.(*claims.ClaimAuthorizeKSignBabyJub)
 	if !ok {
 		return false, fmt.Errorf("Invalid claim type in ClaimAuthKOp.Claim," +
 			"expected ClaimAuthorizeKSignBabyJub")
@@ -83,7 +86,7 @@ func CheckSetRootParams(id *core.ID, setRootReq messages.SetRoot0Req) (bool, err
 	return true, nil
 }
 
-func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoot0Req) (*core.ClaimSetRootKey, error) {
+func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoot0Req) (*claims.ClaimSetRootKey, error) {
 	ok, err := CheckSetRootParams(id, setRootReq)
 	if err != nil || !ok {
 		return nil, fmt.Errorf("SetRoot params verification not passed, " + err.Error())
@@ -92,7 +95,7 @@ func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoo
 	// Add new SetRootClaim with id -> setRootReq.NewRoot
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, setRootReq.NewRoot)
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, setRootReq.NewRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -115,26 +118,26 @@ func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoo
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
 func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash,
-	timestamp int64, signature *utils.SignatureEthMsg) (*core.ClaimSetRootKey, error) {
+	timestamp int64, signature *utils.SignatureEthMsg) (*claims.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := m.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
 	// open the MerkleTree of the user
 	userMT, err := merkletree.NewMerkleTree(stoUserId, 140)
 	if err != nil {
-		return &core.ClaimSetRootKey{}, err
+		return nil, err
 	}
 
 	// verify that the KSign is authorized
 	if !CheckKSignInIddb(userMT, kSignPk) {
-		return &core.ClaimSetRootKey{}, errors.New("can not verify the KSign")
+		return nil, errors.New("can not verify the KSign")
 	}
 	// in the future the user merkletree will be in the client side, and this step will be a check of the ProofKSign
 
 	// check data timestamp
 	verified := utils.VerifyTimestamp(timestamp, 30000) //needs to be from last 30 seconds
 	if !verified {
-		return &core.ClaimSetRootKey{}, errors.New("timestamp too old")
+		return nil, errors.New("timestamp too old")
 	}
 	// check signature with id
 	// whee data signed is id+root+timestamp
@@ -145,12 +148,12 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 	msg = append(msg, root.Bytes()...)
 	msg = append(msg, timestampBytes...)
 	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(*kSignPk), signature, msg) {
-		return &core.ClaimSetRootKey{}, errors.New("signature can not be verified")
+		return nil, errors.New("signature can not be verified")
 	}
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(&id, &root)
+	claimSetRootKey, err := claims.NewClaimSetRootKey(&id, &root)
 	if err != nil {
 		return nil, err
 	}
@@ -158,14 +161,14 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 	// version, err := GetNextVersion(m.mt, entry.HIndex())
 	version, err := GetNextVersion(m.mt, claimSetRootKey.Entry().HIndex())
 	if err != nil {
-		return &core.ClaimSetRootKey{}, err
+		return nil, err
 	}
 	claimSetRootKey.Version = version
 
 	// add User's Id Merkle Root into the Relay's Merkle Tree
 	err = m.mt.AddClaim(claimSetRootKey)
 	if err != nil {
-		return &core.ClaimSetRootKey{}, err
+		return nil, err
 	}
 
 	// update Relay Root in Smart Contract
@@ -178,7 +181,7 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 // the Id's merkletree, and adds the Id's merkle root into the Relay's
 // merkletree inside a ClaimSetRootKey. Returns the merkle proof of both Claims
 func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
-	claimAuthorizeKSignSecp256k1 core.ClaimAuthorizeKSignSecp256k1) error {
+	claimAuthorizeKSignSecp256k1 claims.ClaimAuthorizeKSignSecp256k1) error {
 
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := m.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
@@ -196,7 +199,7 @@ func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(&id, userMT.RootKey())
+	claimSetRootKey, err := claims.NewClaimSetRootKey(&id, userMT.RootKey())
 	if err != nil {
 		return err
 	}
@@ -250,7 +253,7 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg messages.ClaimVa
 
 	// claimSetRootKey of the user in the Relay Merkle Tree
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, userMT.RootKey())
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, userMT.RootKey())
 	if err != nil {
 		return err
 	}
@@ -294,7 +297,7 @@ func (m *IdenManager) GetIdRoot(id *core.ID) (merkletree.Hash, []byte, error) {
 	}
 
 	// build ClaimSetRootKey of the user id
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, userMT.RootKey())
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, userMT.RootKey())
 	if err != nil {
 		return merkletree.Hash{}, []byte{}, err
 	}
@@ -315,9 +318,9 @@ func (m *IdenManager) GetIdRoot(id *core.ID) (merkletree.Hash, []byte, error) {
 
 // GetSetRootClaim returns the last SetRootKey claim corresponding to an id
 // with a proof to the root in the blockchain.
-func (m *IdenManager) GetSetRootClaim(id *core.ID) (*core.ProofClaim, error) {
+func (m *IdenManager) GetSetRootClaim(id *core.ID) (*proof.ProofClaim, error) {
 	// build ClaimSetRootKey of the user id
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, &merkletree.Hash{})
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, &merkletree.Hash{})
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +376,7 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 	}
 
 	// build ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, userMT.RootKey())
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, userMT.RootKey())
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +429,7 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 // non-revocated, all in the form of a ProofClaim, using a root that is
 // published in the blockchain.  The result is signed (with
 // a timestamp) by the service.
-func (m *IdenManager) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.ProofClaim, error) {
+func (m *IdenManager) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*proof.ProofClaim, error) {
 	rootData, err := m.idenStateWriter.GetRoot(m.id)
 	if err != nil {
 		return nil, err
@@ -437,7 +440,7 @@ func (m *IdenManager) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.Pr
 	}
 	fmt.Printf("> G %+v\n", rootData.Root.String())
 	fmt.Printf("> B %+v\n", mt.RootKey().String())
-	proofClaim, err := core.GetClaimProofByHi(mt, hi)
+	proofClaim, err := proof.GetClaimProofByHi(mt, hi)
 	if err != nil {
 		return nil, err
 	}
@@ -452,9 +455,9 @@ func (m *IdenManager) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*core.Pr
 // CreateIdGenesis initializes the id MerkleTree with the given the kop, kdisable,
 // kreenable and kupdateRoots public keys. Where the id is calculated a MerkleTree containing
 // that initial data, calculated in the function CalculateIdGenesis()
-func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *core.ProofClaim, error) {
+func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *proof.ProofClaim, error) {
 
-	id, proofClaims, err := core.CalculateIdGenesisFrom4Keys(kop, kdis, kreen, kupdateRoot)
+	id, proofClaims, err := genesis.CalculateIdGenesisFrom4Keys(kop, kdis, kreen, kupdateRoot)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -466,7 +469,7 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 		return nil, nil, err
 	}
 
-	proofClaimsList := []core.ProofClaim{proofClaims.KOp, proofClaims.KDis,
+	proofClaimsList := []proof.ProofClaim{proofClaims.KOp, proofClaims.KDis,
 		proofClaims.KReen, proofClaims.KUpdateRoot}
 	for _, proofClaim := range proofClaimsList {
 		err = userMT.AddEntry(proofClaim.Claim)
@@ -476,7 +479,7 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 	}
 
 	// create new ClaimSetRootKey
-	claimSetRootKey, err := core.NewClaimSetRootKey(id, userMT.RootKey())
+	claimSetRootKey, err := claims.NewClaimSetRootKey(id, userMT.RootKey())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -503,13 +506,13 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*mes
 		return nil, err
 	}
 
-	claimType, _ := core.GetClaimTypeVersionFromData(leafData)
+	claimType, _ := claims.GetClaimTypeVersionFromData(leafData)
 	nextVersion, err := GetNextVersion(mt, hi)
 	if err != nil {
 		return nil, err
 	}
 
-	core.SetClaimTypeVersionInData(leafData, claimType, nextVersion)
+	claims.SetClaimTypeVersionInData(leafData, claimType, nextVersion)
 
 	entry := merkletree.Entry{
 		Data: *leafData,
@@ -529,7 +532,7 @@ func getNonRevocationProof(mt *merkletree.MerkleTree, hi *merkletree.Hash) (*mes
 
 // GetNextVersion returns the next version of a claim, given a Hash(index)
 func GetNextVersion(mt *merkletree.MerkleTree, hi *merkletree.Hash) (uint32, error) {
-	var claimType core.ClaimType
+	var claimType claims.ClaimType
 	var version uint32
 
 	// loop until we find a nextversion that don't exist
@@ -540,10 +543,10 @@ func GetNextVersion(mt *merkletree.MerkleTree, hi *merkletree.Hash) (uint32, err
 		} else if err != nil {
 			return 0, err
 		}
-		claimType, version = core.GetClaimTypeVersionFromData(leafData)
+		claimType, version = claims.GetClaimTypeVersionFromData(leafData)
 		version++
 
-		core.SetClaimTypeVersionInData(leafData, claimType, version)
+		claims.SetClaimTypeVersionInData(leafData, claimType, version)
 
 		entry := merkletree.Entry{
 			Data: *leafData,

@@ -16,6 +16,9 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/components/idensigner"
 	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/claims"
+	"github.com/iden3/go-iden3-core/core/genesis"
+	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -123,7 +126,7 @@ func TestGetNextVersion(t *testing.T) {
 	// copy(dataSlot[:], data[:496/8])
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claim := core.NewClaimBasic(indexSlot, dataSlot)
+	claim := claims.NewClaimBasic(indexSlot, dataSlot)
 
 	version, err := GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
@@ -161,7 +164,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claim := core.NewClaimBasic(indexSlot, dataSlot)
+	claim := claims.NewClaimBasic(indexSlot, dataSlot)
 
 	err := mt.AddClaim(claim)
 	require.Nil(t, err)
@@ -206,7 +209,7 @@ func TestGetClaimProof(t *testing.T) {
 	var dataSlot [496 / 8]byte
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claimBasic := core.NewClaimBasic(indexSlot, dataSlot)
+	claimBasic := claims.NewClaimBasic(indexSlot, dataSlot)
 
 	// KSign Claim
 	sk, err := crypto.HexToECDSA("0b8bdda435a144fc12764c0afe4ac9e2c4d544bf5692d2a6353ec2075dc1fcb4")
@@ -214,14 +217,14 @@ func TestGetClaimProof(t *testing.T) {
 		panic(err)
 	}
 	pk := sk.Public().(*ecdsa.PublicKey)
-	claimAuthKSign := core.NewClaimAuthorizeKSignSecp256k1(pk)
+	claimAuthKSign := claims.NewClaimAuthorizeKSignSecp256k1(pk)
 
 	var kSignSk babyjub.PrivateKey
 	if _, err := hex.Decode(kSignSk[:], []byte("9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")); err != nil {
 		panic(err)
 	}
 	kSignPk := kSignSk.Public()
-	claimAuthKSignBabyJub := core.NewClaimAuthorizeKSignBabyJub(kSignPk)
+	claimAuthKSignBabyJub := claims.NewClaimAuthorizeKSignBabyJub(kSignPk)
 
 	// open the MerkleTree of the user
 	userMT, err := newTestingMerkle(140)
@@ -240,7 +243,7 @@ func TestGetClaimProof(t *testing.T) {
 	require.Nil(t, err)
 
 	// setRootClaim of the user in the Relay Merkle Tree
-	setRootClaim, err := core.NewClaimSetRootKey(&id, userMT.RootKey())
+	setRootClaim, err := claims.NewClaimSetRootKey(&id, userMT.RootKey())
 	require.Nil(t, err)
 	// setRootClaim.BaseIndex.Version++ // TODO autoincrement
 	// add User's ID Merkle Root into the Relay's Merkle Tree
@@ -248,7 +251,7 @@ func TestGetClaimProof(t *testing.T) {
 	require.Nil(t, err)
 
 	idenStateWriter.On("GetRoot", &relayID).Return(
-		&core.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
+		&proof.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
 	proofClaim, err := service.GetClaimProofByHiBlockchain(setRootClaim.Entry().HIndex())
 	require.Nil(t, err)
 	p, err := json.Marshal(proofClaim)
@@ -266,13 +269,13 @@ func TestGetClaimProof(t *testing.T) {
 	// ClaimAssignName
 	// id, err := core.IDFromString("1oqcKzijA2tyUS6tqgGWoA1jLiN1gS5sWRV6JG8XY")
 	// require.Nil(t, err)
-	claimAssignName := core.NewClaimAssignName("testName@iden3.eth", id)
+	claimAssignName := claims.NewClaimAssignName("testName@iden3.eth", id)
 	// add assignNameClaim in User ID Merkle Tree
 	err = mt.AddClaim(claimAssignName)
 	require.Nil(t, err)
 	fmt.Printf("> A %+v\n", mt.RootKey().String())
 	idenStateWriter.On("GetRoot", &relayID).Return(
-		&core.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
+		&proof.RootData{BlockN: 123, BlockTimestamp: 456, Root: mt.RootKey()}, nil).Once()
 	fmt.Printf("> R %+v\n", mt.RootKey().String())
 	proofClaimAssignName, err := service.GetClaimProofByHiBlockchain(claimAssignName.Entry().HIndex())
 	require.Nil(t, err)
@@ -395,7 +398,7 @@ func TestCreateIdGenesisRandomLoop(t *testing.T) {
 			id, proofKOp, err := idsrv.CreateIdGenesis(kop, kDis, kReen, kUpdateRoot)
 			require.Nil(t, err)
 
-			id2, _, err := core.CalculateIdGenesisFrom4Keys(kop, kDis, kReen, kUpdateRoot)
+			id2, _, err := genesis.CalculateIdGenesisFrom4Keys(kop, kDis, kReen, kUpdateRoot)
 			require.Nil(t, err)
 			require.Equal(t, id, id2)
 
@@ -430,7 +433,7 @@ func TestCreateIdGenesisHardcoded(t *testing.T) {
 	}
 	require.Equal(t, "117sKDpr1utuVXoKJEjij4Z4RczkRhbzpy7gzSsTCb", id.String())
 
-	id2, _, err := core.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
+	id2, _, err := genesis.CalculateIdGenesisFrom4Keys(kopPub, kDis, kReen, kUpdateRoot)
 	require.Nil(t, err)
 	require.Equal(t, id, id2)
 

@@ -1,7 +1,7 @@
 package messages
 
 import (
-	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -9,12 +9,12 @@ import (
 
 // SetRoot0Req contains the data to set the SetRootClaim
 type SetRoot0Req struct {
-	OldRoot           *merkletree.Hash        `json:"oldRoot" binding:"required"`
-	NewRoot           *merkletree.Hash        `json:"newRoot" binding:"required"`
-	ClaimAuthKOp      *merkletree.Entry       `json:"claimKOp" binding:"required"`
-	ProofClaimAuthKOp *core.ProofClaimGenesis `json:"proofKOp" binding:"required,dive"`
-	Date              int64                   `json:"date" binding:"required"`
-	Signature         *babyjub.SignatureComp  `json:"signature" binding:"required"` // signature of the Root
+	OldRoot           *merkletree.Hash         `json:"oldRoot" binding:"required"`
+	NewRoot           *merkletree.Hash         `json:"newRoot" binding:"required"`
+	ClaimAuthKOp      *merkletree.Entry        `json:"claimKOp" binding:"required"`
+	ProofClaimAuthKOp *proof.ProofClaimGenesis `json:"proofKOp" binding:"required,dive"`
+	Date              int64                    `json:"date" binding:"required"`
+	Signature         *babyjub.SignatureComp   `json:"signature" binding:"required"` // signature of the Root
 }
 
 // ClaimValueReq contains a core.ClaimValue with its signature in Hex

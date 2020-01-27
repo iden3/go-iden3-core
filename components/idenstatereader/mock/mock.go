@@ -2,6 +2,7 @@ package mock
 
 import (
 	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/mock"
@@ -15,9 +16,9 @@ func New() *IdenStateReadMock {
 	return &IdenStateReadMock{}
 }
 
-func (m *IdenStateReadMock) GetRoot(id *core.ID) (*core.RootData, error) {
+func (m *IdenStateReadMock) GetRoot(id *core.ID) (*proof.RootData, error) {
 	args := m.Called(id)
-	return args.Get(0).(*core.RootData), args.Error(1)
+	return args.Get(0).(*proof.RootData), args.Error(1)
 }
 
 func (m *IdenStateReadMock) GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
@@ -28,7 +29,7 @@ func (m *IdenStateReadMock) GetRootByTime(id *core.ID, blockTimestamp int64) (me
 	args := m.Called(id, blockTimestamp)
 	return args.Get(0).(merkletree.Hash), args.Error(1)
 }
-func (m *IdenStateReadMock) VerifyProofClaim(pc *core.ProofClaim) (bool, error) {
+func (m *IdenStateReadMock) VerifyProofClaim(pc *proof.ProofClaim) (bool, error) {
 	args := m.Called(pc)
 	return args.Get(0).(bool), args.Error(1)
 }

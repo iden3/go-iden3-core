@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/proof"
+
 	// "github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/components/idenstatereader"
 	"github.com/iden3/go-iden3-core/eth/contracts"
@@ -22,7 +24,7 @@ type IdenStateWriter interface {
 	Start()
 	StopAndJoin()
 	// GetRoot(addr common.Address) (merkletree.Hash, error)
-	GetRoot(id *core.ID) (*core.RootData, error)
+	GetRoot(id *core.ID) (*proof.RootData, error)
 	SetRoot(hash merkletree.Hash)
 }
 

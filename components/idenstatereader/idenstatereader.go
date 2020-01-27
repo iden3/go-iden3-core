@@ -2,9 +2,11 @@ package idenstatereader
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-iden3-core/core"
+	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -12,10 +14,10 @@ import (
 
 type IdenStateReader interface {
 	// Smart contract calls
-	GetRoot(id *core.ID) (*core.RootData, error)
+	GetRoot(id *core.ID) (*proof.RootData, error)
 	GetRootByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
 	GetRootByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error)
-	VerifyProofClaim(pc *core.ProofClaim) (bool, error)
+	VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
 
 	Client() *eth.Client2
 }
@@ -36,7 +38,7 @@ func New(client *eth.Client2, addresses ContractAddresses) *IdenStateRead {
 	}
 }
 
-func (s *IdenStateRead) GetRoot(id *core.ID) (*core.RootData, error) {
+func (s *IdenStateRead) GetRoot(id *core.ID) (*proof.RootData, error) {
 	var root [32]byte
 	var blockN uint64
 	var blockTS uint64
@@ -48,7 +50,7 @@ func (s *IdenStateRead) GetRoot(id *core.ID) (*core.RootData, error) {
 		blockN, blockTS, root, err = rootcommits.GetRootDataById(nil, *id)
 		return err
 	})
-	return &core.RootData{
+	return &proof.RootData{
 		BlockN:         blockN,
 		BlockTimestamp: int64(blockTS),
 		Root:           (*merkletree.Hash)(&root),
@@ -81,7 +83,7 @@ func (s *IdenStateRead) GetRootByTime(id *core.ID, blockTimestamp int64) (merkle
 	return merkletree.Hash(root), err
 }
 
-func (s *IdenStateRead) VerifyProofClaim(pc *core.ProofClaim) (bool, error) {
+func (s *IdenStateRead) VerifyProofClaim(pc *proof.ProofClaim) (bool, error) {
 	if ok, err := pc.Verify(pc.Proof.Root); !ok {
 		return false, err
 	}

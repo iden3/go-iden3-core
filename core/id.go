@@ -5,10 +5,7 @@ import (
 	"errors"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
@@ -144,107 +141,4 @@ func IdGenesisFromRoot(root *merkletree.Hash) *ID {
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
 	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id
-}
-
-// CalculateIdGenesis calculates the ID given the input parameters.
-// Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
-// ID: base58 ( [ type | root_genesis | checksum ] )
-// where checksum: hash( [type | root_genesis ] )
-// where the hash function is MIMC7
-func CalculateIdGenesis(claimKOp merkletree.Entrier, extraGenesisClaims []*merkletree.Entry) (*ID, *ProofClaim, error) {
-	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
-	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = mt.AddClaim(claimKOp)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, claim := range extraGenesisClaims {
-		err = mt.AddEntry(claim)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	idGenesis := mt.RootKey()
-
-	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var idGenesisBytes [27]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
-	id := NewID(TypeBJP0, idGenesisBytes)
-	return &id, proofClaimKOp, nil
-}
-
-type GenesisProofClaims struct {
-	KOp         ProofClaim
-	KDis        ProofClaim
-	KReen       ProofClaim
-	KUpdateRoot ProofClaim
-}
-
-func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*ID, *GenesisProofClaims, error) {
-	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
-	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	claimKOp := NewClaimAuthorizeKSignBabyJub(kop)
-	err = mt.AddClaim(claimKOp)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	claimKDis := NewClaimAuthEthKey(kdis, EthKeyTypeDisable)
-	err = mt.AddClaim(claimKDis)
-	if err != nil {
-		return nil, nil, err
-	}
-	claimKReen := NewClaimAuthEthKey(kreen, EthKeyTypeReenable)
-	err = mt.AddClaim(claimKReen)
-	if err != nil {
-		return nil, nil, err
-	}
-	claimKUpdateRoot := NewClaimAuthEthKey(kupdateRoot, EthKeyTypeUpdateRoot)
-	err = mt.AddClaim(claimKUpdateRoot)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	idGenesis := mt.RootKey()
-
-	proofClaimKOp, err := GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-	proofClaimKDis, err := GetClaimProofByHi(mt, claimKDis.Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-	proofClaimKReen, err := GetClaimProofByHi(mt, claimKReen.Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-	proofClaimKUpdateRoot, err := GetClaimProofByHi(mt, claimKUpdateRoot.Entry().HIndex())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var idGenesisBytes [27]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
-	id := NewID(TypeBJP0, idGenesisBytes)
-	return &id, &GenesisProofClaims{
-		KOp:         *proofClaimKOp,
-		KDis:        *proofClaimKDis,
-		KReen:       *proofClaimKReen,
-		KUpdateRoot: *proofClaimKUpdateRoot,
-	}, nil
 }
