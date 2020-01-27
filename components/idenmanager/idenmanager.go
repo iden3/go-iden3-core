@@ -7,12 +7,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/components/idenmanager/messages"
 	"github.com/iden3/go-iden3-core/components/idensigner"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/genesis"
 	"github.com/iden3/go-iden3-core/core/proof"
+	crypto3 "github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -118,7 +120,7 @@ func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoo
 
 // SetNewIdRoot checks that the data is valid and performs a claim in the Relay merkletree setting the new Root of the emiting Id
 func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root merkletree.Hash,
-	timestamp int64, signature *utils.SignatureEthMsg) (*claims.ClaimSetRootKey, error) {
+	timestamp int64, signature *crypto3.SignatureEthMsg) (*claims.ClaimSetRootKey, error) {
 	// get the user's id storage, using the user id prefix (the id itself)
 	stoUserId := m.mt.Storage().WithPrefix(id.Bytes()).WithPrefix(PREFIX_MERKLETREE)
 
@@ -141,13 +143,14 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 	}
 	// check signature with id
 	// whee data signed is id+root+timestamp
-	timestampBytes := utils.Uint64ToEthBytes(uint64(timestamp))
+	timestampBytes := common3.Uint64ToEthBytes(uint64(timestamp))
 	// signature of id+root+timestamp, only valid if is from last X seconds
 	var msg []byte
 	msg = append(msg, id.Bytes()...)
 	msg = append(msg, root.Bytes()...)
 	msg = append(msg, timestampBytes...)
-	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(*kSignPk), signature, msg) {
+
+	if !crypto3.VerifySigEthMsg(crypto.PubkeyToAddress(*kSignPk), signature, msg) {
 		return nil, errors.New("signature can not be verified")
 	}
 
@@ -240,7 +243,7 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg messages.ClaimVa
 	}
 
 	// verify signature with KSign
-	if !utils.VerifySigEthMsg(crypto.PubkeyToAddress(claimValueMsg.KSignPk.PublicKey),
+	if !crypto3.VerifySigEthMsg(crypto.PubkeyToAddress(claimValueMsg.KSignPk.PublicKey),
 		claimValueMsg.Signature, claimValueMsg.ClaimValue.Bytes()) {
 		return errors.New("signature can not be verified")
 	}

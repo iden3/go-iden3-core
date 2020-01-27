@@ -15,8 +15,8 @@ import (
 	"sync"
 
 	"github.com/gofrs/flock"
+	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	log "github.com/sirupsen/logrus"
@@ -337,7 +337,7 @@ func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg *big.Int) (*babyjub.
 // of the [prefix | date | msg] byte slice.
 func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []byte) (*babyjub.SignatureComp, int64, error) {
 	date := time.Now()
-	msg := append(prefix, utils.Uint64ToEthBytes(uint64(date.Unix()))...)
+	msg := append(prefix, common.Uint64ToEthBytes(uint64(date.Unix()))...)
 	msg = append(msg, rawMsg...)
 	sig, err := ks.SignRaw(pk, msg)
 	return sig, date.Unix(), err
@@ -372,7 +372,7 @@ func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg *big.Int, sigComp *b
 // VerifySignature verifies that the signature sigComp of the poseidon hash of
 // the [prefix | date | msg] byte slice was signed with the public key pkComp.
 func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, prefix PrefixType, date int64, rawMsg []byte) (bool, error) {
-	msg := append(prefix, utils.Uint64ToEthBytes(uint64(date))...)
+	msg := append(prefix, common.Uint64ToEthBytes(uint64(date))...)
 	msg = append(msg, rawMsg...)
 	return VerifySignatureRaw(pkComp, sigComp, msg)
 }

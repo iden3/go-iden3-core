@@ -6,8 +6,8 @@ import (
 	// "fmt"
 	"time"
 
+	"github.com/iden3/go-iden3-core/common"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -37,7 +37,7 @@ func (s *IdenSigner) SignEthMsg(msg []byte) (*babyjub.SignatureComp, error) {
 
 func (s *IdenSigner) SignEthMsgDate(msg []byte) (*babyjub.SignatureComp, int64, error) {
 	dateInt64 := time.Now().Unix()
-	dateBytes := utils.Uint64ToEthBytes(uint64(dateInt64))
+	dateBytes := common.Uint64ToEthBytes(uint64(dateInt64))
 	sig, err := s.SignEthMsg(append(msg, dateBytes...))
 	return sig, dateInt64, err
 }

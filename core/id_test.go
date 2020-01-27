@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/testgen"
-	"github.com/iden3/go-iden3-core/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,7 +61,7 @@ func TestIDparsers(t *testing.T) {
 	typ0Hex, _ := hex.DecodeString(testgen.GetTestValue("typ0").(string))
 	copy(typ0[:], typ0Hex[:2])
 	var genesis0 [27]byte
-	genesis032bytes := utils.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis032bytes := crypto.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
 	copy(genesis0[:], genesis032bytes[:])
 	id0 := NewID(typ0, genesis0)
 	// Check ID0
@@ -71,7 +71,7 @@ func TestIDparsers(t *testing.T) {
 	typ1Hex, _ := hex.DecodeString(testgen.GetTestValue("typ1").(string))
 	copy(typ1[:], typ1Hex[:2])
 	var genesis1 [27]byte
-	genesis132bytes := utils.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis132bytes := crypto.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
 	copy(genesis1[:], genesis132bytes[:])
 	id1 := NewID(typ1, genesis1)
 	// Check ID1
@@ -125,7 +125,7 @@ func TestIDjsonParser(t *testing.T) {
 func TestCheckChecksum(t *testing.T) {
 	typ := TypeBJP0
 	var genesis [27]byte
-	genesis32bytes := utils.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis32bytes := crypto.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
 	copy(genesis[:], genesis32bytes[:])
 
 	id := NewID(typ, genesis)
@@ -150,7 +150,7 @@ func TestCheckChecksum(t *testing.T) {
 	id = NewID(typ, genesis)
 	// changedGenesis := utils.HashBytes([]byte("changedgenesis"))
 	var changedGenesis [27]byte
-	changedGenesis32bytes := utils.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString1").(string)))
+	changedGenesis32bytes := crypto.HashBytes([]byte(testgen.GetTestValue("genesisUnhashedString1").(string)))
 	copy(changedGenesis[:], changedGenesis32bytes[:27])
 
 	copy(id[2:27], changedGenesis[:])

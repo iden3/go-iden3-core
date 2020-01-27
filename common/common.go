@@ -123,3 +123,33 @@ func UnmarshalJSONHexDecode(bs []byte) ([]byte, error) {
 	}
 	return HexDecode(hexStr)
 }
+
+// Uint32ToEthBytes converts a uint32 to bytes in big endian.
+func Uint32ToEthBytes(u uint32) []byte {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, u)
+	if err != nil {
+		panic(err)
+	}
+	return buff.Bytes()
+}
+
+// Uint64ToEthBytes convets a uint64 to bytes in big endian.
+func Uint64ToEthBytes(u uint64) []byte {
+	buff := new(bytes.Buffer)
+	err := binary.Write(buff, binary.BigEndian, u)
+	if err != nil {
+		panic(err)
+	}
+	return buff.Bytes()
+}
+
+// EthBytesToUint32 converts bytes as big endian to uint32.
+func EthBytesToUint32(b []byte) uint32 {
+	return binary.BigEndian.Uint32(b)
+}
+
+// EthBytesToUint64 converts bytes as big endian to uint64.
+func EthBytesToUint64(b []byte) uint64 {
+	return binary.BigEndian.Uint64(b)
+}

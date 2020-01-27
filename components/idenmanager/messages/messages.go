@@ -2,8 +2,8 @@ package messages
 
 import (
 	"github.com/iden3/go-iden3-core/core/proof"
+	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -19,9 +19,9 @@ type SetRoot0Req struct {
 
 // ClaimValueReq contains a core.ClaimValue with its signature in Hex
 type ClaimValueReq struct {
-	ClaimValue merkletree.Entry       `binding:"required"`
-	Signature  *utils.SignatureEthMsg `binding:"required"`
-	KSignPk    *utils.PublicKey       `binding:"required"`
+	ClaimValue merkletree.Entry        `binding:"required"`
+	Signature  *crypto.SignatureEthMsg `binding:"required"`
+	KSignPk    *crypto.PublicKey       `binding:"required"`
 }
 
 // TODO: Remove in next refactor
