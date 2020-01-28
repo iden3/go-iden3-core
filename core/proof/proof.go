@@ -139,11 +139,11 @@ func (pc *ProofClaim) Verify(publishedRoot *merkletree.Hash) (bool, error) {
 		relayAux := pc.RelayAux
 		// Verify that the identity has authorized the relay ID in a genesis claim
 		proofClaimAuthRelay := relayAux.ProofClaimAuthRelay(pc.ID)
-		if ok, err := proofClaimAuthRelay.Verify(relayAux.ClaimAuthRelay()); ok != true {
+		if ok, err := proofClaimAuthRelay.Verify(relayAux.ClaimAuthRelay()); !ok {
 			return false, fmt.Errorf("verification of ProofClaim.RelayAux.ProofClaimAuthRelay failed: %v", err)
 		}
 		// Verify that the claim is under the identity MT
-		if ok, err := relayAux.Proof.Verify(pc.Claim); ok != true {
+		if ok, err := relayAux.Proof.Verify(pc.Claim); !ok {
 			return false, fmt.Errorf("verification of ProofClaim.RelayAux.Proof failed: %v", err)
 		}
 		// Construct setRootClaim from the identity root
@@ -159,7 +159,7 @@ func (pc *ProofClaim) Verify(publishedRoot *merkletree.Hash) (bool, error) {
 	}
 
 	// Verify that the publisherClaim is in the publisher MT
-	if ok, err := pc.Proof.Verify(publisherClaim); ok != true {
+	if ok, err := pc.Proof.Verify(publisherClaim); !ok {
 		return false, fmt.Errorf("verification of ProofClaim.Proof failed: %v", err)
 	}
 

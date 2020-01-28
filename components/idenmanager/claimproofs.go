@@ -28,11 +28,7 @@ func CheckKSignInIddb(mt *merkletree.MerkleTree, kSignPk *ecdsa.PublicKey) bool 
 	entry = claimAuthorizeKSign.Entry()
 	node = merkletree.NewNodeLeaf(entry)
 	_, err = mt.GetNode(node.Key())
-	if err != db.ErrNotFound {
-		return false
-	}
-
-	return true
+	return err == db.ErrNotFound
 }
 
 // CheckKSignBabyJubInIddb checks that a given KSign is in an AuthorizeKSignClaim in the Identity Merkle Tree (in this version, as the Merkle Tree don't allows to delete data, the verification only needs to check if the AuthorizeKSignClaim is in the key-value)
@@ -53,9 +49,5 @@ func CheckKSignBabyJubInIddb(mt *merkletree.MerkleTree, kSignPk *babyjub.PublicK
 	entry = claimAuthorizeKSign.Entry()
 	node = merkletree.NewNodeLeaf(entry)
 	_, err = mt.GetNode(node.Key())
-	if err != db.ErrNotFound {
-		return false
-	}
-
-	return true
+	return err == db.ErrNotFound
 }

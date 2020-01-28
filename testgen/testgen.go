@@ -60,12 +60,10 @@ func GetTestValue(key string) interface{} {
 	return testData.Input[key]
 }
 
-func SetTestValue(key string, value interface{}) error {
+func SetTestValue(key string, value interface{}) {
 	if generate {
 		testData.Input[key] = value
-		return nil
 	}
-	return errors.New("Values can only be set on generate mode (set in initTest function)")
 }
 
 func StopTest() error {

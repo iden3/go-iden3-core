@@ -139,8 +139,14 @@ func testConcatTx(t *testing.T, sto Storage) {
 	// check within tx
 
 	sto1tx, err := sto1.NewTx()
+	if err != nil {
+		panic(err)
+	}
 	sto1tx.Put(k, []byte{4, 5, 6})
 	sto2tx, err := sto2.NewTx()
+	if err != nil {
+		panic(err)
+	}
 	sto2tx.Put(k, []byte{8, 9})
 
 	sto1tx.Add(sto2tx)

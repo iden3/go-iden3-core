@@ -2,6 +2,7 @@ package keystore
 
 import (
 	"crypto/rand"
+	"errors"
 	"time"
 
 	// "encoding/hex"
@@ -216,7 +217,10 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 	if os.IsNotExist(err) {
 		encryptedKeysJSON = []byte{}
 	} else if err != nil {
-		storage.Unlock()
+		if secondErr := storage.Unlock(); secondErr != nil {
+			return nil, errors.New(fmt.Sprintln("An error occured while trying to unlock storage after an error reading from storage. Error 1:",
+				err, "Error 2:", secondErr))
+		}
 		return nil, err
 	}
 	var encryptedKeys KeysStored
@@ -224,7 +228,10 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		encryptedKeys = make(map[babyjub.PublicKeyComp]EncryptedData)
 	} else {
 		if err := json.Unmarshal(encryptedKeysJSON, &encryptedKeys); err != nil {
-			storage.Unlock()
+			if secondErr := storage.Unlock(); secondErr != nil {
+				return nil, errors.New(fmt.Sprintln("An error occured while trying to unlock storage after an error unmarshaling JSON. Error 1:",
+					err, "Error 2:", secondErr))
+			}
 			return nil, err
 		}
 	}
@@ -260,7 +267,7 @@ func (ks *KeyStore) Keys() []babyjub.PublicKeyComp {
 	ks.rw.RLock()
 	defer ks.rw.RUnlock()
 	keys := make([]babyjub.PublicKeyComp, 0, len(ks.encryptedKeys))
-	for pk, _ := range ks.encryptedKeys {
+	for pk := range ks.encryptedKeys {
 		keys = append(keys, pk)
 	}
 	return keys

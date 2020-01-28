@@ -58,14 +58,6 @@ type ClaimLinkObjectIdentity struct {
 	AuxData [256 / 8]byte
 }
 
-// minInt returns the minimum between two inputs
-func minInt(a int, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // NewClaimLinkObjectIdentity returns a ClaimLinkObjectIdentity.
 func NewClaimLinkObjectIdentity(objectType ObjectType, objectIndex uint16, id core.ID,
 	objectHash [256 / 8]byte, auxData [256 / 8]byte) (*ClaimLinkObjectIdentity, error) {

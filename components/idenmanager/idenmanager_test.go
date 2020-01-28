@@ -26,7 +26,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
 	// "github.com/iden3/go-iden3-core/utils"
-	"github.com/ipfsconsortium/go-ipfsc/config"
+
 	// "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -37,17 +37,14 @@ var debug = false
 var service *IdenManager
 var idenStateWriter *idenstatewritemock.IdenStateWriteMock
 var mt *merkletree.MerkleTree
-var c config.Config
 
 const relayIdHex = "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf"
 const relaySkHex = "4be5471a938bdf3606888472878baace4a6a64e14a153adf9a1333969e4e573c"
 
 var relayID core.ID
-var keyStore *babykeystore.KeyStore
 var relaySk babyjub.PrivateKey
 var relayPkComp *babyjub.PublicKeyComp
 var relayPk *babyjub.PublicKey
-var relayId core.ID
 
 var rmDirs []string
 
@@ -132,25 +129,33 @@ func TestGetNextVersion(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, uint32(0), version)
 	claim.Version = version
-	mt.AddClaim(claim)
+	if err := mt.AddClaim(claim); err != nil {
+		panic(err)
+	}
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(1), version)
 
 	claim.Version = version
-	mt.AddClaim(claim)
+	if err := mt.AddClaim(claim); err != nil {
+		panic(err)
+	}
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(2), version)
 
 	claim.Version = version
-	mt.AddClaim(claim)
+	if err := mt.AddClaim(claim); err != nil {
+		panic(err)
+	}
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(3), version)
 
 	claim.Version = version
-	mt.AddClaim(claim)
+	if err := mt.AddClaim(claim); err != nil {
+		panic(err)
+	}
 	version, err = GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
 	require.Equal(t, uint32(4), version)
@@ -279,65 +284,13 @@ func TestGetClaimProof(t *testing.T) {
 	fmt.Printf("> R %+v\n", mt.RootKey().String())
 	proofClaimAssignName, err := service.GetClaimProofByHiBlockchain(claimAssignName.Entry().HIndex())
 	require.Nil(t, err)
-	p, err = json.Marshal(proofClaimAssignName)
+	if p, err = json.Marshal(proofClaimAssignName); err != nil {
+		panic(err)
+	}
 	if debug {
 		fmt.Printf("\n\tclaim assign name claim proof\n\n")
 		fmt.Println(string(p))
 	}
-
-	//proofClaim, err := service.GetClaimProofUserByHi(ethAddr, *claim.Entry().HIndex())
-	//require.Nil(t, err)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//claimProof := proofClaim.ClaimProof
-	//claimNonRevocationProof := proofClaim.ClaimNonRevocationProof
-	//setRootClaimProof := proofClaim.SetRootClaimProof
-	//setRootClaimNonRevocationProof := proofClaim.SetRootClaimNonRevocationProof
-
-	//require.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c4969403074cfee7c08a98f4b565d124c7e4e28acc52e1bc780e3887db000000048000000006461746161736466", common3.HexEncode(claimProof.Leaf))
-	//require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", common3.HexEncode(claimProof.Proof))
-	//require.Equal(t, "0x1415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", claimProof.Root.Hex())
-	//require.Equal(t, "0x3cfc3a1edbf691316fec9b75970fbfb2b0e8d8edfc6ec7628db77c49694030749b9a76a0132a0814192c05c9321efc30c7286f6187f18fc60000005400000000970e8128ab834e8eac17ab8e3812f010678cf7911415376b054a9ab3c7f9bd0ec956b0f403ae98d7e37dcbafdf26b465b23dd970", common3.HexEncode(setRootClaimProof.Leaf))
-	//require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000474c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.HexEncode(setRootClaimProof.Proof))
-	//require.Equal(t, "0xf73c98cbaa1d43ada4ed5520300c348985dd47cc283e3cf7186434a07a46886a", setRootClaimProof.Root.Hex())
-	//require.Equal(t, "0x00000000000000000000000000000000000000000000000000000000000000025563046fb69f065953f0fdb0b3033f721457184adfae2824c02932090bf8f281", common3.HexEncode(claimNonRevocationProof.Proof))
-	//require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000014367d7c39348c9b7f2d488a7cd2edfbae56d608ec92a1b0a747adda3c4aaf763d74c3e76aebd3df03ff91325d245e72ea9ad9599777f5d2c5e560b3f049d68309", common3.HexEncode(setRootClaimNonRevocationProof.Proof))
-
-	//require.Equal(t, claimProof.Root.Bytes(), claimNonRevocationProof.Root.Bytes())
-	//require.Equal(t, setRootClaimProof.Root.Bytes(), setRootClaimNonRevocationProof.Root.Bytes())
-
-	//var leafBytes [128]byte
-	//copy(leafBytes[:], claimProof.Leaf)
-	//entry := merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	//proof, err := merkletree.NewProofFromBytes(claimProof.Proof)
-	//require.Nil(t, err)
-	//verified := merkletree.VerifyProof(&claimProof.Root, proof, entry.HIndex(), entry.HValue())
-	//require.True(t, verified)
-
-	//leafBytes = [128]byte{}
-	//copy(leafBytes[:], setRootClaimProof.Leaf)
-	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	//proof, err = merkletree.NewProofFromBytes(setRootClaimProof.Proof)
-	//require.Nil(t, err)
-	//verified = merkletree.VerifyProof(&setRootClaimProof.Root, proof, entry.HIndex(), entry.HValue())
-	//require.True(t, verified)
-
-	//leafBytes = [128]byte{}
-	//copy(leafBytes[:], claimNonRevocationProof.Leaf)
-	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	//proof, err = merkletree.NewProofFromBytes(claimNonRevocationProof.Proof)
-	//require.Nil(t, err)
-	//verified = merkletree.VerifyProof(&claimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
-	//require.True(t, verified)
-
-	//leafBytes = [128]byte{}
-	//copy(leafBytes[:], setRootClaimNonRevocationProof.Leaf)
-	//entry = merkletree.Entry{Data: *merkletree.BytesToData(leafBytes)}
-	//proof, err = merkletree.NewProofFromBytes(setRootClaimNonRevocationProof.Proof)
-	//require.Nil(t, err)
-	//verified = merkletree.VerifyProof(&setRootClaimNonRevocationProof.Root, proof, entry.HIndex(), entry.HValue())
-	//require.True(t, verified)
 }
 
 func initializeIdService(t *testing.T) *IdenManager {

@@ -170,7 +170,7 @@ func (c *Web3Client) WaitReceipt(txid common.Hash) (*types.Receipt, error) {
 	log.WithField("tx", txid.Hex()).Info("Waiting for receipt")
 
 	start := time.Now()
-	for receipt == nil && time.Now().Sub(start) < c.ReceiptTimeout {
+	for receipt == nil && time.Since(start) < c.ReceiptTimeout {
 		receipt, err = c.ethclient.TransactionReceipt(context.TODO(), txid)
 		if receipt == nil {
 			time.Sleep(200 * time.Millisecond)

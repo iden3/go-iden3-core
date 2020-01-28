@@ -96,7 +96,7 @@ func (c *Contract) VerifyBytecode() error {
 		"codesize": len(code),
 	}).Debug("CONTRACT get code size")
 
-	if code == nil || len(code) == 0 {
+	if len(code) == 0 {
 		return errAddressHasNoCode
 	}
 	return nil
@@ -195,12 +195,15 @@ func (c *Contract) Conterfactual(gasLimit uint64, gasPrice *big.Int, params ...i
 
 	// TODO: check properties
 	signer := types.NewEIP155Signer(networkid)
-	sig := make([]byte, 65, 65)
+	sig := make([]byte, 65)
 	for i := 0; i < len(sig); i++ {
 		sig[i] = 1
 	}
 
 	tx, err = tx.WithSignature(signer, sig)
+	if err != nil {
+		return common.Address{}, common.Address{}, nil, err
+	}
 	creator, err = signer.Sender(tx)
 	if err != nil {
 		return common.Address{}, common.Address{}, nil, err

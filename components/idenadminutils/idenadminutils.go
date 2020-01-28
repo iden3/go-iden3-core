@@ -43,14 +43,17 @@ func (a *IdenAdminUtils) Info(id *core.ID) map[string]string {
 }
 
 // RawDump returns all the key and values from the database
+// TODO: this should go into srvers
 func (a *IdenAdminUtils) RawDump(c *gin.Context) {
 	// var out string
 	sto := a.mt.Storage()
-	sto.Iterate(func(key, value []byte) (bool, error) {
+	err := sto.Iterate(func(key, value []byte) (bool, error) {
 		c.String(200, common3.HexEncode(key)+", "+common3.HexEncode(value)+"\n")
 		return true, nil
 	})
-	return
+	if err != nil {
+		panic(err)
+	}
 }
 
 // RawImport imports the key and values from the RawDump() to the database
@@ -64,7 +67,10 @@ func (a *IdenAdminUtils) RawImport(raw map[string]string) (int, error) {
 
 	defer func() {
 		if err == nil {
-			tx.Commit()
+			if err := tx.Commit(); err != nil {
+				tx.Close()
+			}
+
 		} else {
 			tx.Close()
 		}
@@ -89,12 +95,15 @@ func (a *IdenAdminUtils) RawImport(raw map[string]string) (int, error) {
 func (a *IdenAdminUtils) ClaimsDump() map[string]string {
 	data := make(map[string]string)
 	sto := a.mt.Storage()
-	sto.Iterate(func(key, value []byte) (bool, error) {
+	if err := sto.Iterate(func(key, value []byte) (bool, error) {
 		if value[0] == byte(merkletree.NodeTypeLeaf) {
 			data[common3.HexEncode(key)] = common3.HexEncode(value)
 		}
 		return true, nil
-	})
+	}); err != nil {
+		panic(err)
+	}
+
 	return data
 }
 

@@ -83,9 +83,15 @@ func TestClaimProof(t *testing.T) {
 	entry2 := NewEntryFromInts(1111, 2222, 3333, 4444)
 	entry3 := NewEntryFromInts(5555, 6666, 7777, 8888)
 
-	mt.AddEntry(&entry1)
-	mt.AddEntry(&entry2)
-	mt.AddEntry(&entry3)
+	if err := mt.AddEntry(&entry1); err != nil {
+		panic(err)
+	}
+	if err := mt.AddEntry(&entry2); err != nil {
+		panic(err)
+	}
+	if err := mt.AddEntry(&entry3); err != nil {
+		panic(err)
+	}
 
 	mtp, err := GetClaimProofByHi(mt, entry1.HIndex())
 	assert.Nil(t, err)
@@ -178,6 +184,9 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 	assert.Nil(t, err)
 	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := claims.NewClaimSetRootKey(&id0, &rootKey0)
+	if err != nil {
+		panic(err)
+	}
 	err = mt.AddClaim(claim0)
 	assert.Nil(t, err)
 

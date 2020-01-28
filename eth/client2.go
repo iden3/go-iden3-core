@@ -61,7 +61,7 @@ func (c *Client2) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
 	log.WithField("tx", txid.Hex()).Debug("Waiting for receipt")
 
 	start := time.Now()
-	for receipt == nil && time.Now().Sub(start) < c.ReceiptTimeout {
+	for receipt == nil && time.Since(start) < c.ReceiptTimeout {
 		receipt, err = c.client.TransactionReceipt(context.TODO(), txid)
 		if receipt == nil {
 			time.Sleep(200 * time.Millisecond)

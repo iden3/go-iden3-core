@@ -128,7 +128,7 @@ func (n *Node) String() string {
 	case NodeTypeMiddle: // {Type || ChildL || ChildR}
 		return fmt.Sprintf("Middle L:%s R:%s", n.ChildL, n.ChildR)
 	case NodeTypeLeaf: // {Type || Data...}
-		return fmt.Sprintf("Leaf I:%s D:%s", n.Entry.Data[1], n.Entry.Data[3])
+		return fmt.Sprintf("Leaf I:%v D:%v", n.Entry.Data[1], n.Entry.Data[3])
 	case NodeTypeEmpty: // {}
 		return "Empty"
 	default:
