@@ -129,9 +129,7 @@ func testBitBigEndian(bitmap []byte, n uint) bool {
 }
 
 func HexDecode(h string) ([]byte, error) {
-	if strings.HasPrefix(h, "0x") {
-		h = h[2:]
-	}
+	h = strings.TrimPrefix(h, "0x")
 	return hex.DecodeString(h)
 }
 

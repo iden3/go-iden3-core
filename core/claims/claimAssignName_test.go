@@ -1,13 +1,7 @@
 package claims
 
-import (
-	"fmt"
-	"testing"
-
-	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/testgen"
-	"github.com/stretchr/testify/assert"
-)
+/*
+// TMP commented until ClaimAssignName is updated to new spec
 
 func TestClaimAssignName(t *testing.T) {
 	// If generateTest is true, the checked values will be used to generate a test vector
@@ -43,3 +37,4 @@ func TestClaimAssignName(t *testing.T) {
 		panic(fmt.Errorf("Error stopping test: %w", err))
 	}
 }
+*/
