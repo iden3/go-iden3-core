@@ -43,7 +43,7 @@ func InitTest(name string, gen bool) error {
 	}
 }
 
-func CheckTestValue(key string, value interface{}, t *testing.T) {
+func CheckTestValue(t *testing.T, key string, value interface{}) {
 	if generate {
 		if val, ok := testData.Output[key]; ok && val != value {
 			panic(fmt.Sprint("Key already used with different value: \nKey:", key,
@@ -52,7 +52,7 @@ func CheckTestValue(key string, value interface{}, t *testing.T) {
 		}
 		testData.Output[key] = value
 	} else {
-		assert.Equal(t, value, testData.Output[key])
+		assert.Equal(t, testData.Output[key], value)
 	}
 }
 
