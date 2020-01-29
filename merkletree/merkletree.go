@@ -16,6 +16,16 @@ import (
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
+const (
+	// ElemBytesLen is the length in bytes of each element used for storing
+	// data and hashing.
+	ElemBytesLen = 32
+	// IndexLen indicates how many elements are used for the index.
+	IndexLen = 4
+	// DataLen indicates how many elements are used for the data.
+	DataLen = 8
+)
+
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes
 // corresponds to the serialization of an element from mimc7.
 type ElemBytes [ElemBytesLen]byte
@@ -75,16 +85,6 @@ func (d *Data) UnmarshalText(text []byte) error {
 	return nil
 }
 
-const (
-	// ElemBytesLen is the length in bytes of each element used for storing
-	// data and hashing.
-	ElemBytesLen = 32
-	// IndexLen indicates how many elements are used for the index.
-	IndexLen = 4
-	// DataLen indicates how many elements are used for the data.
-	DataLen = 8
-)
-
 var (
 	// ErrNodeKeyAlreadyExists is used when a node key already exists.
 	ErrNodeKeyAlreadyExists = errors.New("node already exists")
@@ -133,19 +133,27 @@ type Entrier interface {
 	Entry() *Entry
 }
 
+func (e *Entry) Index() []ElemBytes {
+	return e.Data[:IndexLen]
+}
+
+func (e *Entry) Value() []ElemBytes {
+	return e.Data[IndexLen:]
+}
+
 // HIndex calculates the hash of the Index of the entry, used to find the path
 // from the root to the leaf in the MT.
 func (e *Entry) HIndex() *Hash {
 	if e.hIndex == nil { // Cache the hIndex.
 		//e.hIndex = HashElems(e.Index()[:]...)
-		e.hIndex = HashElems(e.Data[:IndexLen]...)
+		e.hIndex = HashElems(e.Index()...)
 	}
 	return e.hIndex
 }
 
 func (e *Entry) HValue() *Hash {
 	if e.hValue == nil { // Cache the hValue.
-		e.hValue = HashElems(e.Data[IndexLen:]...)
+		e.hValue = HashElems(e.Value()...)
 	}
 	return e.hValue
 }
@@ -350,6 +358,12 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 	}
 }
 
+func CheckEntryInField(e Entry) bool {
+	bigints := ElemBytesToBigInts(e.Data[:]...)
+	ok := cryptoUtils.CheckBigIntArrayInField(bigints, cryptoConstants.Q)
+	return ok
+}
+
 // AddClaim adds the Claim that fullfills the Entrier interface to the MerkleTree
 func (mt *MerkleTree) AddClaim(e Entrier) error {
 	return mt.AddEntry(e.Entry())
@@ -362,9 +376,8 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 		return ErrNotWritable
 	}
 	// verfy that the ElemBytes are valid and fit inside the mimc7 field.
-	bigints := ElemBytesToBigInts(e.Data[:]...)
-	ok := cryptoUtils.CheckBigIntArrayInField(bigints, cryptoConstants.Q)
-	if !ok {
+	if !CheckEntryInField(*e) {
+		fmt.Println(e.Data)
 		return errors.New("Elements not inside the Finite Field over R")
 	}
 	tx, err := mt.storage.NewTx()
@@ -374,9 +387,7 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	mt.Lock()
 	defer func() {
 		if err == nil {
-			if err := tx.Commit(); err != nil {
-				tx.Close()
-			}
+			tx.Commit()
 		} else {
 			tx.Close()
 		}
@@ -409,12 +420,8 @@ func (mt *MerkleTree) walk(key *Hash, f func(*Node)) error {
 		f(n)
 	case NodeTypeMiddle:
 		f(n)
-		if err := mt.walk(n.ChildL, f); err != nil {
-			return err
-		}
-		if err := mt.walk(n.ChildR, f); err != nil {
-			return err
-		}
+		mt.walk(n.ChildL, f)
+		mt.walk(n.ChildR, f)
 	default:
 		return ErrInvalidNodeFound
 	}
@@ -448,7 +455,7 @@ node [fontname=Monospace,fontsize=10,shape=box]
 			fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
 		case NodeTypeMiddle:
 			lr := [2]string{n.ChildL.String(), n.ChildR.String()}
-			for i := range lr {
+			for i, _ := range lr {
 				if lr[i] == "00000000" {
 					lr[i] = fmt.Sprintf("empty%v", cnt)
 					fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
@@ -478,16 +485,22 @@ func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
 // DumpClaims function.
 func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 	for _, c := range dumpedClaims {
-		c = strings.TrimPrefix(c, "0x")
+		if strings.HasPrefix(c, "0x") {
+			c = c[2:]
+		}
 		if len(c) != 2*ElemBytesLen*DataLen { // 2*ElemBytesLen because is in Hexadecimal string, so each byte is represented by 2 char
 			return fmt.Errorf("hex length different than %d", 2*ElemBytesLen*DataLen)
 		}
 		var err error
 		var e Entry
-		e, err = NewEntryFromHexs(c[:64], c[64:128], c[128:192], c[192:256], c[256:320], c[320:384], c[384:448], c[448:512])
+		var d Data
+		var dataBytes [ElemBytesLen * DataLen]byte
+		err = common3.HexDecodeInto(dataBytes[:], []byte(c))
 		if err != nil {
 			return err
 		}
+		d = *NewDataFromBytes(dataBytes)
+		e.Data = d
 
 		err = mt.AddEntry(&e)
 		if err != nil {

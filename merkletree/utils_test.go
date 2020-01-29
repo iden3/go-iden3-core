@@ -30,28 +30,28 @@ func TestHashElems(t *testing.T) {
 	h := HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x0434edabe59b9e6a956cddfef69bdc81e04a02a8bbdef76cd66a055cd1c36f02",
+		"0x026fc3d15c056ad66cf7debba8024ae081dc9bf6fedd6c956a9e9be5abed3404",
 		h.Hex())
 
 	d = IntsToData(1, 0, 0, 0, 0, 0, 0, 0)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x07247c8bc80d3e36fc190cb50c86d78bf84ce8611d812daccd8abbbb0fe1fc8e",
+		"0x8efce10fbbbb8acdac2d811d61e84cf88bd7860cb50c19fc363e0dc88b7c2407",
 		h.Hex())
 
 	d = IntsToData(0, 0, 0, 0, 0, 0, 0, 1)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x1200c28eb34748270835b1f0bdad8ec34f82de6fa3147856b7aa12b59c477980",
+		"0x8079479cb512aab7567814a36fde824fc38eadbdf0b13508274847b38ec20012",
 		h.Hex())
 
 	d = IntsToData(12, 45, 78, 41, 35, 80, 54, 42)
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
 	assert.Equal(t,
-		"0x08870f599860de1acc381a95a019dee7c89206247cf70507675da800515c77eb",
+		"0xeb775c5100a85d670705f77c240692c8e7de19a0951a38cc1ade6098590f8708",
 		h.Hex())
 }
 
