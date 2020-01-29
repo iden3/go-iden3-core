@@ -41,6 +41,11 @@ func New(id *core.ID, mt *merkletree.MerkleTree, idenStateWriter idenstatewriter
 	return &IdenManager{id, mt, idenStateWriter, signer}
 }
 
+// ID returns the id.
+func (m *IdenManager) ID() *core.ID {
+	return m.id
+}
+
 // MT returns the merkle tree.
 func (m *IdenManager) MT() *merkletree.MerkleTree {
 	return m.mt
