@@ -33,7 +33,6 @@ require (
 	github.com/influxdata/influxdb v1.7.8 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
-	github.com/jamesruan/sodium v0.0.0-20181216154042-9620b83ffeae
 	github.com/julienschmidt/httprouter v1.2.0 // indirect
 	github.com/karalabe/usb v0.0.0-20190819132248-550797b1cad8 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
