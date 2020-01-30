@@ -23,7 +23,6 @@ require (
 	github.com/go-playground/locales v0.12.1 // indirect
 	github.com/go-playground/universal-translator v0.16.0 // indirect
 	github.com/gofrs/flock v0.7.1
-	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/gorilla/websocket v1.4.0 // indirect
 	github.com/graph-gophers/graphql-go v0.0.0-20190902214650-641ae197eec7 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
@@ -35,7 +34,6 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
 	github.com/julienschmidt/httprouter v1.2.0 // indirect
 	github.com/karalabe/usb v0.0.0-20190819132248-550797b1cad8 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -54,14 +52,11 @@ require (
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/wsddn/go-ecdh v0.0.0-20161211032359-48726bab9208 // indirect
-	golang.org/x/crypto v0.0.0-20190621222207-cc06ce4a13d4
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	golang.org/x/sys v0.0.0-20190507160741-ecd444e8653b // indirect
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
+	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )

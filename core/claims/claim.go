@@ -42,8 +42,8 @@ func SetClaimTypeVersion(e *merkletree.Entry, claimType ClaimType, version uint3
 // SetClaimTypeVersionInData is a helper function to set the type and version of a
 // claim.
 func SetClaimTypeVersionInData(d *merkletree.Data, claimType ClaimType, version uint32) {
-	copyToElemBytes(&d[3], 0, claimType[:])
-	binary.BigEndian.PutUint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:], version)
+	copy(d[0][:], claimType[:])
+	binary.BigEndian.PutUint32(d[0][ClaimTypeLen+ClaimFlagsLen:ClaimTypeLen+ClaimFlagsLen+ClaimVersionLen], version)
 }
 
 // GetClaimTypeVersion is a helper function to get the type and version from a
@@ -54,8 +54,8 @@ func GetClaimTypeVersion(e *merkletree.Entry) (c ClaimType, v uint32) {
 
 // GetClaimTypeVersionFromData gets claims fields data and version from a given claim.
 func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
-	copyFromElemBytes(c[:], 0, &d[3])
-	v = binary.BigEndian.Uint32(d[3][merkletree.ElemBytesLen-ClaimTypeVersionLen:])
+	copy(c[:], d[0][:])
+	v = binary.BigEndian.Uint32(d[0][ClaimTypeLen+ClaimFlagsLen : ClaimTypeLen+ClaimFlagsLen+ClaimVersionLen])
 	return c, v
 }
 
@@ -66,8 +66,13 @@ func HashString(s string) (stringHashed [248 / 8]byte) {
 	return stringHashed
 }
 
-// ClaimTypeLen is the length in bytes of the type in a claim.
-const ClaimTypeLen = 64 / 8
+// ClaimVersionLen is the length in bytes of the version in a claim.
+const (
+	// ClaimTypeLen is the length in bytes of the type in a claim.
+	ClaimTypeLen    = 64 / 8
+	ClaimVersionLen = 32 / 8
+	ClaimFlagsLen   = 32 / 8
+)
 
 // ClaimType is the type used to store a claim type.
 type ClaimType [ClaimTypeLen]byte
@@ -110,11 +115,8 @@ var (
 	ClaimTypeAuthEthKey = NewClaimTypeNum(9)
 )
 
-// ClaimVersionLen is the length in bytes of the version in a claim.
-const ClaimVersionLen = 32 / 8
-
 // ClaimTypeVersionLen is the length in bytes of the version and length in a claim.
-const ClaimTypeVersionLen = ClaimTypeLen + ClaimVersionLen
+const ClaimTypeVersionLen = ClaimTypeLen + ClaimFlagsLen + ClaimVersionLen
 
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {

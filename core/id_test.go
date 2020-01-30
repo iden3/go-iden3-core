@@ -27,7 +27,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis0[:], genesis032bytes[:])
 	id0 := NewID(typ0, genesis0)
 	// Check ID0
-	testgen.CheckTestValue("idString0", id0.String(), t)
+	testgen.CheckTestValue(t, "idString0", id0.String())
 	// Generate ID1
 	var typ1 [2]byte
 	typ1Hex, _ := hex.DecodeString(testgen.GetTestValue("typ1").(string))
@@ -37,7 +37,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis1[:], genesis132bytes[:])
 	id1 := NewID(typ1, genesis1)
 	// Check ID1
-	testgen.CheckTestValue("idString1", id1.String(), t)
+	testgen.CheckTestValue(t, "idString1", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
 	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
@@ -47,19 +47,19 @@ func TestIDparsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	testgen.CheckTestValue("idString0", id0FromBytes.String(), t)
+	testgen.CheckTestValue(t, "idString0", id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	testgen.CheckTestValue("idString1", id1FromBytes.String(), t)
+	testgen.CheckTestValue(t, "idString1", id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	testgen.CheckTestValue("idString0", id0FromString.String(), t)
+	testgen.CheckTestValue(t, "idString0", id0FromString.String())
 }
 
 func TestIDjsonParser(t *testing.T) {
@@ -67,7 +67,7 @@ func TestIDjsonParser(t *testing.T) {
 	assert.Nil(t, err)
 	idj, err := json.Marshal(&id)
 	assert.Nil(t, err)
-	testgen.CheckTestValue("idString2", strings.Replace(string(idj), "\"", "", 2), t)
+	testgen.CheckTestValue(t, "idString2", strings.Replace(string(idj), "\"", "", 2))
 	var idp ID
 	err = json.Unmarshal(idj, &idp)
 	assert.Nil(t, err)

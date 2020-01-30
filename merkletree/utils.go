@@ -41,8 +41,16 @@ func (h *Hash) UnmarshalText(bs []byte) error {
 	return common3.HexDecodeInto(h[:], bs)
 }
 
+func SwapEndianness(b []byte) []byte {
+	o := make([]byte, len(b))
+	for i := range b {
+		o[len(b)-1-i] = b[i]
+	}
+	return o
+}
+
 func ElemBytesToBigInt(elem ElemBytes) *big.Int {
-	return big.NewInt(0).SetBytes(elem[:])
+	return big.NewInt(0).SetBytes(SwapEndianness(elem[:]))
 }
 
 func (h1 *Hash) Equals(h2 *Hash) bool {
@@ -52,15 +60,15 @@ func (h1 *Hash) Equals(h2 *Hash) bool {
 func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 	ints := make([]*big.Int, len(elems))
 	for i, elem := range elems {
-		ints[i] = big.NewInt(0).SetBytes(elem[:])
+		ints[i] = ElemBytesToBigInt(elem)
 	}
 	return ints
 }
 
 // BigIntToHash converts a *big.Int to a Hash.
 func BigIntToHash(e *big.Int) (h Hash) {
-	bs := e.Bytes()
-	copy(h[ElemBytesLen-len(bs):], bs)
+	bs := SwapEndianness(e.Bytes())
+	copy(h[:], bs)
 	return h
 }
 
@@ -100,9 +108,19 @@ func getPath(numLevels int, hIndex *Hash) []bool {
 	return path
 }
 
+// setBit sets the bit n in the bitmap to 1.
+func setBit(bitmap []byte, n uint) {
+	bitmap[n/8] |= 1 << (n % 8)
+}
+
 // setBitBigEndian sets the bit n in the bitmap to 1, in Big Endian.
 func setBitBigEndian(bitmap []byte, n uint) {
 	bitmap[uint(len(bitmap))-n/8-1] |= 1 << (n % 8)
+}
+
+// testBit tests whether the bit n in bitmap is 1.
+func testBit(bitmap []byte, n uint) bool {
+	return bitmap[n/8]&(1<<(n%8)) != 0
 }
 
 // testBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
@@ -167,8 +185,8 @@ func IntsToData(_a, _b, _c, _d, _e, _f, _g, _h int64) Data {
 
 func BigIntsToData(a, b, c, d, e, f, g, h *big.Int) (data Data) {
 	di := []*big.Int{a, b, c, d, e, f, g, h}
-	for i, v := range di {
-		copy(data[i][(ElemBytesLen-len(v.Bytes())):], v.Bytes())
+	for i := 0; i < len(di); i++ {
+		copy(data[i][:], di[i].Bytes())
 	}
 	return
 }

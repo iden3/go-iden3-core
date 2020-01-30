@@ -35,25 +35,26 @@ func NewClaimAuthorizeKSignBabyJubFromEntry(e *merkletree.Entry) *ClaimAuthorize
 	c := &ClaimAuthorizeKSignBabyJub{}
 	_, c.Version = GetClaimTypeVersion(e)
 	sign := []byte{0}
-	copyFromElemBytes(sign, ClaimTypeVersionLen, &e.Data[3])
+	copy(sign, e.Data[1][:])
 	if sign[0] == 1 {
 		c.Sign = true
 	}
-	c.Ay = new(big.Int).SetBytes(e.Data[2][:])
+	c.Ay = new(big.Int).SetBytes(merkletree.SwapEndianness(e.Data[2][:]))
 	return c
 }
 
 // Entry serializes the claim into an Entry.
 func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
+	index := e.Index()
 	SetClaimTypeVersion(e, c.Type(), c.Version)
 	sign := []byte{0}
 	if c.Sign {
 		sign = []byte{1}
 	}
-	copyToElemBytes(&e.Data[3], ClaimTypeVersionLen, sign)
+	copy(index[1][:], sign)
 	ayBytes := c.Ay.Bytes()
-	copy(e.Data[2][merkletree.ElemBytesLen-len(ayBytes):], ayBytes)
+	copy(index[2][:], merkletree.SwapEndianness(ayBytes))
 	return e
 }
 
