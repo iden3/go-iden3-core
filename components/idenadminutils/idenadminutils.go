@@ -1,14 +1,12 @@
 package idenadminutils
 
 import (
-	"fmt"
 	"math/big"
 
 	// "github.com/ethereum/go-ethereum/common"
-	"github.com/gin-gonic/gin"
+
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/components/idenmanager"
-	"github.com/iden3/go-iden3-core/core"
 	merkletree "github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/services/idenstatewriter"
 	"github.com/iden3/go-iden3-crypto/mimc7"
@@ -24,31 +22,12 @@ func New(mt *merkletree.MerkleTree, idenStateWriter idenstatewriter.IdenStateWri
 	return &IdenAdminUtils{mt, idenStateWriter, idenManager}
 }
 
-// Info returns the info overview of the Relay
-func (a *IdenAdminUtils) Info(id *core.ID) map[string]string {
-	o := make(map[string]string)
-	o["db"] = a.mt.Storage().Info()
-	o["root"] = a.mt.RootKey().Hex()
-
-	root, err := a.idenManager.IdenStateWriter().GetRoot(id)
-	if err != nil {
-		o["root_contract"] = "error getting root from contract"
-	} else {
-		o["root_contract"] = root.Root.Hex()
-		o["root_block_number"] = fmt.Sprint(root.BlockN)
-		o["root_block_timestamp"] = fmt.Sprint(root.BlockTimestamp)
-	}
-
-	return o
-}
-
 // RawDump returns all the key and values from the database
-// TODO: this should go into srvers
-func (a *IdenAdminUtils) RawDump(c *gin.Context) {
+func (a *IdenAdminUtils) RawDump(f func(key, value string)) {
 	// var out string
 	sto := a.mt.Storage()
 	err := sto.Iterate(func(key, value []byte) (bool, error) {
-		c.String(200, common3.HexEncode(key)+", "+common3.HexEncode(value)+"\n")
+		f(common3.HexEncode(key), common3.HexEncode(value))
 		return true, nil
 	})
 	if err != nil {
