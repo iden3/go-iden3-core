@@ -173,9 +173,17 @@ func NewEntryFromBytes(b []byte) (*Entry, error) {
 	return &Entry{Data: *NewDataFromBytes(data)}, nil
 }
 
+func NewEntryFromIntArray(a []int64) Entry {
+	return NewEntryFromInts(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7])
+}
+
 func NewEntryFromInts(a, b, c, d, e, f, g, h int64) (entry Entry) {
 	entry.Data = IntsToData(a, b, c, d, e, f, g, h)
 	return entry
+}
+
+func IntArrayToData(a []int64) Data {
+	return IntsToData(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7])
 }
 
 func IntsToData(_a, _b, _c, _d, _e, _f, _g, _h int64) Data {

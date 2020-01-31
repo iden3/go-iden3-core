@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,8 +15,7 @@ func TestGetSetBitmap(t *testing.T) {
 	setBitBigEndian(v[:], 7)
 	setBitBigEndian(v[:], 8)
 	setBitBigEndian(v[:], 255)
-	expected := "8000000000000000000000000000000000000000000000000000000000000180"
-	assert.Equal(t, expected, hex.EncodeToString(v[:]))
+	testgen.CheckTestValue(t, "TestGetSetBitmap", hex.EncodeToString(v[:]))
 
 	assert.Equal(t, false, testBitBigEndian(v[:], 6))
 	assert.Equal(t, true, testBitBigEndian(v[:], 7))
@@ -26,33 +26,29 @@ func TestGetSetBitmap(t *testing.T) {
 }
 
 func TestHashElems(t *testing.T) {
-	d := IntsToData(0, 0, 0, 0, 0, 0, 0, 0)
+	in := interfaceToInt64Array(testgen.GetTestValue("TestHashElems0"))
+	d := IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
 	h := HashElems(d[:]...)
 	hashTestOutput(h)
-	assert.Equal(t,
-		"0x026fc3d15c056ad66cf7debba8024ae081dc9bf6fedd6c956a9e9be5abed3404",
-		h.Hex())
+	testgen.CheckTestValue(t, "TestHashElems0", h.Hex())
 
-	d = IntsToData(1, 0, 0, 0, 0, 0, 0, 0)
+	in = interfaceToInt64Array(testgen.GetTestValue("TestHashElems1"))
+	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
-	assert.Equal(t,
-		"0x8efce10fbbbb8acdac2d811d61e84cf88bd7860cb50c19fc363e0dc88b7c2407",
-		h.Hex())
+	testgen.CheckTestValue(t, "TestHashElems1", h.Hex())
 
-	d = IntsToData(0, 0, 0, 0, 0, 0, 0, 1)
+	in = interfaceToInt64Array(testgen.GetTestValue("TestHashElems2"))
+	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
-	assert.Equal(t,
-		"0x8079479cb512aab7567814a36fde824fc38eadbdf0b13508274847b38ec20012",
-		h.Hex())
+	testgen.CheckTestValue(t, "TestHashElems2", h.Hex())
 
-	d = IntsToData(12, 45, 78, 41, 35, 80, 54, 42)
+	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts0"))
+	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
 	h = HashElems(d[:]...)
 	hashTestOutput(h)
-	assert.Equal(t,
-		"0xeb775c5100a85d670705f77c240692c8e7de19a0951a38cc1ade6098590f8708",
-		h.Hex())
+	testgen.CheckTestValue(t, "TestHashElems3", h.Hex())
 }
 
 func hashTestOutput(h *Hash) {
