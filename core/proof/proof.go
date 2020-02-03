@@ -456,3 +456,27 @@ func VerifyPredicateProof(p *PredicateProof) bool {
 
 	return true
 }
+
+type IdenState struct {
+	BlockTs int64
+	BlockN  uint64
+	Value   *merkletree.Hash
+}
+
+type CredentialExistence struct {
+	Id        *core.ID
+	IdenState IdenState
+	MtpClaim  *merkletree.Proof
+	Claim     *merkletree.Entry
+	RevRoot   *merkletree.Hash
+	RooRoot   *merkletree.Hash
+	IdPub     string
+}
+
+type CredentialValidity struct {
+	CredentialExistence CredentialExistence
+	IdenState           IdenState
+	MtpNotNonce         *merkletree.Proof
+	ClaRoot             *merkletree.Hash
+	RooRoot             *merkletree.Hash
+}
