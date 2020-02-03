@@ -114,7 +114,7 @@ func TestGetNextVersion(t *testing.T) {
 	// copy(dataSlot[:], data[:496/8])
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claim := claims.NewClaimBasic(indexSlot, dataSlot)
+	claim := claims.NewClaimBasic(indexSlot, dataSlot, 0)
 
 	version, err := GetNextVersion(mt, claim.Entry().HIndex())
 	require.Nil(t, err)
@@ -160,7 +160,7 @@ func TestGetNonRevocationProof(t *testing.T) {
 	var dataSlot [claims.DataSlotBytes]byte
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claim := claims.NewClaimBasic(indexSlot, dataSlot)
+	claim := claims.NewClaimBasic(indexSlot, dataSlot, 0)
 
 	if err := mt.AddClaim(claim); err != nil {
 		panic(err)
@@ -206,14 +206,14 @@ func TestGetClaimProof(t *testing.T) {
 	var dataSlot [claims.DataSlotBytes]byte
 	copy(indexSlot[:], indexData[:])
 	copy(dataSlot[:], data[:])
-	claimBasic := claims.NewClaimBasic(indexSlot, dataSlot)
+	claimBasic := claims.NewClaimBasic(indexSlot, dataSlot, 0)
 
 	var kSignSk babyjub.PrivateKey
 	if _, err := hex.Decode(kSignSk[:], []byte("9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")); err != nil {
 		panic(err)
 	}
 	kSignPk := kSignSk.Public()
-	claimAuthKSignBabyJub := claims.NewClaimAuthorizeKSignBabyJub(kSignPk)
+	claimAuthKSignBabyJub := claims.NewClaimAuthorizeKSignBabyJub(kSignPk, 0)
 
 	// TMP commented due ClaimAuthorizeKSignSecp256k1 is not updated yet to new spec
 	// // KSign Claim

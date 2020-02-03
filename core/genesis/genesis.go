@@ -61,7 +61,7 @@ func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoo
 		return nil, nil, err
 	}
 
-	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kop)
+	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kop, 0)
 	err = mt.AddClaim(claimKOp)
 	if err != nil {
 		return nil, nil, err

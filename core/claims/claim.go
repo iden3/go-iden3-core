@@ -59,6 +59,10 @@ func GetClaimTypeVersionFromData(d *merkletree.Data) (c ClaimType, v uint32) {
 	return c, v
 }
 
+func GetRevocationNonce(e *merkletree.Entry) uint32 {
+	return binary.BigEndian.Uint32(e.Data[4][:4])
+}
+
 // HashString takes the first 31 bytes of a hash applied to string
 func HashString(s string) (stringHashed [248 / 8]byte) {
 	hash := crypto.HashBytes([]byte(s))
