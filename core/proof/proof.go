@@ -172,11 +172,13 @@ func (pc *ProofClaim) Verify(publishedRoot *merkletree.Hash) (bool, error) {
 }
 
 func VerifyGenesisMTProof(id *core.ID, proof *merkletree.Proof, hIndex, hValue *merkletree.Hash) (bool, error) {
-	root, err := merkletree.RootFromProof(proof, hIndex, hValue)
+	clr, err := merkletree.RootFromProof(proof, hIndex, hValue)
 	if err != nil {
 		return false, err
 	}
-	if eq := bytes.Equal(id[:], core.IdGenesisFromRoot(root)[:]); !eq {
+	idenState := core.IdenState(clr, &merkletree.HashZero, clr)
+
+	if eq := bytes.Equal(id[:], core.IdGenesisFromIdenState(idenState)[:]); !eq {
 		return false, fmt.Errorf("calclated root doesn't match proof root")
 	}
 	return true, nil

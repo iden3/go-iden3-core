@@ -52,7 +52,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kopPub)
 
-	id, _, err := CalculateIdGenesis(claimKOp, []*merkletree.Entry{})
+	id, _, err := CalculateIdGenesis(claimKOp, []merkletree.Entrier{})
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println("id", id)
@@ -70,7 +70,7 @@ func TestProofClaimGenesis(t *testing.T) {
 
 	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(&kOp)
 
-	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []*merkletree.Entry{})
+	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []merkletree.Entrier{})
 	assert.Nil(t, err)
 
 	proofClaimGenesis := proof.ProofClaimGenesis{

@@ -10,43 +10,49 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
-// CalculateIdGenesis calculates the ID given the input parameters.
+// CalculateIdGenesis calculates the ID given the input claims using a memory Merkle Tree.
 // Adds the given parameters into an ephemeral MerkleTree to calculate the MerkleRoot.
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
-// where the hash function is MIMC7
-func CalculateIdGenesis(claimKOp merkletree.Entrier, extraGenesisClaims []*merkletree.Entry) (*core.ID, *proof.ProofClaim, error) {
+// where the hash function is Poseidon
+func CalculateIdGenesis(claimKOp *claims.ClaimAuthorizeKSignBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, *proof.ProofClaim, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
-	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	clt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	err = mt.AddClaim(claimKOp)
+	return CalculateIdGenesisMT(clt, claimKOp, extraGenesisClaims)
+}
+
+// CalculateIdGenesisMT calculates the Genesis ID from the given claims using the given Claims Merkle Tree.
+func CalculateIdGenesisMT(clt *merkletree.MerkleTree, claimKOp *claims.ClaimAuthorizeKSignBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, *proof.ProofClaim, error) {
+	err := clt.AddClaim(claimKOp)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for _, claim := range extraGenesisClaims {
-		err = mt.AddEntry(claim)
+		err = clt.AddClaim(claim)
 		if err != nil {
 			return nil, nil, err
 		}
 	}
 
-	idGenesis := mt.RootKey()
+	clr := clt.RootKey()
 
-	proofClaimKOp, err := proof.GetClaimProofByHi(mt, claimKOp.Entry().HIndex())
+	proofClaimKOp, err := proof.GetClaimProofByHi(clt, claimKOp.Entry().HIndex())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var idGenesisBytes [27]byte
-	copy(idGenesisBytes[:], idGenesis.Bytes()[len(idGenesis.Bytes())-27:])
-	id := core.NewID(core.TypeBJP0, idGenesisBytes)
-	return &id, proofClaimKOp, nil
+	idenState := core.IdenState(clr, &merkletree.HashZero, clr)
+	id := core.IdGenesisFromIdenState(idenState)
+
+	return id, proofClaimKOp, nil
 }
 
+// DEPRECATED
 type GenesisProofClaims struct {
 	KOp         proof.ProofClaim
 	KDis        proof.ProofClaim
@@ -54,6 +60,7 @@ type GenesisProofClaims struct {
 	KUpdateRoot proof.ProofClaim
 }
 
+// DEPRECATED
 func CalculateIdGenesisFrom4Keys(kop *babyjub.PublicKey, kdis, kreen, kupdateRoot common.Address) (*core.ID, *GenesisProofClaims, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	mt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
