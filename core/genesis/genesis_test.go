@@ -50,7 +50,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kopPub)
+	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kopPub, 0)
 
 	id, _, err := CalculateIdGenesis(claimKOp, []merkletree.Entrier{})
 	assert.Nil(t, err)
@@ -68,7 +68,7 @@ func TestProofClaimGenesis(t *testing.T) {
 	err := kOp.UnmarshalText([]byte(kOpStr))
 	assert.Nil(t, err)
 
-	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(&kOp)
+	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(&kOp, 0)
 
 	id, proofClaimKOp, err := CalculateIdGenesis(claimKOp, []merkletree.Entrier{})
 	assert.Nil(t, err)
@@ -89,7 +89,7 @@ func TestProofClaimGenesis(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// Invalid Mtp of non-existence
-	claimKOp2 := claims.NewClaimAuthorizeKSignBabyJub(&kOp)
+	claimKOp2 := claims.NewClaimAuthorizeKSignBabyJub(&kOp, 0)
 	claimKOp2.Version = 1
 	proofClaimGenesis = proof.ProofClaimGenesis{
 		Mtp: proofClaimKOp.Proof.Mtp1,
@@ -103,7 +103,7 @@ func TestProofClaimGenesis(t *testing.T) {
 		Mtp: proofClaimKOp.Proof.Mtp0,
 		Id:  &core.ID{},
 	}
-	_, err = proofClaimGenesis.Verify(claims.NewClaimBasic([claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}).Entry())
+	_, err = proofClaimGenesis.Verify(claims.NewClaimBasic([claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}, 0).Entry())
 	assert.NotNil(t, err)
 }
 

@@ -1,6 +1,8 @@
 package claims
 
 import (
+	"encoding/binary"
+
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
@@ -17,6 +19,8 @@ const (
 type ClaimBasic struct {
 	// Version is the claim version.
 	Version uint32
+	// RevocationNonce is used to revocate the claim
+	RevocationNonce uint32
 	// IndexSlot is data that goes into the remaining space used for the index.
 	IndexSlot [IndexSlotBytes]byte
 	// DataSlot is the data that goes into the remaining space not used for the index.
@@ -24,16 +28,17 @@ type ClaimBasic struct {
 }
 
 // NewClaimBasic returns a ClaimBasic with the provided data.
-func NewClaimBasic(indexSlot [IndexSlotBytes]byte, dataSlot [DataSlotBytes]byte) *ClaimBasic {
+func NewClaimBasic(indexSlot [IndexSlotBytes]byte, dataSlot [DataSlotBytes]byte, revocationNonce uint32) *ClaimBasic {
 	// TODO: at this moment, revocation nonce is not defined, neither other
 	// claim options.  So, for now, the ClaimBasic just holds two static
 	// blocks of data (IndexSlot and DataSlot).  Once the rest of the claim
 	// parameters are defined, this claim will be updated with all the
 	// options on the construction
 	return &ClaimBasic{
-		Version:   0,
-		IndexSlot: indexSlot,
-		DataSlot:  dataSlot,
+		Version:         0,
+		RevocationNonce: revocationNonce,
+		IndexSlot:       indexSlot,
+		DataSlot:        dataSlot,
 	}
 }
 
@@ -46,7 +51,8 @@ func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
 	copy(c.IndexSlot[304/8:552/8], e.Data[2][:])                         // first 248 bits of index_slot[2]
 	copy(c.IndexSlot[552/8:800/8], e.Data[3][:])                         // first 248 bits of index_slot[3]
 
-	copy(c.DataSlot[:216/8], e.Data[4][:])      // last 216 bits of data_slot[0]
+	c.RevocationNonce = binary.BigEndian.Uint32(e.Data[4][:4])
+	copy(c.DataSlot[:216/8], e.Data[4][4:])     // after 4 first bits, the first 216 bits of data_slot[0]
 	copy(c.DataSlot[216/8:464/8], e.Data[5][:]) // first 248 bits of data_slot[1]
 	copy(c.DataSlot[464/8:712/8], e.Data[6][:]) // first 248 bits of data_slot[2]
 	copy(c.DataSlot[712/8:960/8], e.Data[7][:]) // first 248 bits of data_slot[3]
@@ -64,7 +70,8 @@ func (c *ClaimBasic) Entry() *merkletree.Entry {
 	copy(e.Data[2][0:], c.IndexSlot[304/8:552/8])
 	copy(e.Data[3][0:], c.IndexSlot[552/8:800/8])
 
-	copy(e.Data[4][0:], c.DataSlot[:216/8])
+	binary.BigEndian.PutUint32(e.Data[4][:4], c.RevocationNonce)
+	copy(e.Data[4][4:], c.DataSlot[:216/8])
 	copy(e.Data[5][0:], c.DataSlot[216/8:464/8])
 	copy(e.Data[6][0:], c.DataSlot[464/8:712/8])
 	copy(e.Data[7][0:], c.DataSlot[712/8:960/8])

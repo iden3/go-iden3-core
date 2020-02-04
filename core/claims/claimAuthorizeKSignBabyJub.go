@@ -1,6 +1,7 @@
 package claims
 
 import (
+	"encoding/binary"
 	"math/big"
 
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -12,6 +13,8 @@ import (
 type ClaimAuthorizeKSignBabyJub struct {
 	// Version is the claim version.
 	Version uint32
+	// RevocationNonce is used to revocate the claim
+	RevocationNonce uint32
 	// Sign means positive if false, negative if true.
 	Sign bool
 	// Ay is the y coordinate of the baby jub curve point which corresponds
@@ -21,11 +24,12 @@ type ClaimAuthorizeKSignBabyJub struct {
 
 // NewClaimAuthorizeKSignBabyJub returns a ClaimAuthorizeKSignBabyJub with the
 // given elliptic public key parameters.
-func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PublicKey) *ClaimAuthorizeKSignBabyJub {
+func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PublicKey, revocationNonce uint32) *ClaimAuthorizeKSignBabyJub {
 	return &ClaimAuthorizeKSignBabyJub{
-		Version: 0,
-		Sign:    babyjub.PointCoordSign(pk.X),
-		Ay:      pk.Y,
+		Version:         0,
+		RevocationNonce: revocationNonce,
+		Sign:            babyjub.PointCoordSign(pk.X),
+		Ay:              pk.Y,
 	}
 }
 
@@ -40,6 +44,7 @@ func NewClaimAuthorizeKSignBabyJubFromEntry(e *merkletree.Entry) *ClaimAuthorize
 		c.Sign = true
 	}
 	c.Ay = new(big.Int).SetBytes(merkletree.SwapEndianness(e.Data[2][:]))
+	c.RevocationNonce = binary.BigEndian.Uint32(e.Data[4][:4])
 	return c
 }
 
@@ -55,6 +60,9 @@ func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 	copy(index[1][:], sign)
 	ayBytes := c.Ay.Bytes()
 	copy(index[2][:], merkletree.SwapEndianness(ayBytes))
+
+	binary.BigEndian.PutUint32(e.Data[4][:4], c.RevocationNonce)
+
 	return e
 }
 

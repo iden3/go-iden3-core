@@ -11,40 +11,6 @@ import (
 )
 
 func TestClaimBasic(t *testing.T) {
-	// If generateTest is true, the checked values will be used to generate a test vector
-	generateTest := false
-	// Init test
-	if err := testgen.InitTest("claimBasic", generateTest); err != nil {
-		panic(fmt.Errorf("error initializing test data: %w", err))
-	}
-	// Add input data to the test vector
-	if generateTest {
-		testgen.SetTestValue("0_indexSlot", hex.EncodeToString([]byte{
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2b}))
-		testgen.SetTestValue("0_dataSlot", hex.EncodeToString([]byte{
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
-			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x59}))
-	}
-
 	// ClaimBasic
 	var indexSlot [IndexSlotBytes]byte
 	var dataSlot [DataSlotBytes]byte
@@ -54,13 +20,13 @@ func TestClaimBasic(t *testing.T) {
 	assert.Nil(t, err)
 	copy(indexSlot[:], indexSlotHex[:IndexSlotBytes])
 	copy(dataSlot[:], dataSlotHex[:DataSlotBytes])
-	c0 := NewClaimBasic(indexSlot, dataSlot)
+	c0 := NewClaimBasic(indexSlot, dataSlot, 5678)
 	c0.Version = 1
 	e := c0.Entry()
 	// Check claim against test vector
-	testgen.CheckTestValue(t, "0_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "0_HValue", e.HValue().Hex())
-	testgen.CheckTestValue(t, "0_dataString", e.Data.String())
+	testgen.CheckTestValue(t, "ClaimBasic0_HIndex", e.HIndex().Hex())
+	testgen.CheckTestValue(t, "ClaimBasic0_HValue", e.HValue().Hex())
+	testgen.CheckTestValue(t, "ClaimBasic0_dataString", e.Data.String())
 	dataTestOutput(&e.Data)
 	c1 := NewClaimBasicFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -70,24 +36,15 @@ func TestClaimBasic(t *testing.T) {
 
 	assert.True(t, merkletree.CheckEntryInField(*e))
 
-	// Stop test (write new test vector if needed)
-	if err := testgen.StopTest(); err != nil {
-		panic(fmt.Errorf("Error stopping test: %w", err))
-	}
+	// revocation nonce
+	c3 := NewClaimBasic(indexSlot, dataSlot, 3)
+	assert.Equal(t, c3.RevocationNonce, uint32(3))
+	c3.Version = 1
+	c1.RevocationNonce = 3
+	assert.Equal(t, c3, c1)
 }
 
 func TestClaimBasic1(t *testing.T) {
-	// If generateTest is true, the checked values will be used to generate a test vector
-	generateTest := false
-	// Init test
-	if err := testgen.InitTest("claimBasic", generateTest); err != nil {
-		panic(fmt.Errorf("error initializing test data: %w", err))
-	}
-	// Add input data to the test vector
-	if generateTest {
-		testgen.SetTestValue("1_indexData", "c1")
-		testgen.SetTestValue("1_valueData", "")
-	}
 	indexData := []byte(testgen.GetTestValue("1_indexData").(string))
 	data := []byte(testgen.GetTestValue("1_valueData").(string))
 	var indexSlot [IndexSlotBytes]byte
@@ -96,12 +53,12 @@ func TestClaimBasic1(t *testing.T) {
 	copy(dataSlot[:], data[:])
 
 	// ClaimBasic
-	c0 := NewClaimBasic(indexSlot, dataSlot)
+	c0 := NewClaimBasic(indexSlot, dataSlot, 0)
 	e := c0.Entry()
 	// Check claim against test vector
-	testgen.CheckTestValue(t, "1_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "1_HValue", e.HValue().Hex())
-	testgen.CheckTestValue(t, "1_dataString", e.Data.String())
+	testgen.CheckTestValue(t, "ClaimBasic1_HIndex", e.HIndex().Hex())
+	testgen.CheckTestValue(t, "ClaimBasic1_HValue", e.HValue().Hex())
+	testgen.CheckTestValue(t, "ClaimBasic1_dataString", e.Data.String())
 	dataTestOutput(&e.Data)
 	c1 := NewClaimBasicFromEntry(e)
 	c2, err := NewClaimFromEntry(e)
@@ -110,6 +67,12 @@ func TestClaimBasic1(t *testing.T) {
 	assert.Equal(t, c0, c2)
 
 	assert.True(t, merkletree.CheckEntryInField(*e))
+
+	// revocation nonce
+	c3 := NewClaimBasic(indexSlot, dataSlot, 3)
+	assert.Equal(t, c3.RevocationNonce, uint32(3))
+	c1.RevocationNonce = 3
+	assert.Equal(t, c3, c1)
 
 	// Stop test (write new test vector if needed)
 	if err := testgen.StopTest(); err != nil {
