@@ -6,6 +6,7 @@ import (
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 var (
@@ -135,10 +136,25 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-func IdGenesisFromRoot(root *merkletree.Hash) *ID {
+// IdGenesisFromIdenState calculates the genesis Id from an Identity State.
+func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 	var idGenesisBytes [27]byte
-	rootBytes := root.Bytes()
+	rootBytes := hash.Bytes()
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
 	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id
+}
+
+// IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
+func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
+	idenState, err := poseidon.Hash(
+		merkletree.ElemBytesToBigInts(
+			merkletree.ElemBytes(*clr),
+			merkletree.ElemBytes(*rer),
+			merkletree.ElemBytes(*ror)))
+	if err != nil {
+		panic(err)
+	}
+	idenStateHash := merkletree.BigIntToHash(idenState)
+	return &idenStateHash
 }
