@@ -13,10 +13,8 @@ type LeafRoT struct {
 
 // NewLeafRoT returns a LeafRoT with the provided root.
 func NewLeafRoT(root merkletree.Hash) *LeafRoT {
-	var r [32]byte
-	copy(r[:], root[:31]) // cropped to fit inside the FF
 	return &LeafRoT{
-		Root: r,
+		Root: root,
 	}
 }
 

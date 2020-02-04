@@ -1,9 +1,6 @@
 package idenpub
 
 import (
-	"encoding/hex"
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -11,11 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// If generateTest is true, the checked values will be used to generate a test vector
-var generateTest = false
-
 func TestLeafRoT(t *testing.T) {
-	root := hexStringToKey(testgen.GetTestValue("root0").(string))
+	root := hexStringToHash(testgen.GetTestValue("root0").(string))
 
 	l0 := NewLeafRoT(root)
 	e := l0.Entry()
@@ -47,35 +41,4 @@ func TestLeafReT(t *testing.T) {
 	assert.Equal(t, l1.Nonce, nonce)
 	assert.Equal(t, l0.Version, version)
 	assert.Equal(t, l1.Version, version)
-}
-
-func initTest() {
-	// Init test
-	err := testgen.InitTest("idenpub", generateTest)
-	if err != nil {
-		fmt.Println("error initializing test data:", err)
-		return
-	}
-	// Add input data to the test vector
-	if generateTest {
-		testgen.SetTestValue("root0", "0x2718b18e6743a777501accab821bf348e7c8a44ef23eb4da9f15c546092d302b")
-		testgen.SetTestValue("nonce0", float64(5))
-		testgen.SetTestValue("version0", float64(5))
-	}
-}
-
-func TestMain(m *testing.M) {
-	initTest()
-	result := m.Run()
-	if err := testgen.StopTest(); err != nil {
-		panic(fmt.Errorf("Error stopping test: %w", err))
-	}
-	os.Exit(result)
-}
-
-func hexStringToKey(s string) merkletree.Hash {
-	var keyBytes [merkletree.ElemBytesLen]byte
-	keyBytesHex, _ := hex.DecodeString(s)
-	copy(keyBytes[:], keyBytesHex[:merkletree.ElemBytesLen])
-	return merkletree.Hash(merkletree.ElemBytes(keyBytes))
 }
