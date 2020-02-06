@@ -631,6 +631,34 @@ func newClaimBasicEntry(indexSlot [800 / 8]byte, dataSlot [960 / 8]byte) *Entry 
 	return e
 }
 
+func TestMTWalkDumpTree(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 16; i++ {
+		rawIndex := strconv.Itoa(i) + testgen.GetTestValue("RawIndex0").(string)
+		rawData := testgen.GetTestValue("RawData0").(string)
+		var indexSlot [800 / 8]byte
+		var dataSlot [960 / 8]byte
+		copy(indexSlot[:], rawIndex[:800/8])
+		copy(dataSlot[:], rawData[:960/8])
+		e := newClaimBasicEntry(indexSlot, dataSlot)
+
+		if err := mt.AddEntry(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	w := bytes.NewBufferString("")
+	fmt.Fprintf(w, "--------\nDumpTree of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n")
+	err := mt.DumpTreeIoWriter(w, nil)
+	fmt.Fprintf(w, "End of DumpTree of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n--------\n")
+	assert.Nil(t, err)
+	if debug {
+		fmt.Println(w)
+	}
+}
+
 func TestMTWalkDumpClaims(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()

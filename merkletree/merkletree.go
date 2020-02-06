@@ -475,6 +475,44 @@ node [fontname=Monospace,fontsize=10,shape=box]
 	return err
 }
 
+// DumpTreeIoWritter (and DumpTree) outputs a list of all the key value in hex. Notice that this will
+// output the full tree, which is not needed to reconstruct the Tree. To
+// reconstruct the tree can be done from the output of DumpClaims funtion.
+// The difference between DumpTree and DumpClaims is that with DumpTree the
+// size of the output will be almost the double but to recover the tree will
+// not need to compute the Tree, while with DumpClaims will require to compute
+// the Tree (with the computational cost of each hash)
+func (mt *MerkleTree) DumpTreeIoWriter(w io.Writer, rootKey *Hash) error {
+	fmt.Fprintf(w, "[\n")
+	err := mt.Walk(rootKey, func(n *Node) {
+		fmt.Fprintf(w, "\"%v\":\"%v\",", n.Key().Hex(), common3.HexEncode(n.Value()))
+	})
+	fmt.Fprintf(w, "]\n")
+	return err
+}
+
+// DumpTree acts similar to DumpTreeIoWriter, but outputing a array of strings with all the entrances
+func (mt *MerkleTree) DumpTree(rootKey *Hash) ([]string, error) {
+	var dumpedTree []string
+	err := mt.Walk(rootKey, func(n *Node) {
+		dumpedTree = append(dumpedTree, common3.HexEncode(n.Entry.Bytes()))
+	})
+	return dumpedTree, err
+}
+
+// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
+// them to w.  The output is JSON encoded with claims in hex.
+func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
+	fmt.Fprintf(w, "[\n")
+	err := mt.Walk(rootKey, func(n *Node) {
+		if n.Type == NodeTypeLeaf {
+			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
+		}
+	})
+	fmt.Fprintf(w, "]\n")
+	return err
+}
+
 // DumpClaims outputs a list of all the claims in hex.
 func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
 	var dumpedClaims []string
@@ -511,19 +549,6 @@ func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 		}
 	}
 	return nil
-}
-
-// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
-// them to w.  The output is JSON encoded with claims in hex.
-func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
-	fmt.Fprintf(w, "[\n")
-	err := mt.Walk(rootKey, func(n *Node) {
-		if n.Type == NodeTypeLeaf {
-			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
-		}
-	})
-	fmt.Fprintf(w, "]\n")
-	return err
 }
 
 // nodeAux contains the auxiliary node used in a non-existence proof.
