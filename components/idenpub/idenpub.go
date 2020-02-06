@@ -57,7 +57,7 @@ func NewIdenPubHTTP(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.M
 func (i *IdenPubHTTP) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot *merkletree.Hash) error {
 	// RoT
 	w := bytes.NewBufferString("")
-	err := i.rot.DumpTreeIoWriter(w, rootsRoot)
+	err := i.rot.DumpTree(w, rootsRoot)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (i *IdenPubHTTP) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot 
 
 	// ReT
 	w = bytes.NewBufferString("")
-	err = i.ret.DumpTreeIoWriter(w, revocationsRoot)
+	err = i.ret.DumpTree(w, revocationsRoot)
 	if err != nil {
 		return err
 	}
