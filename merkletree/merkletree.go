@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
@@ -475,29 +476,74 @@ node [fontname=Monospace,fontsize=10,shape=box]
 	return err
 }
 
-// DumpTreeIoWritter (and DumpTree) outputs a list of all the key value in hex. Notice that this will
+// DumpTree outputs a list of all the key value in hex. Notice that this will
 // output the full tree, which is not needed to reconstruct the Tree. To
 // reconstruct the tree can be done from the output of DumpClaims funtion.
 // The difference between DumpTree and DumpClaims is that with DumpTree the
 // size of the output will be almost the double but to recover the tree will
 // not need to compute the Tree, while with DumpClaims will require to compute
 // the Tree (with the computational cost of each hash)
-func (mt *MerkleTree) DumpTreeIoWriter(w io.Writer, rootKey *Hash) error {
-	fmt.Fprintf(w, "[\n")
+func (mt *MerkleTree) DumpTree(w io.Writer, rootKey *Hash) error {
 	err := mt.Walk(rootKey, func(n *Node) {
-		fmt.Fprintf(w, "\"%v\":\"%v\",", n.Key().Hex(), common3.HexEncode(n.Value()))
+		if n.Type != NodeTypeEmpty {
+			fmt.Fprintf(w, "%v:%v,", n.Key().Hex(), common3.HexEncode(n.Value()))
+		}
 	})
-	fmt.Fprintf(w, "]\n")
+
+	if rootKey == nil {
+		rootKey = mt.RootKey()
+	}
+	fmt.Fprintf(w, "%v:%v,", common3.HexEncode(rootNodeValue), rootKey.Hex())
+
 	return err
 }
 
-// DumpTree acts similar to DumpTreeIoWriter, but outputing a array of strings with all the entrances
-func (mt *MerkleTree) DumpTree(rootKey *Hash) ([]string, error) {
-	var dumpedTree []string
-	err := mt.Walk(rootKey, func(n *Node) {
-		dumpedTree = append(dumpedTree, common3.HexEncode(n.Entry.Bytes()))
-	})
-	return dumpedTree, err
+// ImportTree imports the tree from the output from the DumpTree function
+func (mt *MerkleTree) ImportTree(i io.Reader) error {
+	tx, err := mt.storage.NewTx()
+	if err != nil {
+		return err
+	}
+	mt.Lock()
+	defer func() {
+		if err == nil {
+			if err := tx.Commit(); err != nil {
+				tx.Close()
+			}
+		} else {
+			tx.Close()
+		}
+		mt.Unlock()
+	}()
+
+	r := bufio.NewReader(i)
+	for {
+		s, err := r.ReadString(',')
+		if err != nil {
+			break
+		}
+		s = s[:len(s)-1]
+		a := strings.Split(s, ":")
+
+		k, err := common3.HexDecode(a[0])
+		if err != nil {
+			break
+		}
+		v, err := common3.HexDecode(a[1])
+		if err != nil {
+			break
+		}
+		tx.Put(k, v)
+	}
+
+	v, err := tx.Get(rootNodeValue)
+	if err != nil {
+		return err
+	}
+	mt.rootKey = &Hash{}
+	copy(mt.rootKey[:], v)
+
+	return nil
 }
 
 // DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write

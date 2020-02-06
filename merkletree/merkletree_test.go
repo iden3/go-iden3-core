@@ -631,7 +631,7 @@ func newClaimBasicEntry(indexSlot [800 / 8]byte, dataSlot [960 / 8]byte) *Entry 
 	return e
 }
 
-func TestMTWalkDumpTree(t *testing.T) {
+func TestDumpTreeImportTree(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
@@ -650,13 +650,26 @@ func TestMTWalkDumpTree(t *testing.T) {
 	}
 
 	w := bytes.NewBufferString("")
-	fmt.Fprintf(w, "--------\nDumpTree of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n")
-	err := mt.DumpTreeIoWriter(w, nil)
-	fmt.Fprintf(w, "End of DumpTree of the MerkleTree with RootKey "+mt.RootKey().Hex()+"\n--------\n")
+	err := mt.DumpTree(w, nil)
 	assert.Nil(t, err)
 	if debug {
 		fmt.Println(w)
 	}
+
+	dumpedTree := w.Bytes()
+
+	imt := newTestingMerkle(t, 140)
+	defer imt.Storage().Close()
+
+	err = imt.ImportTree(bytes.NewReader(dumpedTree))
+	assert.Nil(t, err)
+	assert.Equal(t, mt.RootKey(), imt.RootKey())
+
+	w = bytes.NewBufferString("")
+	err = imt.DumpTree(w, nil)
+	assert.Nil(t, err)
+	dumpedTree2 := w.Bytes()
+	assert.Equal(t, dumpedTree, dumpedTree2)
 }
 
 func TestMTWalkDumpClaims(t *testing.T) {
