@@ -97,7 +97,7 @@ func TestGetPredicateProof(t *testing.T) {
 
 	id0, err := core.IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
+	rootKey0 := merkletree.HexStringToHash(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := claims.NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	err = mt.AddClaim(claim0)
@@ -135,7 +135,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion0(t *testing.T) {
 
 	id0, err := core.IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
+	rootKey0 := merkletree.HexStringToHash(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := claims.NewClaimSetRootKey(&id0, &rootKey0)
 	assert.Nil(t, err)
 	// oldRoot is the root before adding the claim that we want to prove that we added correctly
@@ -166,7 +166,7 @@ func TestGenerateAndVerifyPredicateProofOfClaimVersion1(t *testing.T) {
 
 	id0, err := core.IDFromString(testgen.GetTestValue("idString1").(string))
 	assert.Nil(t, err)
-	rootKey0 := hexStringToKey(testgen.GetTestValue("rootKey2").(string))
+	rootKey0 := merkletree.HexStringToHash(testgen.GetTestValue("rootKey2").(string))
 	claim0, err := claims.NewClaimSetRootKey(&id0, &rootKey0)
 	if err != nil {
 		panic(err)
@@ -267,11 +267,4 @@ func TestMain(m *testing.M) {
 		os.RemoveAll(dir)
 	}
 	os.Exit(result)
-}
-
-func hexStringToKey(s string) merkletree.Hash {
-	var keyBytes [merkletree.ElemBytesLen]byte
-	keyBytesHex, _ := hex.DecodeString(s)
-	copy(keyBytes[:], keyBytesHex[:merkletree.ElemBytesLen])
-	return merkletree.Hash(merkletree.ElemBytes(keyBytes))
 }

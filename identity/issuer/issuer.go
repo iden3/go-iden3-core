@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/iden3/go-iden3-core/components/idenstatereader"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/genesis"
@@ -11,8 +12,13 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/services/idenstatewriter"
+
+	//"github.com/iden3/go-iden3-core/services/idenstatewriter"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+)
+
+var (
+	ErrIdenStateWriterNil = fmt.Errorf("IdenStateWriter is nil")
 )
 
 var (
@@ -38,23 +44,25 @@ var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 14
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
 type IdenStateTreeRoots struct {
-	ClaimsRoot *merkletree.Hash
-	RevRoot    *merkletree.Hash
-	RootsRoot  *merkletree.Hash
+	ClaimsRoot      *merkletree.Hash
+	RevocationsRoot *merkletree.Hash
+	RootsRoot       *merkletree.Hash
 }
 
 // Issuer is an identity that issues claims
 type Issuer struct {
 	id              *core.ID
 	claimsMt        *merkletree.MerkleTree
-	revMt           *merkletree.MerkleTree
+	revocationsMt   *merkletree.MerkleTree
 	rootsMt         *merkletree.MerkleTree
-	idenStateWriter idenstatewriter.IdenStateWriter
+	idenStateReader idenstatereader.IdenStateReader
+	// idenStateWriter idenstatewriter.IdenStateWriter
 	keyStore        *keystore.KeyStore
 	kOpComp         *babyjub.PublicKeyComp
 	storage         db.Storage
 	nonceGen        *UniqueNonceGen
 	idenStateList   *StorageList
+	idenStatePublic *merkletree.Hash
 	cfg             Config
 }
 
@@ -81,7 +89,7 @@ func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletr
 }
 
 // New creates a new Issuer, creating a new genesis ID and initializes the storages.
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier, storage db.Storage, keyStore *keystore.KeyStore, idenStateWriter idenstatewriter.IdenStateWriter) (*Issuer, error) {
+func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier, storage db.Storage, keyStore *keystore.KeyStore, idenStateReader idenstatereader.IdenStateReader) (*Issuer, error) {
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
 		return nil, err
@@ -105,7 +113,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 		return nil, err
 	}
 	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kOp, nonce)
-	id, _, err := genesis.CalculateIdGenesisMT(clt, claimKOp, extraGenesisClaims)
+	id, _, err := genesis.CalculateIdGenesisMT(clt, rot, claimKOp, extraGenesisClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -124,14 +132,16 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	issuer := &Issuer{
 		id:              id,
 		claimsMt:        clt,
-		revMt:           ret,
+		revocationsMt:   ret,
 		rootsMt:         rot,
-		idenStateWriter: idenStateWriter,
+		idenStateReader: idenStateReader,
+		// idenStateWriter: idenStateWriter,
 		keyStore:        keyStore,
 		kOpComp:         kOpComp,
 		storage:         storage,
 		nonceGen:        nonceGen,
 		idenStateList:   idenStateList,
+		idenStatePublic: nil,
 		cfg:             cfg,
 	}
 
@@ -151,7 +161,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 }
 
 // Load creates an Issuer by loading a previously created Issuer (with New).
-func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateWriter idenstatewriter.IdenStateWriter) (*Issuer, error) {
+func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateReader idenstatereader.IdenStateReader) (*Issuer, error) {
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
@@ -185,11 +195,12 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateWriter idens
 	idenStateList := NewStorageList(dbPrefixIdenStateList)
 
 	return &Issuer{
-		id:              &id,
-		claimsMt:        clt,
-		revMt:           ret,
-		rootsMt:         rot,
-		idenStateWriter: idenStateWriter,
+		id:            &id,
+		claimsMt:      clt,
+		revocationsMt: ret,
+		rootsMt:       rot,
+		// idenStateWriter: idenStateWriter,
+		idenStateReader: idenStateReader,
 		keyStore:        keyStore,
 		kOpComp:         &kOpComp,
 		storage:         storage,
@@ -201,18 +212,23 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateWriter idens
 
 // state returns the current Identity State and the three merkle tree roots.
 func (i *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
-	clr, rer, ror := i.claimsMt.RootKey(), i.revMt.RootKey(), i.rootsMt.RootKey()
+	clr, rer, ror := i.claimsMt.RootKey(), i.revocationsMt.RootKey(), i.rootsMt.RootKey()
 	idenState := core.IdenState(clr, rer, ror)
 	return idenState, IdenStateTreeRoots{
-		ClaimsRoot: clr,
-		RevRoot:    rer,
-		RootsRoot:  ror,
+		ClaimsRoot:      clr,
+		RevocationsRoot: rer,
+		RootsRoot:       ror,
 	}
 }
 
 // ID returns the Issuer ID (Identity ID).
 func (i *Issuer) ID() *core.ID {
 	return i.id
+}
+
+func (i *Issuer) SyncIdenStatePublic() error {
+	// i.idenStateReader.GetState(i.id)
+	return fmt.Errorf("TODO")
 }
 
 // GenCredentialExistence generates an existence credential (claim + proof of
@@ -242,6 +258,9 @@ func (i *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Creden
 // IssueClaim adds a new claim to the Claims Merkle Tree of the Issuer.  The
 // Identity State is not updated.
 func (i *Issuer) IssueClaim(claim merkletree.Entrier) error {
+	if i.idenStateReader == nil {
+		return ErrIdenStateWriterNil
+	}
 	err := i.claimsMt.AddClaim(claim)
 	if err != nil {
 		return err
@@ -275,6 +294,9 @@ func (i *Issuer) getIdenStateByIdx(tx db.Tx, idx uint32) (*merkletree.Hash, *Ide
 // PublishState calculates the current Issuer identity state, and if it's
 // different than the last one, it publishes in in the blockchain.
 func (i *Issuer) PublishState() error {
+	if i.idenStateReader == nil {
+		return ErrIdenStateWriterNil
+	}
 	idenState, idenStateTreeRoots := i.state()
 
 	tx, err := i.storage.NewTx()
@@ -307,17 +329,26 @@ func (i *Issuer) PublishState() error {
 
 // RevokeClaim revokes an already issued claim.
 func (i *Issuer) RevokeClaim(claim merkletree.Entrier) error {
+	if i.idenStateReader == nil {
+		return ErrIdenStateWriterNil
+	}
 	data, err := i.claimsMt.GetDataByIndex(claim.Entry().HIndex())
 	if err != nil {
 		return err
 	}
 	nonce := claims.GetRevocationNonce(&merkletree.Entry{Data: *data})
 
-	return fmt.Errorf("TODO: Add nonce %v to RevocationTree", nonce)
+	if err := claims.AddLeafRevocationsTree(i.revocationsMt, nonce, 0xffffffff); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateClaim allows updating the value of an already issued claim.
 func (i *Issuer) UpdateClaim(hIndex *merkletree.Hash, value []merkletree.ElemBytes) error {
+	if i.idenStateReader == nil {
+		return ErrIdenStateWriterNil
+	}
 	return fmt.Errorf("TODO")
 }
 

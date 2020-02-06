@@ -2,17 +2,23 @@ package eth
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethkeystore "github.com/ethereum/go-ethereum/accounts/keystore"
+
 	// "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	ErrAccountNil = fmt.Errorf("Authorized calls can't be made when the account is nil")
 )
 
 type Client2 struct {
@@ -27,6 +33,9 @@ func NewClient2(client *ethclient.Client, account *accounts.Account, ks *ethkeys
 }
 
 func (c *Client2) CallAuth(fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
+	if c.account == nil {
+		return nil, ErrAccountNil
+	}
 	nonce, err := c.client.PendingNonceAt(context.Background(), c.account.Address)
 	if err != nil {
 		return nil, err

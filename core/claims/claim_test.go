@@ -10,6 +10,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/testgen"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 // If generateTest is true, the checked values will be used to generate a test vector
@@ -57,6 +58,17 @@ func initTest() {
 		// ClaimAuthorizeKSignBabyJub
 		testgen.SetTestValue("0_privateKey", "28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f")
 		testgen.SetTestValue("1_privateKey", "9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")
+
+		// TestLeafRootsTree
+		root0, err := poseidon.HashBytes([]byte("root0"))
+		if err != nil {
+			panic(err)
+		}
+		testgen.SetTestValue("root0", merkletree.BigIntToHash(root0).Hex())
+
+		// TestLeafRevocationsTree
+		testgen.SetTestValue("nonce0", float64(5))
+		testgen.SetTestValue("version0", float64(5))
 	}
 }
 

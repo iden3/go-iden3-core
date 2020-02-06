@@ -876,3 +876,13 @@ func (mt *MerkleTree) dbInsert(tx db.Tx, k []byte, t NodeType, data []byte) {
 	v := append([]byte{byte(t)}, data...)
 	tx.Put(k, v)
 }
+
+func HexStringToHash(s string) Hash {
+	b, err := common3.HexDecode(s)
+	if err != nil {
+		panic(err)
+	}
+	var b32 [ElemBytesLen]byte
+	copy(b32[:], b[:32])
+	return Hash(ElemBytes(b32))
+}

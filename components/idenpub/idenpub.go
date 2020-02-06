@@ -1,5 +1,7 @@
 package idenpub
 
+// TODO: Rename this to IdenStatePubOffchain
+
 import (
 	"bytes"
 	"math"
@@ -24,24 +26,12 @@ type IdenPub interface {
 	Publish()
 }
 
-// IdenPubHTTP satisfies the IdenPub interface, and stores in a leveldb the published RoT & ReT to be returned when requested.
+// IdenPubHTTP satisfies the IdenPub interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
 type IdenPubHTTP struct {
 	rw  sync.RWMutex
 	db  db.Storage
 	rot *merkletree.MerkleTree
 	ret *merkletree.MerkleTree
-}
-
-// AddLeafRoT adds a new leaf to the given MerkleTree, which contains the Root
-func AddLeafRoT(mt *merkletree.MerkleTree, root merkletree.Hash) error {
-	l := NewLeafRoT(root)
-	return mt.AddEntry(l.Entry())
-}
-
-// AddLeafReT adds a new leaf to the given MerkleTree, which contains the Nonce & Version
-func AddLeafReT(mt *merkletree.MerkleTree, nonce, version uint32) error {
-	l := NewLeafReT(nonce, version)
-	return mt.AddEntry(l.Entry())
 }
 
 // NewIdenPubHTTP returns a new IdenPubHTTP
@@ -53,9 +43,9 @@ func NewIdenPubHTTP(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.M
 	}
 }
 
-// Publish publishes the RoT and ReT to the configured way of publishing
+// Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
 func (i *IdenPubHTTP) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot *merkletree.Hash) error {
-	// RoT
+	// RootsTree
 	w := bytes.NewBufferString("")
 	err := i.rot.DumpTree(w, rootsRoot)
 	if err != nil {
@@ -63,7 +53,7 @@ func (i *IdenPubHTTP) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot 
 	}
 	rotBlob := w.Bytes()
 
-	// ReT
+	// RevocationsTree
 	w = bytes.NewBufferString("")
 	err = i.ret.DumpTree(w, revocationsRoot)
 	if err != nil {
@@ -121,12 +111,12 @@ func (i *IdenPubHTTP) getCacheI(tx db.Tx) (int, error) {
 
 // PublicData contains the RootsTree + Root, and the RevocationTree + Root
 type PublicData struct {
-	IdenState merkletree.Hash
-	ClTRoot   merkletree.Hash
-	RoTRoot   merkletree.Hash
-	RoT       []byte
-	ReTRoot   merkletree.Hash
-	ReT       []byte
+	IdenState           merkletree.Hash
+	ClaimsTreeRoot      merkletree.Hash
+	RootsTreeRoot       merkletree.Hash
+	RootsTree           []byte
+	RevocationsTreeRoot merkletree.Hash
+	RevocationsTree     []byte
 }
 
 // GetPublicData returns the public data of the IdenPubHTTP.
@@ -188,12 +178,12 @@ func (i *IdenPubHTTP) GetPublicData() (*PublicData, error) {
 	copy(retRoot32[:], retRoot[:32])
 
 	p := &PublicData{
-		IdenState: merkletree.Hash(merkletree.ElemBytes(idenState32)),
-		ClTRoot:   merkletree.Hash(merkletree.ElemBytes(cltRoot32)),
-		RoTRoot:   merkletree.Hash(merkletree.ElemBytes(rotRoot32)),
-		RoT:       rot,
-		ReTRoot:   merkletree.Hash(merkletree.ElemBytes(retRoot32)),
-		ReT:       ret,
+		IdenState:           merkletree.Hash(merkletree.ElemBytes(idenState32)),
+		ClaimsTreeRoot:      merkletree.Hash(merkletree.ElemBytes(cltRoot32)),
+		RootsTreeRoot:       merkletree.Hash(merkletree.ElemBytes(rotRoot32)),
+		RootsTree:           rot,
+		RevocationsTreeRoot: merkletree.Hash(merkletree.ElemBytes(retRoot32)),
+		RevocationsTree:     ret,
 	}
 	return p, nil
 }

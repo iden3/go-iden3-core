@@ -16,17 +16,18 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
-	idenstatewritemock "github.com/iden3/go-iden3-core/services/idenstatewriter/mock"
+
+	// idenstatewritemock "github.com/iden3/go-iden3-core/services/idenstatewriter/mock"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 var debug = true
 
 var service *IdenManager
-var idenStateWriter *idenstatewritemock.IdenStateWriteMock
+
+// var idenStateWriter *idenstatewritemock.IdenStateWriteMock
 var mt *merkletree.MerkleTree
 
 const relayIdHex = "113kyY52PSBr9oUqosmYkCavjjrQFuiuAw47FpZeUf"
@@ -99,8 +100,8 @@ func initializeEnvironment(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	idenStateWriter = idenstatewritemock.New()
-	service = New(&relayID, mt, idenStateWriter, *signer)
+	// idenStateWriter = idenstatewritemock.New()
+	service = New(&relayID, mt, *signer)
 }
 
 func TestGetNextVersion(t *testing.T) {
@@ -353,8 +354,8 @@ func initializeIdService(t *testing.T) *IdenManager {
 		t.Error(err)
 	}
 	// sto := db.NewMemoryStorage()
-	idenStateWriteMock := idenstatewritemock.New()
-	idenStateWriteMock.On("SetRoot", mock.Anything).Return()
+	// idenStateWriteMock := idenstatewritemock.New()
+	// idenStateWriteMock.On("SetRoot", mock.Anything).Return()
 
 	pass := []byte("my passphrase")
 	storage := babykeystore.MemStorage([]byte{})
@@ -378,7 +379,7 @@ func initializeIdService(t *testing.T) *IdenManager {
 
 	signer := idensigner.New(keyStore, *relayPk)
 
-	return New(&relayId, mt, idenStateWriteMock, *signer)
+	return New(&relayId, mt, *signer)
 }
 
 func TestCreateIdGenesisRandomLoop(t *testing.T) {

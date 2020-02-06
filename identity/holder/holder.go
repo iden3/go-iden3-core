@@ -3,8 +3,8 @@ package holder
 import (
 	"fmt"
 
-	"github.com/iden3/go-iden3-core/components/identity/issuer"
 	"github.com/iden3/go-iden3-core/core/proof"
+	"github.com/iden3/go-iden3-core/identity/issuer"
 )
 
 type Holder struct {

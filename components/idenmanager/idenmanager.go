@@ -1,5 +1,7 @@
 package idenmanager
 
+// DEPRECATED in favour of identity/issuer
+
 import (
 	"crypto/ecdsa"
 	"errors"
@@ -18,7 +20,8 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	babykeystore "github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/services/idenstatewriter"
+
+	// "github.com/iden3/go-iden3-core/services/idenstatewriter"
 	"github.com/iden3/go-iden3-core/utils"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -30,15 +33,15 @@ var (
 )
 
 type IdenManager struct {
-	id              *core.ID
-	mt              *merkletree.MerkleTree
-	idenStateWriter idenstatewriter.IdenStateWriter
-	signer          idensigner.IdenSigner
+	id *core.ID
+	mt *merkletree.MerkleTree
+	// idenStateWriter idenstatewriter.IdenStateWriter
+	signer idensigner.IdenSigner
 }
 
-func New(id *core.ID, mt *merkletree.MerkleTree, idenStateWriter idenstatewriter.IdenStateWriter,
+func New(id *core.ID, mt *merkletree.MerkleTree,
 	signer idensigner.IdenSigner) *IdenManager {
-	return &IdenManager{id, mt, idenStateWriter, signer}
+	return &IdenManager{id, mt, signer}
 }
 
 // ID returns the id.
@@ -52,9 +55,9 @@ func (m *IdenManager) MT() *merkletree.MerkleTree {
 }
 
 // IdenStateWriter returns the IdenStateWriter
-func (m *IdenManager) IdenStateWriter() idenstatewriter.IdenStateWriter {
-	return m.idenStateWriter
-}
+// func (m *IdenManager) IdenStateWriter() idenstatewriter.IdenStateWriter {
+// 	return m.idenStateWriter
+// }
 
 // CheckSetRootParams checks the params corresponding to the SetRoot0Req.
 // 1. Check that id and ProofClaimAuthKOp.Id match
@@ -118,7 +121,7 @@ func (m *IdenManager) UpdateSetRootClaim(id *core.ID, setRootReq messages.SetRoo
 	}
 
 	// update Relay Root in Smart Contract
-	m.idenStateWriter.SetRoot(*m.mt.RootKey())
+	// m.idenStateWriter.SetRoot(*m.mt.RootKey())
 
 	return claimSetRootKey, nil
 }
@@ -180,7 +183,7 @@ func (m *IdenManager) CommitNewIdRoot(id core.ID, kSignPk *ecdsa.PublicKey, root
 	}
 
 	// update Relay Root in Smart Contract
-	m.idenStateWriter.SetRoot(*m.mt.RootKey())
+	// m.idenStateWriter.SetRoot(*m.mt.RootKey())
 
 	return claimSetRootKey, nil
 }
@@ -226,7 +229,7 @@ func (m *IdenManager) AddClaimAuthorizeKSignSecp256k1First(id core.ID,
 	}
 
 	// update Relay's Root in the Smart Contract
-	m.idenStateWriter.SetRoot(*m.mt.RootKey())
+	// m.idenStateWriter.SetRoot(*m.mt.RootKey())
 
 	return nil
 }
@@ -278,7 +281,7 @@ func (m *IdenManager) AddUserIdClaim(id *core.ID, claimValueMsg messages.ClaimVa
 	}
 
 	// update Relay Root in Smart Contract
-	m.idenStateWriter.SetRoot(*m.mt.RootKey())
+	// m.idenStateWriter.SetRoot(*m.mt.RootKey())
 
 	return nil
 }
@@ -289,7 +292,7 @@ func (m *IdenManager) AddClaim(claim merkletree.Entrier) error {
 	if err != nil {
 		return err
 	}
-	m.idenStateWriter.SetRoot(*m.mt.RootKey())
+	// m.idenStateWriter.SetRoot(*m.mt.RootKey())
 	return nil
 }
 
@@ -438,7 +441,8 @@ func (m *IdenManager) GetClaimProofUserByHiOld(id *core.ID, hi *merkletree.Hash)
 // published in the blockchain.  The result is signed (with
 // a timestamp) by the service.
 func (m *IdenManager) GetClaimProofByHiBlockchain(hi *merkletree.Hash) (*proof.ProofClaim, error) {
-	rootData, err := m.idenStateWriter.GetRoot(m.id)
+	// rootData, err := m.idenStateWriter.GetRoot(m.id)
+	rootData, err := &proof.RootData{}, fmt.Errorf("DEPRECATED")
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +503,7 @@ func (m *IdenManager) CreateIdGenesis(kop *babyjub.PublicKey, kdis, kreen, kupda
 	}
 
 	// update Relay's Root in the Smart Contract
-	m.idenStateWriter.SetRoot(*m.MT().RootKey())
+	// m.idenStateWriter.SetRoot(*m.MT().RootKey())
 
 	return id, &proofClaims.KOp, nil
 }
