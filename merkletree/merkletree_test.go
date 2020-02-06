@@ -346,6 +346,7 @@ func TestVerifyProofCases(t *testing.T) {
 	for i := 8; i < 32; i++ {
 		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
 		proof, err = mt.GenerateProof(e.HIndex(), nil)
+		assert.Nil(t, err)
 		if debug {
 			fmt.Println(i, proof)
 		}
