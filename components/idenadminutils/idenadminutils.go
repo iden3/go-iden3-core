@@ -8,18 +8,19 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/components/idenmanager"
 	merkletree "github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-core/services/idenstatewriter"
+
+	// "github.com/iden3/go-iden3-core/services/idenstatewriter"
 	"github.com/iden3/go-iden3-crypto/mimc7"
 )
 
 type IdenAdminUtils struct {
-	mt              *merkletree.MerkleTree
-	idenStateWriter idenstatewriter.IdenStateWriter
-	idenManager     *idenmanager.IdenManager
+	mt *merkletree.MerkleTree
+	//idenStateWriter idenstatewriter.IdenStateWriter
+	idenManager *idenmanager.IdenManager
 }
 
-func New(mt *merkletree.MerkleTree, idenStateWriter idenstatewriter.IdenStateWriter, idenManager *idenmanager.IdenManager) *IdenAdminUtils {
-	return &IdenAdminUtils{mt, idenStateWriter, idenManager}
+func New(mt *merkletree.MerkleTree, idenManager *idenmanager.IdenManager) *IdenAdminUtils {
+	return &IdenAdminUtils{mt, idenManager}
 }
 
 // RawDump returns all the key and values from the database

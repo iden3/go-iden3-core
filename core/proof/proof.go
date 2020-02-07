@@ -176,7 +176,9 @@ func VerifyGenesisMTProof(id *core.ID, proof *merkletree.Proof, hIndex, hValue *
 	if err != nil {
 		return false, err
 	}
-	idenState := core.IdenState(clr, &merkletree.HashZero, clr)
+	// Roots Tree has only one leaf, so the Root of the Tree is the same value as the Leaf Node Key
+	ror := merkletree.NewNodeLeaf(claims.NewLeafRootsTree(*clr).Entry()).Key()
+	idenState := core.IdenState(clr, &merkletree.HashZero, ror)
 
 	if eq := bytes.Equal(id[:], core.IdGenesisFromIdenState(idenState)[:]); !eq {
 		return false, fmt.Errorf("calclated root doesn't match proof root")
@@ -459,25 +461,25 @@ func VerifyPredicateProof(p *PredicateProof) bool {
 	return true
 }
 
-type IdenState struct {
-	BlockTs int64
-	BlockN  uint64
-	Value   *merkletree.Hash
+type IdenStateData struct {
+	BlockTs   int64
+	BlockN    uint64
+	IdenState *merkletree.Hash
 }
 
 type CredentialExistence struct {
-	Id        *core.ID
-	IdenState IdenState
-	MtpClaim  *merkletree.Proof
-	Claim     *merkletree.Entry
-	RevRoot   *merkletree.Hash
-	RooRoot   *merkletree.Hash
-	IdPub     string
+	Id            *core.ID
+	IdenStateData IdenStateData
+	MtpClaim      *merkletree.Proof
+	Claim         *merkletree.Entry
+	RevRoot       *merkletree.Hash
+	RooRoot       *merkletree.Hash
+	IdPub         string
 }
 
 type CredentialValidity struct {
 	CredentialExistence CredentialExistence
-	IdenState           IdenState
+	IdenStateData       IdenStateData
 	MtpNotNonce         *merkletree.Proof
 	ClaRoot             *merkletree.Hash
 	RooRoot             *merkletree.Hash
