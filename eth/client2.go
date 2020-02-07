@@ -21,6 +21,7 @@ var (
 	ErrAccountNil = fmt.Errorf("Authorized calls can't be made when the account is nil")
 )
 
+// Client2 is an ethereum client to call Smart Contract methods.
 type Client2 struct {
 	client         *ethclient.Client
 	account        *accounts.Account
@@ -28,10 +29,15 @@ type Client2 struct {
 	ReceiptTimeout time.Duration
 }
 
+// NewClient2 creates a Client2 instance.  The account is not mandatory (it can
+// be nil).  If the account is nil, CallAuth will fail with ErrAccountNil.
 func NewClient2(client *ethclient.Client, account *accounts.Account, ks *ethkeystore.KeyStore) *Client2 {
 	return &Client2{client: client, account: account, ks: ks, ReceiptTimeout: 60 * time.Second}
 }
 
+// CallAuth performs a Smart Contract method call that requires authorization.
+// This call requires a valid account with Ether that can be spend during the
+// call.
 func (c *Client2) CallAuth(fn func(*ethclient.Client, *bind.TransactOpts) (*types.Transaction, error)) (*types.Transaction, error) {
 	if c.account == nil {
 		return nil, ErrAccountNil
@@ -58,10 +64,13 @@ func (c *Client2) CallAuth(fn func(*ethclient.Client, *bind.TransactOpts) (*type
 	return fn(c.client, auth)
 }
 
+// Call performs a read only Smart Contract method call.
 func (c *Client2) Call(fn func(*ethclient.Client) error) error {
 	return fn(c.client)
 }
 
+// WaitReceipt will block until a transaction is confirmed.  Internally it
+// polls the state every 200 milliseconds.
 func (c *Client2) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
