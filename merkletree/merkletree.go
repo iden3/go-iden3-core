@@ -111,6 +111,9 @@ var (
 	ErrEntryIndexAlreadyExists = errors.New("the entry index already exists in the tree")
 	// ErrNotWritable is used when the MerkleTree is not writable and a write function is called
 	ErrNotWritable = errors.New("Merkle Tree not writable")
+	// EOF indicates the End of File
+	EOF = fmt.Errorf("End of File")
+
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
@@ -478,24 +481,89 @@ node [fontname=Monospace,fontsize=10,shape=box]
 
 // DumpTree outputs a list of all the key value in hex. Notice that this will
 // output the full tree, which is not needed to reconstruct the Tree. To
-// reconstruct the tree can be done from the output of DumpClaims funtion.
-// The difference between DumpTree and DumpClaims is that with DumpTree the
-// size of the output will be almost the double but to recover the tree will
-// not need to compute the Tree, while with DumpClaims will require to compute
-// the Tree (with the computational cost of each hash)
+// reconstruct the tree can be done from the output of DumpClaims funtion.  The
+// difference between DumpTree and DumpClaims is that with DumpTree the size of
+// the output will be almost the double (in raw bytes, but with the current
+// implementation DumpTree output is even smaller than DumpClaims output size, but because DumpTree stores in
+// binary while DumpClaims stores in hex) but to recover the tree will not need
+// to compute the Tree, while with DumpClaims will require to compute the Tree
+// (with the computational cost of each hash)
 func (mt *MerkleTree) DumpTree(w io.Writer, rootKey *Hash) error {
+	var errS error
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type != NodeTypeEmpty {
-			fmt.Fprintf(w, "%v:%v,", n.Key().Hex(), common3.HexEncode(n.Value()))
+			err := serializeKV(w, n.Key().Bytes(), n.Value())
+			if err != nil {
+				errS = err
+			}
 		}
 	})
+	if err != nil {
+		return err
+	}
+	if errS != nil {
+		return errS
+	}
 
 	if rootKey == nil {
 		rootKey = mt.RootKey()
 	}
-	fmt.Fprintf(w, "%v:%v,", common3.HexEncode(rootNodeValue), rootKey.Hex())
+	err = serializeKV(w, rootNodeValue, rootKey.Bytes())
 
 	return err
+}
+
+func checkKVLen(kLen, vLen int) error {
+	if kLen > 0xff {
+		return fmt.Errorf("len(k) %d > 0xff", kLen)
+	}
+	if vLen > 0xffff {
+		return fmt.Errorf("len(v) %d > 0xffff", vLen)
+	}
+	return nil
+}
+
+func serializeKV(w io.Writer, k, v []byte) error {
+	if err := checkKVLen(len(k), len(v)); err != nil {
+		return err
+	}
+	kH := byte(len(k))
+	vH := common3.Uint16ToBytes(uint16(len(v)))
+	_, err := w.Write([]byte{kH})
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(vH)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(k)
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(v)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func deserializeKV(r io.Reader) ([]byte, []byte, error) {
+	header := make([]byte, 3)
+	_, err := io.ReadFull(r, header)
+	if err == io.EOF {
+		return nil, nil, EOF
+	} else if err != nil {
+		return nil, nil, err
+	}
+	kLen := int(header[0])
+	vLen := int(common3.BytesToUint16(header[1:]))
+	kv := make([]byte, kLen+vLen)
+	_, err = io.ReadFull(r, kv)
+	if err != nil {
+		return nil, nil, err
+	}
+	return kv[:kLen], kv[kLen:], nil
 }
 
 // ImportTree imports the tree from the output from the DumpTree function
@@ -518,20 +586,11 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 
 	r := bufio.NewReader(i)
 	for {
-		s, err := r.ReadString(',')
-		if err != nil {
+		k, v, err := deserializeKV(r)
+		if err == EOF {
 			break
-		}
-		s = s[:len(s)-1]
-		a := strings.Split(s, ":")
-
-		k, err := common3.HexDecode(a[0])
-		if err != nil {
-			break
-		}
-		v, err := common3.HexDecode(a[1])
-		if err != nil {
-			break
+		} else if err != nil {
+			return err
 		}
 		tx.Put(k, v)
 	}

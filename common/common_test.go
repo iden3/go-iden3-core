@@ -34,3 +34,10 @@ func TestBytesToUint32(t *testing.T) {
 	u := BytesToUint32([]byte{0xe7, 0x3, 0x0, 0x0})
 	assert.Equal(t, uint32(999), u)
 }
+
+func TestBytesToUint16(t *testing.T) {
+	i := uint16(50)
+	b := Uint16ToBytes(i)
+	i2 := BytesToUint16(b)
+	assert.Equal(t, i, i2)
+}
