@@ -111,8 +111,6 @@ var (
 	ErrEntryIndexAlreadyExists = errors.New("the entry index already exists in the tree")
 	// ErrNotWritable is used when the MerkleTree is not writable and a write function is called
 	ErrNotWritable = errors.New("Merkle Tree not writable")
-	// EOF indicates the End of File
-	EOF = fmt.Errorf("End of File")
 
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -551,16 +549,16 @@ func serializeKV(w io.Writer, k, v []byte) error {
 func deserializeKV(r io.Reader) ([]byte, []byte, error) {
 	header := make([]byte, 3)
 	_, err := io.ReadFull(r, header)
-	if err == io.EOF {
-		return nil, nil, EOF
-	} else if err != nil {
+	if err != nil {
 		return nil, nil, err
 	}
 	kLen := int(header[0])
 	vLen := int(common3.BytesToUint16(header[1:]))
 	kv := make([]byte, kLen+vLen)
 	_, err = io.ReadFull(r, kv)
-	if err != nil {
+	if err == io.EOF {
+		return nil, nil, io.ErrUnexpectedEOF
+	} else if err != nil {
 		return nil, nil, err
 	}
 	return kv[:kLen], kv[kLen:], nil
@@ -587,7 +585,7 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 	r := bufio.NewReader(i)
 	for {
 		k, v, err := deserializeKV(r)
-		if err == EOF {
+		if err == io.EOF {
 			break
 		} else if err != nil {
 			return err
