@@ -1,6 +1,4 @@
-package idenstatereader
-
-// TODO: Rename this to IdenStatePubOnchain
+package idenpubonchain
 
 import (
 	"fmt"
@@ -16,8 +14,8 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
-// IdenStateReader is an interface that gives access to the IdenStates Smart Contract.
-type IdenStateReader interface {
+// IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
+type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
 	GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
 	GetStateByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error)
@@ -31,27 +29,27 @@ type ContractAddresses struct {
 	IdenStates common.Address
 }
 
-// IdenStateRead is the regular implementation of IdenStateReader
-type IdenStateRead struct {
+// IdenPubOnChain is the regular implementation of IdenPubOnChain
+type IdenPubOnChain struct {
 	client    *eth.Client2
 	addresses ContractAddresses
 }
 
-// New creates a new IdenStateRead
-func New(client *eth.Client2, addresses ContractAddresses) *IdenStateRead {
-	return &IdenStateRead{
+// New creates a new IdenPubOnChain
+func New(client *eth.Client2, addresses ContractAddresses) *IdenPubOnChain {
+	return &IdenPubOnChain{
 		client:    client,
 		addresses: addresses,
 	}
 }
 
 // GetState returns the Identity State of the given ID from the IdenStates Smart Contract.
-func (s *IdenStateRead) GetState(id *core.ID) (*proof.IdenStateData, error) {
+func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
 	var blockTS uint64
-	err := s.client.Call(func(c *ethclient.Client) error {
-		idenStates, err := contracts.NewState(s.addresses.IdenStates, c)
+	err := ip.client.Call(func(c *ethclient.Client) error {
+		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
@@ -67,10 +65,10 @@ func (s *IdenStateRead) GetState(id *core.ID) (*proof.IdenStateData, error) {
 
 // GetState returns the Identity State of the given ID closest to the blockN
 // from the IdenStates Smart Contract.
-func (s *IdenStateRead) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
+func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
 	var idenState [32]byte
-	err := s.client.Call(func(c *ethclient.Client) error {
-		idenStates, err := contracts.NewState(s.addresses.IdenStates, c)
+	err := ip.client.Call(func(c *ethclient.Client) error {
+		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
@@ -82,10 +80,10 @@ func (s *IdenStateRead) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.
 
 // GetState returns the Identity State of the given ID closest to the blockTimeStamp
 // from the IdenStates Smart Contract.
-func (s *IdenStateRead) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
+func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
 	var idenState [32]byte
-	err := s.client.Call(func(c *ethclient.Client) error {
-		idenStates, err := contracts.NewState(s.addresses.IdenStates, c)
+	err := ip.client.Call(func(c *ethclient.Client) error {
+		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
@@ -96,10 +94,10 @@ func (s *IdenStateRead) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkl
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (s *IdenStateRead) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
-	if tx, err := s.client.CallAuth(
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+	if tx, err := ip.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			idenStates, err := contracts.NewState(s.addresses.IdenStates, c)
+			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
 				return nil, err
 			}
@@ -113,10 +111,10 @@ func (s *IdenStateRead) SetState(id *core.ID, newState *merkletree.Hash, kOpProo
 }
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
-func (s *IdenStateRead) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
-	if tx, err := s.client.CallAuth(
+func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+	if tx, err := ip.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			idenStates, err := contracts.NewState(s.addresses.IdenStates, c)
+			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
 				return nil, err
 			}
@@ -130,16 +128,16 @@ func (s *IdenStateRead) InitState(id *core.ID, genesisState *merkletree.Hash, ne
 }
 
 // Should this really be here?
-// func (s *IdenStateRead) VerifyProofClaim(pc *proof.ProofClaim) (bool, error) {
+// func (ip *IdenPubOnChain) VerifyProofClaim(pc *proof.ProofClaim) (bool, error) {
 // 	if ok, err := pc.Verify(pc.Proof.Root); !ok {
 // 		return false, err
 // 	}
 // 	id, blockN, blockTime := pc.PublishedData()
-// 	rootByBlock, err := s.GetStateByBlock(id, blockN)
+// 	rootByBlock, err := ip.GetStateByBlock(id, blockN)
 // 	if err != nil {
 // 		return false, err
 // 	}
-// 	rootByTime, err := s.GetStateByTime(id, blockTime)
+// 	rootByTime, err := ip.GetStateByTime(id, blockTime)
 // 	if err != nil {
 // 		return false, err
 // 	}
@@ -155,6 +153,6 @@ func (s *IdenStateRead) InitState(id *core.ID, genesisState *merkletree.Hash, ne
 // 	return true, nil
 // }
 
-// func (s *IdenStateRead) Client() *eth.Client2 {
-// 	return s.client
+// func (ip *IdenPubOnChain) Client() *eth.Client2 {
+// 	return ip.client
 // }

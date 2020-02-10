@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/iden3/go-iden3-core/components/idenstatereader"
+	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/genesis"
@@ -13,12 +13,11 @@ import (
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 
-	//"github.com/iden3/go-iden3-core/services/idenstatewriter"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 var (
-	ErrIdenStateWriterNil     = fmt.Errorf("IdenStateWriter is nil")
+	ErrIdenPubOnChainNil      = fmt.Errorf("IdenPubOnChain is nil")
 	ErrIdenStatePendingNotNil = fmt.Errorf("Update of the published IdenState is pending")
 )
 
@@ -50,6 +49,8 @@ type IdenStateTreeRoots struct {
 	RootsRoot       *merkletree.Hash
 }
 
+// TODO: Add mutex!
+
 // Issuer is an identity that issues claims
 type Issuer struct {
 	storage       db.Storage
@@ -57,12 +58,12 @@ type Issuer struct {
 	claimsMt      *merkletree.MerkleTree
 	revocationsMt *merkletree.MerkleTree
 	rootsMt       *merkletree.MerkleTree
-	// idenStateReader can be nil if the identity doesn't connect to the blockchain.
-	idenStateReader idenstatereader.IdenStateReader
-	keyStore        *keystore.KeyStore
-	kOpComp         *babyjub.PublicKeyComp
-	nonceGen        *UniqueNonceGen
-	idenStateList   *StorageList
+	// idenPubOnChain can be nil if the identity doesn't connect to the blockchain.
+	idenPubOnChain idenpubonchain.IdenPubOnChainer
+	keyStore       *keystore.KeyStore
+	kOpComp        *babyjub.PublicKeyComp
+	nonceGen       *UniqueNonceGen
+	idenStateList  *StorageList
 	// idenStateOnChain can be nil if the identity doesn't connect to the blockchain.
 	idenStateOnChain *merkletree.Hash
 	idenStatePending *merkletree.Hash
@@ -92,7 +93,7 @@ func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletr
 }
 
 // New creates a new Issuer, creating a new genesis ID and initializes the storages.
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier, storage db.Storage, keyStore *keystore.KeyStore, idenStateReader idenstatereader.IdenStateReader) (*Issuer, error) {
+func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier, storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpubonchain.IdenPubOnChainer) (*Issuer, error) {
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
 		return nil, err
@@ -104,9 +105,11 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 		return nil, err
 	}
 
+	// Initialize the UniqueNonceGen to generate revocation nonces for claims.
 	nonceGen := NewUniqueNonceGen(NewStorageValue(dbKeyNonceIdx))
 	nonceGen.Init(tx)
 
+	// Create the Claim to authorize the Operational Key (kOp)
 	kOp, err := kOpComp.Decompress()
 	if err != nil {
 		return nil, err
@@ -132,32 +135,24 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 
 	idenStateList := NewStorageList(dbPrefixIdenStateList)
 
-	var idenStateOnChain *merkletree.Hash
-	if idenStateReader != nil {
-		idenStateData, err := idenStateReader.GetState(id)
-		if err != nil {
-			return nil, err
-		}
-		idenStateOnChain = idenStateData.IdenState
-	}
-
 	issuer := &Issuer{
-		id:              id,
-		claimsMt:        clt,
-		revocationsMt:   ret,
-		rootsMt:         rot,
-		idenStateReader: idenStateReader,
+		id:             id,
+		claimsMt:       clt,
+		revocationsMt:  ret,
+		rootsMt:        rot,
+		idenPubOnChain: idenPubOnChain,
 		// idenStateWriter: idenStateWriter,
 		keyStore:         keyStore,
 		kOpComp:          kOpComp,
 		storage:          storage,
 		nonceGen:         nonceGen,
 		idenStateList:    idenStateList,
-		idenStateOnChain: idenStateOnChain,
+		idenStateOnChain: nil,
 		idenStatePending: nil,
 		cfg:              cfg,
 	}
 
+	// Initalize the history of idenStates
 	idenState, idenStateTreeRoots := issuer.state()
 	idenStateList.Init(tx)
 
@@ -174,7 +169,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 }
 
 // Load creates an Issuer by loading a previously created Issuer (with New).
-func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateReader idenstatereader.IdenStateReader) (*Issuer, error) {
+func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpubonchain.IdenPubOnChainer) (*Issuer, error) {
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
@@ -204,34 +199,31 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenStateReader idens
 	}
 
 	nonceGen := NewUniqueNonceGen(NewStorageValue(dbKeyNonceIdx))
-
 	idenStateList := NewStorageList(dbPrefixIdenStateList)
 
-	var idenStateOnChain *merkletree.Hash
-	if idenStateReader != nil {
-		idenStateData, err := idenStateReader.GetState(&id)
-		if err != nil {
-			return nil, err
-		}
-		idenStateOnChain = idenStateData.IdenState
-	}
-
-	return &Issuer{
+	is := Issuer{
 		id:            &id,
 		claimsMt:      clt,
 		revocationsMt: ret,
 		rootsMt:       rot,
 		// idenStateWriter: idenStateWriter,
-		idenStateReader:  idenStateReader,
+		idenPubOnChain:   idenPubOnChain,
 		keyStore:         keyStore,
 		kOpComp:          &kOpComp,
 		storage:          storage,
 		nonceGen:         nonceGen,
 		idenStateList:    idenStateList,
-		idenStateOnChain: idenStateOnChain,
+		idenStateOnChain: nil,
 		idenStatePending: nil,
 		cfg:              cfg,
-	}, nil
+	}
+
+	if err := is.SyncIdenStatePublic(); err != nil {
+		if err != ErrIdenPubOnChainNil {
+			return nil, err
+		}
+	}
+	return &is, nil
 }
 
 // state returns the current Identity State and the three merkle tree roots.
@@ -253,31 +245,53 @@ func (is *Issuer) ID() *core.ID {
 // SyncIdenStatePublic updates the IdenStateOnChain and IdenStatePending from
 // the values in the Smart Contract.
 func (is *Issuer) SyncIdenStatePublic() error {
-	idenStateData, err := is.idenStateReader.GetState(is.id)
+	if is.idenPubOnChain == nil {
+		return ErrIdenPubOnChainNil
+	}
+	idenStateData, err := is.idenPubOnChain.GetState(is.id)
 	if err != nil {
 		return err
 	}
-	// If there's an idenStatePending, verify that the result from the
-	// smart contract matches.  Otherwise, the result must be the
-	// idenStateOnChain.
-	if is.idenStatePending != nil {
-		if !idenStateData.IdenState.Equals(is.idenStatePending) {
-			return fmt.Errorf("Fatal error: Identity State in the Smart Contract (%v)"+
-				" doesn't match the expected Pending one (%v).",
-				idenStateData.IdenState, is.idenStatePending)
+	if is.idenStateOnChain == nil {
+		// If the IdenState is not in the blockchain, the result will be HashZero
+		if idenStateData.IdenState.Equals(&merkletree.HashZero) {
+			return nil
 		}
-	} else {
+		is.idenStateOnChain = idenStateData.IdenState
+		return nil
+	}
+	if is.idenStatePending == nil {
+		// If there's no IdenState pending to be set on chain, the
+		// obtained one must be the idenStateOnChain
 		if !idenStateData.IdenState.Equals(is.idenStateOnChain) {
 			return fmt.Errorf("Fatal error: Identity State in the Smart Contract (%v)"+
 				" doesn't match the expected OnChain one (%v).",
-				idenStateData.IdenState, is.idenStatePending)
+				idenStateData.IdenState, is.idenStateOnChain)
 		}
+		return nil
+	}
+	// If there's an IdenState pending to be set on chain, the
+	// obtained one can be:
+
+	// a. the idenStateOnchan (in this case, we still have an
+	// IdenState pending to be set on chain).
+	if idenStateData.IdenState.Equals(is.idenStateOnChain) {
+		return nil
 	}
 
-	is.idenStatePending = nil
-	is.idenStateOnChain = idenStateData.IdenState
+	// b. the idenStatePending (in this case, we no longer have an
+	// IdenState pending and it becomes the idenStateOnChain).
+	if idenStateData.IdenState.Equals(is.idenStatePending) {
+		is.idenStatePending = nil
+		is.idenStateOnChain = idenStateData.IdenState
+		return nil
+	}
 
-	return nil
+	// c. Neither the idenStatePending nor the idenStateOnchain
+	// (unexpected result).
+	return fmt.Errorf("Fatal error: Identity State in the Smart Contract (%v)"+
+		" doesn't match the Pending one (%v) nor the OnChain one (%v).",
+		idenStateData.IdenState, is.idenStatePending, is.idenStateOnChain)
 }
 
 // GenCredentialExistence generates an existence credential (claim + proof of
@@ -307,8 +321,8 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 // IssueClaim adds a new claim to the Claims Merkle Tree of the Issuer.  The
 // Identity State is not updated.
 func (is *Issuer) IssueClaim(claim merkletree.Entrier) error {
-	if is.idenStateReader == nil {
-		return ErrIdenStateWriterNil
+	if is.idenPubOnChain == nil {
+		return ErrIdenPubOnChainNil
 	}
 	err := is.claimsMt.AddClaim(claim)
 	if err != nil {
@@ -343,8 +357,8 @@ func (is *Issuer) getIdenStateByIdx(tx db.Tx, idx uint32) (*merkletree.Hash, *Id
 // PublishState calculates the current Issuer identity state, and if it's
 // different than the last one, it publishes in in the blockchain.
 func (is *Issuer) PublishState() error {
-	if is.idenStateReader == nil {
-		return ErrIdenStateWriterNil
+	if is.idenPubOnChain == nil {
+		return ErrIdenPubOnChainNil
 	}
 	if is.idenStatePending != nil {
 		return ErrIdenStatePendingNotNil
@@ -381,8 +395,8 @@ func (is *Issuer) PublishState() error {
 
 // RevokeClaim revokes an already issued claim.
 func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
-	if is.idenStateReader == nil {
-		return ErrIdenStateWriterNil
+	if is.idenPubOnChain == nil {
+		return ErrIdenPubOnChainNil
 	}
 	data, err := is.claimsMt.GetDataByIndex(claim.Entry().HIndex())
 	if err != nil {
@@ -398,8 +412,8 @@ func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
 
 // UpdateClaim allows updating the value of an already issued claim.
 func (is *Issuer) UpdateClaim(hIndex *merkletree.Hash, value []merkletree.ElemBytes) error {
-	if is.idenStateReader == nil {
-		return ErrIdenStateWriterNil
+	if is.idenPubOnChain == nil {
+		return ErrIdenPubOnChainNil
 	}
 	return fmt.Errorf("TODO")
 }

@@ -1,4 +1,4 @@
-package idenpub
+package idenpuboffchain
 
 import (
 	"fmt"
@@ -43,14 +43,14 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.RootKey().Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.RootKey().Hex())
 
-	idenPubHTTP := NewIdenPubHTTP(db.NewMemoryStorage(), rotMt, retMt)
+	idenPubOffChainHttp := NewIdenPubOffChainHttp(db.NewMemoryStorage(), rotMt, retMt)
 
 	idenState := merkletree.HexStringToHash(testgen.GetTestValue("idenState0").(string))
 
-	err = idenPubHTTP.Publish(&idenState, cltMt.RootKey(), rotMt.RootKey(), retMt.RootKey())
+	err = idenPubOffChainHttp.Publish(&idenState, cltMt.RootKey(), rotMt.RootKey(), retMt.RootKey())
 	assert.Nil(t, err)
 
-	pubData, err := idenPubHTTP.GetPublicData()
+	pubData, err := idenPubOffChainHttp.GetPublicData()
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "rootRootsTree1", pubData.RootsTreeRoot.Hex())
 	assert.Equal(t, rotMt.RootKey().Hex(), pubData.RootsTreeRoot.Hex())
@@ -60,7 +60,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 
 func initTest() {
 	// Init test
-	err := testgen.InitTest("idenpub", generateTest)
+	err := testgen.InitTest("idenpuboffchain", generateTest)
 	if err != nil {
 		fmt.Println("error initializing test data:", err)
 		return

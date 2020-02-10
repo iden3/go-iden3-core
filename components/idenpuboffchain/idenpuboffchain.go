@@ -1,6 +1,4 @@
-package idenpub
-
-// TODO: Rename this to IdenStatePubOffchain
+package idenpuboffchain
 
 import (
 	"bytes"
@@ -21,22 +19,22 @@ var (
 	retKey       = []byte("ret")
 )
 
-// IdenPub is a interface, that for the moment will be satisfied at least by IdenPubHTTP & IdenPubIPFS.
-type IdenPub interface {
+// IdenPubOffChainer is a interface, that for the moment will be satisfied at least by IdenPubOffChainHttp & IdenPubIPFS.
+type IdenPubOffChainer interface {
 	Publish()
 }
 
-// IdenPubHTTP satisfies the IdenPub interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
-type IdenPubHTTP struct {
+// IdenPubOffChainHttp satisfies the IdenPubOffChainer interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
+type IdenPubOffChainHttp struct {
 	rw  sync.RWMutex
 	db  db.Storage
 	rot *merkletree.MerkleTree
 	ret *merkletree.MerkleTree
 }
 
-// NewIdenPubHTTP returns a new IdenPubHTTP
-func NewIdenPubHTTP(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.MerkleTree) *IdenPubHTTP {
-	return &IdenPubHTTP{
+// NewIdenPubOffChainHttp returns a new IdenPubOffChainHttp
+func NewIdenPubOffChainHttp(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.MerkleTree) *IdenPubOffChainHttp {
+	return &IdenPubOffChainHttp{
 		db:  db,
 		rot: rot,
 		ret: ret,
@@ -44,7 +42,7 @@ func NewIdenPubHTTP(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.M
 }
 
 // Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
-func (i *IdenPubHTTP) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot *merkletree.Hash) error {
+func (i *IdenPubOffChainHttp) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot *merkletree.Hash) error {
 	// RootsTree
 	w := bytes.NewBufferString("")
 	err := i.rot.DumpTree(w, rootsRoot)
@@ -99,7 +97,7 @@ func nextCacheI(i int) int {
 	return int(math.Mod(float64(i), 1))
 }
 
-func (i *IdenPubHTTP) getCacheI(tx db.Tx) (int, error) {
+func (i *IdenPubOffChainHttp) getCacheI(tx db.Tx) (int, error) {
 	cacheI, err := tx.Get(cacheIKey)
 	if err == db.ErrNotFound {
 		cacheI = []byte{1}
@@ -119,8 +117,8 @@ type PublicData struct {
 	RevocationsTree     []byte
 }
 
-// GetPublicData returns the public data of the IdenPubHTTP.
-func (i *IdenPubHTTP) GetPublicData() (*PublicData, error) {
+// GetPublicData returns the public data of the IdenPubOffChainHttp.
+func (i *IdenPubOffChainHttp) GetPublicData() (*PublicData, error) {
 	tx, err := i.db.NewTx()
 	if err != nil {
 		return nil, err

@@ -3,6 +3,7 @@ package issuer
 import (
 	"testing"
 
+	idenpubonchain "github.com/iden3/go-iden3-core/components/idenpubonchain/mock"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/keystore"
@@ -31,7 +32,7 @@ func TestNewLoadIssuer(t *testing.T) {
 	assert.Equal(t, issuer.id, issuerLoad.id)
 }
 
-func TestIssuer(t *testing.T) {
+func TestIssuerGenesis(t *testing.T) {
 	cfg := ConfigDefault
 	storage := db.NewMemoryStorage()
 	ksStorage := keystore.MemStorage([]byte{})
@@ -40,6 +41,24 @@ func TestIssuer(t *testing.T) {
 	kOp, err := keyStore.NewKey(pass)
 	require.Nil(t, err)
 	issuer, err := New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, nil)
+	require.Nil(t, err)
+
+	assert.Equal(t, issuer.revocationsMt.RootKey(), &merkletree.HashZero)
+
+	idenState, _ := issuer.state()
+	assert.Equal(t, issuer.ID(), core.IdGenesisFromIdenState(idenState))
+}
+
+func TestIssuerFull(t *testing.T) {
+	cfg := ConfigDefault
+	storage := db.NewMemoryStorage()
+	ksStorage := keystore.MemStorage([]byte{})
+	keyStore, err := keystore.NewKeyStore(&ksStorage, keystore.LightKeyStoreParams)
+	require.Nil(t, err)
+	kOp, err := keyStore.NewKey(pass)
+	require.Nil(t, err)
+	idenPubOnChain := idenpubonchain.New()
+	issuer, err := New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain)
 	require.Nil(t, err)
 
 	assert.Equal(t, issuer.revocationsMt.RootKey(), &merkletree.HashZero)
