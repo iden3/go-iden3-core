@@ -1,7 +1,6 @@
 package idenpub
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,9 +56,6 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	assert.Equal(t, rotMt.RootKey().Hex(), pubData.RootsTreeRoot.Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", pubData.RevocationsTreeRoot.Hex())
 	assert.Equal(t, retMt.RootKey().Hex(), pubData.RevocationsTreeRoot.Hex())
-
-	testgen.CheckTestValue(t, "RootsTree1", hex.EncodeToString(pubData.RootsTree))
-	testgen.CheckTestValue(t, "RevocationsTree1", hex.EncodeToString(pubData.RevocationsTree))
 }
 
 func initTest() {

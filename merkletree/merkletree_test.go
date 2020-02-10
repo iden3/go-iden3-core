@@ -673,7 +673,7 @@ func TestDumpTreeImportTree(t *testing.T) {
 	assert.Equal(t, dumpedTree, dumpedTree2)
 }
 
-func TestMTWalkDumpClaims(t *testing.T) {
+func TestDumpClaimsIoWriter(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
 
