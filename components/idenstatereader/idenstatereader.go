@@ -16,6 +16,7 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
+// IdenStateReader is an interface that gives access to the IdenStates Smart Contract.
 type IdenStateReader interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
 	GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
@@ -25,15 +26,18 @@ type IdenStateReader interface {
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
 }
 
+// ContractAddresses are the list of Smart Contract addresses used for the on chain identity state data.
 type ContractAddresses struct {
 	IdenStates common.Address
 }
 
+// IdenStateRead is the regular implementation of IdenStateReader
 type IdenStateRead struct {
 	client    *eth.Client2
 	addresses ContractAddresses
 }
 
+// New creates a new IdenStateRead
 func New(client *eth.Client2, addresses ContractAddresses) *IdenStateRead {
 	return &IdenStateRead{
 		client:    client,
@@ -41,7 +45,7 @@ func New(client *eth.Client2, addresses ContractAddresses) *IdenStateRead {
 	}
 }
 
-// GetState returns the Identity State of the given ID from the IdenStates smart contract.
+// GetState returns the Identity State of the given ID from the IdenStates Smart Contract.
 func (s *IdenStateRead) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
@@ -62,7 +66,7 @@ func (s *IdenStateRead) GetState(id *core.ID) (*proof.IdenStateData, error) {
 }
 
 // GetState returns the Identity State of the given ID closest to the blockN
-// from the IdenStates smart contract.
+// from the IdenStates Smart Contract.
 func (s *IdenStateRead) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
 	var idenState [32]byte
 	err := s.client.Call(func(c *ethclient.Client) error {
@@ -77,7 +81,7 @@ func (s *IdenStateRead) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.
 }
 
 // GetState returns the Identity State of the given ID closest to the blockTimeStamp
-// from the IdenStates smart contract.
+// from the IdenStates Smart Contract.
 func (s *IdenStateRead) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
 	var idenState [32]byte
 	err := s.client.Call(func(c *ethclient.Client) error {
@@ -91,6 +95,7 @@ func (s *IdenStateRead) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkl
 	return merkletree.Hash(idenState), err
 }
 
+// SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
 func (s *IdenStateRead) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
 	if tx, err := s.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -107,6 +112,7 @@ func (s *IdenStateRead) SetState(id *core.ID, newState *merkletree.Hash, kOpProo
 	}
 }
 
+// InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (s *IdenStateRead) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
 	if tx, err := s.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {

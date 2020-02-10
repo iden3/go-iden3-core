@@ -847,6 +847,9 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 	return bytes.Equal(rootKey[:], rootFromProof[:])
 }
 
+// RootFromProof calculates the root that would correspond to a tree whose
+// siblings are the ones in the proof with the claim hashing to hIndex and
+// hValue.
 func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 	sibIdx := len(proof.Siblings) - 1
 	var midKey *Hash
@@ -912,6 +915,8 @@ func (mt *MerkleTree) addNode(tx db.Tx, n *Node) (*Hash, error) {
 	return k, nil
 }
 
+// dbGet is a helper function to get the node of a key from the internal
+// storage.
 func (mt *MerkleTree) dbGet(k []byte) (NodeType, []byte, error) {
 	if bytes.Equal(k, HashZero[:]) {
 		return 0, nil, nil
@@ -931,11 +936,14 @@ func (mt *MerkleTree) dbGet(k []byte) (NodeType, []byte, error) {
 	return NodeType(nodeType), nodeBytes, nil
 }
 
+// dbInsert is a helper function to insert a node into a key in an open db
+// transaction.
 func (mt *MerkleTree) dbInsert(tx db.Tx, k []byte, t NodeType, data []byte) {
 	v := append([]byte{byte(t)}, data...)
 	tx.Put(k, v)
 }
 
+// HexStringToHash decodes a hex string into a Hash.
 func HexStringToHash(s string) Hash {
 	b, err := common3.HexDecode(s)
 	if err != nil {

@@ -1,5 +1,7 @@
 package issuer
 
+// TODO: Move this to a more appropiate place.
+
 import (
 	"encoding/binary"
 	"encoding/json"
