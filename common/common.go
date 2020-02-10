@@ -87,26 +87,23 @@ func HexDecodeInto(dst []byte, h []byte) error {
 	return nil
 }
 
-// Uint16ToBytes returns a byte array from a uint8
+// Uint16ToBytes returns a byte array from a uint16
 func Uint16ToBytes(u uint16) []byte {
 	var b [2]byte
 	binary.LittleEndian.PutUint16(b[:], u)
 	return b[:]
 }
 
-// BytesToUint16 returns a uint8 from a byte array
+// BytesToUint16 returns a uint16 from a byte array
 func BytesToUint16(b []byte) uint16 {
 	return binary.LittleEndian.Uint16(b[:2])
 }
 
 // Uint32ToBytes returns a byte array from a uint32
 func Uint32ToBytes(u uint32) []byte {
-	buff := new(bytes.Buffer)
-	err := binary.Write(buff, binary.LittleEndian, u)
-	if err != nil {
-		panic(err)
-	}
-	return buff.Bytes()
+	var b [4]byte
+	binary.LittleEndian.PutUint32(b[:], u)
+	return b[:]
 }
 
 // BytesToUint32 returns a uint32 from a byte array
