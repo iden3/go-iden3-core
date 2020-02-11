@@ -19,8 +19,10 @@ import (
 )
 
 var (
-	ErrIdenPubOnChainNil      = fmt.Errorf("IdenPubOnChain is nil")
-	ErrIdenStatePendingNotNil = fmt.Errorf("Update of the published IdenState is pending")
+	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
+	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
+	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
+	ErrClaimNotFoundStateOnChain = fmt.Errorf("Claim not found under the on chain identity state")
 )
 
 var (
@@ -32,15 +34,38 @@ var (
 	dbKeyKOp               = []byte("kop")
 	dbKeyId                = []byte("id")
 	dbKeyNonceIdx          = []byte("nonceidx")
-	dbKeyIdenStateOnChain  = []byte("idenstateonchain")
-	dbKeyIdenStatePending  = []byte("idenstatepending")
-	dbKeySetStateEthTx     = []byte("setstateethtx")
-	dbKeyInitStateEthTx    = []byte("initstateethtx")
+	// dbKeyIdenStateOnChain     = []byte("idenstateonchain")
+	dbKeyIdenStateDataOnChain = []byte("idenstatedataonchain")
+	dbKeyIdenStatePending     = []byte("idenstatepending")
+	dbKeySetStateEthTx        = []byte("setstateethtx")
+	dbKeyInitStateEthTx       = []byte("initstateethtx")
 )
 
 var (
 	sigPrefixSetState = []byte("setstate:")
 )
+
+// ConfigDefault is a default configuration for the Issuer.
+var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140}
+
+func storeJSON(tx db.Tx, key []byte, v interface{}) error {
+	vJSON, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	tx.Put(key, vJSON)
+	return nil
+}
+
+func loadJSON(storage db.Storage, key []byte, v interface{}) error {
+	vJSON, err := storage.Get(key)
+	if err == db.ErrNotFound {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return json.Unmarshal(vJSON, v)
+}
 
 // Config allows configuring the creation of an Issuer.
 type Config struct {
@@ -48,9 +73,6 @@ type Config struct {
 	MaxLevelsRevocationTree int
 	MaxLevelsRootsTree      int
 }
-
-// ConfigDefault is a default configuration for the Issuer.
-var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140}
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
 type IdenStateTreeRoots struct {
@@ -75,10 +97,10 @@ type Issuer struct {
 	kOpComp        *babyjub.PublicKeyComp
 	nonceGen       *UniqueNonceGen
 	idenStateList  *StorageList
-	// idenStateOnChain is the last known identity state checked to be in
-	// the Smart Contract.  idenStateOnChain can be nil if the identity
-	// doesn't connect to the blockchain.
-	_idenStateOnChain *merkletree.Hash
+	// _idenStateOnChain     *merkletree.Hash
+	// idenStateDataOnChain is the last known identity state checked to be
+	// in the Smart Contract.
+	_idenStateDataOnChain *proof.IdenStateData
 	// idenStatePending is a newly calculated identity state that is being
 	// published in the Smart Contract but the transaction to publish it is
 	// still pending.
@@ -88,24 +110,24 @@ type Issuer struct {
 	cfg               Config
 }
 
+//
+// Persistence setters and getters
+//
+
+func (is *Issuer) idenStateDataOnChain() *proof.IdenStateData { return is._idenStateDataOnChain }
+
+func (is *Issuer) setIdenStateDataOnChain(tx db.Tx, v *proof.IdenStateData) error {
+	is._idenStateDataOnChain = v
+	return storeJSON(tx, dbKeyIdenStateDataOnChain, v)
+}
+
+func (is *Issuer) loadIdenStateDataOnChain() error {
+	is._idenStateDataOnChain = &proof.IdenStateData{}
+	return loadJSON(is.storage, dbKeyIdenStateDataOnChain, is._idenStateDataOnChain)
+}
+
 func (is *Issuer) idenStateOnChain() *merkletree.Hash {
-	return is._idenStateOnChain
-}
-
-func (is *Issuer) setIdenStateOnChain(tx db.Tx, v *merkletree.Hash) {
-	tx.Put(dbKeyIdenStateOnChain, v[:])
-	is._idenStateOnChain = v
-}
-
-func (is *Issuer) loadIdenStateOnChain() error {
-	b, err := is.storage.Get(dbKeyIdenStateOnChain)
-	if err != nil {
-		return err
-	}
-	var v merkletree.Hash
-	copy(v[:], b)
-	is._idenStateOnChain = &v
-	return nil
+	return is._idenStateDataOnChain.IdenState
 }
 
 func (is *Issuer) idenStatePending() *merkletree.Hash {
@@ -113,8 +135,8 @@ func (is *Issuer) idenStatePending() *merkletree.Hash {
 }
 
 func (is *Issuer) setIdenStatePending(tx db.Tx, v *merkletree.Hash) {
-	tx.Put(dbKeyIdenStatePending, v[:])
 	is._idenStatePending = v
+	tx.Put(dbKeyIdenStatePending, v[:])
 }
 
 func (is *Issuer) loadIdenStatePending() error {
@@ -128,57 +150,28 @@ func (is *Issuer) loadIdenStatePending() error {
 	return nil
 }
 
-func storeEthTx(tx db.Tx, key []byte, v *types.Transaction) error {
-	vJSON, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	tx.Put(key, vJSON)
-	return nil
-}
-
-func loadEthTx(storage db.Storage, key []byte) (*types.Transaction, error) {
-	vJSON, err := storage.Get(key)
-	if err == db.ErrNotFound {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	var v types.Transaction
-	if err := json.Unmarshal(vJSON, &v); err != nil {
-		return nil, err
-	}
-	return &v, nil
-}
-
 func (is *Issuer) setStateEthTx() *types.Transaction { return is._setStateEthTx }
 
 func (is *Issuer) setSetStateEthTx(tx db.Tx, v *types.Transaction) error {
-	return storeEthTx(tx, dbKeySetStateEthTx, v)
+	is._setStateEthTx = v
+	return storeJSON(tx, dbKeySetStateEthTx, v)
 }
 
 func (is *Issuer) loadSetStateEthTx() error {
-	v, err := loadEthTx(is.storage, dbKeySetStateEthTx)
-	if err != nil {
-		return err
-	}
-	is._setStateEthTx = v
-	return nil
+	is._setStateEthTx = &types.Transaction{}
+	return loadJSON(is.storage, dbKeySetStateEthTx, is._setStateEthTx)
 }
 
 func (is *Issuer) initStateEthTx() *types.Transaction { return is._initStateEthTx }
 
 func (is *Issuer) setInitStateEthTx(tx db.Tx, v *types.Transaction) error {
-	return storeEthTx(tx, dbKeyInitStateEthTx, v)
+	is._initStateEthTx = v
+	return storeJSON(tx, dbKeyInitStateEthTx, v)
 }
 
 func (is *Issuer) loadInitStateEthTx() error {
-	v, err := loadEthTx(is.storage, dbKeyInitStateEthTx)
-	if err != nil {
-		return err
-	}
-	is._initStateEthTx = v
-	return nil
+	is._initStateEthTx = &types.Transaction{}
+	return loadJSON(is.storage, dbKeyInitStateEthTx, is._initStateEthTx)
 }
 
 // loadMTs loads the three identity merkle trees from the storage using the configuration.
@@ -270,8 +263,8 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 		return nil, err
 	}
 
-	// Initialize IdenStateOnChain and IdenStatePending to zero (writes to storage).
-	is.setIdenStateOnChain(tx, &merkletree.HashZero)
+	// Initialize IdenStateDataOnChain and IdenStatePending to zero (writes to storage).
+	is.setIdenStateDataOnChain(tx, &proof.IdenStateData{IdenState: &merkletree.HashZero})
 	is.setIdenStatePending(tx, &merkletree.HashZero)
 
 	if err := tx.Commit(); err != nil {
@@ -330,7 +323,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 		cfg:            cfg,
 	}
 
-	if err := is.loadIdenStateOnChain(); err != nil {
+	if err := is.loadIdenStateDataOnChain(); err != nil {
 		return nil, err
 	}
 	if err := is.loadIdenStatePending(); err != nil {
@@ -364,6 +357,8 @@ func (is *Issuer) ID() *core.ID {
 // SyncIdenStatePublic updates the IdenStateOnChain and IdenStatePending from
 // the values in the Smart Contract.
 func (is *Issuer) SyncIdenStatePublic() error {
+	is.rw.Lock()
+	defer is.rw.Unlock()
 	tx, err := is.storage.NewTx()
 	if err != nil {
 		return err
@@ -378,8 +373,6 @@ func (is *Issuer) SyncIdenStatePublic() error {
 }
 
 func (is *Issuer) syncIdenStatePublic(tx db.Tx) error {
-	is.rw.Lock()
-	defer is.rw.Unlock()
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
@@ -406,7 +399,7 @@ func (is *Issuer) syncIdenStatePublic(tx db.Tx) error {
 	// IdenState pending and it becomes the idenStateOnChain).
 	if idenStateData.IdenState.Equals(is.idenStatePending()) {
 		is.setIdenStatePending(tx, &merkletree.HashZero)
-		is.setIdenStateOnChain(tx, idenStateData.IdenState)
+		is.setIdenStateDataOnChain(tx, idenStateData)
 		return nil
 	}
 
@@ -423,33 +416,11 @@ func (is *Issuer) syncIdenStatePublic(tx db.Tx) error {
 		idenStateData.IdenState, is.idenStatePending(), is.idenStateOnChain())
 }
 
-// GenCredentialExistence generates an existence credential (claim + proof of
-// existence) of an issued claim.  The result contains all data necessary to
-// validate the credential against the Identity State found in the blockchain.
-func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.CredentialExistence, error) {
-	// idenState, err := m.idenStateWriter.GetIdenState(is.id)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// var clr *merkletree.Hash // TODO
-	// clt, err := m.claimsMt.Snapshot(clr)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// proofClaim, err := proof.GetClaimProofByHi(mt, hi)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// proofClaim.ID = is.id
-	// proofClaim.BlockN = idenState.BlockN
-	// proofClaim.BlockTimestamp = idenState.BlockTs
-	// return proofClaim, nil
-	return nil, fmt.Errorf("TODO")
-}
-
 // IssueClaim adds a new claim to the Claims Merkle Tree of the Issuer.  The
 // Identity State is not updated.
 func (is *Issuer) IssueClaim(claim merkletree.Entrier) error {
+	is.rw.Lock()
+	defer is.rw.Unlock()
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
@@ -475,13 +446,13 @@ func (is *Issuer) getIdenStateByIdx(tx db.Tx, idx uint32) (*merkletree.Hash, *Id
 
 // getIdenStateTreeRoots gets the identity state tree roots of the Issuer from
 // the stored list by identity state.
-// func (is *Issuer) getIdenStateTreeRoots(tx db.Tx, idenState *merkletree.Hash) (*IdenStateTreeRoots, error) {
-// 	var idenStateTreeRoots IdenStateTreeRoots
-// 	if err := is.idenStateList.Get(tx, idenState[:], &idenStateTreeRoots); err != nil {
-// 		return nil, err
-// 	}
-// 	return &idenStateTreeRoots, nil
-// }
+func (is *Issuer) getIdenStateTreeRoots(tx db.Tx, idenState *merkletree.Hash) (*IdenStateTreeRoots, error) {
+	var idenStateTreeRoots IdenStateTreeRoots
+	if err := is.idenStateList.Get(tx, idenState[:], &idenStateTreeRoots); err != nil {
+		return nil, err
+	}
+	return &idenStateTreeRoots, nil
+}
 
 // PublishState calculates the current Issuer identity state, and if it's
 // different than the last one, it publishes in in the blockchain.
@@ -562,6 +533,8 @@ func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
+	is.rw.Lock()
+	defer is.rw.Unlock()
 	data, err := is.claimsMt.GetDataByIndex(claim.Entry().HIndex())
 	if err != nil {
 		return err
@@ -590,4 +563,49 @@ func (is *Issuer) Sign(string) (string, error) {
 // Sign signs a binary message by the kOp of the issuer.
 func (is *Issuer) SignBinary(prefix, msg []byte) (*babyjub.SignatureComp, error) {
 	return is.keyStore.SignRaw(is.kOpComp, append(prefix, msg...))
+}
+
+func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Hash) (*merkletree.Proof, error) {
+	mtp, err := mt.GenerateProof(hi, root)
+	if err != nil {
+		return nil, err
+	}
+	if !mtp.Existence {
+		return nil, ErrClaimNotFoundStateOnChain
+	}
+	return mtp, nil
+}
+
+// GenCredentialExistence generates an existence credential (claim + proof of
+// existence) of an issued claim.  The result contains all data necessary to
+// validate the credential against the Identity State found in the blockchain.
+// Fot now, there are no genesis credentials.
+func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.CredentialExistence, error) {
+	tx, err := is.storage.NewTx()
+	if err != nil {
+		return nil, err
+	}
+	is.rw.RLock()
+	defer is.rw.RUnlock()
+	idenStateData := is.idenStateDataOnChain()
+	if idenStateData.IdenState.Equals(&merkletree.HashZero) {
+		return nil, ErrIdenStateOnChainZero
+	}
+	idenStateTreeRoots, err := is.getIdenStateTreeRoots(tx, idenStateData.IdenState)
+	if err != nil {
+		return nil, err
+	}
+	mtpExist, err := generateExistenceMTProof(is.claimsMt, claim.Entry().HIndex(), idenStateTreeRoots.ClaimsRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &proof.CredentialExistence{
+		Id:            is.id,
+		IdenStateData: *idenStateData,
+		MtpClaim:      mtpExist,
+		Claim:         claim.Entry(),
+		RevRoot:       idenStateTreeRoots.RevocationsRoot,
+		RooRoot:       idenStateTreeRoots.RootsRoot,
+		IdPub:         "http://TODO",
+	}, nil
 }

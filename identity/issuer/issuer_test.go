@@ -61,6 +61,24 @@ func TestIssuerFull(t *testing.T) {
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
 }
 
+func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+	var ethTx types.Transaction
+	newState, _ := issuer.state()
+	sig, err := issuer.SignBinary(sigPrefixSetState, append(genesisState[:], newState[:]...))
+	require.Nil(t, err)
+	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	return &ethTx, newState
+}
+
+func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+	var ethTx types.Transaction
+	newState, _ := issuer.state()
+	sig, err := issuer.SignBinary(sigPrefixSetState, append(oldState[:], newState[:]...))
+	require.Nil(t, err)
+	idenPubOnChain.On("SetState", issuer.id, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	return &ethTx, newState
+}
+
 func TestIssuerPublish(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	issuer, _, _ := newIssuer(t, idenPubOnChain)
@@ -90,12 +108,7 @@ func TestIssuerPublish(t *testing.T) {
 	err = issuer.IssueClaim(claims.NewClaimBasic(indexBytes, dataBytes, 0))
 	require.Nil(t, err)
 
-	var ethTx types.Transaction
-	newState, _ := issuer.state()
-	require.Nil(t, err)
-	sig, err := issuer.SignBinary(sigPrefixSetState, append(genesisState[:], newState[:]...))
-	require.Nil(t, err)
-	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	_, newState := mockInitState(t, idenPubOnChain, issuer, genesisState)
 
 	// Publishing state for the first time
 	err = issuer.PublishState()
@@ -129,11 +142,7 @@ func TestIssuerPublish(t *testing.T) {
 	require.Nil(t, err)
 
 	oldState := newState
-	newState, _ = issuer.state()
-	require.Nil(t, err)
-	sig, err = issuer.SignBinary(sigPrefixSetState, append(oldState[:], newState[:]...))
-	require.Nil(t, err)
-	idenPubOnChain.On("SetState", issuer.id, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	_, newState = mockSetState(t, idenPubOnChain, issuer, oldState)
 
 	// Publishing state update
 	err = issuer.PublishState()
@@ -156,4 +165,47 @@ func TestIssuerPublish(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, newState, issuer.idenStateOnChain())
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+}
+
+func TestIssuerCredential(t *testing.T) {
+	idenPubOnChain := idenpubonchain.New()
+	issuer, _, _ := newIssuer(t, idenPubOnChain)
+	genesisState, _ := issuer.state()
+
+	// Issue a Claim
+	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes[0] = 0x42
+	claim0 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
+
+	err := issuer.IssueClaim(claim0)
+	require.Nil(t, err)
+
+	credExist, err := issuer.GenCredentialExistence(claim0)
+	assert.Nil(t, credExist)
+	assert.Equal(t, ErrIdenStateOnChainZero, err)
+
+	_, newState := mockInitState(t, idenPubOnChain, issuer, genesisState)
+	err = issuer.PublishState()
+	require.Nil(t, err)
+
+	idenPubOnChain.On("GetState", issuer.id).Return(&proof.IdenStateData{IdenState: newState}, nil).Once()
+
+	err = issuer.SyncIdenStatePublic()
+	require.Nil(t, err)
+	assert.Equal(t, newState, issuer.idenStateOnChain())
+	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+
+	credExist, err = issuer.GenCredentialExistence(claim0)
+	assert.Nil(t, err)
+
+	// Issue another claim
+	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes[0] = 0x81
+	claim1 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
+
+	err = issuer.IssueClaim(claim1)
+	require.Nil(t, err)
+
+	credExist, err = issuer.GenCredentialExistence(claim1)
+	assert.Equal(t, ErrClaimNotFoundStateOnChain, err)
 }
