@@ -35,6 +35,11 @@ var (
 	dbKeyIdenStateOnChain  = []byte("idenstateonchain")
 	dbKeyIdenStatePending  = []byte("idenstatepending")
 	dbKeySetStateEthTx     = []byte("setstateethtx")
+	dbKeyInitStateEthTx    = []byte("initstateethtx")
+)
+
+var (
+	sigPrefixSetState = []byte("setstate:")
 )
 
 // Config allows configuring the creation of an Issuer.
@@ -79,6 +84,7 @@ type Issuer struct {
 	// still pending.
 	_idenStatePending *merkletree.Hash
 	_setStateEthTx    *types.Transaction
+	_initStateEthTx   *types.Transaction
 	cfg               Config
 }
 
@@ -87,11 +93,7 @@ func (is *Issuer) idenStateOnChain() *merkletree.Hash {
 }
 
 func (is *Issuer) setIdenStateOnChain(tx db.Tx, v *merkletree.Hash) {
-	if v == nil {
-		tx.Put(dbKeyIdenStateOnChain, merkletree.HashZero[:])
-	} else {
-		tx.Put(dbKeyIdenStateOnChain, v[:])
-	}
+	tx.Put(dbKeyIdenStateOnChain, v[:])
 	is._idenStateOnChain = v
 }
 
@@ -102,11 +104,7 @@ func (is *Issuer) loadIdenStateOnChain() error {
 	}
 	var v merkletree.Hash
 	copy(v[:], b)
-	if v.Equals(&merkletree.HashZero) {
-		is._idenStateOnChain = nil
-	} else {
-		is._idenStateOnChain = &v
-	}
+	is._idenStateOnChain = &v
 	return nil
 }
 
@@ -115,56 +113,71 @@ func (is *Issuer) idenStatePending() *merkletree.Hash {
 }
 
 func (is *Issuer) setIdenStatePending(tx db.Tx, v *merkletree.Hash) {
-	if v == nil {
-		tx.Put(dbKeyIdenStatePending, merkletree.HashZero[:])
-	} else {
-		tx.Put(dbKeyIdenStatePending, v[:])
-	}
+	tx.Put(dbKeyIdenStatePending, v[:])
 	is._idenStatePending = v
 }
 
 func (is *Issuer) loadIdenStatePending() error {
 	b, err := is.storage.Get(dbKeyIdenStatePending)
-	if err == db.ErrNotFound {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 	var v merkletree.Hash
 	copy(v[:], b)
-	if v.Equals(&merkletree.HashZero) {
-		is._idenStatePending = nil
-	} else {
-		is._idenStatePending = &v
-	}
+	is._idenStatePending = &v
 	return nil
 }
 
-func (is *Issuer) setStateEthTx() *types.Transaction {
-	return is._setStateEthTx
-}
-
-func (is *Issuer) setSetStateEthTx(tx db.Tx, v *types.Transaction) error {
+func storeEthTx(tx db.Tx, key []byte, v *types.Transaction) error {
 	vJSON, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	tx.Put(dbKeySetStateEthTx, vJSON)
+	tx.Put(key, vJSON)
 	return nil
 }
 
-func (is *Issuer) loadSetStateEthTx() error {
-	vJSON, err := is.storage.Get(dbKeySetStateEthTx)
+func loadEthTx(storage db.Storage, key []byte) (*types.Transaction, error) {
+	vJSON, err := storage.Get(key)
 	if err == db.ErrNotFound {
-		return nil
+		return nil, nil
 	} else if err != nil {
-		return err
+		return nil, err
 	}
 	var v types.Transaction
 	if err := json.Unmarshal(vJSON, &v); err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
+func (is *Issuer) setStateEthTx() *types.Transaction { return is._setStateEthTx }
+
+func (is *Issuer) setSetStateEthTx(tx db.Tx, v *types.Transaction) error {
+	return storeEthTx(tx, dbKeySetStateEthTx, v)
+}
+
+func (is *Issuer) loadSetStateEthTx() error {
+	v, err := loadEthTx(is.storage, dbKeySetStateEthTx)
+	if err != nil {
 		return err
 	}
-	is._setStateEthTx = &v
+	is._setStateEthTx = v
+	return nil
+}
+
+func (is *Issuer) initStateEthTx() *types.Transaction { return is._initStateEthTx }
+
+func (is *Issuer) setInitStateEthTx(tx db.Tx, v *types.Transaction) error {
+	return storeEthTx(tx, dbKeyInitStateEthTx, v)
+}
+
+func (is *Issuer) loadInitStateEthTx() error {
+	v, err := loadEthTx(is.storage, dbKeyInitStateEthTx)
+	if err != nil {
+		return err
+	}
+	is._initStateEthTx = v
 	return nil
 }
 
@@ -257,9 +270,9 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 		return nil, err
 	}
 
-	// Initialize IdenStateOnChain and IdenStatePending to nil (writes to storage).
-	is.setIdenStateOnChain(tx, nil)
-	is.setIdenStatePending(tx, nil)
+	// Initialize IdenStateOnChain and IdenStatePending to zero (writes to storage).
+	is.setIdenStateOnChain(tx, &merkletree.HashZero)
+	is.setIdenStatePending(tx, &merkletree.HashZero)
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
@@ -334,8 +347,6 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 
 // state returns the current Identity State and the three merkle tree roots.
 func (is *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
-	is.rw.RLock()
-	defer is.rw.RUnlock()
 	clr, rer, ror := is.claimsMt.RootKey(), is.revocationsMt.RootKey(), is.rootsMt.RootKey()
 	idenState := core.IdenState(clr, rer, ror)
 	return idenState, IdenStateTreeRoots{
@@ -376,38 +387,32 @@ func (is *Issuer) syncIdenStatePublic(tx db.Tx) error {
 	if err != nil {
 		return err
 	}
-	if is.idenStateOnChain() == nil {
-		// If the IdenState is not in the blockchain, the result will be HashZero
-		if idenStateData.IdenState.Equals(&merkletree.HashZero) {
+	if is.idenStatePending().Equals(&merkletree.HashZero) {
+		// If there's no IdenState pending to be set on chain, the
+		// obtained one must be the idenStateOnChain (Zero for genesis
+		// / empty in the smart contract).
+		if idenStateData.IdenState.Equals(is.idenStateOnChain()) {
 			return nil
 		}
-		is.setIdenStateOnChain(tx, idenStateData.IdenState)
-		return nil
-	}
-	if is.idenStatePending() == nil {
-		// If there's no IdenState pending to be set on chain, the
-		// obtained one must be the idenStateOnChain
-		if !idenStateData.IdenState.Equals(is.idenStateOnChain()) {
-			return fmt.Errorf("Fatal error: Identity State in the Smart Contract (%v)"+
-				" doesn't match the expected OnChain one (%v).",
-				idenStateData.IdenState, is.idenStateOnChain())
-		}
-		return nil
+
+		return fmt.Errorf("Fatal error: Identity State in the Smart Contract (%v)"+
+			" doesn't match the expected OnChain one (%v).",
+			idenStateData.IdenState, is.idenStateOnChain())
 	}
 	// If there's an IdenState pending to be set on chain, the
 	// obtained one can be:
 
-	// a. the idenStateOnchan (in this case, we still have an
-	// IdenState pending to be set on chain).
-	if idenStateData.IdenState.Equals(is.idenStateOnChain()) {
+	// a. the idenStatePending (in this case, we no longer have an
+	// IdenState pending and it becomes the idenStateOnChain).
+	if idenStateData.IdenState.Equals(is.idenStatePending()) {
+		is.setIdenStatePending(tx, &merkletree.HashZero)
+		is.setIdenStateOnChain(tx, idenStateData.IdenState)
 		return nil
 	}
 
-	// b. the idenStatePending (in this case, we no longer have an
-	// IdenState pending and it becomes the idenStateOnChain).
-	if idenStateData.IdenState.Equals(is.idenStatePending()) {
-		is.setIdenStatePending(tx, nil)
-		is.setIdenStateOnChain(tx, idenStateData.IdenState)
+	// b. the idenStateOnchan (in this case, we still have an
+	// IdenState pending to be set on chain).
+	if idenStateData.IdenState.Equals(is.idenStateOnChain()) {
 		return nil
 	}
 
@@ -486,7 +491,7 @@ func (is *Issuer) PublishState() error {
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
-	if is.idenStatePending() != nil {
+	if !is.idenStatePending().Equals(&merkletree.HashZero) {
 		return ErrIdenStatePendingNotNil
 	}
 	idenState, idenStateTreeRoots := is.state()
@@ -495,6 +500,7 @@ func (is *Issuer) PublishState() error {
 	if err != nil {
 		return err
 	}
+
 	idenStateListLen, err := is.idenStateList.Length(tx)
 	if err != nil {
 		return err
@@ -504,7 +510,7 @@ func (is *Issuer) PublishState() error {
 		return err
 	}
 
-	if idenState == idenStateLast {
+	if idenState.Equals(idenStateLast) {
 		// IdenState hasn't changed, there's no need to do anything!
 		return nil
 	}
@@ -513,14 +519,34 @@ func (is *Issuer) PublishState() error {
 		return err
 	}
 
-	// Publish the State in the Smart Contract.
-	ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, nil, nil, nil)
+	// Sign [minor] identity transition from last state to new (current) state.
+	sig, err := is.SignBinary(sigPrefixSetState, append(idenStateLast[:], idenState[:]...))
 	if err != nil {
 		return err
 	}
 
-	if err := is.setSetStateEthTx(tx, ethTx); err != nil {
-		return err
+	if is.idenStateOnChain().Equals(&merkletree.HashZero) {
+		// Identity State not present in the Smart Contract. First time
+		// publishing it.
+		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, nil, nil, sig)
+		if err != nil {
+			return err
+		}
+
+		if err := is.setInitStateEthTx(tx, ethTx); err != nil {
+			return err
+		}
+	} else {
+		// Identity State apready present in the Smart Contract.
+		// Update it.
+		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, nil, nil, sig)
+		if err != nil {
+			return err
+		}
+
+		if err := is.setSetStateEthTx(tx, ethTx); err != nil {
+			return err
+		}
 	}
 
 	is.setIdenStatePending(tx, idenState)
@@ -528,7 +554,7 @@ func (is *Issuer) PublishState() error {
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	return fmt.Errorf("TODO")
+	return nil
 }
 
 // RevokeClaim revokes an already issued claim.
@@ -562,6 +588,6 @@ func (is *Issuer) Sign(string) (string, error) {
 }
 
 // Sign signs a binary message by the kOp of the issuer.
-func (is *Issuer) SignBinary(string) (string, error) {
-	return "", fmt.Errorf("TODO")
+func (is *Issuer) SignBinary(prefix, msg []byte) (*babyjub.SignatureComp, error) {
+	return is.keyStore.SignRaw(is.kOpComp, append(prefix, msg...))
 }

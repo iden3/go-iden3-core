@@ -12,6 +12,7 @@ import (
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
@@ -19,8 +20,8 @@ type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
 	GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
 	GetStateByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error)
-	SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error)
-	InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error)
+	SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
+	InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
 }
 
@@ -94,14 +95,17 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (mer
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
 				return nil, err
 			}
-			return idenStates.SetState(auth, *newState, *id, kOpProof, stateTransitionProof, *signature)
+			// FIXME: Use 64 byte signature once the contract is updated
+			var badSig [32]byte
+			copy(badSig[:], signature[:])
+			return idenStates.SetState(auth, *newState, *id, kOpProof, stateTransitionProof, badSig)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
@@ -111,14 +115,17 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpPr
 }
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
 				return nil, err
 			}
-			return idenStates.InitState(auth, *newState, *genesisState, *id, kOpProof, stateTransitionProof, *signature)
+			// FIXME: Use 64 byte signature once the contract is updated
+			var badSig [32]byte
+			copy(badSig[:], signature[:])
+			return idenStates.InitState(auth, *newState, *genesisState, *id, kOpProof, stateTransitionProof, badSig)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed initalizating identity state in the Smart Contract (initState): %w", err)

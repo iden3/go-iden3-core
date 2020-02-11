@@ -5,6 +5,7 @@ import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -31,12 +32,12 @@ func (m *IdenPubOnChainMock) GetStateByTime(id *core.ID, blockTimeStamp int64) (
 	return args.Get(0).(merkletree.Hash), args.Error(1)
 }
 
-func (m *IdenPubOnChainMock) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+func (m *IdenPubOnChainMock) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	args := m.Called(id, genesisState, newState, kOpProof, stateTransitionProof, signature)
 	return args.Get(0).(*types.Transaction), args.Error(1)
 }
 
-func (m *IdenPubOnChainMock) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *merkletree.Hash) (*types.Transaction, error) {
+func (m *IdenPubOnChainMock) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	args := m.Called(id, newState, kOpProof, stateTransitionProof, signature)
 	return args.Get(0).(*types.Transaction), args.Error(1)
 }
