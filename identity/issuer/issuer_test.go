@@ -195,7 +195,7 @@ func TestIssuerCredential(t *testing.T) {
 	assert.Equal(t, newState, issuer.idenStateOnChain())
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
 
-	credExist, err = issuer.GenCredentialExistence(claim0)
+	_, err = issuer.GenCredentialExistence(claim0)
 	assert.Nil(t, err)
 
 	// Issue another claim
@@ -206,6 +206,6 @@ func TestIssuerCredential(t *testing.T) {
 	err = issuer.IssueClaim(claim1)
 	require.Nil(t, err)
 
-	credExist, err = issuer.GenCredentialExistence(claim1)
+	_, err = issuer.GenCredentialExistence(claim1)
 	assert.Equal(t, ErrClaimNotFoundStateOnChain, err)
 }
