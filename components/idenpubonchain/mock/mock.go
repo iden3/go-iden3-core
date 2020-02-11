@@ -22,14 +22,14 @@ func (m *IdenPubOnChainMock) GetState(id *core.ID) (*proof.IdenStateData, error)
 	return args.Get(0).(*proof.IdenStateData), args.Error(1)
 }
 
-func (m *IdenPubOnChainMock) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
+func (m *IdenPubOnChainMock) GetStateByBlock(id *core.ID, blockN uint64) (*merkletree.Hash, error) {
 	args := m.Called(id, blockN)
-	return args.Get(0).(merkletree.Hash), args.Error(1)
+	return args.Get(0).(*merkletree.Hash), args.Error(1)
 }
 
-func (m *IdenPubOnChainMock) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
+func (m *IdenPubOnChainMock) GetStateByTime(id *core.ID, blockTimeStamp int64) (*merkletree.Hash, error) {
 	args := m.Called(id, blockTimeStamp)
-	return args.Get(0).(merkletree.Hash), args.Error(1)
+	return args.Get(0).(*merkletree.Hash), args.Error(1)
 }
 
 func (m *IdenPubOnChainMock) InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {

@@ -42,7 +42,7 @@ var (
 )
 
 var (
-	sigPrefixSetState = []byte("setstate:")
+	SigPrefixSetState = []byte("setstate:")
 )
 
 // ConfigDefault is a default configuration for the Issuer.
@@ -357,6 +357,20 @@ func (is *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
 	}
 }
 
+// State calculates and returns the current Identity State and the three merkle tree roots.
+func (is *Issuer) State() (*merkletree.Hash, IdenStateTreeRoots) {
+	is.rw.RLock()
+	defer is.rw.RUnlock()
+	return is.state()
+}
+
+// StateDataOnChain returns the last known IdentityState Data known to be on chain.
+func (is *Issuer) StateDataOnChain() *proof.IdenStateData {
+	is.rw.RLock()
+	defer is.rw.RUnlock()
+	return is.idenStateDataOnChain()
+}
+
 // ID returns the Issuer ID (Identity ID).
 func (is *Issuer) ID() *core.ID {
 	return is.id
@@ -495,7 +509,7 @@ func (is *Issuer) PublishState() error {
 	}
 
 	// Sign [minor] identity transition from last state to new (current) state.
-	sig, err := is.SignBinary(sigPrefixSetState, append(idenStateLast[:], idenState[:]...))
+	sig, err := is.SignBinary(SigPrefixSetState, append(idenStateLast[:], idenState[:]...))
 	if err != nil {
 		return err
 	}

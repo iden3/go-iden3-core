@@ -18,8 +18,8 @@ import (
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
 type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
-	GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
-	GetStateByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error)
+	GetStateByBlock(id *core.ID, blockN uint64) (*merkletree.Hash, error)
+	GetStateByTime(id *core.ID, blockTimestamp int64) (*merkletree.Hash, error)
 	SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
 	InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
@@ -66,7 +66,7 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 
 // GetState returns the Identity State of the given ID closest to the blockN
 // from the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
+func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, blockN uint64) (*merkletree.Hash, error) {
 	var idenState [32]byte
 	err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
@@ -76,12 +76,13 @@ func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, blockN uint64) (merkletre
 		idenState, err = idenStates.GetStateByBlock(nil, *id, blockN)
 		return err
 	})
-	return merkletree.Hash(idenState), err
+	h := merkletree.Hash(idenState)
+	return &h, err
 }
 
 // GetState returns the Identity State of the given ID closest to the blockTimeStamp
 // from the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
+func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (*merkletree.Hash, error) {
 	var idenState [32]byte
 	err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
@@ -91,7 +92,8 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (mer
 		idenState, err = idenStates.GetStateByTime(nil, *id, uint64(blockTimeStamp))
 		return err
 	})
-	return merkletree.Hash(idenState), err
+	h := merkletree.Hash(idenState)
+	return &h, err
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
