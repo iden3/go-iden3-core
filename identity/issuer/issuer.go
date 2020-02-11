@@ -604,12 +604,12 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 		return nil, err
 	}
 	return &proof.CredentialExistence{
-		Id:            is.id,
-		IdenStateData: *idenStateData,
-		MtpClaim:      mtpExist,
-		Claim:         claim.Entry(),
-		RevRoot:       idenStateTreeRoots.RevocationsRoot,
-		RooRoot:       idenStateTreeRoots.RootsRoot,
-		IdPub:         "http://TODO",
+		Id:              is.id,
+		IdenStateData:   *idenStateData,
+		MtpClaim:        mtpExist,
+		Claim:           claim.Entry(),
+		RevocationsRoot: idenStateTreeRoots.RevocationsRoot,
+		RootsRoot:       idenStateTreeRoots.RootsRoot,
+		IdPub:           "http://TODO",
 	}, nil
 }
