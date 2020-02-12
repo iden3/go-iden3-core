@@ -44,6 +44,8 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 	if !credExist.MtpClaim.Existence {
 		return ErrMtpNonExistence
 	}
+	// Verify that the idenState is built from claims merkle tree where the
+	// claim exists.
 	claimsRoot, err := merkletree.RootFromProof(credExist.MtpClaim, credExist.Claim.HIndex(), credExist.Claim.HValue())
 	if err != nil {
 		return err
@@ -53,6 +55,7 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 		return ErrCalculatedIdenStateDoesntMatch
 	}
 
+	// Verify that the IdenStateData from the eistence credential is in the smart contract.
 	idenStateDataOnChain, err := v.idenPubOnChain.GetStateByBlock(credExist.Id, credExist.IdenStateData.BlockN)
 	if err != nil {
 		return err
@@ -89,6 +92,8 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 				" Accepting IdenState only after timestamp %v", credentialTimestamp, timeOldestAccepted)
 		}
 	}
+	// Verify that the idenState is built from revocations merkle tree
+	// where the claim is not revoked (the revocation nonce is not a leaf).
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!
 	nonce := claims.GetRevocationNonce(credValid.CredentialExistence.Claim)
 	revLeaf := claims.NewLeafRevocationsTree(nonce, 0xffffffff).Entry()
@@ -99,6 +104,15 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 	idenState := core.IdenState(credValid.ClaimsRoot, revocationsRoot, credValid.RootsRoot)
 	if !idenState.Equals(credValid.IdenStateData.IdenState) {
 		return ErrCalculatedIdenStateDoesntMatch
+	}
+
+	// Verify that the IdenStateData from the validity credential is in the smart contract.
+	idenStateDataOnChain, err := v.idenPubOnChain.GetStateByBlock(credValid.CredentialExistence.Id, credValid.IdenStateData.BlockN)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(idenStateDataOnChain, &credValid.IdenStateData) {
+		return ErrIdenStateOnChainDoesntMatch
 	}
 	return nil
 }

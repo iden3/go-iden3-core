@@ -138,8 +138,8 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 	err = is.PublishState()
 	require.Nil(t, err)
 
-	blockN = uint64(13)
-	blockTs = int64(200)
+	blockN = uint64(14)
+	blockTs = int64(300)
 	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
 	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
 		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
@@ -248,10 +248,19 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	_, credExistClaim1 := newIssuerIssuedClaim2(t, idenPubOnChain, claim1, claim2)
 
 	var now time.Time
+	now = time.Unix(400, 0)
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
 		return now
 	})
 
 	err := verifier.VerifyCredentialExistence(credExistClaim1)
 	assert.Nil(t, err)
+
+	// History:
+	// {Ts: 100, BlockN: 12} -> claim1 is added
+	// {Ts: 200, BlockN: 13} -> claim2 is added
+	// {Ts: 300, BlockN: 14} -> claim1 is revoked
+	// {Ts: 400, BlockN: --} -> Now
+
+	// TODO: Continue once holder is implemented
 }
