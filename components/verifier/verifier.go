@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
@@ -52,12 +53,11 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 		return ErrCalculatedIdenStateDoesntMatch
 	}
 
-	idenStateOnChain, err := v.idenPubOnChain.GetStateByBlock(credExist.Id, credExist.IdenStateData.BlockN)
+	idenStateDataOnChain, err := v.idenPubOnChain.GetStateByBlock(credExist.Id, credExist.IdenStateData.BlockN)
 	if err != nil {
 		return err
 	}
-	// TODO: Update to reflect.DeepEqual once https://github.com/iden3/contracts/issues/23 is solved
-	if !idenStateOnChain.Equals(credExist.IdenStateData.IdenState) {
+	if !reflect.DeepEqual(idenStateDataOnChain, &credExist.IdenStateData) {
 		return ErrIdenStateOnChainDoesntMatch
 	}
 	return nil

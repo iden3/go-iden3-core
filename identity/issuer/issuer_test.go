@@ -64,7 +64,7 @@ func TestIssuerFull(t *testing.T) {
 func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
 	var ethTx types.Transaction
 	newState, _ := issuer.state()
-	sig, err := issuer.SignBinary(sigPrefixSetState, append(genesisState[:], newState[:]...))
+	sig, err := issuer.SignBinary(SigPrefixSetState, append(genesisState[:], newState[:]...))
 	require.Nil(t, err)
 	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
 	return &ethTx, newState
@@ -73,7 +73,7 @@ func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMo
 func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
 	var ethTx types.Transaction
 	newState, _ := issuer.state()
-	sig, err := issuer.SignBinary(sigPrefixSetState, append(oldState[:], newState[:]...))
+	sig, err := issuer.SignBinary(SigPrefixSetState, append(oldState[:], newState[:]...))
 	require.Nil(t, err)
 	idenPubOnChain.On("SetState", issuer.id, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
 	return &ethTx, newState

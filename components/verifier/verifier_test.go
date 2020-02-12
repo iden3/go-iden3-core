@@ -78,7 +78,8 @@ func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOn
 	blockN := uint64(12)
 	blockTs := int64(105000)
 	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
+		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -101,7 +102,8 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 	blockN := uint64(12)
 	blockTs := int64(100)
 	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Once()
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
+		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -121,7 +123,8 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 	blockN = uint64(13)
 	blockTs = int64(200)
 	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Once()
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
+		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -138,7 +141,8 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 	blockN = uint64(13)
 	blockTs = int64(200)
 	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
+		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -180,7 +184,8 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	credExistBad.Id[5] = 0x00
 	credExistBad.Id[6] = 0x00
 	require.NotEqual(t, credExist, credExistBad)
-	idenPubOnChain.On("GetStateByBlock", credExistBad.Id, credExistBad.IdenStateData.BlockN).Return(&merkletree.HashZero, nil)
+	idenPubOnChain.On("GetStateByBlock", credExistBad.Id, credExistBad.IdenStateData.BlockN).
+		Return(&proof.IdenStateData{IdenState: &merkletree.HashZero}, nil)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
 
@@ -201,10 +206,9 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
 
-	// TODO: Update once smart contract returns BlockTs and BlockN every time
 	// Cred Exist has bad BlockN
-	// stateDataOnChain := is.StateDataOnChain()
-	idenPubOnChain.On("GetStateByBlock", is.ID(), uint64(01)).Return(&merkletree.HashZero, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), uint64(01)).
+		Return(&proof.IdenStateData{IdenState: &merkletree.HashZero}, nil)
 	credExistBad = &proof.CredentialExistence{}
 	copier.Copy(credExistBad, credExist)
 	credExistBad.IdenStateData.BlockN = 01
