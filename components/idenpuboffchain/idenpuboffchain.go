@@ -10,13 +10,13 @@ import (
 )
 
 var (
-	cacheIKey    = []byte("cacheI")
-	idenStateKey = []byte("idenState")
-	cltRootKey   = []byte("cltRoot")
-	rotRootKey   = []byte("rotRoot")
-	retRootKey   = []byte("retRoot")
-	rotKey       = []byte("rot")
-	retKey       = []byte("ret")
+	dbKeyCacheI          = []byte("cacheI")
+	dbKeyIdenState       = []byte("idenState")
+	dbKeyClaimsRoot      = []byte("claimsroot")
+	dbKeyRootsRoot       = []byte("rootsroot")
+	dbKeyRevocationsRoot = []byte("revocationsroot")
+	dbKeyRootsTree       = []byte("rootstree")
+	dbKeyRevocationsTree = []byte("revocationstree")
 )
 
 // IdenPubOffChainer is a interface, that for the moment will be satisfied at least by IdenPubOffChainHttp & IdenPubIPFS.
@@ -26,18 +26,18 @@ type IdenPubOffChainer interface {
 
 // IdenPubOffChainHttp satisfies the IdenPubOffChainer interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
 type IdenPubOffChainHttp struct {
-	rw  sync.RWMutex
-	db  db.Storage
-	rot *merkletree.MerkleTree
-	ret *merkletree.MerkleTree
+	rw              sync.RWMutex
+	db              db.Storage
+	rootsTree       *merkletree.MerkleTree
+	revocationsTree *merkletree.MerkleTree
 }
 
 // NewIdenPubOffChainHttp returns a new IdenPubOffChainHttp
-func NewIdenPubOffChainHttp(db db.Storage, rot *merkletree.MerkleTree, ret *merkletree.MerkleTree) *IdenPubOffChainHttp {
+func NewIdenPubOffChainHttp(db db.Storage, rootsTree *merkletree.MerkleTree, revocationsTree *merkletree.MerkleTree) *IdenPubOffChainHttp {
 	return &IdenPubOffChainHttp{
-		db:  db,
-		rot: rot,
-		ret: ret,
+		db:              db,
+		rootsTree:       rootsTree,
+		revocationsTree: revocationsTree,
 	}
 }
 
@@ -45,7 +45,7 @@ func NewIdenPubOffChainHttp(db db.Storage, rot *merkletree.MerkleTree, ret *merk
 func (i *IdenPubOffChainHttp) Publish(idenState, claimsRoot, rootsRoot, revocationsRoot *merkletree.Hash) error {
 	// RootsTree
 	w := bytes.NewBufferString("")
-	err := i.rot.DumpTree(w, rootsRoot)
+	err := i.rootsTree.DumpTree(w, rootsRoot)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (i *IdenPubOffChainHttp) Publish(idenState, claimsRoot, rootsRoot, revocati
 
 	// RevocationsTree
 	w = bytes.NewBufferString("")
-	err = i.ret.DumpTree(w, revocationsRoot)
+	err = i.revocationsTree.DumpTree(w, revocationsRoot)
 	if err != nil {
 		return err
 	}
@@ -81,14 +81,14 @@ func (i *IdenPubOffChainHttp) Publish(idenState, claimsRoot, rootsRoot, revocati
 	}
 	cacheI = nextCacheI(cacheI)
 
-	tx.Put(append(idenStateKey, byte(cacheI)), idenState[:])
-	tx.Put(append(cltRootKey, byte(cacheI)), claimsRoot[:])
-	tx.Put(append(rotRootKey, byte(cacheI)), rootsRoot[:])
-	tx.Put(append(rotKey, byte(cacheI)), rotBlob)
-	tx.Put(append(retRootKey, byte(cacheI)), revocationsRoot[:])
-	tx.Put(append(retKey, byte(cacheI)), retBlob)
+	tx.Put(append(dbKeyIdenState, byte(cacheI)), idenState[:])
+	tx.Put(append(dbKeyClaimsRoot, byte(cacheI)), claimsRoot[:])
+	tx.Put(append(dbKeyRootsRoot, byte(cacheI)), rootsRoot[:])
+	tx.Put(append(dbKeyRootsTree, byte(cacheI)), rotBlob)
+	tx.Put(append(dbKeyRevocationsRoot, byte(cacheI)), revocationsRoot[:])
+	tx.Put(append(dbKeyRevocationsTree, byte(cacheI)), retBlob)
 
-	tx.Put(cacheIKey, []byte{byte(cacheI)})
+	tx.Put(dbKeyCacheI, []byte{byte(cacheI)})
 
 	return nil
 }
@@ -98,7 +98,7 @@ func nextCacheI(i int) int {
 }
 
 func (i *IdenPubOffChainHttp) getCacheI(tx db.Tx) (int, error) {
-	cacheI, err := tx.Get(cacheIKey)
+	cacheI, err := tx.Get(dbKeyCacheI)
 	if err == db.ErrNotFound {
 		cacheI = []byte{1}
 	} else if err != nil {
@@ -135,33 +135,33 @@ func (i *IdenPubOffChainHttp) GetPublicData() (*PublicData, error) {
 	}
 
 	// idenState
-	idenState, err := tx.Get(append(idenStateKey, byte(cacheI)))
+	idenState, err := tx.Get(append(dbKeyIdenState, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}
 
 	// clt
-	cltRoot, err := tx.Get(append(cltRootKey, byte(cacheI)))
+	cltRoot, err := tx.Get(append(dbKeyClaimsRoot, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}
 
 	// rot
-	rotRoot, err := tx.Get(append(rotRootKey, byte(cacheI)))
+	rotRoot, err := tx.Get(append(dbKeyRootsRoot, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}
-	rot, err := tx.Get(append(rotKey, byte(cacheI)))
+	rot, err := tx.Get(append(dbKeyRootsTree, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}
 
 	// ret
-	retRoot, err := tx.Get(append(retRootKey, byte(cacheI)))
+	retRoot, err := tx.Get(append(dbKeyRevocationsRoot, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}
-	ret, err := tx.Get(append(retKey, byte(cacheI)))
+	ret, err := tx.Get(append(dbKeyRevocationsTree, byte(cacheI)))
 	if err != nil {
 		return nil, err
 	}

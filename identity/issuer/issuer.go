@@ -85,12 +85,12 @@ type IdenStateTreeRoots struct {
 
 // Issuer is an identity that issues claims
 type Issuer struct {
-	rw            *sync.RWMutex
-	storage       db.Storage
-	id            *core.ID
-	claimsMt      *merkletree.MerkleTree
-	revocationsMt *merkletree.MerkleTree
-	rootsMt       *merkletree.MerkleTree
+	rw              *sync.RWMutex
+	storage         db.Storage
+	id              *core.ID
+	claimsTree      *merkletree.MerkleTree
+	revocationsTree *merkletree.MerkleTree
+	rootsTree       *merkletree.MerkleTree
 	// idenPubOnChain can be nil if the identity doesn't connect to the blockchain.
 	idenPubOnChain idenpubonchain.IdenPubOnChainer
 	keyStore       *keystore.KeyStore
@@ -240,12 +240,12 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	idenStateList := NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
-		rw:             &sync.RWMutex{},
-		id:             id,
-		claimsMt:       clt,
-		revocationsMt:  ret,
-		rootsMt:        rot,
-		idenPubOnChain: idenPubOnChain,
+		rw:              &sync.RWMutex{},
+		id:              id,
+		claimsTree:      clt,
+		revocationsTree: ret,
+		rootsTree:       rot,
+		idenPubOnChain:  idenPubOnChain,
 		// idenStateWriter: idenStateWriter,
 		keyStore:      keyStore,
 		kOpComp:       kOpComp,
@@ -311,18 +311,18 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 	idenStateList := NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
-		rw:             &sync.RWMutex{},
-		id:             &id,
-		claimsMt:       clt,
-		revocationsMt:  ret,
-		rootsMt:        rot,
-		idenPubOnChain: idenPubOnChain,
-		keyStore:       keyStore,
-		kOpComp:        &kOpComp,
-		storage:        storage,
-		nonceGen:       nonceGen,
-		idenStateList:  idenStateList,
-		cfg:            cfg,
+		rw:              &sync.RWMutex{},
+		id:              &id,
+		claimsTree:      clt,
+		revocationsTree: ret,
+		rootsTree:       rot,
+		idenPubOnChain:  idenPubOnChain,
+		keyStore:        keyStore,
+		kOpComp:         &kOpComp,
+		storage:         storage,
+		nonceGen:        nonceGen,
+		idenStateList:   idenStateList,
+		cfg:             cfg,
 	}
 
 	if err := is.loadIdenStateDataOnChain(); err != nil {
@@ -348,7 +348,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 
 // state returns the current Identity State and the three merkle tree roots.
 func (is *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
-	clr, rer, ror := is.claimsMt.RootKey(), is.revocationsMt.RootKey(), is.rootsMt.RootKey()
+	clr, rer, ror := is.claimsTree.RootKey(), is.revocationsTree.RootKey(), is.rootsTree.RootKey()
 	idenState := core.IdenState(clr, rer, ror)
 	return idenState, IdenStateTreeRoots{
 		ClaimsRoot:      clr,
@@ -442,7 +442,7 @@ func (is *Issuer) IssueClaim(claim merkletree.Entrier) error {
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
-	err := is.claimsMt.AddClaim(claim)
+	err := is.claimsTree.AddClaim(claim)
 	if err != nil {
 		return err
 	}
@@ -553,13 +553,13 @@ func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
 	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
-	data, err := is.claimsMt.GetDataByIndex(claim.Entry().HIndex())
+	data, err := is.claimsTree.GetDataByIndex(claim.Entry().HIndex())
 	if err != nil {
 		return err
 	}
 	nonce := claims.GetRevocationNonce(&merkletree.Entry{Data: *data})
 
-	if err := claims.AddLeafRevocationsTree(is.revocationsMt, nonce, 0xffffffff); err != nil {
+	if err := claims.AddLeafRevocationsTree(is.revocationsTree, nonce, 0xffffffff); err != nil {
 		return err
 	}
 	return nil
@@ -613,7 +613,7 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	if err != nil {
 		return nil, err
 	}
-	mtpExist, err := generateExistenceMTProof(is.claimsMt, claim.Entry().HIndex(), idenStateTreeRoots.ClaimsRoot)
+	mtpExist, err := generateExistenceMTProof(is.claimsTree, claim.Entry().HIndex(), idenStateTreeRoots.ClaimsRoot)
 	if err != nil {
 		return nil, err
 	}

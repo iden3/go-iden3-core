@@ -45,7 +45,7 @@ func TestNewLoadIssuer(t *testing.T) {
 func TestIssuerGenesis(t *testing.T) {
 	issuer, _, _ := newIssuer(t, nil)
 
-	assert.Equal(t, issuer.revocationsMt.RootKey(), &merkletree.HashZero)
+	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
 	idenState, _ := issuer.state()
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
@@ -55,7 +55,7 @@ func TestIssuerFull(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	issuer, _, _ := newIssuer(t, idenPubOnChain)
 
-	assert.Equal(t, issuer.revocationsMt.RootKey(), &merkletree.HashZero)
+	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
 	idenState, _ := issuer.state()
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
