@@ -54,6 +54,15 @@ func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMo
 	return &ethTx, newState
 }
 
+func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, is *issuer.Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+	var ethTx types.Transaction
+	newState, _ := is.State()
+	sig, err := is.SignBinary(issuer.SigPrefixSetState, append(oldState[:], newState[:]...))
+	require.Nil(t, err)
+	idenPubOnChain.On("SetState", is.ID(), newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	return &ethTx, newState
+}
+
 func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, claim merkletree.Entrier) *issuer.Issuer {
 	is, _, _ := newIssuer(t, idenPubOnChain)
 	genesisState, _ := is.State()
@@ -75,6 +84,66 @@ func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOn
 	require.Nil(t, err)
 
 	return is
+}
+
+func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, claim1, claim2 merkletree.Entrier) (*issuer.Issuer, *proof.CredentialExistence) {
+	is, _, _ := newIssuer(t, idenPubOnChain)
+	genesisState, _ := is.State()
+	err := is.IssueClaim(claim1)
+	require.Nil(t, err)
+
+	_, newState := mockInitState(t, idenPubOnChain, is, genesisState)
+
+	// Publishing state for the first time with claim1
+	err = is.PublishState()
+	require.Nil(t, err)
+
+	blockN := uint64(12)
+	blockTs := int64(100)
+	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Once()
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+
+	err = is.SyncIdenStatePublic()
+	require.Nil(t, err)
+
+	credExist, err := is.GenCredentialExistence(claim1)
+	require.Nil(t, err)
+
+	// Publish state a second time with another claim2
+
+	err = is.IssueClaim(claim2)
+	require.Nil(t, err)
+
+	_, newState = mockSetState(t, idenPubOnChain, is, newState)
+	err = is.PublishState()
+	require.Nil(t, err)
+
+	blockN = uint64(13)
+	blockTs = int64(200)
+	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Once()
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+
+	err = is.SyncIdenStatePublic()
+	require.Nil(t, err)
+
+	// Publish state a third time revoking claim1
+
+	err = is.RevokeClaim(claim1)
+	require.Nil(t, err)
+
+	_, newState = mockSetState(t, idenPubOnChain, is, newState)
+	err = is.PublishState()
+	require.Nil(t, err)
+
+	blockN = uint64(13)
+	blockTs = int64(200)
+	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
+	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).Return(newState, nil)
+
+	err = is.SyncIdenStatePublic()
+	require.Nil(t, err)
+
+	return is, credExist
 }
 
 func TestVerifyCredentialExistence(t *testing.T) {
@@ -161,5 +230,24 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
+}
 
+func TestVerifyCredentialValidity(t *testing.T) {
+	idenPubOnChain := idenpubonchain.New()
+
+	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes[0] = 0x42
+	claim1 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
+	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes[0] = 0x48
+	claim2 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
+	_, credExistClaim1 := newIssuerIssuedClaim2(t, idenPubOnChain, claim1, claim2)
+
+	var now time.Time
+	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
+		return now
+	})
+
+	err := verifier.VerifyCredentialExistence(credExistClaim1)
+	assert.Nil(t, err)
 }
