@@ -1,6 +1,7 @@
 package verifier
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -12,10 +13,22 @@ import (
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/jinzhu/copier"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var pass = []byte("my passphrase")
+
+func Copy(dst interface{}, src interface{}) {
+	srcJSON, err := json.Marshal(src)
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(srcJSON, dst); err != nil {
+		panic(err)
+	}
+}
 
 func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := issuer.ConfigDefault
@@ -78,6 +91,75 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
 		return now
 	})
+
+	// Good Cred Exist
 	err = verifier.VerifyCredentialExistence(credExist)
-	require.Nil(t, err)
+	assert.Nil(t, err)
+
+	// Cred Exist is proof non existence
+	credExistBad := &proof.CredentialExistence{}
+	Copy(credExistBad, credExist)
+	credExistBad.MtpClaim.Existence = false
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
+	// Cred Exist has bad Id
+	credExistBad = &proof.CredentialExistence{}
+	Copy(credExistBad, credExist)
+	credExistBad.Id[4] = 0x00
+	credExistBad.Id[5] = 0x00
+	credExistBad.Id[6] = 0x00
+	require.NotEqual(t, credExist, credExistBad)
+	idenPubOnChain.On("GetStateByBlock", credExistBad.Id, credExistBad.IdenStateData.BlockN).Return(&merkletree.HashZero, nil)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
+	// Cred Exist has bad RootsRoot
+	credExistBad = &proof.CredentialExistence{}
+	Copy(credExistBad, credExist)
+	credExistBad.RootsRoot[0] = 0x00
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
+	// Cred Exist has bad IdenState
+	credExistBad = &proof.CredentialExistence{}
+	//copier.Copy(credExistBad, credExist)
+	Copy(credExistBad, credExist)
+	credExistBad.IdenStateData.IdenState[1] = 0x00
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
+	// TODO: Update once smart contract returns BlockTs and BlockN every time
+	// Cred Exist has bad BlockN
+	// stateDataOnChain := is.StateDataOnChain()
+	idenPubOnChain.On("GetStateByBlock", is.ID(), uint64(01)).Return(&merkletree.HashZero, nil)
+	credExistBad = &proof.CredentialExistence{}
+	copier.Copy(credExistBad, credExist)
+	credExistBad.IdenStateData.BlockN = 01
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
+	// TODO: Uncomment once smart contract returns BlockTs and BlockN every time
+	// Cred Exist has bad BlockTs
+	// credExistBad = &proof.CredentialExistence{}
+	// copier.Copy(credExistBad, credExist)
+	// credExistBad.IdenStateData.BlockTs = 02
+	// require.NotEqual(t, credExist, credExistBad)
+	// err = verifier.VerifyCredentialExistence(credExistBad)
+	// assert.NotNil(t, err)
+
+	// Cred Exist has bad Claim
+	credExistBad = &proof.CredentialExistence{}
+	copier.Copy(credExistBad, credExist)
+	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes[0] = 0x88
+	credExistBad.Claim = claims.NewClaimBasic(indexBytes, dataBytes, 0).Entry()
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
+
 }
