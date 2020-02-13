@@ -1,14 +1,13 @@
-package issuer
+package db
 
 import (
 	"testing"
 
-	"github.com/iden3/go-iden3-core/db"
 	"github.com/stretchr/testify/require"
 )
 
 func TestStorageValue(t *testing.T) {
-	storage := db.NewMemoryStorage()
+	storage := NewMemoryStorage()
 	sv := NewStorageValue([]byte("key"))
 
 	tx, err := storage.NewTx()
@@ -27,7 +26,7 @@ func TestStorageValue(t *testing.T) {
 }
 
 func TestStorageList(t *testing.T) {
-	storage := db.NewMemoryStorage()
+	storage := NewMemoryStorage()
 	sl := NewStorageList([]byte("list:"))
 
 	type Entry struct {

@@ -18,8 +18,8 @@ import (
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
 type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
-	GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error)
-	GetStateByTime(id *core.ID, blockTimestamp int64) (merkletree.Hash, error)
+	GetStateByBlock(id *core.ID, blockN uint64) (*proof.IdenStateData, error)
+	GetStateByTime(id *core.ID, blockTimestamp int64) (*proof.IdenStateData, error)
 	SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
 	InitState(id *core.ID, genesisState *merkletree.Hash, newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
@@ -44,7 +44,8 @@ func New(client *eth.Client2, addresses ContractAddresses) *IdenPubOnChain {
 	}
 }
 
-// GetState returns the Identity State of the given ID from the IdenStates Smart Contract.
+// GetState returns the Identity State Data of the given ID from the IdenStates Smart Contract.
+// If no result is found, the returned IdenStateData is all zeroes.
 func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
@@ -64,34 +65,57 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	}, err
 }
 
-// GetState returns the Identity State of the given ID closest to the blockN
-// from the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, blockN uint64) (merkletree.Hash, error) {
+// GetState returns the Identity State Data of the given ID that is closest
+// (equal or older) to the queryBlockN from the IdenStates Smart Contract.  If
+// a resut is found, BlockN <= queryBlockN.
+// If no result is found, the returned IdenStateData is all zeroes.
+func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*proof.IdenStateData, error) {
 	var idenState [32]byte
+	var blockN uint64
+	var blockTS uint64
 	err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
-		idenState, err = idenStates.GetStateByBlock(nil, *id, blockN)
+		blockN, blockTS, idenState, err = idenStates.GetStateDataByBlock(nil, *id, queryBlockN)
 		return err
 	})
-	return merkletree.Hash(idenState), err
+	return &proof.IdenStateData{
+		BlockN:    blockN,
+		BlockTs:   int64(blockTS),
+		IdenState: (*merkletree.Hash)(&idenState),
+	}, err
 }
 
-// GetState returns the Identity State of the given ID closest to the blockTimeStamp
-// from the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, blockTimeStamp int64) (merkletree.Hash, error) {
+// GetState returns the Identity State Data of the given ID closest (equal or
+// older) to the queryBlockTs from the IdenStates Smart Contract.  If a resut
+// is found, BlockN <= queryBlockN.
+// If no result is found, the returned IdenStateData is all zeroes.
+func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proof.IdenStateData, error) {
 	var idenState [32]byte
+	var blockN uint64
+	var blockTS uint64
 	err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
-		idenState, err = idenStates.GetStateByTime(nil, *id, uint64(blockTimeStamp))
+		blockN, blockTS, idenState, err = idenStates.GetStateDataByTime(nil, *id, uint64(queryBlockTs))
 		return err
 	})
-	return merkletree.Hash(idenState), err
+	return &proof.IdenStateData{
+		BlockN:    blockN,
+		BlockTs:   int64(blockTS),
+		IdenState: (*merkletree.Hash)(&idenState),
+	}, err
+}
+
+// splitSignature splits the signature returning (sigR8, sigS)
+func splitSignature(signature *babyjub.SignatureComp) (sigR8 [32]byte, sigS [32]byte) {
+	copy(sigR8[:], signature[:32])
+	copy(sigS[:], signature[32:])
+	return sigR8, sigS
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
@@ -102,10 +126,8 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpPr
 			if err != nil {
 				return nil, err
 			}
-			// FIXME: Use 64 byte signature once the contract is updated
-			var badSig [32]byte
-			copy(badSig[:], signature[:])
-			return idenStates.SetState(auth, *newState, *id, kOpProof, stateTransitionProof, badSig)
+			sigR8, sigS := splitSignature(signature)
+			return idenStates.SetState(auth, *newState, *id, kOpProof, stateTransitionProof, sigR8, sigS)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
@@ -122,10 +144,8 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash, 
 			if err != nil {
 				return nil, err
 			}
-			// FIXME: Use 64 byte signature once the contract is updated
-			var badSig [32]byte
-			copy(badSig[:], signature[:])
-			return idenStates.InitState(auth, *newState, *genesisState, *id, kOpProof, stateTransitionProof, badSig)
+			sigR8, sigS := splitSignature(signature)
+			return idenStates.InitState(auth, *newState, *genesisState, *id, kOpProof, stateTransitionProof, sigR8, sigS)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed initalizating identity state in the Smart Contract (initState): %w", err)
@@ -133,33 +153,3 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash, 
 		return tx, nil
 	}
 }
-
-// Should this really be here?
-// func (ip *IdenPubOnChain) VerifyProofClaim(pc *proof.ProofClaim) (bool, error) {
-// 	if ok, err := pc.Verify(pc.Proof.Root); !ok {
-// 		return false, err
-// 	}
-// 	id, blockN, blockTime := pc.PublishedData()
-// 	rootByBlock, err := ip.GetStateByBlock(id, blockN)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	rootByTime, err := ip.GetStateByTime(id, blockTime)
-// 	if err != nil {
-// 		return false, err
-// 	}
-//
-// 	if !pc.Proof.Root.Equals(&rootByBlock) {
-// 		return false, fmt.Errorf("ProofClaim Root doesn't match the one " +
-// 			"from the smart contract queried by (id, blockN)")
-// 	}
-// 	if !pc.Proof.Root.Equals(&rootByTime) {
-// 		return false, fmt.Errorf("ProofClaim Root doesn't match the one " +
-// 			"from the smart contract queried by (id, blockTime)")
-// 	}
-// 	return true, nil
-// }
-
-// func (ip *IdenPubOnChain) Client() *eth.Client2 {
-// 	return ip.client
-// }

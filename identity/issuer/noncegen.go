@@ -16,13 +16,13 @@ import (
 
 // UniqueNonceGen is a generator of unique nonces with persistent state.
 type UniqueNonceGen struct {
-	index *StorageValue
+	index *db.StorageValue
 	mutex sync.Mutex
 }
 
 // NewUniqueNonceGen creates a new unique nonce generator, storing the
 // persistent state in the index.
-func NewUniqueNonceGen(index *StorageValue) *UniqueNonceGen {
+func NewUniqueNonceGen(index *db.StorageValue) *UniqueNonceGen {
 	return &UniqueNonceGen{index: index, mutex: sync.Mutex{}}
 }
 

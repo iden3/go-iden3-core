@@ -9,7 +9,7 @@ import (
 
 func TestUniqueNonceGen(t *testing.T) {
 	storage := db.NewMemoryStorage()
-	nonceGen := NewUniqueNonceGen(NewStorageValue([]byte("nonceIdx")))
+	nonceGen := NewUniqueNonceGen(db.NewStorageValue([]byte("nonceIdx")))
 	tx, err := storage.NewTx()
 	require.Nil(t, err)
 	nonceGen.Init(tx)

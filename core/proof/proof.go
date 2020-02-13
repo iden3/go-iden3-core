@@ -468,19 +468,19 @@ type IdenStateData struct {
 }
 
 type CredentialExistence struct {
-	Id            *core.ID
-	IdenStateData IdenStateData
-	MtpClaim      *merkletree.Proof
-	Claim         *merkletree.Entry
-	RevRoot       *merkletree.Hash
-	RooRoot       *merkletree.Hash
-	IdPub         string
+	Id              *core.ID
+	IdenStateData   IdenStateData
+	MtpClaim        *merkletree.Proof
+	Claim           *merkletree.Entry
+	RevocationsRoot *merkletree.Hash
+	RootsRoot       *merkletree.Hash
+	IdPubUrl        string
 }
 
 type CredentialValidity struct {
 	CredentialExistence CredentialExistence
 	IdenStateData       IdenStateData
 	MtpNotNonce         *merkletree.Proof
-	ClaRoot             *merkletree.Hash
-	RooRoot             *merkletree.Hash
+	ClaimsRoot          *merkletree.Hash
+	RootsRoot           *merkletree.Hash
 }
