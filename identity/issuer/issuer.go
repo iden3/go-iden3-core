@@ -48,25 +48,6 @@ var (
 // ConfigDefault is a default configuration for the Issuer.
 var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140}
 
-func storeJSON(tx db.Tx, key []byte, v interface{}) error {
-	vJSON, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	tx.Put(key, vJSON)
-	return nil
-}
-
-func loadJSON(storage db.Storage, key []byte, v interface{}) error {
-	vJSON, err := storage.Get(key)
-	if err == db.ErrNotFound {
-		return nil
-	} else if err != nil {
-		return err
-	}
-	return json.Unmarshal(vJSON, v)
-}
-
 // Config allows configuring the creation of an Issuer.
 type Config struct {
 	MaxLevelsClaimsTree     int
@@ -96,7 +77,7 @@ type Issuer struct {
 	keyStore       *keystore.KeyStore
 	kOpComp        *babyjub.PublicKeyComp
 	nonceGen       *UniqueNonceGen
-	idenStateList  *StorageList
+	idenStateList  *db.StorageList
 	// _idenStateOnChain     *merkletree.Hash
 	// idenStateDataOnChain is the last known identity state checked to be
 	// in the Smart Contract.
@@ -118,12 +99,12 @@ func (is *Issuer) idenStateDataOnChain() *proof.IdenStateData { return is._idenS
 
 func (is *Issuer) setIdenStateDataOnChain(tx db.Tx, v *proof.IdenStateData) error {
 	is._idenStateDataOnChain = v
-	return storeJSON(tx, dbKeyIdenStateDataOnChain, v)
+	return db.StoreJSON(tx, dbKeyIdenStateDataOnChain, v)
 }
 
 func (is *Issuer) loadIdenStateDataOnChain() error {
 	is._idenStateDataOnChain = &proof.IdenStateData{}
-	return loadJSON(is.storage, dbKeyIdenStateDataOnChain, is._idenStateDataOnChain)
+	return db.LoadJSON(is.storage, dbKeyIdenStateDataOnChain, is._idenStateDataOnChain)
 }
 
 func (is *Issuer) idenStateOnChain() *merkletree.Hash {
@@ -154,24 +135,24 @@ func (is *Issuer) loadIdenStatePending() error {
 
 func (is *Issuer) setEthTxSetState(tx db.Tx, v *types.Transaction) error {
 	is._ethTxSetState = v
-	return storeJSON(tx, dbKeyEthTxSetState, v)
+	return db.StoreJSON(tx, dbKeyEthTxSetState, v)
 }
 
 func (is *Issuer) loadEthTxSetState() error {
 	is._ethTxSetState = &types.Transaction{}
-	return loadJSON(is.storage, dbKeyEthTxSetState, is._ethTxSetState)
+	return db.LoadJSON(is.storage, dbKeyEthTxSetState, is._ethTxSetState)
 }
 
 // func (is *Issuer) ethTxInitState() *types.Transaction { return is._ethTxInitState }
 
 func (is *Issuer) setEthTxInitState(tx db.Tx, v *types.Transaction) error {
 	is._ethTxInitState = v
-	return storeJSON(tx, dbKeyEthTxInitState, v)
+	return db.StoreJSON(tx, dbKeyEthTxInitState, v)
 }
 
 func (is *Issuer) loadEthTxInitState() error {
 	is._ethTxInitState = &types.Transaction{}
-	return loadJSON(is.storage, dbKeyEthTxInitState, is._ethTxInitState)
+	return db.LoadJSON(is.storage, dbKeyEthTxInitState, is._ethTxInitState)
 }
 
 // loadMTs loads the three identity merkle trees from the storage using the configuration.
@@ -210,7 +191,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	}
 
 	// Initialize the UniqueNonceGen to generate revocation nonces for claims.
-	nonceGen := NewUniqueNonceGen(NewStorageValue(dbKeyNonceIdx))
+	nonceGen := NewUniqueNonceGen(db.NewStorageValue(dbKeyNonceIdx))
 	nonceGen.Init(tx)
 
 	// Create the Claim to authorize the Operational Key (kOp)
@@ -237,7 +218,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	}
 	tx.Put(dbKeyConfig, cfgJSON)
 
-	idenStateList := NewStorageList(dbPrefixIdenStateList)
+	idenStateList := db.NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
 		rw:              &sync.RWMutex{},
@@ -307,8 +288,8 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 		return nil, err
 	}
 
-	nonceGen := NewUniqueNonceGen(NewStorageValue(dbKeyNonceIdx))
-	idenStateList := NewStorageList(dbPrefixIdenStateList)
+	nonceGen := NewUniqueNonceGen(db.NewStorageValue(dbKeyNonceIdx))
+	idenStateList := db.NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
 		rw:              &sync.RWMutex{},
@@ -624,6 +605,6 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 		Claim:           claim.Entry(),
 		RevocationsRoot: idenStateTreeRoots.RevocationsRoot,
 		RootsRoot:       idenStateTreeRoots.RootsRoot,
-		IdPub:           "http://TODO",
+		IdPubUrl:        "http://TODO",
 	}, nil
 }

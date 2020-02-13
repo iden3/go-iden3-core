@@ -13,7 +13,6 @@ import (
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -199,7 +198,6 @@ func TestVerifyCredentialExistence(t *testing.T) {
 
 	// Cred Exist has bad IdenState
 	credExistBad = &proof.CredentialExistence{}
-	//copier.Copy(credExistBad, credExist)
 	Copy(credExistBad, credExist)
 	credExistBad.IdenStateData.IdenState[1] = 0x00
 	require.NotEqual(t, credExist, credExistBad)
@@ -210,7 +208,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	idenPubOnChain.On("GetStateByBlock", is.ID(), uint64(01)).
 		Return(&proof.IdenStateData{IdenState: &merkletree.HashZero}, nil)
 	credExistBad = &proof.CredentialExistence{}
-	copier.Copy(credExistBad, credExist)
+	Copy(credExistBad, credExist)
 	credExistBad.IdenStateData.BlockN = 01
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
@@ -227,7 +225,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 
 	// Cred Exist has bad Claim
 	credExistBad = &proof.CredentialExistence{}
-	copier.Copy(credExistBad, credExist)
+	Copy(credExistBad, credExist)
 	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
 	indexBytes[0] = 0x88
 	credExistBad.Claim = claims.NewClaimBasic(indexBytes, dataBytes, 0).Entry()
@@ -247,8 +245,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	claim2 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
 	_, credExistClaim1 := newIssuerIssuedClaim2(t, idenPubOnChain, claim1, claim2)
 
-	var now time.Time
-	now = time.Unix(400, 0)
+	now := time.Unix(400, 0)
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
 		return now
 	})

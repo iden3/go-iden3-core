@@ -1,4 +1,4 @@
-package idenpuboffchain
+package idenpuboffchainwriter
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // If generateTest is true, the checked values will be used to generate a test vector
@@ -43,14 +44,15 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.RootKey().Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.RootKey().Hex())
 
-	idenPubOffChainHttp := NewIdenPubOffChainHttp(db.NewMemoryStorage(), rotMt, retMt)
+	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(&ConfigDefault, db.NewMemoryStorage(), rotMt, retMt)
+	require.Nil(t, err)
 
 	idenState := merkletree.HexStringToHash(testgen.GetTestValue("idenState0").(string))
 
-	err = idenPubOffChainHttp.Publish(&idenState, cltMt.RootKey(), rotMt.RootKey(), retMt.RootKey())
+	err = idenPubOffChainWriteHttp.Publish(&idenState, cltMt.RootKey(), retMt.RootKey(), rotMt.RootKey())
 	assert.Nil(t, err)
 
-	pubData, err := idenPubOffChainHttp.GetPublicData()
+	pubData, err := idenPubOffChainWriteHttp.GetPublicData(nil)
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "rootRootsTree1", pubData.RootsTreeRoot.Hex())
 	assert.Equal(t, rotMt.RootKey().Hex(), pubData.RootsTreeRoot.Hex())
@@ -60,7 +62,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 
 func initTest() {
 	// Init test
-	err := testgen.InitTest("idenpuboffchain", generateTest)
+	err := testgen.InitTest("idenpuboffchainwriter", generateTest)
 	if err != nil {
 		fmt.Println("error initializing test data:", err)
 		return
