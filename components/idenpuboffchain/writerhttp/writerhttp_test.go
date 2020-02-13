@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -44,20 +46,36 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.RootKey().Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.RootKey().Hex())
 
-	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(&ConfigDefault, db.NewMemoryStorage(), rotMt, retMt)
+	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(&ConfigDefault, db.NewMemoryStorage())
 	require.Nil(t, err)
 
-	idenState := merkletree.HexStringToHash(testgen.GetTestValue("idenState0").(string))
+	idenState := core.IdenState(cltMt.RootKey(), retMt.RootKey(), rotMt.RootKey())
 
-	err = idenPubOffChainWriteHttp.Publish(&idenState, cltMt.RootKey(), retMt.RootKey(), rotMt.RootKey())
+	publicData := idenpuboffchain.PublicData{
+		IdenState:           idenState,
+		ClaimsTreeRoot:      cltMt.RootKey(),
+		RevocationsTreeRoot: retMt.RootKey(),
+		RevocationsTree:     retMt,
+		RootsTreeRoot:       rotMt.RootKey(),
+		RootsTree:           rotMt,
+	}
+
+	err = idenPubOffChainWriteHttp.Publish(&publicData)
 	assert.Nil(t, err)
 
-	pubData, err := idenPubOffChainWriteHttp.GetPublicData(nil)
+	pubDataBlobs, err := idenPubOffChainWriteHttp.GetPublicData(nil)
 	assert.Nil(t, err)
-	testgen.CheckTestValue(t, "rootRootsTree1", pubData.RootsTreeRoot.Hex())
-	assert.Equal(t, rotMt.RootKey().Hex(), pubData.RootsTreeRoot.Hex())
-	testgen.CheckTestValue(t, "rootRevocationsTree1", pubData.RevocationsTreeRoot.Hex())
-	assert.Equal(t, retMt.RootKey().Hex(), pubData.RevocationsTreeRoot.Hex())
+	testgen.CheckTestValue(t, "rootRootsTree1", pubDataBlobs.RootsTreeRoot.Hex())
+	assert.Equal(t, rotMt.RootKey().Hex(), pubDataBlobs.RootsTreeRoot.Hex())
+	testgen.CheckTestValue(t, "rootRevocationsTree1", pubDataBlobs.RevocationsTreeRoot.Hex())
+	assert.Equal(t, retMt.RootKey().Hex(), pubDataBlobs.RevocationsTreeRoot.Hex())
+
+	pubDataBlobs2, err := idenPubOffChainWriteHttp.GetPublicData(idenState)
+	assert.Nil(t, err)
+	assert.Equal(t, pubDataBlobs, pubDataBlobs2)
+
+	_, err = idenpuboffchain.NewPublicDataFromBlobs(pubDataBlobs)
+	require.Nil(t, err)
 }
 
 func initTest() {
@@ -69,11 +87,6 @@ func initTest() {
 	}
 	// Add input data to the test vector
 	if generateTest {
-		idenState0, err := poseidon.HashBytes([]byte("idenState0"))
-		if err != nil {
-			panic(err)
-		}
-		testgen.SetTestValue("idenState0", merkletree.BigIntToHash(idenState0).Hex())
 		root0, err := poseidon.HashBytes([]byte("root0"))
 		if err != nil {
 			panic(err)

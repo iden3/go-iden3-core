@@ -10,12 +10,17 @@ import (
 )
 
 var (
-	ErrCalculatedIdenStateDoesntMatch = fmt.Errorf("Calculated IdenState doesn't match the one PublicDataBlobs")
+	ErrCalculatedIdenStateDoesntMatch = fmt.Errorf("Calculated IdenState doesn't match the one in PublicDataBlobs")
 )
+
+// IdenPubOffChainReader is a interface to read the off chain public state of an identity.
+type IdenPubOffChainReader interface {
+	GetPublicData(idenPubUrl string, id *core.ID, idenState *merkletree.Hash) (*PublicData, error)
+}
 
 // IdenPubOffChainWriter is a interface to write the off chain public state of an identity.
 type IdenPubOffChainWriter interface {
-	Publish(idenState, claimsRoot, revocationsRoot, rootsRoot *merkletree.Hash) error
+	Publish(publicData *PublicData) error
 }
 
 // PublicDataBlobs contains the RootsTree (blob) + Root, and the RevocationTree (blob) + Root
@@ -30,10 +35,12 @@ type PublicDataBlobs struct {
 
 // PublicData contains the IdenState, ClaimsRoot, RootsTree and RevocationsTree
 type PublicData struct {
-	IdenState       *merkletree.Hash
-	ClaimsRoot      *merkletree.Hash
-	RevocationsTree *merkletree.MerkleTree
-	RootsTree       *merkletree.MerkleTree
+	IdenState           *merkletree.Hash
+	ClaimsTreeRoot      *merkletree.Hash
+	RevocationsTreeRoot *merkletree.Hash
+	RevocationsTree     *merkletree.MerkleTree
+	RootsTreeRoot       *merkletree.Hash
+	RootsTree           *merkletree.MerkleTree
 }
 
 // NewPublicDataFromBlobs builds the revocation tree and the roots tree in
@@ -70,9 +77,11 @@ func NewPublicDataFromBlobs(publicDataBlobs *PublicDataBlobs) (*PublicData, erro
 		return nil, ErrCalculatedIdenStateDoesntMatch
 	}
 	return &PublicData{
-		IdenState:       &publicDataBlobs.IdenState,
-		ClaimsRoot:      &publicDataBlobs.ClaimsTreeRoot,
-		RevocationsTree: revocationsTree,
-		RootsTree:       rootsTree,
+		IdenState:           &publicDataBlobs.IdenState,
+		ClaimsTreeRoot:      &publicDataBlobs.ClaimsTreeRoot,
+		RevocationsTreeRoot: &publicDataBlobs.RevocationsTreeRoot,
+		RevocationsTree:     revocationsTree,
+		RootsTreeRoot:       &publicDataBlobs.RootsTreeRoot,
+		RootsTree:           rootsTree,
 	}, nil
 }

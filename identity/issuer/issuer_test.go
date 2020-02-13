@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain/writermock"
 	idenpubonchain "github.com/iden3/go-iden3-core/components/idenpubonchain/mock"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
@@ -12,12 +13,14 @@ import (
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 var pass = []byte("my passphrase")
 
-func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock) (*Issuer, db.Storage, *keystore.KeyStore) {
+func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock) (*Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := ConfigDefault
 	storage := db.NewMemoryStorage()
 	ksStorage := keystore.MemStorage([]byte{})
@@ -27,15 +30,15 @@ func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock) 
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	issuer, err := New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain)
+	issuer, err := New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return issuer, storage, keyStore
 }
 
 func TestNewLoadIssuer(t *testing.T) {
-	issuer, storage, keyStore := newIssuer(t, nil)
+	issuer, storage, keyStore := newIssuer(t, nil, nil)
 
-	issuerLoad, err := Load(storage, keyStore, nil)
+	issuerLoad, err := Load(storage, keyStore, nil, nil)
 	require.Nil(t, err)
 
 	assert.Equal(t, issuer.cfg, issuerLoad.cfg)
@@ -43,7 +46,7 @@ func TestNewLoadIssuer(t *testing.T) {
 }
 
 func TestIssuerGenesis(t *testing.T) {
-	issuer, _, _ := newIssuer(t, nil)
+	issuer, _, _ := newIssuer(t, nil, nil)
 
 	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
@@ -53,7 +56,8 @@ func TestIssuerGenesis(t *testing.T) {
 
 func TestIssuerFull(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain)
+	idenPubOffChainWrite := writermock.New()
+	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
 
 	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
@@ -61,16 +65,22 @@ func TestIssuerFull(t *testing.T) {
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
 }
 
-func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
+	issuer *Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
 	var ethTx types.Transaction
 	newState, _ := issuer.state()
 	sig, err := issuer.SignBinary(SigPrefixSetState, append(genesisState[:], newState[:]...))
 	require.Nil(t, err)
 	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	idenPubOffChainWrite.On("Publish", mock.AnythingOfType("*idenpuboffchain.PublicData")).Return().Run(func(args mock.Arguments) {
+	}).Return(nil)
 	return &ethTx, newState
 }
 
-func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, issuer *Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	issuer *Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
 	var ethTx types.Transaction
 	newState, _ := issuer.state()
 	sig, err := issuer.SignBinary(SigPrefixSetState, append(oldState[:], newState[:]...))
@@ -81,7 +91,8 @@ func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMoc
 
 func TestIssuerPublish(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain)
+	idenPubOffChainWrite := writermock.New()
+	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
 
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
@@ -108,7 +119,7 @@ func TestIssuerPublish(t *testing.T) {
 	err = issuer.IssueClaim(claims.NewClaimBasic(indexBytes, dataBytes, 0))
 	require.Nil(t, err)
 
-	_, newState := mockInitState(t, idenPubOnChain, issuer, genesisState)
+	_, newState := mockInitState(t, idenPubOnChain, idenPubOffChainWrite, issuer, genesisState)
 
 	// Publishing state for the first time
 	err = issuer.PublishState()
@@ -169,7 +180,8 @@ func TestIssuerPublish(t *testing.T) {
 
 func TestIssuerCredential(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain)
+	idenPubOffChainWrite := writermock.New()
+	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
 	genesisState, _ := issuer.state()
 
 	// Issue a Claim
@@ -184,7 +196,7 @@ func TestIssuerCredential(t *testing.T) {
 	assert.Nil(t, credExist)
 	assert.Equal(t, ErrIdenStateOnChainZero, err)
 
-	_, newState := mockInitState(t, idenPubOnChain, issuer, genesisState)
+	_, newState := mockInitState(t, idenPubOnChain, idenPubOffChainWrite, issuer, genesisState)
 	err = issuer.PublishState()
 	require.Nil(t, err)
 

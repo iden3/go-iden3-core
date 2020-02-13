@@ -9,11 +9,6 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 )
 
-// IdenPubOffChainReader is a interface to read the off chain public state of an identity.
-type IdenPubOffChainReader interface {
-	GetPublicData(idenPubUrl string, id *core.ID, idenState *merkletree.Hash) (*idenpuboffchain.PublicData, error)
-}
-
 // IdenPubOffChainReadHttp satisfies the IdenPubOffChainRead interface, and reads the off chain public state of an identity from a IdenPubOffChainWriteHttp.
 type IdenPubOffChainReadHttp struct {
 }
@@ -22,7 +17,8 @@ func NewIdenPubOffChainHttp() *IdenPubOffChainReadHttp {
 	return &IdenPubOffChainReadHttp{}
 }
 
-func (i *IdenPubOffChainReadHttp) GetPublicData(idenPubUrl string, id *core.ID, idenState *merkletree.Hash) (*idenpuboffchain.PublicData, error) {
+func (i *IdenPubOffChainReadHttp) GetPublicData(idenPubUrl string, id *core.ID,
+	idenState *merkletree.Hash) (*idenpuboffchain.PublicData, error) {
 	httpClient := httpclient.NewHttpClient(idenPubUrl)
 
 	var publicDataBlobs idenpuboffchain.PublicDataBlobs

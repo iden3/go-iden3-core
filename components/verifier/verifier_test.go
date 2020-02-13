@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain/writermock"
 	idenpubonchain "github.com/iden3/go-iden3-core/components/idenpubonchain/mock"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
@@ -14,6 +15,7 @@ import (
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +31,8 @@ func Copy(dst interface{}, src interface{}) {
 	}
 }
 
-func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
+func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := issuer.ConfigDefault
 	storage := db.NewMemoryStorage()
 	ksStorage := keystore.MemStorage([]byte{})
@@ -39,17 +42,21 @@ func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock) 
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	is, err := issuer.New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain)
+	is, err := issuer.New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return is, storage, keyStore
 }
 
-func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, is *issuer.Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
+func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
+	is *issuer.Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
 	var ethTx types.Transaction
 	newState, _ := is.State()
 	sig, err := is.SignBinary(issuer.SigPrefixSetState, append(genesisState[:], newState[:]...))
 	require.Nil(t, err)
 	idenPubOnChain.On("InitState", is.ID(), genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
+	idenPubOffChainWrite.On("Publish", mock.AnythingOfType("*idenpuboffchain.PublicData")).Return().Run(func(args mock.Arguments) {
+	}).Return(nil)
 	return &ethTx, newState
 }
 
@@ -62,17 +69,27 @@ func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMoc
 	return &ethTx, newState
 }
 
-func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, claim merkletree.Entrier) *issuer.Issuer {
-	is, _, _ := newIssuer(t, idenPubOnChain)
+func _newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
+	claim merkletree.Entrier) (*issuer.Issuer, *merkletree.Hash) {
+	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
 	genesisState, _ := is.State()
 	err := is.IssueClaim(claim)
 	require.Nil(t, err)
 
-	_, newState := mockInitState(t, idenPubOnChain, is, genesisState)
+	_, newState := mockInitState(t, idenPubOnChain, idenPubOffChainWrite, is, genesisState)
 
 	// Publishing state for the first time
 	err = is.PublishState()
 	require.Nil(t, err)
+
+	return is, newState
+}
+
+func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
+	claim merkletree.Entrier) *issuer.Issuer {
+	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim)
 
 	blockN := uint64(12)
 	blockTs := int64(105000)
@@ -80,23 +97,16 @@ func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOn
 	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
 		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
-	err = is.SyncIdenStatePublic()
+	err := is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
 	return is
 }
 
-func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, claim1, claim2 merkletree.Entrier) (*issuer.Issuer, *proof.CredentialExistence) {
-	is, _, _ := newIssuer(t, idenPubOnChain)
-	genesisState, _ := is.State()
-	err := is.IssueClaim(claim1)
-	require.Nil(t, err)
-
-	_, newState := mockInitState(t, idenPubOnChain, is, genesisState)
-
-	// Publishing state for the first time with claim1
-	err = is.PublishState()
-	require.Nil(t, err)
+func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
+	claim1, claim2 merkletree.Entrier) (*issuer.Issuer, *proof.CredentialExistence) {
+	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim1)
 
 	blockN := uint64(12)
 	blockTs := int64(100)
@@ -104,7 +114,7 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
 		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
 
-	err = is.SyncIdenStatePublic()
+	err := is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
 	credExist, err := is.GenCredentialExistence(claim1)
@@ -151,10 +161,11 @@ func newIssuerIssuedClaim2(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 
 func TestVerifyCredentialExistence(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
+	idenPubOffChainWrite := writermock.New()
 	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
 	indexBytes[0] = 0x42
 	claim := claims.NewClaimBasic(indexBytes, dataBytes, 0)
-	is := newIssuerIssuedClaim(t, idenPubOnChain, claim)
+	is := newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim)
 
 	credExist, err := is.GenCredentialExistence(claim)
 	require.Nil(t, err)
@@ -188,10 +199,10 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
 
-	// Cred Exist has bad RootsRoot
+	// Cred Exist has bad RootsTreeRoot
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
-	credExistBad.RootsRoot[0] = 0x00
+	credExistBad.RootsTreeRoot[0] = 0x00
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
@@ -236,6 +247,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 
 func TestVerifyCredentialValidity(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
+	idenPubOffChainWrite := writermock.New()
 
 	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
 	indexBytes[0] = 0x42
@@ -243,7 +255,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
 	indexBytes[0] = 0x48
 	claim2 := claims.NewClaimBasic(indexBytes, dataBytes, 0)
-	_, credExistClaim1 := newIssuerIssuedClaim2(t, idenPubOnChain, claim1, claim2)
+	_, credExistClaim1 := newIssuerIssuedClaim2(t, idenPubOnChain, idenPubOffChainWrite, claim1, claim2)
 
 	now := time.Unix(400, 0)
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {

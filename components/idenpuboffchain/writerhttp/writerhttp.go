@@ -33,21 +33,17 @@ type Config struct {
 
 // IdenPubOffChainWriteHttp satisfies the IdenPubOffChainWriter interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
 type IdenPubOffChainWriteHttp struct {
-	rw              *sync.RWMutex
-	storage         db.Storage
-	rootsTree       *merkletree.MerkleTree
-	revocationsTree *merkletree.MerkleTree
-	cfg             *Config
+	rw      *sync.RWMutex
+	storage db.Storage
+	cfg     *Config
 }
 
 // NewIdenPubOffChainWriteHttp returns a new IdenPubOffChainWriteHttp
-func NewIdenPubOffChainWriteHttp(cfg *Config, storage db.Storage, rootsTree *merkletree.MerkleTree, revocationsTree *merkletree.MerkleTree) (*IdenPubOffChainWriteHttp, error) {
+func NewIdenPubOffChainWriteHttp(cfg *Config, storage db.Storage) (*IdenPubOffChainWriteHttp, error) {
 	i := IdenPubOffChainWriteHttp{
-		rw:              &sync.RWMutex{},
-		storage:         storage,
-		rootsTree:       rootsTree,
-		revocationsTree: revocationsTree,
-		cfg:             cfg,
+		rw:      &sync.RWMutex{},
+		storage: storage,
+		cfg:     cfg,
 	}
 	tx, err := i.storage.NewTx()
 	if err != nil {
@@ -64,26 +60,24 @@ func NewIdenPubOffChainWriteHttp(cfg *Config, storage db.Storage, rootsTree *mer
 }
 
 // LoadIdenPubOffChainWriteHttp returns a new IdenPubOffChainWriteHttp
-func LoadIdenPubOffChainWriteHttp(storage db.Storage, rootsTree *merkletree.MerkleTree, revocationsTree *merkletree.MerkleTree) (*IdenPubOffChainWriteHttp, error) {
+func LoadIdenPubOffChainWriteHttp(storage db.Storage) (*IdenPubOffChainWriteHttp, error) {
 	var cfg Config
 	if err := db.LoadJSON(storage, dbKeyConfig, &cfg); err != nil {
 		return nil, err
 	}
 	i := IdenPubOffChainWriteHttp{
-		rw:              &sync.RWMutex{},
-		storage:         storage,
-		rootsTree:       rootsTree,
-		revocationsTree: revocationsTree,
-		cfg:             &cfg,
+		rw:      &sync.RWMutex{},
+		storage: storage,
+		cfg:     &cfg,
 	}
 	return &i, nil
 }
 
 // Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
-func (i *IdenPubOffChainWriteHttp) Publish(idenState, claimsRoot, revocationsRoot, rootsRoot *merkletree.Hash) error {
+func (i *IdenPubOffChainWriteHttp) Publish(publicData *idenpuboffchain.PublicData) error {
 	// RootsTree
 	w := bytes.NewBufferString("")
-	err := i.rootsTree.DumpTree(w, rootsRoot)
+	err := publicData.RootsTree.DumpTree(w, publicData.RootsTreeRoot)
 	if err != nil {
 		return err
 	}
@@ -91,7 +85,7 @@ func (i *IdenPubOffChainWriteHttp) Publish(idenState, claimsRoot, revocationsRoo
 
 	// RevocationsTree
 	w = bytes.NewBufferString("")
-	err = i.revocationsTree.DumpTree(w, revocationsRoot)
+	err = publicData.RevocationsTree.DumpTree(w, publicData.RevocationsTreeRoot)
 	if err != nil {
 		return err
 	}
@@ -118,11 +112,11 @@ func (i *IdenPubOffChainWriteHttp) Publish(idenState, claimsRoot, revocationsRoo
 		return err
 	}
 
-	tx.Put(append(dbKeyIdenState, cacheIdx), idenState[:])
-	tx.Put(append(dbKeyClaimsRoot, cacheIdx), claimsRoot[:])
-	tx.Put(append(dbKeyRootsRoot, cacheIdx), rootsRoot[:])
+	tx.Put(append(dbKeyIdenState, cacheIdx), publicData.IdenState[:])
+	tx.Put(append(dbKeyClaimsRoot, cacheIdx), publicData.ClaimsTreeRoot[:])
+	tx.Put(append(dbKeyRootsRoot, cacheIdx), publicData.RootsTreeRoot[:])
 	tx.Put(append(dbKeyRootsTree, cacheIdx), rotBlob)
-	tx.Put(append(dbKeyRevocationsRoot, cacheIdx), revocationsRoot[:])
+	tx.Put(append(dbKeyRevocationsRoot, cacheIdx), publicData.RevocationsTreeRoot[:])
 	tx.Put(append(dbKeyRevocationsTree, cacheIdx), retBlob)
 
 	return nil

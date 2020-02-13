@@ -50,7 +50,7 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 	if err != nil {
 		return err
 	}
-	idenState := core.IdenState(claimsRoot, credExist.RevocationsRoot, credExist.RootsRoot)
+	idenState := core.IdenState(claimsRoot, credExist.RevocationsTreeRoot, credExist.RootsTreeRoot)
 	if !idenState.Equals(credExist.IdenStateData.IdenState) {
 		return ErrCalculatedIdenStateDoesntMatch
 	}
@@ -97,11 +97,11 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!
 	nonce := claims.GetRevocationNonce(credValid.CredentialExistence.Claim)
 	revLeaf := claims.NewLeafRevocationsTree(nonce, 0xffffffff).Entry()
-	revocationsRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, revLeaf.HIndex(), revLeaf.HValue())
+	revocationsTreeRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, revLeaf.HIndex(), revLeaf.HValue())
 	if err != nil {
 		return err
 	}
-	idenState := core.IdenState(credValid.ClaimsRoot, revocationsRoot, credValid.RootsRoot)
+	idenState := core.IdenState(credValid.ClaimsTreeRoot, revocationsTreeRoot, credValid.RootsTreeRoot)
 	if !idenState.Equals(credValid.IdenStateData.IdenState) {
 		return ErrCalculatedIdenStateDoesntMatch
 	}
