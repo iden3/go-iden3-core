@@ -21,6 +21,7 @@ type IdenPubOffChainReader interface {
 // IdenPubOffChainWriter is a interface to write the off chain public state of an identity.
 type IdenPubOffChainWriter interface {
 	Publish(publicData *PublicData) error
+	Url() string
 }
 
 // PublicDataBlobs contains the RootsTree (blob) + Root, and the RevocationTree (blob) + Root

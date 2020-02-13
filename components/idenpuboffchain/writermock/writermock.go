@@ -17,3 +17,8 @@ func (i *IdenPubOffChainWriteMock) Publish(publicData *idenpuboffchain.PublicDat
 	args := i.Called(publicData)
 	return args.Error(0)
 }
+
+func (i *IdenPubOffChainWriteMock) Url() string {
+	args := i.Called()
+	return args.Get(0).(string)
+}

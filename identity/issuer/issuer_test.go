@@ -73,9 +73,9 @@ func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMo
 	sig, err := issuer.SignBinary(SigPrefixSetState, append(genesisState[:], newState[:]...))
 	require.Nil(t, err)
 	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
-	idenPubOnChain.On("InitState", issuer.id, genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
 	idenPubOffChainWrite.On("Publish", mock.AnythingOfType("*idenpuboffchain.PublicData")).Return().Run(func(args mock.Arguments) {
 	}).Return(nil)
+	idenPubOffChainWrite.On("Url").Return("https://foo.bar")
 	return &ethTx, newState
 }
 

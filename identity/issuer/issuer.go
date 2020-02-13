@@ -631,6 +631,6 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 		Claim:               claim.Entry(),
 		RevocationsTreeRoot: idenStateTreeRoots.RevocationsTreeRoot,
 		RootsTreeRoot:       idenStateTreeRoots.RootsTreeRoot,
-		IdenPubUrl:          "http://TODO",
+		IdenPubUrl:          is.idenPubOffChainWriter.Url(),
 	}, nil
 }

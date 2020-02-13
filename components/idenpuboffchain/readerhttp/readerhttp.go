@@ -30,6 +30,9 @@ func (i *IdenPubOffChainReadHttp) GetPublicData(idenPubUrl string, id *core.ID,
 		err = httpClient.DoRequest(httpClient.NewRequest().Path(
 			fmt.Sprintf("%s/laststate", id.String())).Get(""), &publicDataBlobs)
 	}
+	if err != nil {
+		return nil, err
+	}
 	publicData, err := idenpuboffchain.NewPublicDataFromBlobs(&publicDataBlobs)
 	if err != nil {
 		return nil, err

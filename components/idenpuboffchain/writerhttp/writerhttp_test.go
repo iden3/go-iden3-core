@@ -46,7 +46,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.RootKey().Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.RootKey().Hex())
 
-	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(&ConfigDefault, db.NewMemoryStorage())
+	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(NewConfigDefault("http://foo.bar"), db.NewMemoryStorage())
 	require.Nil(t, err)
 
 	idenState := core.IdenState(cltMt.RootKey(), retMt.RootKey(), rotMt.RootKey())

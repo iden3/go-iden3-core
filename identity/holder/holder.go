@@ -14,6 +14,12 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+var (
+	ErrRevokedClaim = fmt.Errorf("Revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+)
+
+var ConfigDefault = Config{Config: issuer.ConfigDefault}
+
 type Config struct {
 	issuer.Config
 }
@@ -79,7 +85,7 @@ func (h *Holder) HolderGetCredentialValidity(
 		return nil, err
 	}
 	if mtpNotNonce.Existence {
-		return nil, fmt.Errorf("Revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+		return nil, ErrRevokedClaim
 	}
 	return &proof.CredentialValidity{
 		CredentialExistence: *credExist,

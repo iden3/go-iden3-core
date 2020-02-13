@@ -25,10 +25,13 @@ var (
 	dbKeyRevocationsTree = []byte("revocationstree")
 )
 
-var ConfigDefault = Config{CacheLen: 1}
-
 type Config struct {
 	CacheLen byte
+	Url      string
+}
+
+func NewConfigDefault(url string) *Config {
+	return &Config{CacheLen: 1, Url: url}
 }
 
 // IdenPubOffChainWriteHttp satisfies the IdenPubOffChainWriter interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
@@ -71,6 +74,10 @@ func LoadIdenPubOffChainWriteHttp(storage db.Storage) (*IdenPubOffChainWriteHttp
 		cfg:     &cfg,
 	}
 	return &i, nil
+}
+
+func (i *IdenPubOffChainWriteHttp) Url() string {
+	return i.cfg.Url
 }
 
 // Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
