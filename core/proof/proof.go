@@ -474,7 +474,7 @@ type CredentialExistence struct {
 	Claim           *merkletree.Entry
 	RevocationsRoot *merkletree.Hash
 	RootsRoot       *merkletree.Hash
-	IdPubUrl        string
+	IdenPubUrl      string
 }
 
 type CredentialValidity struct {

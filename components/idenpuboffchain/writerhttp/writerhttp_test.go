@@ -1,4 +1,4 @@
-package idenpuboffchainwriter
+package writerhttp
 
 import (
 	"fmt"
@@ -62,7 +62,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 
 func initTest() {
 	// Init test
-	err := testgen.InitTest("idenpuboffchainwriter", generateTest)
+	err := testgen.InitTest("idenpuboffchainwriterhttp", generateTest)
 	if err != nil {
 		fmt.Println("error initializing test data:", err)
 		return

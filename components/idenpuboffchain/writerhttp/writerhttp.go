@@ -1,10 +1,11 @@
-package idenpuboffchainwriter
+package writerhttp
 
 import (
 	"bytes"
 	"fmt"
 	"sync"
 
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
 )
@@ -23,11 +24,6 @@ var (
 	dbKeyRootsTree       = []byte("rootstree")
 	dbKeyRevocationsTree = []byte("revocationstree")
 )
-
-// IdenPubOffChainWriter is a interface to write the off chain public state of an identity.
-type IdenPubOffChainWriter interface {
-	Publish(idenState, claimsRoot, revocationsRoot, rootsRoot *merkletree.Hash) error
-}
 
 var ConfigDefault = Config{CacheLen: 1}
 
@@ -165,20 +161,10 @@ func (i *IdenPubOffChainWriteHttp) initCacheIdx(tx db.Tx) {
 // 	return cacheIdx[0], nil
 // }
 
-// PublicData contains the RootsTree + Root, and the RevocationTree + Root
-type PublicData struct {
-	IdenState           merkletree.Hash
-	ClaimsTreeRoot      merkletree.Hash
-	RootsTreeRoot       merkletree.Hash
-	RootsTree           []byte
-	RevocationsTreeRoot merkletree.Hash
-	RevocationsTree     []byte
-}
-
 // GetPublicData returns the identity off chain public data corresponding to
 // the queryIdenState.  If the queryIdenState is nil, the last identity off
 // chain public data is returned.
-func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash) (*PublicData, error) {
+func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash) (*idenpuboffchain.PublicDataBlobs, error) {
 	tx, err := i.storage.NewTx()
 	if err != nil {
 		return nil, err
@@ -221,16 +207,6 @@ func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash
 		return nil, err
 	}
 
-	// roots tree
-	rotRoot, err := tx.Get(append(dbKeyRootsRoot, cacheIdx))
-	if err != nil {
-		return nil, err
-	}
-	rot, err := tx.Get(append(dbKeyRootsTree, cacheIdx))
-	if err != nil {
-		return nil, err
-	}
-
 	// revocations tree
 	retRoot, err := tx.Get(append(dbKeyRevocationsRoot, cacheIdx))
 	if err != nil {
@@ -241,22 +217,32 @@ func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash
 		return nil, err
 	}
 
+	// roots tree
+	rotRoot, err := tx.Get(append(dbKeyRootsRoot, cacheIdx))
+	if err != nil {
+		return nil, err
+	}
+	rot, err := tx.Get(append(dbKeyRootsTree, cacheIdx))
+	if err != nil {
+		return nil, err
+	}
+
 	var idenState32 [merkletree.ElemBytesLen]byte
 	var cltRoot32 [merkletree.ElemBytesLen]byte
 	var rotRoot32 [merkletree.ElemBytesLen]byte
 	var retRoot32 [merkletree.ElemBytesLen]byte
 	copy(idenState32[:], idenState[:32])
 	copy(cltRoot32[:], cltRoot[:32])
-	copy(rotRoot32[:], rotRoot[:32])
 	copy(retRoot32[:], retRoot[:32])
+	copy(rotRoot32[:], rotRoot[:32])
 
-	p := &PublicData{
+	p := &idenpuboffchain.PublicDataBlobs{
 		IdenState:           merkletree.Hash(merkletree.ElemBytes(idenState32)),
 		ClaimsTreeRoot:      merkletree.Hash(merkletree.ElemBytes(cltRoot32)),
-		RootsTreeRoot:       merkletree.Hash(merkletree.ElemBytes(rotRoot32)),
-		RootsTree:           rot,
 		RevocationsTreeRoot: merkletree.Hash(merkletree.ElemBytes(retRoot32)),
 		RevocationsTree:     ret,
+		RootsTreeRoot:       merkletree.Hash(merkletree.ElemBytes(rotRoot32)),
+		RootsTree:           rot,
 	}
 	return p, nil
 }
