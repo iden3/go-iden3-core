@@ -25,6 +25,8 @@ var (
 	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
 	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
 	ErrClaimNotFoundStateOnChain = fmt.Errorf("Claim not found under the on chain identity state")
+	ErrClaimNotFoundClaimsTree   = fmt.Errorf("Claim not found in the claims tree: the claim hasn't been issued")
+	ErrClaimNotYetInOnChainState = fmt.Errorf("Claim has been issued but is not yet under a published on chain identity state")
 )
 
 var (
@@ -600,6 +602,27 @@ func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Ha
 	return mtp, nil
 }
 
+// entryInTree checks if a given entry is in the merkle tree startin from the
+// rootKey.  If rootKey is nil, the current merkle tree root is used.
+func entryInTree(mt *merkletree.MerkleTree, rootKey *merkletree.Hash, entry *merkletree.Entry) error {
+	var err error
+	if rootKey != nil {
+		mt, err = mt.Snapshot(rootKey)
+		if err != nil {
+			return err
+		}
+	}
+	data, err := mt.GetDataByIndex(entry.HIndex())
+	if err != nil {
+		return ErrClaimNotFoundClaimsTree
+	}
+	foundEntry := &merkletree.Entry{Data: *data}
+	if !foundEntry.Equal(entry) {
+		return ErrClaimNotFoundClaimsTree
+	}
+	return nil
+}
+
 // GenCredentialExistence generates an existence credential (claim + proof of
 // existence) of an issued claim.  The result contains all data necessary to
 // validate the credential against the Identity State found in the blockchain.
@@ -619,16 +642,30 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	if err != nil {
 		return nil, err
 	}
-	mtpExist, err := generateExistenceMTProof(is.claimsTree, claim.Entry().HIndex(),
+	claimEntry := claim.Entry()
+	mtpExist, err := generateExistenceMTProof(is.claimsTree, claimEntry.HIndex(),
 		idenStateTreeRoots.ClaimsTreeRoot)
 	if err != nil {
-		return nil, err
+		// We were unable to generate a proof from the claims tree
+		// associated with the on chain identity state.  Check if the
+		// claim exists in the current claims tree.
+		if err := entryInTree(is.claimsTree, nil, claimEntry); err != nil {
+			return nil, err
+		} else {
+			return nil, ErrClaimNotYetInOnChainState
+		}
+	} else {
+		// We were able to generate a proof from the claims tree with
+		// the HIndex.  Check the HValue is also valid!
+		if err := entryInTree(is.claimsTree, idenStateTreeRoots.ClaimsTreeRoot, claimEntry); err != nil {
+			return nil, err
+		}
 	}
 	return &proof.CredentialExistence{
 		Id:                  is.id,
 		IdenStateData:       *idenStateData,
 		MtpClaim:            mtpExist,
-		Claim:               claim.Entry(),
+		Claim:               claimEntry,
 		RevocationsTreeRoot: idenStateTreeRoots.RevocationsTreeRoot,
 		RootsTreeRoot:       idenStateTreeRoots.RootsTreeRoot,
 		IdenPubUrl:          is.idenPubOffChainWriter.Url(),

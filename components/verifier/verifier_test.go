@@ -180,12 +180,12 @@ func TestVerifyCredentialExistence(t *testing.T) {
 
 	// TODO: Uncomment once smart contract returns BlockTs and BlockN every time
 	// Cred Exist has bad BlockTs
-	// credExistBad = &proof.CredentialExistence{}
-	// copier.Copy(credExistBad, credExist)
-	// credExistBad.IdenStateData.BlockTs = 02
-	// require.NotEqual(t, credExist, credExistBad)
-	// err = verifier.VerifyCredentialExistence(credExistBad)
-	// assert.NotNil(t, err)
+	credExistBad = &proof.CredentialExistence{}
+	Copy(credExistBad, credExist)
+	credExistBad.IdenStateData.BlockTs = 02
+	require.NotEqual(t, credExist, credExistBad)
+	err = verifier.VerifyCredentialExistence(credExistBad)
+	assert.NotNil(t, err)
 
 	// Cred Exist has bad Claim
 	credExistBad = &proof.CredentialExistence{}
