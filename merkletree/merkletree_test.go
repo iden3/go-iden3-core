@@ -104,6 +104,20 @@ func TestAddEntry1(t *testing.T) {
 	testgen.CheckTestValue(t, "TestAddEntry1", mt.RootKey().Hex())
 }
 
+func TestAddBarchEntry1(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	in := interfaceToInt64Array(testgen.GetTestValue("EntryInts0"))
+	e := NewEntryFromIntArray(in)
+	var entries []Entry
+	entries = append(entries, e)
+	if wrong, err := mt.AddEntryBatch(entries); err != nil || len(wrong) > 0 {
+		t.Fatalf("wrong entries:%v | error:%s", wrong, err)
+	}
+	testgen.CheckTestValue(t, "TestAddEntry1", mt.RootKey().Hex())
+}
+
 func TestAddEntry2(t *testing.T) {
 	mt := newTestingMerkle(t, 140)
 	defer mt.Storage().Close()
@@ -138,6 +152,41 @@ func TestAddEntry16(t *testing.T) {
 		if err := mt2.AddEntry(&e); err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	assert.Equal(t, mt1.RootKey().Hex(), mt2.RootKey().Hex())
+	testgen.CheckTestValue(t, "TestAddEntry16", mt1.RootKey().Hex())
+}
+
+func TestAddEntryBatch16(t *testing.T) {
+	var entries []Entry
+	mt1 := newTestingMerkle(t, 140)
+	defer mt1.Storage().Close()
+	for i := 0; i < 16; i++ {
+		e := NewEntryFromInts(int64(i), 0, 0, 0, int64(i), 0, 0, 0)
+		entries = append(entries, e)
+	}
+	wrong, err := mt1.AddEntryBatch(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wrong) > 0 {
+		t.Fatalf("wrong entries on AddEntryBatch: %v", wrong)
+	}
+
+	entries = []Entry{}
+	mt2 := newTestingMerkle(t, 140)
+	defer mt2.Storage().Close()
+	for i := 16 - 1; i >= 0; i-- {
+		e := NewEntryFromInts(int64(i), 0, 0, 0, int64(i), 0, 0, 0)
+		entries = append(entries, e)
+	}
+	wrong, err = mt2.AddEntryBatch(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wrong) > 0 {
+		t.Fatalf("wrong entries on AddEntryBatch: %v", wrong)
 	}
 
 	assert.Equal(t, mt1.RootKey().Hex(), mt2.RootKey().Hex())
@@ -493,6 +542,25 @@ func BenchmarkAddEntry(b *testing.B) {
 		if err := mt.AddEntry(&e); err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func BenchmarkAddEntryBatch(b *testing.B) {
+	var entries []Entry
+	mt := newTestingMerkle(b, 140)
+	defer mt.Storage().Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
+		entries = append(entries, e)
+	}
+	wrong, err := mt.AddEntryBatch(entries)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if len(wrong) > 0 {
+		b.Fatal(fmt.Errorf("wrong entries on AddEntryBatch: %v", wrong))
 	}
 }
 

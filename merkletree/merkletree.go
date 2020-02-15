@@ -410,6 +410,54 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	return nil
 }
 
+// AddEntryBatch adds multiple Entries to the MerkleTree
+// returns an integer array indicating what entries have failed (by index)
+// Takes advantage of the KV cache, it only calls commit once (at the end).
+func (mt *MerkleTree) AddEntryBatch(entries []Entry) ([]int, error) {
+	// verify that the MerkleTree is writable
+	if !mt.writable {
+		return []int{}, ErrNotWritable
+	}
+	mt.Lock()
+	tx, err := mt.storage.NewTx()
+	if err != nil {
+		return []int{}, err
+	}
+	defer func() {
+		if err == nil {
+			if err := tx.Commit(); err != nil {
+				tx.Close()
+			}
+		} else {
+			tx.Close()
+		}
+		mt.Unlock()
+	}()
+	var wrongEntries []int
+
+	for i, e := range entries {
+		if !CheckEntryInField(e) {
+			wrongEntries = append(wrongEntries, i)
+			continue
+		}
+		newNodeLeaf := NewNodeLeaf(&e)
+		hIndex := e.HIndex()
+		path := getPath(mt.maxLevels, hIndex)
+
+		newRootKey, err := mt.addLeaf(tx, newNodeLeaf, mt.rootKey, 0, path)
+		if err != nil {
+			// To be deleted, just for current debug
+			return wrongEntries, err
+
+			wrongEntries = append(wrongEntries, i)
+			continue
+		}
+		mt.rootKey = newRootKey
+		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+	}
+	return wrongEntries, nil
+}
+
 // walk is a helper recursive function to iterate over all tree branches
 func (mt *MerkleTree) walk(key *Hash, f func(*Node)) error {
 	n, err := mt.GetNode(key)
