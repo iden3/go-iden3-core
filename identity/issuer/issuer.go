@@ -334,7 +334,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 
 	if err := is.SyncIdenStatePublic(); err != nil {
 		if err != ErrIdenPubOnChainNil {
-			return nil, err
+			return nil, fmt.Errorf("Error syncing idenstate from smart contract: %w", err)
 		}
 	}
 	return &is, nil
@@ -370,6 +370,11 @@ func (is *Issuer) ID() *core.ID {
 	return is.id
 }
 
+// KeyOperational returns the identity's operational key.
+func (is *Issuer) KeyOperational() *babyjub.PublicKeyComp {
+	return is.kOpComp
+}
+
 // SyncIdenStatePublic updates the IdenStateOnChain and IdenStatePending from
 // the values in the Smart Contract.
 func (is *Issuer) SyncIdenStatePublic() error {
@@ -380,7 +385,7 @@ func (is *Issuer) SyncIdenStatePublic() error {
 	defer is.rw.Unlock()
 	idenStateData, err := is.idenPubOnChain.GetState(is.id)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error calling idenstates smart contract getState: %w", err)
 	}
 	if is.idenStatePending().Equals(&merkletree.HashZero) {
 		// If there's no IdenState pending to be set on chain, the
@@ -513,7 +518,7 @@ func (is *Issuer) PublishState() error {
 		// publishing it.
 		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, nil, nil, sig)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error calling idenstates smart contract initState: %w", err)
 		}
 
 		if err := is.setEthTxInitState(tx, ethTx); err != nil {
@@ -524,7 +529,7 @@ func (is *Issuer) PublishState() error {
 		// Update it.
 		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, nil, nil, sig)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error calling idenstates smart contract setState: %w", err)
 		}
 
 		if err := is.setEthTxSetState(tx, ethTx); err != nil {
