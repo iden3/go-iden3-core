@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
@@ -20,6 +21,7 @@ import (
 
 var (
 	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
+	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
 	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
 	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
 	ErrClaimNotFoundStateOnChain = fmt.Errorf("Claim not found under the on chain identity state")
@@ -57,12 +59,10 @@ type Config struct {
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
 type IdenStateTreeRoots struct {
-	ClaimsRoot      *merkletree.Hash
-	RevocationsRoot *merkletree.Hash
-	RootsRoot       *merkletree.Hash
+	ClaimsTreeRoot      *merkletree.Hash
+	RevocationsTreeRoot *merkletree.Hash
+	RootsTreeRoot       *merkletree.Hash
 }
-
-// TODO: Add mutex!
 
 // Issuer is an identity that issues claims
 type Issuer struct {
@@ -74,10 +74,13 @@ type Issuer struct {
 	rootsTree       *merkletree.MerkleTree
 	// idenPubOnChain can be nil if the identity doesn't connect to the blockchain.
 	idenPubOnChain idenpubonchain.IdenPubOnChainer
-	keyStore       *keystore.KeyStore
-	kOpComp        *babyjub.PublicKeyComp
-	nonceGen       *UniqueNonceGen
-	idenStateList  *db.StorageList
+	// idenPubOffChainWriter can be nil if the identity doesn't ever update
+	// it's state after genesis.
+	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter
+	keyStore              *keystore.KeyStore
+	kOpComp               *babyjub.PublicKeyComp
+	nonceGen              *UniqueNonceGen
+	idenStateList         *db.StorageList
 	// _idenStateOnChain     *merkletree.Hash
 	// idenStateDataOnChain is the last known identity state checked to be
 	// in the Smart Contract.
@@ -156,7 +159,8 @@ func (is *Issuer) loadEthTxInitState() error {
 }
 
 // loadMTs loads the three identity merkle trees from the storage using the configuration.
-func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletree.MerkleTree, *merkletree.MerkleTree, error) {
+func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletree.MerkleTree,
+	*merkletree.MerkleTree, error) {
 	cltStorage := storage.WithPrefix(dbPrefixClaimsTree)
 	retStorage := storage.WithPrefix(dbPrefixRevocationTree)
 	rotStorage := storage.WithPrefix(dbPrefixRootsTree)
@@ -178,7 +182,10 @@ func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletr
 }
 
 // New creates a new Issuer, creating a new genesis ID and initializes the storages.
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier, storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpubonchain.IdenPubOnChainer) (*Issuer, error) {
+func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier,
+	storage db.Storage, keyStore *keystore.KeyStore,
+	idenPubOnChain idenpubonchain.IdenPubOnChainer,
+	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
 		return nil, err
@@ -221,12 +228,13 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	idenStateList := db.NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
-		rw:              &sync.RWMutex{},
-		id:              id,
-		claimsTree:      clt,
-		revocationsTree: ret,
-		rootsTree:       rot,
-		idenPubOnChain:  idenPubOnChain,
+		rw:                    &sync.RWMutex{},
+		id:                    id,
+		claimsTree:            clt,
+		revocationsTree:       ret,
+		rootsTree:             rot,
+		idenPubOnChain:        idenPubOnChain,
+		idenPubOffChainWriter: idenPubOffChainWriter,
 		// idenStateWriter: idenStateWriter,
 		keyStore:      keyStore,
 		kOpComp:       kOpComp,
@@ -259,7 +267,9 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 }
 
 // Load creates an Issuer by loading a previously created Issuer (with New).
-func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpubonchain.IdenPubOnChainer) (*Issuer, error) {
+func Load(storage db.Storage, keyStore *keystore.KeyStore,
+	idenPubOnChain idenpubonchain.IdenPubOnChainer,
+	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
@@ -292,18 +302,19 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore, idenPubOnChain idenpu
 	idenStateList := db.NewStorageList(dbPrefixIdenStateList)
 
 	is := Issuer{
-		rw:              &sync.RWMutex{},
-		id:              &id,
-		claimsTree:      clt,
-		revocationsTree: ret,
-		rootsTree:       rot,
-		idenPubOnChain:  idenPubOnChain,
-		keyStore:        keyStore,
-		kOpComp:         &kOpComp,
-		storage:         storage,
-		nonceGen:        nonceGen,
-		idenStateList:   idenStateList,
-		cfg:             cfg,
+		rw:                    &sync.RWMutex{},
+		id:                    &id,
+		claimsTree:            clt,
+		revocationsTree:       ret,
+		rootsTree:             rot,
+		idenPubOnChain:        idenPubOnChain,
+		idenPubOffChainWriter: idenPubOffChainWriter,
+		keyStore:              keyStore,
+		kOpComp:               &kOpComp,
+		storage:               storage,
+		nonceGen:              nonceGen,
+		idenStateList:         idenStateList,
+		cfg:                   cfg,
 	}
 
 	if err := is.loadIdenStateDataOnChain(); err != nil {
@@ -332,9 +343,9 @@ func (is *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
 	clr, rer, ror := is.claimsTree.RootKey(), is.revocationsTree.RootKey(), is.rootsTree.RootKey()
 	idenState := core.IdenState(clr, rer, ror)
 	return idenState, IdenStateTreeRoots{
-		ClaimsRoot:      clr,
-		RevocationsRoot: rer,
-		RootsRoot:       ror,
+		ClaimsTreeRoot:      clr,
+		RevocationsTreeRoot: rer,
+		RootsTreeRoot:       ror,
 	}
 }
 
@@ -521,6 +532,20 @@ func (is *Issuer) PublishState() error {
 
 	is.setIdenStatePending(tx, idenState)
 
+	publicData := idenpuboffchain.PublicData{
+		IdenState:           idenState,
+		ClaimsTreeRoot:      idenStateTreeRoots.ClaimsTreeRoot,
+		RevocationsTreeRoot: idenStateTreeRoots.RevocationsTreeRoot,
+		RevocationsTree:     is.revocationsTree,
+		RootsTreeRoot:       idenStateTreeRoots.RootsTreeRoot,
+		RootsTree:           is.rootsTree,
+	}
+
+	// finally, Publish the Public Off Chain identity data
+	if err := is.idenPubOffChainWriter.Publish(&publicData); err != nil {
+		return err
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}
@@ -594,17 +619,18 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	if err != nil {
 		return nil, err
 	}
-	mtpExist, err := generateExistenceMTProof(is.claimsTree, claim.Entry().HIndex(), idenStateTreeRoots.ClaimsRoot)
+	mtpExist, err := generateExistenceMTProof(is.claimsTree, claim.Entry().HIndex(),
+		idenStateTreeRoots.ClaimsTreeRoot)
 	if err != nil {
 		return nil, err
 	}
 	return &proof.CredentialExistence{
-		Id:              is.id,
-		IdenStateData:   *idenStateData,
-		MtpClaim:        mtpExist,
-		Claim:           claim.Entry(),
-		RevocationsRoot: idenStateTreeRoots.RevocationsRoot,
-		RootsRoot:       idenStateTreeRoots.RootsRoot,
-		IdPubUrl:        "http://TODO",
+		Id:                  is.id,
+		IdenStateData:       *idenStateData,
+		MtpClaim:            mtpExist,
+		Claim:               claim.Entry(),
+		RevocationsTreeRoot: idenStateTreeRoots.RevocationsTreeRoot,
+		RootsTreeRoot:       idenStateTreeRoots.RootsTreeRoot,
+		IdenPubUrl:          is.idenPubOffChainWriter.Url(),
 	}, nil
 }
