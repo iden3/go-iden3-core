@@ -219,5 +219,5 @@ func TestIssuerCredential(t *testing.T) {
 	require.Nil(t, err)
 
 	_, err = issuer.GenCredentialExistence(claim1)
-	assert.Equal(t, ErrClaimNotFoundStateOnChain, err)
+	assert.Equal(t, ErrClaimNotYetInOnChainState, err)
 }

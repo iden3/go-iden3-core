@@ -2,6 +2,7 @@ package httpclient
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/dghubble/sling"
 	"gopkg.in/go-playground/validator.v9"
@@ -42,7 +43,9 @@ func (p *HttpClient) DoRequest(s *sling.Sling, res interface{}) error {
 		if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
 			err = serverError
 		} else if res != nil {
-			err = p.validate.Struct(res)
+			if reflect.TypeOf(res).Kind() == reflect.Struct {
+				err = p.validate.Struct(res)
+			}
 		}
 	}
 	return err

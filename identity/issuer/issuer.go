@@ -25,6 +25,8 @@ var (
 	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
 	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
 	ErrClaimNotFoundStateOnChain = fmt.Errorf("Claim not found under the on chain identity state")
+	ErrClaimNotFoundClaimsTree   = fmt.Errorf("Claim not found in the claims tree: the claim hasn't been issued")
+	ErrClaimNotYetInOnChainState = fmt.Errorf("Claim has been issued but is not yet under a published on chain identity state")
 )
 
 var (
@@ -273,15 +275,15 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting config from storage: %w", err)
 	}
 	if err := json.Unmarshal(cfgJSON, &cfg); err != nil {
 		return nil, err
 	}
 
-	kOpCompBytes, err := storage.Get(dbKeyConfig)
+	kOpCompBytes, err := storage.Get(dbKeyKOp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting kop from storage: %w", err)
 	}
 	var kOpComp babyjub.PublicKeyComp
 	copy(kOpComp[:], kOpCompBytes)
@@ -289,13 +291,13 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	var id core.ID
 	idBytes, err := storage.Get(dbKeyId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting id from storage: %w", err)
 	}
 	copy(id[:], idBytes)
 
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error loading merkle trees from storage: %w", err)
 	}
 
 	nonceGen := NewUniqueNonceGen(db.NewStorageValue(dbKeyNonceIdx))
@@ -332,7 +334,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 
 	if err := is.SyncIdenStatePublic(); err != nil {
 		if err != ErrIdenPubOnChainNil {
-			return nil, err
+			return nil, fmt.Errorf("Error syncing idenstate from smart contract: %w", err)
 		}
 	}
 	return &is, nil
@@ -368,6 +370,11 @@ func (is *Issuer) ID() *core.ID {
 	return is.id
 }
 
+// KeyOperational returns the identity's operational key.
+func (is *Issuer) KeyOperational() *babyjub.PublicKeyComp {
+	return is.kOpComp
+}
+
 // SyncIdenStatePublic updates the IdenStateOnChain and IdenStatePending from
 // the values in the Smart Contract.
 func (is *Issuer) SyncIdenStatePublic() error {
@@ -378,7 +385,7 @@ func (is *Issuer) SyncIdenStatePublic() error {
 	defer is.rw.Unlock()
 	idenStateData, err := is.idenPubOnChain.GetState(is.id)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error calling idenstates smart contract getState: %w", err)
 	}
 	if is.idenStatePending().Equals(&merkletree.HashZero) {
 		// If there's no IdenState pending to be set on chain, the
@@ -511,7 +518,7 @@ func (is *Issuer) PublishState() error {
 		// publishing it.
 		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, nil, nil, sig)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error calling idenstates smart contract initState: %w", err)
 		}
 
 		if err := is.setEthTxInitState(tx, ethTx); err != nil {
@@ -522,7 +529,7 @@ func (is *Issuer) PublishState() error {
 		// Update it.
 		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, nil, nil, sig)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error calling idenstates smart contract setState: %w", err)
 		}
 
 		if err := is.setEthTxSetState(tx, ethTx); err != nil {
@@ -619,16 +626,30 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	if err != nil {
 		return nil, err
 	}
-	mtpExist, err := generateExistenceMTProof(is.claimsTree, claim.Entry().HIndex(),
+	claimEntry := claim.Entry()
+	mtpExist, err := generateExistenceMTProof(is.claimsTree, claimEntry.HIndex(),
 		idenStateTreeRoots.ClaimsTreeRoot)
 	if err != nil {
-		return nil, err
+		// We were unable to generate a proof from the claims tree
+		// associated with the on chain identity state.  Check if the
+		// claim exists in the current claims tree.
+		if err := is.claimsTree.EntryExists(claimEntry, nil); err != nil {
+			return nil, ErrClaimNotFoundClaimsTree
+		} else {
+			return nil, ErrClaimNotYetInOnChainState
+		}
+	} else {
+		// We were able to generate a proof from the claims tree with
+		// the HIndex.  Check the HValue is also valid!
+		if err := is.claimsTree.EntryExists(claimEntry, idenStateTreeRoots.ClaimsTreeRoot); err != nil {
+			return nil, ErrClaimNotFoundClaimsTree
+		}
 	}
 	return &proof.CredentialExistence{
 		Id:                  is.id,
 		IdenStateData:       *idenStateData,
 		MtpClaim:            mtpExist,
-		Claim:               claim.Entry(),
+		Claim:               claimEntry,
 		RevocationsTreeRoot: idenStateTreeRoots.RevocationsTreeRoot,
 		RootsTreeRoot:       idenStateTreeRoots.RootsTreeRoot,
 		IdenPubUrl:          is.idenPubOffChainWriter.Url(),
