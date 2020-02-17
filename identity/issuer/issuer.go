@@ -275,15 +275,15 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting config from storage: %w", err)
 	}
 	if err := json.Unmarshal(cfgJSON, &cfg); err != nil {
 		return nil, err
 	}
 
-	kOpCompBytes, err := storage.Get(dbKeyConfig)
+	kOpCompBytes, err := storage.Get(dbKeyKOp)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting kop from storage: %w", err)
 	}
 	var kOpComp babyjub.PublicKeyComp
 	copy(kOpComp[:], kOpCompBytes)
@@ -291,13 +291,13 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	var id core.ID
 	idBytes, err := storage.Get(dbKeyId)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting id from storage: %w", err)
 	}
 	copy(id[:], idBytes)
 
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error loading merkle trees from storage: %w", err)
 	}
 
 	nonceGen := NewUniqueNonceGen(db.NewStorageValue(dbKeyNonceIdx))
@@ -607,7 +607,7 @@ func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Ha
 	return mtp, nil
 }
 
-// entryInTree checks if a given entry is in the merkle tree startin from the
+// entryInTree checks if a given entry is in the merkle tree starting from the
 // rootKey.  If rootKey is nil, the current merkle tree root is used.
 func entryInTree(mt *merkletree.MerkleTree, rootKey *merkletree.Hash, entry *merkletree.Entry) error {
 	var err error
