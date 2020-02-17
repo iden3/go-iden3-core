@@ -111,6 +111,8 @@ var (
 	ErrEntryIndexAlreadyExists = errors.New("the entry index already exists in the tree")
 	// ErrNotWritable is used when the MerkleTree is not writable and a write function is called
 	ErrNotWritable = errors.New("Merkle Tree not writable")
+	// ErrEntryDataNotMatch is used when the entry data doesn't match the expected one.
+	ErrEntryDataNotMatch = errors.New("Entry data doesn't match the expected one")
 
 	// HashZero is a hash value of zeros, and is the key of an empty node.
 	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -276,6 +278,27 @@ func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
 		}
 	}
 	return nil, ErrEntryIndexNotFound
+}
+
+// EntryExists checks if a given entry is in the merkle tree starting from the
+// rootKey.  If rootKey is nil, the current merkle tree root is used.
+func (mt *MerkleTree) EntryExists(entry *Entry, rootKey *Hash) error {
+	var err error
+	if rootKey != nil {
+		mt, err = mt.Snapshot(rootKey)
+		if err != nil {
+			return err
+		}
+	}
+	data, err := mt.GetDataByIndex(entry.HIndex())
+	if err != nil {
+		return err
+	}
+	foundEntry := &Entry{Data: *data}
+	if !foundEntry.Equal(entry) {
+		return ErrEntryDataNotMatch
+	}
+	return nil
 }
 
 // pushLeaf recursively pushes an existing oldLeaf down until its path diverges
