@@ -183,8 +183,9 @@ func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletr
 	return clt, ret, rot, nil
 }
 
-// New creates a new Issuer, creating a new genesis ID and initializes the storages.
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier,
+// New creates a new Issuer, creating a new genesis ID and initializes the
+// storages.  The extraGenesisClaims metadata's are updated.
+func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
 	storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
@@ -212,8 +213,18 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkle
 	if err != nil {
 		return nil, err
 	}
-	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kOp, nonce)
-	id, _, err := genesis.CalculateIdGenesisMT(clt, rot, claimKOp, extraGenesisClaims)
+	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kOp)
+	claimKOp.Metadata().RevNonce = nonce
+	extraGenesisClaimsEntriers := make([]merkletree.Entrier, len(extraGenesisClaims))
+	for i, claim := range extraGenesisClaims {
+		nonce, err := nonceGen.Next(tx)
+		if err != nil {
+			return nil, err
+		}
+		claim.Metadata().RevNonce = nonce
+		extraGenesisClaimsEntriers[i] = claim
+	}
+	id, err := genesis.CalculateIdGenesisMT(clt, rot, claimKOp, extraGenesisClaimsEntriers)
 	if err != nil {
 		return nil, err
 	}
@@ -434,14 +445,27 @@ func (is *Issuer) SyncIdenStatePublic() error {
 }
 
 // IssueClaim adds a new claim to the Claims Merkle Tree of the Issuer.  The
-// Identity State is not updated.
-func (is *Issuer) IssueClaim(claim merkletree.Entrier) error {
+// Identity State is not updated.  The claim metadata is updated if the issue
+// is successfull.
+func (is *Issuer) IssueClaim(claim claims.Claimer) error {
 	is.rw.Lock()
 	defer is.rw.Unlock()
 	if is.idenPubOnChain == nil {
 		return ErrIdenPubOnChainNil
 	}
-	err := is.claimsTree.AddClaim(claim)
+	tx, err := is.storage.NewTx()
+	if err != nil {
+		return err
+	}
+	nonce, err := is.nonceGen.Next(tx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	claim.Metadata().RevNonce = nonce
+	err = is.claimsTree.AddClaim(claim)
 	if err != nil {
 		return err
 	}
@@ -655,3 +679,11 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 		IdenPubUrl:          is.idenPubOffChainWriter.Url(),
 	}, nil
 }
+
+// TODO: Create an Admin struct that exposes the following:
+// - The 3 Merle Trees
+// - RawDump(f func(key, value string))
+// - RawImport(raw map[string]string) (int, error)
+// - ClaimsDump() map[string]string
+// The return and input types are open to change.  They are based on the old
+// components/idenadminutils/idenadminutils.go

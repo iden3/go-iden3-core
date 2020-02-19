@@ -8,9 +8,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/stretchr/testify/assert"
 )
 
 // If generateTest is true, the checked values will be used to generate a test vector
@@ -38,8 +40,9 @@ func initTest() {
 			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
 			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
 			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
-			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2b}))
-		testgen.SetTestValue("0_dataSlot", hex.EncodeToString([]byte{
+			0x29, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a, 0x2a,
+			0x2a, 0x2b}))
+		testgen.SetTestValue("0_valueSlot", hex.EncodeToString([]byte{
 			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
 			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
 			0x56, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40,
@@ -91,6 +94,38 @@ func dataTestOutput(d *merkletree.Data) {
 	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[2][:]))
 	fmt.Fprintf(s, "\t\t\"%v\",", hex.EncodeToString(d[3][:]))
 	fmt.Println(s.String())
+}
+
+func TestMetadata(t *testing.T) {
+	{
+		metadata0 := NewMetadata(ClaimHeaderBasic)
+		metadata0.RevNonce = 1234
+		entry := &merkletree.Entry{}
+		metadata0.Marshal(entry)
+		var metadata1 Metadata
+		metadata1.Unmarshal(entry)
+		assert.Equal(t, metadata0, metadata1)
+	}
+
+	claimHeaderTest := ClaimHeader{
+		Type:       *NewClaimTypeNum(42),
+		Dest:       ClaimRecipIdenIndex,
+		Expiration: true,
+		Version:    true}
+
+	{
+		metadata0 := NewMetadata(claimHeaderTest)
+		metadata0.RevNonce = 1234
+		metadata0.Dest = &core.ID{}
+		metadata0.Dest[0] = 0x42
+		metadata0.Expiration = 4567
+		metadata0.Version = 7788
+		entry := &merkletree.Entry{}
+		metadata0.Marshal(entry)
+		var metadata1 Metadata
+		metadata1.Unmarshal(entry)
+		assert.Equal(t, metadata0, metadata1)
+	}
 }
 
 // TODO: Update to new claim spec.

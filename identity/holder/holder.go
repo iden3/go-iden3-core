@@ -10,7 +10,6 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -32,7 +31,7 @@ type Holder struct {
 }
 
 // New creates a new Holder, calling the internal Issuer.New().
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []merkletree.Entrier,
+func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
 	storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter,
@@ -77,9 +76,10 @@ func (h *Holder) HolderGetCredentialValidity(
 	if err != nil {
 		return nil, err
 	}
-	nonce := claims.GetRevocationNonce(credExist.Claim)
+	var claimMetadata claims.Metadata
+	claimMetadata.Unmarshal(credExist.Claim)
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!
-	revLeaf := claims.NewLeafRevocationsTree(nonce, 0xffffffff).Entry()
+	revLeaf := claims.NewLeafRevocationsTree(claimMetadata.RevNonce, 0xffffffff).Entry()
 	mtpNotNonce, err := publicData.RevocationsTree.GenerateProof(revLeaf.HIndex(), nil)
 	if err != nil {
 		return nil, err
@@ -97,6 +97,6 @@ func (h *Holder) HolderGetCredentialValidity(
 }
 
 // HolderImportCredentialExistence imports a received Credential of Existence into the ClaimsDB.
-func (h *Holder) HolderImportCredentialExistence(credExist *proof.ProofClaim) error {
-	return fmt.Errorf("TODO: Implement ClaimDB")
-}
+// func (h *Holder) HolderImportCredentialExistence(credExist *proof.ProofClaim) error {
+// 	return fmt.Errorf("TODO: Implement ClaimDB")
+// }

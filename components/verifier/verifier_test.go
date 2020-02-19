@@ -48,7 +48,7 @@ func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	is, err := issuer.New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
+	is, err := issuer.New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return is, storage, keyStore
 }
@@ -80,7 +80,7 @@ func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMoc
 
 func _newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
-	claim merkletree.Entrier) (*issuer.Issuer, *merkletree.Hash) {
+	claim claims.Claimer) (*issuer.Issuer, *merkletree.Hash) {
 	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
 	genesisState, _ := is.State()
 	err := is.IssueClaim(claim)
@@ -97,7 +97,7 @@ func _newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubO
 
 func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock,
-	claim merkletree.Entrier) *issuer.Issuer {
+	claim claims.Claimer) *issuer.Issuer {
 	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim)
 
 	blockN := uint64(12)
@@ -115,9 +115,9 @@ func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOn
 func TestVerifyCredentialExistence(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	idenPubOffChainWrite := writermock.New()
-	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x42
-	claim := claims.NewClaimBasic(indexBytes, dataBytes, 0)
+	claim := claims.NewClaimBasic(indexBytes, valueBytes)
 	is := newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim)
 
 	credExist, err := is.GenCredentialExistence(claim)
@@ -190,9 +190,9 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	// Cred Exist has bad Claim
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
-	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes, valueBytes = [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x88
-	credExistBad.Claim = claims.NewClaimBasic(indexBytes, dataBytes, 0).Entry()
+	credExistBad.Claim = claims.NewClaimBasic(indexBytes, valueBytes).Entry()
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
@@ -210,7 +210,7 @@ func newHolder(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	ho, err := holder.New(cfg, kOp, []merkletree.Entrier{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite, idenPubOffChainRead)
+	ho, err := holder.New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite, idenPubOffChainRead)
 	require.Nil(t, err)
 	return ho, storage, keyStore
 }
@@ -248,9 +248,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state first time with claim1
 
-	indexBytes, dataBytes := [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x42
-	claim1 := claims.NewClaimBasic(indexBytes, dataBytes, 11)
+	claim1 := claims.NewClaimBasic(indexBytes, valueBytes)
 	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim1)
 
 	blockN := uint64(12)
@@ -280,9 +280,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state a second time with another claim2
 
-	indexBytes, dataBytes = [claims.IndexSlotBytes]byte{}, [claims.DataSlotBytes]byte{}
+	indexBytes, valueBytes = [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x48
-	claim2 := claims.NewClaimBasic(indexBytes, dataBytes, 22)
+	claim2 := claims.NewClaimBasic(indexBytes, valueBytes)
 
 	err = is.IssueClaim(claim2)
 	require.Nil(t, err)
