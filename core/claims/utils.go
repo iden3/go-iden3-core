@@ -8,11 +8,23 @@ import (
 )
 
 type ClaimGeneric struct {
-	entry *merkletree.Entry
+	metadata Metadata
+	entry    *merkletree.Entry
 }
 
-func (a ClaimGeneric) Entry() *merkletree.Entry {
-	return a.entry
+func NewClaimGeneric(entry *merkletree.Entry) *ClaimGeneric {
+	var metadata Metadata
+	metadata.Unmarshal(entry)
+	return &ClaimGeneric{metadata: metadata, entry: entry}
+}
+
+func (c *ClaimGeneric) Entry() *merkletree.Entry {
+	c.metadata.Marshal(c.entry)
+	return c.entry
+}
+
+func (c *ClaimGeneric) Metadata() *Metadata {
+	return &c.metadata
 }
 
 func HexToClaimGeneric(h string) (ClaimGeneric, error) {
