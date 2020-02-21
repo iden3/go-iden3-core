@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 
@@ -20,6 +21,7 @@ import (
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var debug = false
@@ -483,16 +485,72 @@ func TestProofFromBytesBig(t *testing.T) {
 	assert.Equal(t, proof2, proof2Parsed)
 }
 
+// BenchmarkAddEntry populates a merkletree and then performs benchmarks adding multiple times an Entry
+// To generate the output for the flamegraph:
+// go test -run BenchmarkAddEntry -bench=BenchmarkAddEntry -cpuprofile=addentry-benchmark.out
 func BenchmarkAddEntry(b *testing.B) {
-	mt := newTestingMerkle(b, 140)
+
+	memory := true
+	var sto db.Storage
+	var dir string
+	var err error
+	if memory {
+		// Memory storage
+		sto = db.NewMemoryStorage()
+	} else {
+		// LevelDB storage
+		dir, err = ioutil.TempDir("", "db")
+		require.Nil(b, err)
+		sto, err = db.NewLevelDbStorage(dir, false)
+		require.Nil(b, err)
+	}
+
+	// new MerkleTree
+	mt, err := NewMerkleTree(sto, 140)
+	require.Nil(b, err)
 	defer mt.Storage().Close()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
+	// populate the merkletree
+	for i := 0; i < 99; i++ {
+		e := NewEntryFromInts(int64(i), int64(i), int64(i), int64(i), int64(i), int64(i), int64(i), int64(i))
 		if err := mt.AddEntry(&e); err != nil {
 			b.Fatal(err)
 		}
+	}
+
+	// make benchmarks adding same Entry multiple times
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var storageCopy db.Storage
+		if memory {
+			storageCopy = db.NewMemoryStorage()
+		} else {
+			dir, err := ioutil.TempDir("", "db")
+			require.Nil(b, err)
+			storageCopy, err = db.NewLevelDbStorage(dir, false)
+			require.Nil(b, err)
+		}
+		tx, err := storageCopy.NewTx()
+		require.Nil(b, err)
+
+		err = mt.Storage().Iterate(func(k []byte, v []byte) (bool, error) {
+			tx.Put(k, v)
+
+			return true, nil
+		})
+		require.Nil(b, err)
+		err = tx.Commit()
+		require.Nil(b, err)
+		mtCopy, err := NewMerkleTree(storageCopy, 140)
+		require.Nil(b, err)
+
+		e := NewEntryFromInts(99, 99, 99, 99, 99, 99, 99, 99)
+		if err := mtCopy.AddEntry(&e); err != nil {
+			b.Fatal(err)
+		}
+	}
+	if !memory {
+		os.RemoveAll(dir)
 	}
 }
 
