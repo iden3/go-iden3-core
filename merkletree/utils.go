@@ -33,7 +33,7 @@ func (h Hash) Bytes() []byte {
 	return h[:]
 }
 
-func (h *Hash) MarshalText() ([]byte, error) {
+func (h Hash) MarshalText() ([]byte, error) {
 	return []byte(common3.HexEncode(h.Bytes())), nil
 }
 

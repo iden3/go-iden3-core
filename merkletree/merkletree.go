@@ -71,7 +71,7 @@ func (d1 *Data) Equal(d2 *Data) bool {
 		bytes.Equal(d1[2][:], d2[2][:]) && bytes.Equal(d1[3][:], d2[3][:])
 }
 
-func (d *Data) MarshalText() ([]byte, error) {
+func (d Data) MarshalText() ([]byte, error) {
 	dataBytes := d.Bytes()
 	return []byte(common3.HexEncode(dataBytes[:])), nil
 }
@@ -171,7 +171,7 @@ func (e1 *Entry) Equal(e2 *Entry) bool {
 	return e1.Data.Equal(&e2.Data)
 }
 
-func (e *Entry) MarshalText() ([]byte, error) {
+func (e Entry) MarshalText() ([]byte, error) {
 	return []byte(common3.HexEncode(e.Bytes())), nil
 }
 
@@ -763,7 +763,7 @@ func (p *Proof) Bytes() []byte {
 	return bs
 }
 
-func (p *Proof) MarshalJSON() ([]byte, error) {
+func (p Proof) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(p.Bytes()))
 }
 

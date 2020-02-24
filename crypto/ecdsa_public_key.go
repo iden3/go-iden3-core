@@ -14,7 +14,7 @@ type PublicKey struct {
 }
 
 // MarshalJSON serializes the public key as a hex string.
-func (pk *PublicKey) MarshalJSON() ([]byte, error) {
+func (pk PublicKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(crypto.CompressPubkey(&pk.PublicKey)))
 }
 
