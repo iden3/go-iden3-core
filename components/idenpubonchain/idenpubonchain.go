@@ -15,6 +15,10 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+var (
+	ErrIdenNotOnChain = fmt.Errorf("Identity not found on chain.")
+)
+
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
 type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
@@ -58,6 +62,9 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 		blockN, blockTS, idenState, err = idenStates.GetStateDataById(nil, *id)
 		return err
 	})
+	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+		return nil, ErrIdenNotOnChain
+	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
@@ -81,6 +88,9 @@ func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*pro
 		blockN, blockTS, idenState, err = idenStates.GetStateDataByBlock(nil, *id, queryBlockN)
 		return err
 	})
+	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+		return nil, ErrIdenNotOnChain
+	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
@@ -104,6 +114,9 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 		blockN, blockTS, idenState, err = idenStates.GetStateDataByTime(nil, *id, uint64(queryBlockTs))
 		return err
 	})
+	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+		return nil, ErrIdenNotOnChain
+	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),

@@ -112,8 +112,16 @@ func (is *Issuer) loadIdenStateDataOnChain() error {
 	return db.LoadJSON(is.storage, dbKeyIdenStateDataOnChain, is._idenStateDataOnChain)
 }
 
+func (is *Issuer) IdenStateOnChain() *merkletree.Hash {
+	return is._idenStateDataOnChain.IdenState
+}
+
 func (is *Issuer) idenStateOnChain() *merkletree.Hash {
 	return is._idenStateDataOnChain.IdenState
+}
+
+func (is *Issuer) IdenStatePending() *merkletree.Hash {
+	return is._idenStatePending
 }
 
 func (is *Issuer) idenStatePending() *merkletree.Hash {
@@ -395,7 +403,11 @@ func (is *Issuer) SyncIdenStatePublic() error {
 	is.rw.Lock()
 	defer is.rw.Unlock()
 	idenStateData, err := is.idenPubOnChain.GetState(is.id)
-	if err != nil {
+	if err == idenpubonchain.ErrIdenNotOnChain {
+		idenStateData = &proof.IdenStateData{
+			IdenState: &merkletree.HashZero,
+		}
+	} else if err != nil {
 		return fmt.Errorf("Error calling idenstates smart contract getState: %w", err)
 	}
 	if is.idenStatePending().Equals(&merkletree.HashZero) {
