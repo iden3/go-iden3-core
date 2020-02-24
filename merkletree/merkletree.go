@@ -33,7 +33,7 @@ type ElemBytes [ElemBytesLen]byte
 
 // String returns the last 4 bytes of ElemBytes in hex.
 func (e *ElemBytes) String() string {
-	return hex.EncodeToString(e[ElemBytesLen-4:])
+	return fmt.Sprintf("%v...", hex.EncodeToString(e[ElemBytesLen-4:]))
 }
 
 // ElemsBytesToBytes serializes an array of ElemBytes to []byte.
