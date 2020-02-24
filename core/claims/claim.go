@@ -182,7 +182,7 @@ func byte2bool(b byte) bool {
 }
 
 // Marshal the ClaimHeader into an entry
-func (c *ClaimHeader) Marshal(e *merkletree.Entry) {
+func (c ClaimHeader) Marshal(e *merkletree.Entry) {
 	index := e.Index()
 	copy(index[0][:ClaimTypeLen], c.Type[:])
 	flags0 := &index[0][ClaimTypeLen]
@@ -249,7 +249,7 @@ func (m *Metadata) Type() ClaimType {
 }
 
 // Marshal the Metadata into an entry
-func (m *Metadata) Marshal(e *merkletree.Entry) {
+func (m Metadata) Marshal(e *merkletree.Entry) {
 	m.header.Marshal(e)
 	index := e.Index()
 	value := e.Value()

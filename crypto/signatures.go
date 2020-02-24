@@ -22,7 +22,7 @@ func (s *Signature) UnmarshalJSON(bs []byte) error {
 }
 
 // MarshalJSON serializes a signature as a hex string.
-func (s *Signature) MarshalJSON() ([]byte, error) {
+func (s Signature) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(s[:]))
 }
 
@@ -36,7 +36,7 @@ func (s *SignatureEthMsg) UnmarshalJSON(bs []byte) error {
 }
 
 // MarshalJSON serializes a signature as a hex string.
-func (s *SignatureEthMsg) MarshalJSON() ([]byte, error) {
+func (s SignatureEthMsg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(common3.HexEncode(s[:]))
 }
 
