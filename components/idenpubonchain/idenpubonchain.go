@@ -16,9 +16,11 @@ import (
 )
 
 var (
-	ErrIdenNotOnChain      = fmt.Errorf("Identity not found on chain")
-	ErrIdenByBlockNotFound = fmt.Errorf("Identity not found by the queried block number")
-	ErrIdenByTimeNotFound  = fmt.Errorf("Identity not found by the queried block timestamp")
+	ErrIdenNotOnChain              = fmt.Errorf("Identity not found on chain")
+	ErrIdenNotOnChainOrBlockTooNew = fmt.Errorf("Identity not found on chain or the queried block number is not yet on chain")
+	ErrIdenNotOnChainOrTimeTooNew  = fmt.Errorf("Identity not found on chain or the queried time is not yet on chain")
+	ErrIdenByBlockNotFound         = fmt.Errorf("Identity not found by the queried block number")
+	ErrIdenByTimeNotFound          = fmt.Errorf("Identity not found by the queried block timestamp")
 )
 
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
@@ -102,7 +104,7 @@ func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64
 		return err
 	})
 	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
-		return nil, ErrIdenNotOnChain
+		return nil, ErrIdenNotOnChainOrBlockTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
@@ -140,7 +142,7 @@ func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64)
 		return err
 	})
 	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
-		return nil, ErrIdenNotOnChain
+		return nil, ErrIdenNotOnChainOrTimeTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
