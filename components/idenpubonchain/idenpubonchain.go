@@ -16,7 +16,11 @@ import (
 )
 
 var (
-	ErrIdenNotOnChain = fmt.Errorf("Identity not found on chain.")
+	ErrIdenNotOnChain              = fmt.Errorf("Identity not found on chain")
+	ErrIdenNotOnChainOrBlockTooNew = fmt.Errorf("Identity not found on chain or the queried block number is not yet on chain")
+	ErrIdenNotOnChainOrTimeTooNew  = fmt.Errorf("Identity not found on chain or the queried time is not yet on chain")
+	ErrIdenByBlockNotFound         = fmt.Errorf("Identity not found by the queried block number")
+	ErrIdenByTimeNotFound          = fmt.Errorf("Identity not found by the queried block timestamp")
 )
 
 // IdenPubOnChainer is an interface that gives access to the IdenStates Smart Contract.
@@ -49,7 +53,6 @@ func New(client *eth.Client2, addresses ContractAddresses) *IdenPubOnChain {
 }
 
 // GetState returns the Identity State Data of the given ID from the IdenStates Smart Contract.
-// If no result is found, the returned IdenStateData is all zeroes.
 func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
@@ -72,11 +75,23 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	}, err
 }
 
-// GetState returns the Identity State Data of the given ID that is closest
-// (equal or older) to the queryBlockN from the IdenStates Smart Contract.  If
-// a resut is found, BlockN <= queryBlockN.
-// If no result is found, the returned IdenStateData is all zeroes.
+// GetStateByBlock returns the Identity State Data of the given ID published at
+// queryBlockN from the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*proof.IdenStateData, error) {
+	idenStateData, err := ip.GetStateClosestToBlock(id, queryBlockN)
+	if err != nil {
+		return nil, err
+	}
+	if idenStateData.BlockN != queryBlockN {
+		return nil, ErrIdenByBlockNotFound
+	}
+	return idenStateData, nil
+}
+
+// GetStateClosestToBlock returns the Identity State Data of the given ID that
+// is closest (equal or older) to the queryBlockN from the IdenStates Smart
+// Contract.  If a resut is found, BlockN <= queryBlockN.
+func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
 	var blockTS uint64
@@ -89,7 +104,7 @@ func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*pro
 		return err
 	})
 	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
-		return nil, ErrIdenNotOnChain
+		return nil, ErrIdenNotOnChainOrBlockTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
@@ -98,11 +113,23 @@ func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*pro
 	}, err
 }
 
-// GetState returns the Identity State Data of the given ID closest (equal or
-// older) to the queryBlockTs from the IdenStates Smart Contract.  If a resut
-// is found, BlockN <= queryBlockN.
-// If no result is found, the returned IdenStateData is all zeroes.
+// GetStateByTime returns the Identity State Data of the given ID published at
+// queryBlockTs from the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proof.IdenStateData, error) {
+	idenStateData, err := ip.GetStateClosestToTime(id, queryBlockTs)
+	if err != nil {
+		return nil, err
+	}
+	if idenStateData.BlockTs != queryBlockTs {
+		return nil, ErrIdenByTimeNotFound
+	}
+	return idenStateData, nil
+}
+
+// GetStateClosestToTime returns the Identity State Data of the given ID
+// closest (equal or older) to the queryBlockTs from the IdenStates Smart
+// Contract.  If a resut is found, BlockN <= queryBlockN.
+func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64) (*proof.IdenStateData, error) {
 	var idenState [32]byte
 	var blockN uint64
 	var blockTS uint64
@@ -115,7 +142,7 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 		return err
 	})
 	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
-		return nil, ErrIdenNotOnChain
+		return nil, ErrIdenNotOnChainOrTimeTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
