@@ -278,13 +278,30 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	//
 	now = time.Unix(200, 0)
 
-	// ISSUER: Publish state a second time with another claim2
+	// ISSUER: Publish state a second time with another claim2, claim3
 
 	indexBytes, valueBytes = [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x48
 	claim2 := claims.NewClaimBasic(indexBytes, valueBytes)
 
 	err = is.IssueClaim(claim2)
+	require.Nil(t, err)
+
+	// claim3 is a claim with expiration at T=350
+
+	header := claims.ClaimHeader{
+		Type:       *claims.NewClaimTypeNum(9999),
+		Dest:       claims.ClaimRecipSelf,
+		Expiration: true,
+		Version:    false,
+	}
+	metadata := claims.NewMetadata(header)
+	metadata.Expiration = 350
+	var entry merkletree.Entry
+	metadata.Marshal(&entry)
+	claim3 := claims.NewClaimGeneric(&entry)
+
+	err = is.IssueClaim(claim3)
 	require.Nil(t, err)
 
 	_, newState = mockSetState(t, idenPubOnChain, is, newState)
@@ -301,6 +318,8 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	require.Nil(t, err)
 
 	credExistClaim2, err := is.GenCredentialExistence(claim2)
+	require.Nil(t, err)
+	credExistClaim3, err := is.GenCredentialExistence(claim3)
 	require.Nil(t, err)
 
 	// HOLDER + VERIFIER
@@ -362,6 +381,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	credValidClaim2t3, err := ho.HolderGetCredentialValidity(credExistClaim2)
 	assert.Nil(t, err)
 
+	credValidClaim3t3, err := ho.HolderGetCredentialValidity(credExistClaim3)
+	assert.Nil(t, err)
+
 	// C1T2 with long freshness is valid
 	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 250*time.Second)
 	assert.Nil(t, err)
@@ -374,8 +396,16 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = verifier.VerifyCredentialValidity(credValidClaim2t3, 50*time.Second)
 	assert.Nil(t, err)
 
+	// C3T3 has not expired at T=300 (expiration=350)
+	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 1000*time.Second)
+	assert.Nil(t, err)
+
 	//
 	// {Ts: 400, BlockN: --}
 	//
 	now = time.Unix(400, 0)
+
+	// C3T3 has expired at T=400 (expiration=350)
+	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 1000*time.Second)
+	assert.Equal(t, ErrClaimExpired, err)
 }

@@ -17,6 +17,7 @@ var (
 	ErrMtpNonExistence                = fmt.Errorf("The Merkle Tree Proof is of non-existence")
 	ErrMtpExistence                   = fmt.Errorf("The Merkle Tree Proof is of existence")
 	ErrCalculatedIdenStateDoesntMatch = fmt.Errorf("Calculated IdenState doesn't match the one in the credential")
+	ErrClaimExpired                   = fmt.Errorf("Expired claim")
 )
 
 type Verifier struct {
@@ -67,6 +68,15 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 }
 
 func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity, freshness time.Duration) error {
+	// If the claim has an expiration date, check that it hasn't expired.
+	var metadata claims.Metadata
+	metadata.Unmarshal(credValid.CredentialExistence.Claim)
+	if metadata.Header().Expiration {
+		now := v.timeNow()
+		if time.Unix(metadata.Expiration, 0).Before(now) {
+			return ErrClaimExpired
+		}
+	}
 	if err := v.VerifyCredentialExistence(&credValid.CredentialExistence); err != nil {
 		return err
 	}
