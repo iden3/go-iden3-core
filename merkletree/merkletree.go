@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/db"
 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
@@ -715,7 +716,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 	siblingBytes := bs[ElemBytesLen:]
 	sibIdx := 0
 	for i := uint(0); i < p.depth; i++ {
-		if testBitBigEndian(p.notempties[:], i) {
+		if common.TestBitBigEndian(p.notempties[:], i) {
 			if len(siblingBytes) < (sibIdx+1)*ElemBytesLen {
 				return nil, ErrInvalidProofBytes
 			}
@@ -787,7 +788,7 @@ func (p *Proof) String() string {
 	fmt.Fprintf(buf, "\tdepth: %v\n", p.depth)
 	fmt.Fprintf(buf, "\tnotempties: ")
 	for i := uint(0); i < p.depth; i++ {
-		if testBitBigEndian(p.notempties[:], i) {
+		if common.TestBitBigEndian(p.notempties[:], i) {
 			fmt.Fprintf(buf, "1")
 		} else {
 			fmt.Fprintf(buf, "0")
@@ -797,7 +798,7 @@ func (p *Proof) String() string {
 	fmt.Fprintf(buf, "\tsiblings: ")
 	sibIdx := 0
 	for i := uint(0); i < p.depth; i++ {
-		if testBitBigEndian(p.notempties[:], i) {
+		if common.TestBitBigEndian(p.notempties[:], i) {
 			fmt.Fprintf(buf, "%v ", p.Siblings[sibIdx])
 			sibIdx++
 		} else {
@@ -852,7 +853,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 			return nil, ErrInvalidNodeFound
 		}
 		if !bytes.Equal(siblingKey[:], HashZero[:]) {
-			setBitBigEndian(p.notempties[:], uint(p.depth))
+			common.SetBitBigEndian(p.notempties[:], uint(p.depth))
 			p.Siblings = append(p.Siblings, siblingKey)
 		}
 	}
@@ -889,7 +890,7 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 	path := getPath(int(proof.depth), hIndex)
 	var siblingKey *Hash
 	for lvl := int(proof.depth) - 1; lvl >= 0; lvl-- {
-		if testBitBigEndian(proof.notempties[:], uint(lvl)) {
+		if common.TestBitBigEndian(proof.notempties[:], uint(lvl)) {
 			siblingKey = proof.Siblings[sibIdx]
 			sibIdx--
 		} else {
