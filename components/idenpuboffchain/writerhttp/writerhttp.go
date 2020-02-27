@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/merkletree"
 )
@@ -81,7 +82,7 @@ func (i *IdenPubOffChainWriteHttp) Url() string {
 }
 
 // Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
-func (i *IdenPubOffChainWriteHttp) Publish(publicData *idenpuboffchain.PublicData) error {
+func (i *IdenPubOffChainWriteHttp) Publish(id *core.ID, publicData *idenpuboffchain.PublicData) error {
 	// RootsTree
 	w := bytes.NewBufferString("")
 	err := publicData.RootsTree.DumpTree(w, publicData.RootsTreeRoot)

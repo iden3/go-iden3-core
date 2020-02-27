@@ -5,25 +5,26 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iden3/go-iden3-core/components/idenpuboffchain/writermock"
-	idenpubonchain "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
+	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
+	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
+	"github.com/iden3/go-iden3-core/components/idenpubonchain"
+	idenpubonchainlocal "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-var idenPubOnChain *idenpubonchain.IdenPubOnChain
-var idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock
+var idenPubOnChain *idenpubonchainlocal.IdenPubOnChain
+var idenPubOffChain *idenpuboffchanlocal.IdenPubOffChain
 
 var pass = []byte("my passphrase")
 
-func newIssuer(t *testing.T, genesisOnly bool, _idenPubOnChain *idenpubonchain.IdenPubOnChain,
-	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock) (*Issuer, db.Storage, *keystore.KeyStore) {
+func newIssuer(t *testing.T, genesisOnly bool, idenPubOnChain idenpubonchain.IdenPubOnChainer,
+	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter) (*Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := ConfigDefault
 	cfg.GenesisOnly = genesisOnly
 	storage := db.NewMemoryStorage()
@@ -34,7 +35,7 @@ func newIssuer(t *testing.T, genesisOnly bool, _idenPubOnChain *idenpubonchain.I
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	issuer, err := New(cfg, kOp, []claims.Claimer{}, storage, keyStore, _idenPubOnChain, idenPubOffChainWrite)
+	issuer, err := New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChain)
 	require.Nil(t, err)
 	return issuer, storage, keyStore
 }
@@ -59,7 +60,7 @@ func TestIssuerGenesis(t *testing.T) {
 }
 
 func TestIssuerFull(t *testing.T) {
-	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 
 	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
@@ -68,7 +69,7 @@ func TestIssuerFull(t *testing.T) {
 }
 
 func TestIssuerPublish(t *testing.T) {
-	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
@@ -148,7 +149,7 @@ func TestIssuerPublish(t *testing.T) {
 }
 
 func TestIssuerCredential(t *testing.T) {
-	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 
 	// Issue a Claim
 	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
@@ -190,7 +191,7 @@ func TestIssuerCredential(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	var blockN uint64
-	idenPubOnChain = idenpubonchain.New(
+	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Now()
 		},
@@ -199,9 +200,6 @@ func TestMain(m *testing.M) {
 			return blockN
 		},
 	)
-	idenPubOffChainWrite = writermock.New()
-	idenPubOffChainWrite.On("Publish", mock.AnythingOfType("*idenpuboffchain.PublicData")).Return().Run(func(args mock.Arguments) {
-	}).Return(nil)
-	idenPubOffChainWrite.On("Url").Return("https://foo.bar")
+	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	os.Exit(m.Run())
 }

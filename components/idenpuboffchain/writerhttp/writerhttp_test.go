@@ -60,7 +60,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 		RootsTree:           rotMt,
 	}
 
-	err = idenPubOffChainWriteHttp.Publish(&publicData)
+	err = idenPubOffChainWriteHttp.Publish(&core.ID{}, &publicData)
 	assert.Nil(t, err)
 
 	pubDataBlobs, err := idenPubOffChainWriteHttp.GetPublicData(nil)
