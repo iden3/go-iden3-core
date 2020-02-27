@@ -335,7 +335,7 @@ func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg *big.Int) (*babyjub.
 	if !ok {
 		return nil, fmt.Errorf("Public key not found in the cache.  Is it unlocked?")
 	}
-	sig := sk.SignMimc7(msg)
+	sig := sk.SignPoseidon(msg)
 	sigComp := sig.Compress()
 	return &sigComp, nil
 }
@@ -373,7 +373,7 @@ func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg *big.Int, sigComp *b
 		return false, err
 	}
 	pk := babyjub.PublicKey(*pkPoint)
-	return pk.VerifyMimc7(msg, sig), nil
+	return pk.VerifyPoseidon(msg, sig), nil
 }
 
 // VerifySignature verifies that the signature sigComp of the poseidon hash of
