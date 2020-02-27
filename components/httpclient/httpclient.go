@@ -38,15 +38,18 @@ func (p *HttpClient) NewRequest() *sling.Sling {
 func (p *HttpClient) DoRequest(s *sling.Sling, res interface{}) error {
 	var serverError ServerError
 	resp, err := s.Receive(res, &serverError)
-	if err == nil {
-		defer resp.Body.Close()
-		if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
-			err = serverError
-		} else if res != nil {
-			if reflect.TypeOf(res).Kind() == reflect.Struct {
-				err = p.validate.Struct(res)
-			}
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
+		return serverError
+	}
+	if res != nil {
+		rv := reflect.ValueOf(res)
+		if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Struct {
+			return p.validate.Struct(res)
 		}
 	}
-	return err
+	return nil
 }
