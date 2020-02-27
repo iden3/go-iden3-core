@@ -6,22 +6,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
-	idenpuboffchainrw "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
-	idenpubonchain "github.com/iden3/go-iden3-core/components/idenpubonchain/mock"
+	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
+	"github.com/iden3/go-iden3-core/components/idenpubonchain"
+	"github.com/iden3/go-iden3-core/merkletree"
+
+	idenpubonchainlocal "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/identity/holder"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var idenPubOffChain *idenpuboffchainrw.IdenPubOffChain
+var blockN uint64
+var blockTs int64
+
+var idenPubOffChain *idenpuboffchanlocal.IdenPubOffChain
+var idenPubOnChain *idenpubonchainlocal.IdenPubOnChain
 
 var pass = []byte("my passphrase")
 
@@ -35,7 +40,7 @@ func Copy(dst interface{}, src interface{}) {
 	}
 }
 
-func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+func newIssuer(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := issuer.ConfigDefault
 	storage := db.NewMemoryStorage()
@@ -51,72 +56,29 @@ func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	return is, storage, keyStore
 }
 
-func mockInitState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
-	is *issuer.Issuer, genesisState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
-	var ethTx types.Transaction
-	newState, _ := is.State()
-	sig, err := is.SignBinary(issuer.SigPrefixSetState, append(genesisState[:], newState[:]...))
-	require.Nil(t, err)
-	idenPubOnChain.On("InitState", is.ID(), genesisState, newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
-	return &ethTx, newState
-}
-
-func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock, is *issuer.Issuer, oldState *merkletree.Hash) (*types.Transaction, *merkletree.Hash) {
-	var ethTx types.Transaction
-	newState, _ := is.State()
-	sig, err := is.SignBinary(issuer.SigPrefixSetState, append(oldState[:], newState[:]...))
-	require.Nil(t, err)
-	idenPubOnChain.On("SetState", is.ID(), newState, []byte(nil), []byte(nil), sig).Return(&ethTx, nil).Once()
-	return &ethTx, newState
-}
-
-func _newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
-	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter,
-	claim claims.Claimer) (*issuer.Issuer, *merkletree.Hash) {
-	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
-	genesisState, _ := is.State()
-	err := is.IssueClaim(claim)
-	require.Nil(t, err)
-
-	_, newState := mockInitState(t, idenPubOnChain, is, genesisState)
-
-	// Publishing state for the first time
-	err = is.PublishState()
-	require.Nil(t, err)
-
-	return is, newState
-}
-
-func newIssuerIssuedClaim(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
-	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter,
-	claim claims.Claimer) *issuer.Issuer {
-	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChainWrite, claim)
-
-	blockN := uint64(12)
-	blockTs := int64(105000)
-	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
-		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
-
-	err := is.SyncIdenStatePublic()
-	require.Nil(t, err)
-
-	return is
-}
-
 func TestVerifyCredentialExistence(t *testing.T) {
-	idenPubOnChain := idenpubonchain.New()
 	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x42
 	claim := claims.NewClaimBasic(indexBytes, valueBytes)
-	is := newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChain, claim)
+
+	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
+	err := is.IssueClaim(claim)
+	require.Nil(t, err)
+
+	// Publishing state for the first time
+	blockTs, blockN = 105000, 12
+	err = is.PublishState()
+	require.Nil(t, err)
+	idenPubOnChain.Sync()
+
+	err = is.SyncIdenStatePublic()
+	require.Nil(t, err)
 
 	credExist, err := is.GenCredentialExistence(claim)
 	require.Nil(t, err)
 
-	var now time.Time
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
-		return now
+		return time.Unix(blockTs, 0)
 	})
 
 	// Good Cred Exist
@@ -138,8 +100,6 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	credExistBad.Id[5] = 0x00
 	credExistBad.Id[6] = 0x00
 	require.NotEqual(t, credExist, credExistBad)
-	idenPubOnChain.On("GetStateByBlock", credExistBad.Id, credExistBad.IdenStateData.BlockN).
-		Return(&proof.IdenStateData{IdenState: &merkletree.HashZero}, nil)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
 
@@ -160,8 +120,6 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// Cred Exist has bad BlockN
-	idenPubOnChain.On("GetStateByBlock", is.ID(), uint64(01)).
-		Return(&proof.IdenStateData{IdenState: &merkletree.HashZero}, nil)
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
 	credExistBad.IdenStateData.BlockN = 01
@@ -169,7 +127,6 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
 
-	// TODO: Uncomment once smart contract returns BlockTs and BlockN every time
 	// Cred Exist has bad BlockTs
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
@@ -189,7 +146,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func newHolder(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+func newHolder(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter,
 	idenPubOffChainRead idenpuboffchain.IdenPubOffChainReader) (*holder.Holder, db.Storage, *keystore.KeyStore) {
 	cfg := holder.ConfigDefault
@@ -207,11 +164,8 @@ func newHolder(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 }
 
 func TestVerifyCredentialValidity(t *testing.T) {
-	idenPubOnChain := idenpubonchain.New()
-
-	now := time.Unix(0, 0)
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
-		return now
+		return time.Unix(blockTs, 0)
 	})
 
 	ho, _, _ := newHolder(t, idenPubOnChain, nil, idenPubOffChain)
@@ -219,22 +173,24 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	//
 	// {Ts: 100, BlockN: 12} -> claim1 is added
 	//
-	now = time.Unix(100, 0)
+	blockTs, blockN = 100, 12
 
 	// ISSUER: Publish state first time with claim1
 
 	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
 	indexBytes[0] = 0x42
 	claim1 := claims.NewClaimBasic(indexBytes, valueBytes)
-	is, newState := _newIssuerIssuedClaim(t, idenPubOnChain, idenPubOffChain, claim1)
 
-	blockN := uint64(12)
-	blockTs := int64(100)
-	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Twice()
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
-		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
+	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
+	err := is.IssueClaim(claim1)
+	require.Nil(t, err)
 
-	err := is.SyncIdenStatePublic()
+	// Publishing state for the first time
+	err = is.PublishState()
+	require.Nil(t, err)
+	idenPubOnChain.Sync()
+
+	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
 	credExistClaim1, err := is.GenCredentialExistence(claim1)
@@ -251,7 +207,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	//
 	// {Ts: 200, BlockN: 13} -> claim2 is added
 	//
-	now = time.Unix(200, 0)
+	blockTs, blockN = 200, 13
 
 	// ISSUER: Publish state a second time with another claim2, claim3
 
@@ -279,15 +235,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = is.IssueClaim(claim3)
 	require.Nil(t, err)
 
-	_, newState = mockSetState(t, idenPubOnChain, is, newState)
 	err = is.PublishState()
 	require.Nil(t, err)
-
-	blockN = uint64(13)
-	blockTs = int64(200)
-	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil).Times(5)
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
-		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
+	idenPubOnChain.Sync()
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -325,22 +275,16 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	//
 	// {Ts: 300, BlockN: 14} -> claim1 is revoked
 	//
-	now = time.Unix(300, 0)
+	blockTs, blockN = 300, 14
 
 	// ISSUER: Publish state a third time revoking claim1
 
 	err = is.RevokeClaim(claim1)
 	require.Nil(t, err)
 
-	_, newState = mockSetState(t, idenPubOnChain, is, newState)
 	err = is.PublishState()
 	require.Nil(t, err)
-
-	blockN = uint64(14)
-	blockTs = int64(300)
-	idenPubOnChain.On("GetState", is.ID()).Return(&proof.IdenStateData{IdenState: newState, BlockN: blockN, BlockTs: blockTs}, nil)
-	idenPubOnChain.On("GetStateByBlock", is.ID(), blockN).
-		Return(&proof.IdenStateData{BlockN: blockN, BlockTs: blockTs, IdenState: newState}, nil)
+	idenPubOnChain.Sync()
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -378,7 +322,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	//
 	// {Ts: 400, BlockN: --}
 	//
-	now = time.Unix(400, 0)
+	blockTs, blockN = 400, 15
 
 	// C3T3 has expired at T=400 (expiration=350)
 	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 1000*time.Second)
@@ -386,20 +330,14 @@ func TestVerifyCredentialValidity(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// var blockN uint64
-	// idenPubOnChain = idenpubonchain.New(
-	// 	func() time.Time {
-	// 		return time.Now()
-	// 	},
-	// 	func() uint64 {
-	// 		blockN += 1
-	// 		return blockN
-	// 	},
-	// )
-	// idenPubOffChainWrite = writermock.New()
-	// idenPubOffChainWrite.On("Publish", mock.AnythingOfType("*idenpuboffchain.PublicData")).Return().Run(func(args mock.Arguments) {
-	// }).Return(nil)
-	// idenPubOffChainWrite.On("Url").Return("https://foo.bar")
-	idenPubOffChain = idenpuboffchainrw.NewIdenPubOffChain("http://foo.bar")
+	idenPubOnChain = idenpubonchainlocal.New(
+		func() time.Time {
+			return time.Unix(blockTs, 0)
+		},
+		func() uint64 {
+			return blockN
+		},
+	)
+	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	os.Exit(m.Run())
 }

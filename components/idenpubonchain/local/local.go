@@ -119,13 +119,6 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 	return idenState, nil
 }
 
-// splitSignature splits the signature returning (sigR8, sigS)
-func splitSignature(signature *babyjub.SignatureComp) (sigR8 [32]byte, sigS [32]byte) {
-	copy(sigR8[:], signature[:32])
-	copy(sigS[:], signature[32:])
-	return sigR8, sigS
-}
-
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte,
 	stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
