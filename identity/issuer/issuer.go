@@ -20,6 +20,7 @@ import (
 )
 
 var (
+	ErrIdenGenesisOnly           = fmt.Errorf("Identity is genesis only")
 	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
 	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
 	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
@@ -50,13 +51,14 @@ var (
 )
 
 // ConfigDefault is a default configuration for the Issuer.
-var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140}
+var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140, GenesisOnly: false}
 
 // Config allows configuring the creation of an Issuer.
 type Config struct {
 	MaxLevelsClaimsTree     int
 	MaxLevelsRevocationTree int
 	MaxLevelsRootsTree      int
+	GenesisOnly             bool
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -197,6 +199,14 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims
 	storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
+	if !cfg.GenesisOnly {
+		if idenPubOnChain == nil {
+			return nil, ErrIdenPubOnChainNil
+		}
+		if idenPubOffChainWriter == nil {
+			return nil, ErrIdenPubOffChainWriterNil
+		}
+	}
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
 		return nil, err
@@ -299,6 +309,14 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	if err := json.Unmarshal(cfgJSON, &cfg); err != nil {
 		return nil, err
 	}
+	if !cfg.GenesisOnly {
+		if idenPubOnChain == nil {
+			return nil, ErrIdenPubOnChainNil
+		}
+		if idenPubOffChainWriter == nil {
+			return nil, ErrIdenPubOffChainWriterNil
+		}
+	}
 
 	kOpCompBytes, err := storage.Get(dbKeyKOp)
 	if err != nil {
@@ -351,8 +369,8 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		return nil, err
 	}
 
-	if err := is.SyncIdenStatePublic(); err != nil {
-		if err != ErrIdenPubOnChainNil {
+	if !is.cfg.GenesisOnly {
+		if err := is.SyncIdenStatePublic(); err != nil {
 			return nil, fmt.Errorf("Error syncing idenstate from smart contract: %w", err)
 		}
 	}
@@ -397,8 +415,8 @@ func (is *Issuer) KeyOperational() *babyjub.PublicKeyComp {
 // SyncIdenStatePublic updates the IdenStateOnChain and IdenStatePending from
 // the values in the Smart Contract.
 func (is *Issuer) SyncIdenStatePublic() error {
-	if is.idenPubOnChain == nil {
-		return ErrIdenPubOnChainNil
+	if is.cfg.GenesisOnly {
+		return ErrIdenGenesisOnly
 	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
@@ -460,11 +478,11 @@ func (is *Issuer) SyncIdenStatePublic() error {
 // Identity State is not updated.  The claim metadata is updated if the issue
 // is successfull.
 func (is *Issuer) IssueClaim(claim claims.Claimer) error {
+	if is.cfg.GenesisOnly {
+		return ErrIdenGenesisOnly
+	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
-	if is.idenPubOnChain == nil {
-		return ErrIdenPubOnChainNil
-	}
 	tx, err := is.storage.NewTx()
 	if err != nil {
 		return err
@@ -510,11 +528,11 @@ func (is *Issuer) getIdenStateTreeRoots(tx db.Tx, idenState *merkletree.Hash) (*
 // PublishState calculates the current Issuer identity state, and if it's
 // different than the last one, it publishes in in the blockchain.
 func (is *Issuer) PublishState() error {
+	if is.cfg.GenesisOnly {
+		return ErrIdenGenesisOnly
+	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
-	if is.idenPubOnChain == nil {
-		return ErrIdenPubOnChainNil
-	}
 	if !is.idenStatePending().Equals(&merkletree.HashZero) {
 		return ErrIdenStatePendingNotNil
 	}
@@ -597,8 +615,8 @@ func (is *Issuer) PublishState() error {
 
 // RevokeClaim revokes an already issued claim.
 func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
-	if is.idenPubOnChain == nil {
-		return ErrIdenPubOnChainNil
+	if is.cfg.GenesisOnly {
+		return ErrIdenGenesisOnly
 	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
@@ -616,8 +634,8 @@ func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
 
 // UpdateClaim allows updating the value of an already issued claim.
 func (is *Issuer) UpdateClaim(hIndex *merkletree.Hash, value []merkletree.ElemBytes) error {
-	if is.idenPubOnChain == nil {
-		return ErrIdenPubOnChainNil
+	if is.cfg.GenesisOnly {
+		return ErrIdenGenesisOnly
 	}
 	return fmt.Errorf("TODO")
 }
@@ -648,6 +666,13 @@ func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Ha
 // validate the credential against the Identity State found in the blockchain.
 // For now, there are no genesis credentials.
 func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.CredentialExistence, error) {
+	// TODO: Once a genesis credential is implemented, figure out what to
+	// return here.  Maybe this function will error and there will be a
+	// "GenCredentialExistenceGenesis".  Maybe this function will be able
+	// to return a credential even when there's no state on chain.
+	if is.cfg.GenesisOnly {
+		return nil, ErrIdenGenesisOnly
+	}
 	tx, err := is.storage.NewTx()
 	if err != nil {
 		return nil, err
