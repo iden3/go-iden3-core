@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,16 +13,16 @@ import (
 func TestGetSetBitmap(t *testing.T) {
 	var v [32]byte
 
-	setBitBigEndian(v[:], 7)
-	setBitBigEndian(v[:], 8)
-	setBitBigEndian(v[:], 255)
+	common.SetBitBigEndian(v[:], 7)
+	common.SetBitBigEndian(v[:], 8)
+	common.SetBitBigEndian(v[:], 255)
 	testgen.CheckTestValue(t, "TestGetSetBitmap", hex.EncodeToString(v[:]))
 
-	assert.Equal(t, false, testBitBigEndian(v[:], 6))
-	assert.Equal(t, true, testBitBigEndian(v[:], 7))
-	assert.Equal(t, true, testBitBigEndian(v[:], 8))
-	assert.Equal(t, false, testBitBigEndian(v[:], 9))
-	assert.Equal(t, true, testBitBigEndian(v[:], 255))
+	assert.Equal(t, false, common.TestBitBigEndian(v[:], 6))
+	assert.Equal(t, true, common.TestBitBigEndian(v[:], 7))
+	assert.Equal(t, true, common.TestBitBigEndian(v[:], 8))
+	assert.Equal(t, false, common.TestBitBigEndian(v[:], 9))
+	assert.Equal(t, true, common.TestBitBigEndian(v[:], 255))
 
 }
 

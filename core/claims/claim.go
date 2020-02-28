@@ -16,24 +16,11 @@ import (
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
 var ErrInvalidClaimType = errors.New("invalid claim type")
 
-// copyToElemBytes copies the src slice forwards to e, ending at -start of
-// e.  This function will panic if src doesn't fit into len(e)-start.
-func copyToElemBytes(e *merkletree.ElemBytes, start int, src []byte) {
-	copy(e[merkletree.ElemBytesLen-start-len(src):], src)
-}
-
 // ClearMostSigByte sets the most significant byte of the element to 0 to make sure it fits
 // inside the FiniteField over R.
 func ClearMostSigByte(e [merkletree.ElemBytesLen]byte) merkletree.ElemBytes {
 	e[0] = 0
 	return merkletree.ElemBytes(e)
-}
-
-// copyFromElemBytes copies from e to dst, ending at -start of e and going
-// forwards.  This function will panic if len(e)-start is smaller than
-// len(dst).
-func copyFromElemBytes(dst []byte, start int, e *merkletree.ElemBytes) {
-	copy(dst, e[merkletree.ElemBytesLen-start-len(dst):])
 }
 
 func GetRevocationNonce(e *merkletree.Entry) uint32 {

@@ -1,15 +1,14 @@
 package merkletree
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	// "encoding/json"
 	// "fmt"
 	"bytes"
 	"math/big"
-	"strings"
 
+	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 )
@@ -41,16 +40,8 @@ func (h *Hash) UnmarshalText(bs []byte) error {
 	return common3.HexDecodeInto(h[:], bs)
 }
 
-func SwapEndianness(b []byte) []byte {
-	o := make([]byte, len(b))
-	for i := range b {
-		o[len(b)-1-i] = b[i]
-	}
-	return o
-}
-
 func ElemBytesToBigInt(elem ElemBytes) *big.Int {
-	return big.NewInt(0).SetBytes(SwapEndianness(elem[:]))
+	return big.NewInt(0).SetBytes(common.SwapEndianness(elem[:]))
 }
 
 func (h1 *Hash) Equals(h2 *Hash) bool {
@@ -67,7 +58,7 @@ func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 
 // BigIntToHash converts a *big.Int to a Hash.
 func BigIntToHash(e *big.Int) (h Hash) {
-	bs := SwapEndianness(e.Bytes())
+	bs := common.SwapEndianness(e.Bytes())
 	copy(h[:], bs)
 	return h
 }
@@ -103,34 +94,9 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
 func getPath(numLevels int, hIndex *Hash) []bool {
 	path := make([]bool, numLevels)
 	for n := 0; n < numLevels; n++ {
-		path[n] = testBitBigEndian(hIndex[:], uint(n))
+		path[n] = common.TestBitBigEndian(hIndex[:], uint(n))
 	}
 	return path
-}
-
-// setBit sets the bit n in the bitmap to 1.
-func setBit(bitmap []byte, n uint) {
-	bitmap[n/8] |= 1 << (n % 8)
-}
-
-// setBitBigEndian sets the bit n in the bitmap to 1, in Big Endian.
-func setBitBigEndian(bitmap []byte, n uint) {
-	bitmap[uint(len(bitmap))-n/8-1] |= 1 << (n % 8)
-}
-
-// testBit tests whether the bit n in bitmap is 1.
-func testBit(bitmap []byte, n uint) bool {
-	return bitmap[n/8]&(1<<(n%8)) != 0
-}
-
-// testBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
-func testBitBigEndian(bitmap []byte, n uint) bool {
-	return bitmap[uint(len(bitmap))-n/8-1]&(1<<(n%8)) != 0
-}
-
-func HexDecode(h string) ([]byte, error) {
-	h = strings.TrimPrefix(h, "0x")
-	return hex.DecodeString(h)
 }
 
 func NewEntryFromHexs(a, b, c, d, e, f, g, h string) (entry Entry, err error) {
@@ -145,7 +111,7 @@ func HexsToData(_a, _b, _c, _d, _e, _f, _g, _h string) (Data, error) {
 	var bints []*big.Int
 	aux := []string{_a, _b, _c, _d, _e, _f, _g, _h}
 	for _, v := range aux {
-		vBytes, err := HexDecode(v)
+		vBytes, err := common.HexDecode(v)
 		if err != nil {
 			return Data{}, err
 		}

@@ -160,3 +160,32 @@ func EthBytesToUint32(b []byte) uint32 {
 func EthBytesToUint64(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
 }
+
+// SetBit sets the bit n in the bitmap to 1.
+func SetBit(bitmap []byte, n uint) {
+	bitmap[n/8] |= 1 << (n % 8)
+}
+
+// SetBitBigEndian sets the bit n in the bitmap to 1, in Big Endian.
+func SetBitBigEndian(bitmap []byte, n uint) {
+	bitmap[uint(len(bitmap))-n/8-1] |= 1 << (n % 8)
+}
+
+// TestBit tests whether the bit n in bitmap is 1.
+func TestBit(bitmap []byte, n uint) bool {
+	return bitmap[n/8]&(1<<(n%8)) != 0
+}
+
+// TestBitBigEndian tests whether the bit n in bitmap is 1, in Big Endian.
+func TestBitBigEndian(bitmap []byte, n uint) bool {
+	return bitmap[uint(len(bitmap))-n/8-1]&(1<<(n%8)) != 0
+}
+
+// SwapEndianness swaps the order of the bytes in the slice.
+func SwapEndianness(b []byte) []byte {
+	o := make([]byte, len(b))
+	for i := range b {
+		o[len(b)-1-i] = b[i]
+	}
+	return o
+}

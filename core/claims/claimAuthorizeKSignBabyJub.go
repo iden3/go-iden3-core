@@ -3,6 +3,7 @@ package claims
 import (
 	"math/big"
 
+	"github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -38,7 +39,7 @@ func NewClaimAuthorizeKSignBabyJubFromEntry(e *merkletree.Entry) *ClaimAuthorize
 	if sign[0] == 1 {
 		c.Sign = true
 	}
-	c.Ay = new(big.Int).SetBytes(merkletree.SwapEndianness(e.Data[2][:]))
+	c.Ay = new(big.Int).SetBytes(common.SwapEndianness(e.Data[2][:]))
 	return c
 }
 
@@ -52,7 +53,7 @@ func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 	}
 	copy(index[1][:], sign)
 	ayBytes := c.Ay.Bytes()
-	copy(index[2][:], merkletree.SwapEndianness(ayBytes))
+	copy(index[2][:], common.SwapEndianness(ayBytes))
 	c.metadata.Marshal(e)
 	return e
 }
