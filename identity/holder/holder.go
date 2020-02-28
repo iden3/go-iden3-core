@@ -23,6 +23,10 @@ type Config struct {
 	issuer.Config
 }
 
+func init() {
+	ConfigDefault.GenesisOnly = true
+}
+
 // Holder is an identity that holds claims.  It is an extension of an Issuer.
 type Holder struct {
 	*issuer.Issuer

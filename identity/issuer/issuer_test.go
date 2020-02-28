@@ -19,9 +19,10 @@ import (
 
 var pass = []byte("my passphrase")
 
-func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
+func newIssuer(t *testing.T, genesisOnly bool, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 	idenPubOffChainWrite *writermock.IdenPubOffChainWriteMock) (*Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := ConfigDefault
+	cfg.GenesisOnly = genesisOnly
 	storage := db.NewMemoryStorage()
 	ksStorage := keystore.MemStorage([]byte{})
 	keyStore, err := keystore.NewKeyStore(&ksStorage, keystore.LightKeyStoreParams)
@@ -36,7 +37,7 @@ func newIssuer(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMock,
 }
 
 func TestNewLoadIssuer(t *testing.T) {
-	issuer, storage, keyStore := newIssuer(t, nil, nil)
+	issuer, storage, keyStore := newIssuer(t, true, nil, nil)
 
 	issuerLoad, err := Load(storage, keyStore, nil, nil)
 	require.Nil(t, err)
@@ -46,7 +47,7 @@ func TestNewLoadIssuer(t *testing.T) {
 }
 
 func TestIssuerGenesis(t *testing.T) {
-	issuer, _, _ := newIssuer(t, nil, nil)
+	issuer, _, _ := newIssuer(t, true, nil, nil)
 
 	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
@@ -57,7 +58,7 @@ func TestIssuerGenesis(t *testing.T) {
 func TestIssuerFull(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	idenPubOffChainWrite := writermock.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
 
 	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
 
@@ -92,7 +93,7 @@ func mockSetState(t *testing.T, idenPubOnChain *idenpubonchain.IdenPubOnChainMoc
 func TestIssuerPublish(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	idenPubOffChainWrite := writermock.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
 
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
@@ -181,7 +182,7 @@ func TestIssuerPublish(t *testing.T) {
 func TestIssuerCredential(t *testing.T) {
 	idenPubOnChain := idenpubonchain.New()
 	idenPubOffChainWrite := writermock.New()
-	issuer, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChainWrite)
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChainWrite)
 	genesisState, _ := issuer.state()
 
 	// Issue a Claim
