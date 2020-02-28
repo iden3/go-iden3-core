@@ -20,7 +20,7 @@ type IdenPubOffChainReader interface {
 
 // IdenPubOffChainWriter is a interface to write the off chain public state of an identity.
 type IdenPubOffChainWriter interface {
-	Publish(publicData *PublicData) error
+	Publish(id *core.ID, publicData *PublicData) error
 	Url() string
 }
 

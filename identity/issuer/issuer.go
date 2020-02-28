@@ -603,7 +603,7 @@ func (is *Issuer) PublishState() error {
 	}
 
 	// finally, Publish the Public Off Chain identity data
-	if err := is.idenPubOffChainWriter.Publish(&publicData); err != nil {
+	if err := is.idenPubOffChainWriter.Publish(is.id, &publicData); err != nil {
 		return err
 	}
 
