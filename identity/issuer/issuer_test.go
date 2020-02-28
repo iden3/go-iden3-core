@@ -35,7 +35,9 @@ func newIssuer(t *testing.T, genesisOnly bool, idenPubOnChain idenpubonchain.Ide
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	issuer, err := New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChain)
+	_, err = Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
+	require.Nil(t, err)
+	issuer, err := Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return issuer, storage, keyStore
 }

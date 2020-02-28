@@ -51,7 +51,9 @@ func newIssuer(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	is, err := issuer.New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
+	_, err = issuer.Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
+	require.Nil(t, err)
+	is, err := issuer.Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return is, storage, keyStore
 }
@@ -158,7 +160,9 @@ func newHolder(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
-	ho, err := holder.New(cfg, kOp, []claims.Claimer{}, storage, keyStore, idenPubOnChain, idenPubOffChainWrite, idenPubOffChainRead)
+	_, err = holder.Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
+	require.Nil(t, err)
+	ho, err := holder.Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite, idenPubOffChainRead)
 	require.Nil(t, err)
 	return ho, storage, keyStore
 }

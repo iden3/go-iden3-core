@@ -5,6 +5,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
@@ -34,22 +35,14 @@ type Holder struct {
 	idenPubOnChain        idenpubonchain.IdenPubOnChainer
 }
 
-// New creates a new Holder, calling the internal Issuer.New().
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
-	storage db.Storage, keyStore *keystore.KeyStore,
-	idenPubOnChain idenpubonchain.IdenPubOnChainer,
-	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter,
-	idenPubOffChainReader idenpuboffchain.IdenPubOffChainReader) (*Holder, error) {
-	is, err := issuer.New(cfg.Config, kOpComp, extraGenesisClaims, storage, keyStore,
-		idenPubOnChain, idenPubOffChainWriter)
+// Create a new Holder, calling the internal Issuer.New().
+func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
+	storage db.Storage, keyStore *keystore.KeyStore) (*core.ID, error) {
+	id, err := issuer.Create(cfg.Config, kOpComp, extraGenesisClaims, storage, keyStore)
 	if err != nil {
 		return nil, err
 	}
-	return &Holder{
-		Issuer:                is,
-		idenPubOffChainReader: idenPubOffChainReader,
-		idenPubOnChain:        idenPubOnChain,
-	}, nil
+	return id, nil
 }
 
 // New creates a Holder by loading a previously created Holder (with New, and calling the internal Issuer.Load().
