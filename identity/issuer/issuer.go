@@ -193,20 +193,10 @@ func loadMTs(cfg *Config, storage db.Storage) (*merkletree.MerkleTree, *merkletr
 	return clt, ret, rot, nil
 }
 
-// New creates a new Issuer, creating a new genesis ID and initializes the
+// Create a new Issuer, creating a new genesis ID and initializes the
 // storages.  The extraGenesisClaims metadata's are updated.
-func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
-	storage db.Storage, keyStore *keystore.KeyStore,
-	idenPubOnChain idenpubonchain.IdenPubOnChainer,
-	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
-	if !cfg.GenesisOnly {
-		if idenPubOnChain == nil {
-			return nil, ErrIdenPubOnChainNil
-		}
-		if idenPubOffChainWriter == nil {
-			return nil, ErrIdenPubOffChainWriterNil
-		}
-	}
+func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims.Claimer,
+	storage db.Storage, keyStore *keystore.KeyStore) (*core.ID, error) {
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
 		return nil, err
@@ -264,8 +254,8 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims
 		claimsTree:            clt,
 		revocationsTree:       ret,
 		rootsTree:             rot,
-		idenPubOnChain:        idenPubOnChain,
-		idenPubOffChainWriter: idenPubOffChainWriter,
+		idenPubOnChain:        nil,
+		idenPubOffChainWriter: nil,
 		// idenStateWriter: idenStateWriter,
 		keyStore:      keyStore,
 		kOpComp:       kOpComp,
@@ -293,8 +283,7 @@ func New(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []claims
 		return nil, err
 	}
 
-	return &is, nil
-
+	return is.id, nil
 }
 
 // Load creates an Issuer by loading a previously created Issuer (with New).
