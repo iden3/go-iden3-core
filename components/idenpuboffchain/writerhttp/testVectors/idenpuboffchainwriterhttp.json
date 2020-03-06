@@ -1,12 +1,11 @@
 {
   "Input": {
-    "idenState0": "0x5d297c0c1847185a10a46e1f7d2d24061caf7ff29db8cf55d8b83740e8db4926",
     "nonce0": 5,
-    "root0": "0x19a3945073b163c7035988e8d9ac56a61c70166c542889fc863083e38a45d025",
+    "root0": "0x4194fadc37db15f9908583140f298a4c29ad378219f0bf14811673d8a0b0f12d",
     "version0": 5
   },
   "Output": {
-    "rootRevocationsTree1": "0xe2d007ec15591e3db08415a44ce827c58934f078340ce717f60ff89ba4baed26",
-    "rootRootsTree1": "0xedda7acab1e93a43346845377ff9cfdd252147c00fa327fe57545c46aa560c1c"
+    "rootRevocationsTree1": "0xb9b100caa6fb1a323a5ae3b4cb265ec77bfd58216bb95ca3c08b3e07b12e0a0e",
+    "rootRootsTree1": "0x286869e45291794513a8f803d7d42d70cff50e620378cd645ef73a9f3abe8008"
   }
 }

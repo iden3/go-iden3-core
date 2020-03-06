@@ -14,7 +14,6 @@ import (
 	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/db"
-	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
@@ -386,7 +385,7 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 
 func CheckEntryInField(e Entry) bool {
 	bigints := ElemBytesToBigInts(e.Data[:]...)
-	ok := cryptoUtils.CheckBigIntArrayInField(bigints, cryptoConstants.Q)
+	ok := cryptoUtils.CheckBigIntArrayInField(bigints)
 	return ok
 }
 

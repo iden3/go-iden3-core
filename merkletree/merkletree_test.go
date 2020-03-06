@@ -18,7 +18,6 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/testgen"
-	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -865,7 +864,7 @@ func TestEntryToBytesToEntry(t *testing.T) {
 	}
 	for _, elemBytes := range entry.Data {
 		bigints := ElemBytesToBigInt(elemBytes)
-		ok := cryptoUtils.CheckBigIntInField(bigints, cryptoConstants.Q)
+		ok := cryptoUtils.CheckBigIntInField(bigints)
 		assert.True(t, ok)
 	}
 }
