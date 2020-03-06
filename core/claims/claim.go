@@ -9,7 +9,6 @@ import (
 	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/merkletree"
 
-	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
@@ -94,7 +93,7 @@ const ClaimTypeVersionLen = ClaimTypeLen + ClaimFlagsLen + ClaimVersionLen
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	for _, elemBytes := range e.Data {
 		bigints := merkletree.ElemBytesToBigInt(elemBytes)
-		ok := cryptoUtils.CheckBigIntInField(bigints, cryptoConstants.Q)
+		ok := cryptoUtils.CheckBigIntInField(bigints)
 		if !ok {
 			return nil, errors.New("Elements not in the Finite Field over R")
 		}
