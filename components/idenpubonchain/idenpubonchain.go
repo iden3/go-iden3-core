@@ -43,12 +43,12 @@ type ContractAddresses struct {
 
 // IdenPubOnChain is the regular implementation of IdenPubOnChain
 type IdenPubOnChain struct {
-	client    *eth.Client2
+	client    *eth.Client
 	addresses ContractAddresses
 }
 
 // New creates a new IdenPubOnChain
-func New(client *eth.Client2, addresses ContractAddresses) *IdenPubOnChain {
+func New(client *eth.Client, addresses ContractAddresses) *IdenPubOnChain {
 	return &IdenPubOnChain{
 		client:    client,
 		addresses: addresses,

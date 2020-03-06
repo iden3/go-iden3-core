@@ -47,7 +47,7 @@ func (m *IdenPubOnChainMock) SetState(id *core.ID, newState *merkletree.Hash, kO
 // 	return args.Get(0).(bool), args.Error(1)
 // }
 
-// func (m *IdenPubOnChainMock) Client() *eth.Client2 {
+// func (m *IdenPubOnChainMock) Client() *eth.Client {
 // 	args := m.Called()
-// 	return args.Get(0).(*eth.Client2)
+// 	return args.Get(0).(*eth.Client)
 // }
