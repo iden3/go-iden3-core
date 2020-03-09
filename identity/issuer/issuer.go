@@ -3,6 +3,7 @@ package issuer
 import (
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -17,6 +18,8 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-iden3-crypto/utils"
 )
 
 var (
@@ -551,7 +554,7 @@ func (is *Issuer) PublishState() error {
 	}
 
 	// Sign [minor] identity transition from last state to new (current) state.
-	sig, err := is.SignBinary(SigPrefixSetState, append(idenStateLast[:], idenState[:]...))
+	sig, err := is.SignState(SigPrefixSetState, idenStateLast, idenState)
 	if err != nil {
 		return err
 	}
@@ -634,9 +637,30 @@ func (is *Issuer) Sign(string) (string, error) {
 	return "", fmt.Errorf("TODO")
 }
 
-// Sign signs a binary message by the kOp of the issuer.
+// SignBinary signs a binary message by the kOp of the issuer.
 func (is *Issuer) SignBinary(prefix, msg []byte) (*babyjub.SignatureComp, error) {
 	return is.keyStore.SignRaw(is.kOpComp, append(prefix, msg...))
+}
+
+// SignState signs the Identity State transition (oldState+newState) by the kOp of the issuer.
+func (is *Issuer) SignState(prefix []byte, oldState, newState *merkletree.Hash) (*babyjub.SignatureComp, error) {
+	var prefix31 [31]byte
+	copy(prefix31[:], prefix)
+	prefixBigInt := new(big.Int)
+	utils.SetBigIntFromLEBytes(prefixBigInt, prefix31[:])
+
+	toHash := [poseidon.T]*big.Int{prefixBigInt, merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*oldState)), merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*newState)), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
+
+	return is.SignElems(toHash)
+}
+
+// SignElems signs a [poseidon.T]*big.Int of elements in *big.Int format
+func (is *Issuer) SignElems(toHash [poseidon.T]*big.Int) (*babyjub.SignatureComp, error) {
+	e, err := poseidon.PoseidonHash(toHash)
+	if err != nil {
+		return nil, err
+	}
+	return is.keyStore.SignElem(is.kOpComp, e)
 }
 
 func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Hash) (*merkletree.Proof, error) {

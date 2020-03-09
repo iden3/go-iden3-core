@@ -34,7 +34,7 @@ func NewID(typ [2]byte, genesis [27]byte) ID {
 	return ID(b)
 }
 
-// String returns a base58 from the ID.Bytes()
+// String returns a base58 from the ID
 func (id *ID) String() string {
 	return base58.Encode(id[:])
 }
