@@ -5,6 +5,8 @@ import (
 	"sort"
 )
 
+// LEGACY
+
 type MemoryStorage struct {
 	prefix []byte
 	kv     kvMap
@@ -15,7 +17,7 @@ type MemoryStorageTx struct {
 	kv kvMap
 }
 
-func NewMemoryStorage() *MemoryStorage {
+func NewMemoryStorageLegacy() *MemoryStorage {
 	kvmap := make(kvMap)
 	return &MemoryStorage{[]byte{}, kvmap}
 }
@@ -24,11 +26,11 @@ func (l *MemoryStorage) Info() string {
 	return "in-memory"
 }
 
-func (m *MemoryStorage) WithPrefix(prefix []byte) Storage {
+func (m *MemoryStorage) WithPrefix(prefix []byte) StorageLegacy {
 	return &MemoryStorage{concat(m.prefix, prefix), m.kv}
 }
 
-func (m *MemoryStorage) NewTx() (Tx, error) {
+func (m *MemoryStorage) NewTx() (TxLegacy, error) {
 	return &MemoryStorageTx{m, make(kvMap)}, nil
 }
 
@@ -87,7 +89,7 @@ func (tx *MemoryStorageTx) Commit() error {
 	return nil
 }
 
-func (tx *MemoryStorageTx) Add(atx Tx) {
+func (tx *MemoryStorageTx) Add(atx TxLegacy) {
 	mstx := atx.(*MemoryStorageTx)
 	for _, v := range mstx.kv {
 		tx.kv.Put(v.K, v.V)

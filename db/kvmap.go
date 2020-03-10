@@ -1,5 +1,7 @@
 package db
 
+// LEGACY
+
 import (
 	"crypto/sha256"
 )

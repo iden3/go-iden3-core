@@ -500,7 +500,7 @@ func BenchmarkAddEntry(b *testing.B) {
 		// LevelDB storage
 		dir, err = ioutil.TempDir("", "db")
 		require.Nil(b, err)
-		sto, err = db.NewLevelDbStorage(dir, false)
+		sto, err = db.NewBadgerStorage(dir, false)
 		require.Nil(b, err)
 	}
 
@@ -526,7 +526,7 @@ func BenchmarkAddEntry(b *testing.B) {
 		} else {
 			dir, err := ioutil.TempDir("", "db")
 			require.Nil(b, err)
-			storageCopy, err = db.NewLevelDbStorage(dir, false)
+			storageCopy, err = db.NewBadgerStorage(dir, false)
 			require.Nil(b, err)
 		}
 		tx, err := storageCopy.NewTx()
@@ -560,22 +560,12 @@ func TestDbInsertGet(t *testing.T) {
 	tx, err := mt.storage.NewTx()
 	assert.Nil(t, err)
 	mt.Lock()
-	defer func() {
-		if err == nil {
-			if err = tx.Commit(); err != nil {
-				panic(err)
-			}
-		} else {
-			tx.Close()
-		}
-		mt.Unlock()
-	}()
+	defer mt.Unlock()
 
 	key := []byte("key")
 	mt.dbInsert(tx, key, 9, []byte("value"))
-	if err = tx.Commit(); err != nil {
-		panic(err)
-	}
+	err = tx.Commit()
+	require.Nil(t, err)
 
 	nodeType, data, err := mt.dbGet(key)
 	assert.Nil(t, err)

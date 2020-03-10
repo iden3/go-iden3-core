@@ -395,7 +395,7 @@ func (mt *MerkleTree) AddClaim(e Entrier) error {
 }
 
 // AddEntry adds the Entry to the MerkleTree
-func (mt *MerkleTree) AddEntry(e *Entry) error {
+func (mt *MerkleTree) AddEntry(e *Entry) (err error) {
 	// verify that the MerkleTree is writable
 	if !mt.writable {
 		return ErrNotWritable
@@ -404,20 +404,18 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	if !CheckEntryInField(*e) {
 		return errors.New("Elements not inside the Finite Field over R")
 	}
+	mt.Lock()
+	defer mt.Unlock()
 	tx, err := mt.storage.NewTx()
 	if err != nil {
 		return err
 	}
-	mt.Lock()
 	defer func() {
 		if err == nil {
-			if err := tx.Commit(); err != nil {
-				tx.Close()
-			}
+			err = tx.Commit()
 		} else {
 			tx.Close()
 		}
-		mt.Unlock()
 	}()
 
 	newNodeLeaf := NewNodeLeaf(e)
@@ -430,7 +428,7 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	}
 	mt.rootKey = newRootKey
 	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
-	return nil
+	return
 }
 
 // walk is a helper recursive function to iterate over all tree branches

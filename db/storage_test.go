@@ -6,18 +6,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var rmDirs []string
 
-func levelDbStorage(t *testing.T) Storage {
+func badgerStorage(t *testing.T) Storage {
 	dir, err := ioutil.TempDir("", "db")
 	rmDirs = append(rmDirs, dir)
 	if err != nil {
 		t.Fatal(err)
 		return nil
 	}
-	sto, err := NewLevelDbStorage(dir, false)
+	sto, err := NewBadgerStorage(dir, false)
 	if err != nil {
 		t.Fatal(err)
 		return nil
@@ -130,88 +131,145 @@ func testIterate(t *testing.T, sto Storage) {
 	assert.Equal(t, KV{[]byte{3}, []byte{9}}, r[2])
 }
 
-func testConcatTx(t *testing.T, sto Storage) {
-	k := []byte{9}
+func testConcurrentTx(t *testing.T, sto Storage) {
+	kv1 := KV{[]byte{1}, []byte{2}}
+	kv2 := KV{[]byte{3}, []byte{4}}
 
-	sto1 := sto.WithPrefix([]byte{1})
-	sto2 := sto.WithPrefix([]byte{2})
+	tx1, err := sto.NewTx()
+	require.Nil(t, err)
+	tx2, err := sto.NewTx()
+	require.Nil(t, err)
 
-	// check within tx
+	tx1.Put(kv1.K, kv1.V)
+	tx2.Put(kv2.K, kv2.V)
 
-	sto1tx, err := sto1.NewTx()
-	if err != nil {
-		panic(err)
-	}
-	sto1tx.Put(k, []byte{4, 5, 6})
-	sto2tx, err := sto2.NewTx()
-	if err != nil {
-		panic(err)
-	}
-	sto2tx.Put(k, []byte{8, 9})
+	require.Nil(t, tx1.Commit())
+	require.Nil(t, tx2.Commit())
 
-	sto1tx.Add(sto2tx)
-	assert.Nil(t, sto1tx.Commit())
-
-	// check outside tx
-
-	v1, err := sto1.Get(k)
+	v1, err := sto.Get(kv1.K)
 	assert.Nil(t, err)
-	assert.Equal(t, v1, []byte{4, 5, 6})
-
-	v2, err := sto2.Get(k)
+	assert.Equal(t, kv1.V, v1)
+	v2, err := sto.Get(kv2.K)
 	assert.Nil(t, err)
-	assert.Equal(t, v2, []byte{8, 9})
+	assert.Equal(t, kv2.V, v2)
 }
 
-func testList(t *testing.T, sto Storage) {
-	sto1 := sto.WithPrefix([]byte{1})
-	r1, err := sto1.List(100)
+func testDelete(t *testing.T, sto Storage) {
+	kv1 := KV{[]byte{1}, []byte{2}}
+	kv2 := KV{[]byte{3}, []byte{4}}
+
+	tx1, err := sto.NewTx()
+	require.Nil(t, err)
+
+	tx1.Put(kv1.K, kv1.V)
+	tx1.Put(kv2.K, kv2.V)
+	tx1.Delete(kv1.K)
+
+	require.Nil(t, tx1.Commit())
+
+	_, err = sto.Get(kv1.K)
+	assert.Equal(t, ErrNotFound, err)
+	v2, err := sto.Get(kv2.K)
 	assert.Nil(t, err)
-	assert.Equal(t, 0, len(r1))
+	assert.Equal(t, kv2.V, v2)
 
-	sto1tx, _ := sto1.NewTx()
-	sto1tx.Put([]byte{1}, []byte{4})
-	sto1tx.Put([]byte{2}, []byte{5})
-	sto1tx.Put([]byte{3}, []byte{6})
-	assert.Nil(t, sto1tx.Commit())
+	tx1, err = sto.NewTx()
+	require.Nil(t, err)
 
-	sto2 := sto.WithPrefix([]byte{2})
-	sto2tx, _ := sto2.NewTx()
-	sto2tx.Put([]byte{1}, []byte{7})
-	sto2tx.Put([]byte{2}, []byte{8})
-	sto2tx.Put([]byte{3}, []byte{9})
-	assert.Nil(t, sto2tx.Commit())
+	tx1.Delete(kv2.K)
 
-	r, err := sto1.List(100)
-	assert.Nil(t, err)
-	assert.Equal(t, 3, len(r))
-	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
-	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
-	assert.Equal(t, r[2], KV{[]byte{3}, []byte{6}})
+	require.Nil(t, tx1.Commit())
 
-	r, err = sto1.List(2)
-	assert.Nil(t, err)
-	assert.Equal(t, 2, len(r))
-	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
-	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
-
+	_, err = sto.Get(kv2.K)
+	assert.Equal(t, ErrNotFound, err)
 }
 
-func TestLevelDb(t *testing.T) {
-	testReturnKnownErrIfNotExists(t, levelDbStorage(t))
-	testStorageInsertGet(t, levelDbStorage(t))
-	testStorageWithPrefix(t, levelDbStorage(t))
-	testConcatTx(t, levelDbStorage(t))
-	testList(t, levelDbStorage(t))
-	testIterate(t, levelDbStorage(t))
+// func testConcatTx(t *testing.T, sto Storage) {
+// 	k := []byte{9}
+//
+// 	sto1 := sto.WithPrefix([]byte{1})
+// 	sto2 := sto.WithPrefix([]byte{2})
+//
+// 	// check within tx
+//
+// 	sto1tx, err := sto1.NewTx()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	sto1tx.Put(k, []byte{4, 5, 6})
+// 	sto2tx, err := sto2.NewTx()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	sto2tx.Put(k, []byte{8, 9})
+//
+// 	sto1tx.Add(sto2tx)
+// 	assert.Nil(t, sto1tx.Commit())
+//
+// 	// check outside tx
+//
+// 	v1, err := sto1.Get(k)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, v1, []byte{4, 5, 6})
+//
+// 	v2, err := sto2.Get(k)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, v2, []byte{8, 9})
+// }
+
+// func testList(t *testing.T, sto Storage) {
+// 	sto1 := sto.WithPrefix([]byte{1})
+// 	r1, err := sto1.List(100)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, 0, len(r1))
+//
+// 	sto1tx, _ := sto1.NewTx()
+// 	sto1tx.Put([]byte{1}, []byte{4})
+// 	sto1tx.Put([]byte{2}, []byte{5})
+// 	sto1tx.Put([]byte{3}, []byte{6})
+// 	assert.Nil(t, sto1tx.Commit())
+//
+// 	sto2 := sto.WithPrefix([]byte{2})
+// 	sto2tx, _ := sto2.NewTx()
+// 	sto2tx.Put([]byte{1}, []byte{7})
+// 	sto2tx.Put([]byte{2}, []byte{8})
+// 	sto2tx.Put([]byte{3}, []byte{9})
+// 	assert.Nil(t, sto2tx.Commit())
+//
+// 	r, err := sto1.List(100)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, 3, len(r))
+// 	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
+// 	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
+// 	assert.Equal(t, r[2], KV{[]byte{3}, []byte{6}})
+//
+// 	r, err = sto1.List(2)
+// 	assert.Nil(t, err)
+// 	assert.Equal(t, 2, len(r))
+// 	assert.Equal(t, r[0], KV{[]byte{1}, []byte{4}})
+// 	assert.Equal(t, r[1], KV{[]byte{2}, []byte{5}})
+//
+// }
+
+func TestBadger(t *testing.T) {
+	testReturnKnownErrIfNotExists(t, badgerStorage(t))
+	testStorageInsertGet(t, badgerStorage(t))
+	testStorageWithPrefix(t, badgerStorage(t))
+	testConcurrentTx(t, badgerStorage(t))
+	testDelete(t, badgerStorage(t))
+	// testConcatTx(t, badgerStorage(t))
+	// testList(t, badgerStorage(t))
+	testIterate(t, badgerStorage(t))
 }
 
 func TestMemory(t *testing.T) {
 	testReturnKnownErrIfNotExists(t, NewMemoryStorage())
 	testStorageInsertGet(t, NewMemoryStorage())
 	testStorageWithPrefix(t, NewMemoryStorage())
-	testConcatTx(t, NewMemoryStorage())
-	testList(t, NewMemoryStorage())
+	testConcurrentTx(t, NewMemoryStorage())
+	testDelete(t, NewMemoryStorage())
+	// testConcatTx(t, NewMemoryStorage())
+	// testList(t, NewMemoryStorage())
 	testIterate(t, NewMemoryStorage())
 }
 

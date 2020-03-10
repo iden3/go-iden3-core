@@ -10,6 +10,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
+// LEGACY
+
 type LevelDbStorage struct {
 	ldb    *leveldb.DB
 	prefix []byte
@@ -66,11 +68,11 @@ func (l *LevelDbStorage) Info() string {
 	return string(json)
 }
 
-func (l *LevelDbStorage) WithPrefix(prefix []byte) Storage {
+func (l *LevelDbStorage) WithPrefix(prefix []byte) StorageLegacy {
 	return &LevelDbStorage{l.ldb, concat(l.prefix, prefix)}
 }
 
-func (l *LevelDbStorage) NewTx() (Tx, error) {
+func (l *LevelDbStorage) NewTx() (TxLegacy, error) {
 	return &LevelDbStorageTx{l, make(kvMap)}, nil
 }
 
@@ -126,7 +128,7 @@ func (tx *LevelDbStorageTx) Put(k, v []byte) {
 	tx.cache.Put(concat(tx.prefix, k[:]), v)
 }
 
-func (tx *LevelDbStorageTx) Add(atx Tx) {
+func (tx *LevelDbStorageTx) Add(atx TxLegacy) {
 	ldbtx := atx.(*LevelDbStorageTx)
 	for _, v := range ldbtx.cache {
 		tx.cache.Put(v.K, v.V)
