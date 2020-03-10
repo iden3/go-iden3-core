@@ -2,9 +2,12 @@ package claims
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
+	"github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -47,26 +50,64 @@ func HashString(s string) (stringHashed [EntryFullBytesLen]byte) {
 // ClaimType is the type used to store a claim type.
 type ClaimType [ClaimTypeLen]byte
 
+func (ct ClaimType) MarshalText() ([]byte, error) {
+	var str string
+	switch ct {
+	case ClaimTypeBasic:
+		str = fmt.Sprintf("str:%v", ClaimTypeStringBasic)
+	case ClaimTypeAuthorizeKSignBabyJub:
+		str = fmt.Sprintf("str:%v", ClaimTypeStringAuthorizeKSignBabyJub)
+	default:
+		str = fmt.Sprintf("hex:%v", common.Hex(ct[:]))
+	}
+	return []byte(str), nil
+}
+
+func (ct *ClaimType) UnmarshalText(b []byte) error {
+	str := string(b)
+	if strings.HasPrefix(str, "str:") {
+		str := strings.TrimPrefix(str, "str:")
+		switch str {
+		case ClaimTypeStringBasic:
+			*ct = ClaimTypeBasic
+		case ClaimTypeStringAuthorizeKSignBabyJub:
+			*ct = ClaimTypeAuthorizeKSignBabyJub
+		default:
+			return fmt.Errorf("Unknown ClaimType str:%v", str)
+		}
+	} else if strings.HasPrefix(str, "hex:") {
+		str := strings.TrimPrefix(str, "hex:")
+		if err := common.HexDecodeInto(ct[:], []byte(str)); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("invalid ClaimType prefix")
+	}
+	return nil
+}
+
 // NewClaimType creates a ClaimType from a type name.
-func NewClaimType(name string) *ClaimType {
-	t := &ClaimType{}
+func NewClaimType(name string) ClaimType {
+	t := ClaimType{}
 	h := crypto.HashBytes([]byte(name))
 	copy(t[:ClaimTypeLen], h[len(h)-ClaimTypeLen:])
 	return t
 }
 
 // NewClaimTypeNum to set type to a claim.
-func NewClaimTypeNum(num uint64) *ClaimType {
+func NewClaimTypeNum(num uint64) ClaimType {
 	ct := ClaimType{}
 	binary.BigEndian.PutUint64(ct[:], num)
-	return &ct
+	return ct
 }
 
 var (
 	// ClaimTypeBasic is a simple claim type that can be used for anything.
-	ClaimTypeBasic = NewClaimTypeNum(0)
+	ClaimTypeBasic       = NewClaimTypeNum(0)
+	ClaimTypeStringBasic = "Basic"
 	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
-	ClaimTypeAuthorizeKSignBabyJub = NewClaimTypeNum(1)
+	ClaimTypeAuthorizeKSignBabyJub       = NewClaimTypeNum(1)
+	ClaimTypeStringAuthorizeKSignBabyJub = "AuthorizeKSignBabyJub"
 
 // 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
 // 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
@@ -101,13 +142,13 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	var metadata Metadata
 	metadata.Unmarshal(e)
 	switch metadata.Type() {
-	case *ClaimTypeBasic:
+	case ClaimTypeBasic:
 		c := NewClaimBasicFromEntry(e)
 		return c, nil
 	// case *ClaimTypeAssignName:
 	// 	c := NewClaimAssignNameFromEntry(e)
 	// 	return c, nil
-	case *ClaimTypeAuthorizeKSignBabyJub:
+	case ClaimTypeAuthorizeKSignBabyJub:
 		c := NewClaimAuthorizeKSignBabyJubFromEntry(e)
 		return c, nil
 	// case *ClaimTypeSetRootKey:
@@ -138,14 +179,46 @@ type ClaimRecip byte
 const (
 	// ClaimRecipSelf is a claim that refers to a property of the issuing
 	// identity.
-	ClaimRecipSelf ClaimRecip = 0b00
+	ClaimRecipSelf       ClaimRecip = 0b00
+	ClaimRecipStringSelf string     = "Self"
 	// ClaimRecipIdenIndex is a claim that refers to a property of an
 	// identity found in the index part of the claim.
-	ClaimRecipIdenIndex ClaimRecip = 0b01
+	ClaimRecipIdenIndex       ClaimRecip = 0b01
+	ClaimRecipStringIdenIndex string     = "IdenIndex"
 	// ClaimRecipIdenIndex is a claim that refers to a property of an
 	// identity found in the value part of the claim.
-	ClaimRecipIdenValue ClaimRecip = 0b10
+	ClaimRecipIdenValue       ClaimRecip = 0b10
+	ClaimRecipStringIdenValue string     = "IdenValue"
 )
+
+func (cr ClaimRecip) MarshalText() ([]byte, error) {
+	var str string
+	switch cr {
+	case ClaimRecipSelf:
+		str = ClaimRecipStringSelf
+	case ClaimRecipIdenIndex:
+		str = ClaimRecipStringIdenIndex
+	case ClaimRecipIdenValue:
+		str = ClaimRecipStringIdenValue
+	default:
+		return nil, fmt.Errorf("invalid ClaimRecip")
+	}
+	return []byte(str), nil
+}
+
+func (cr *ClaimRecip) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case ClaimRecipStringSelf:
+		*cr = ClaimRecipSelf
+	case ClaimRecipStringIdenIndex:
+		*cr = ClaimRecipIdenIndex
+	case ClaimRecipStringIdenValue:
+		*cr = ClaimRecipIdenValue
+	default:
+		return fmt.Errorf("invalid ClaimRecip")
+	}
+	return nil
+}
 
 // ClaimHeader represents the first bytes of the claim index and contains its
 // type and flags.
@@ -191,13 +264,13 @@ func (c *ClaimHeader) Unmarshal(e *merkletree.Entry) {
 var (
 	// ClaimHeaderBasic is a simple claim type that can be used for anything.
 	ClaimHeaderBasic = ClaimHeader{
-		Type:       *ClaimTypeBasic,
+		Type:       ClaimTypeBasic,
 		Dest:       ClaimRecipSelf,
 		Expiration: false,
 		Version:    false}
 	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
 	ClaimHeaderAuthorizeKSignBabyJub = ClaimHeader{
-		Type:       *ClaimTypeAuthorizeKSignBabyJub,
+		Type:       ClaimTypeAuthorizeKSignBabyJub,
 		Dest:       ClaimRecipSelf,
 		Expiration: false,
 		Version:    false}
@@ -281,4 +354,68 @@ func (m *Metadata) Unmarshal(e *merkletree.Entry) {
 		m.Expiration = int64(binary.BigEndian.Uint64(value[0][ClaimRevNonceLen:]))
 	}
 	m.RevNonce = binary.BigEndian.Uint32(value[0][:])
+}
+
+type metadataJSON struct {
+	Type       ClaimType
+	Recip      ClaimRecip
+	ID         *core.ID
+	Expiration *int64
+	Version    *uint32
+	RevNonce   uint32
+}
+
+func (m Metadata) MarshalJSON() ([]byte, error) {
+	var metadata metadataJSON
+	h := m.Header()
+	metadata.Type = h.Type
+	metadata.Recip = h.Dest
+	if h.Dest != ClaimRecipSelf {
+		metadata.ID = m.Dest
+	}
+	if h.Expiration {
+		metadata.Expiration = &m.Expiration
+	}
+	if h.Version {
+		metadata.Version = &m.Version
+	}
+	metadata.RevNonce = m.RevNonce
+	return json.Marshal(metadata)
+}
+
+func (m *Metadata) UnmarshalJSON(b []byte) error {
+	var metadata metadataJSON
+	if err := json.Unmarshal(b, &metadata); err != nil {
+		return err
+	}
+	m.header = ClaimHeader{
+		Type:       metadata.Type,
+		Dest:       metadata.Recip,
+		Expiration: metadata.Expiration != nil,
+		Version:    metadata.Version != nil,
+	}
+	switch m.header.Type {
+	case ClaimTypeBasic:
+		if m.header != ClaimHeaderBasic {
+			return fmt.Errorf("claim header for ClaimType %v is different than expected",
+				ClaimTypeStringBasic)
+		}
+	case ClaimTypeAuthorizeKSignBabyJub:
+		if m.header != ClaimHeaderAuthorizeKSignBabyJub {
+			return fmt.Errorf("claim header for ClaimType %v is different than expected",
+				ClaimTypeStringAuthorizeKSignBabyJub)
+		}
+	default:
+	}
+	if m.header.Dest != ClaimRecipSelf {
+		m.Dest = metadata.ID
+	}
+	if m.header.Expiration {
+		m.Expiration = *metadata.Expiration
+	}
+	if m.header.Version {
+		m.Version = *metadata.Version
+	}
+	m.RevNonce = metadata.RevNonce
+	return nil
 }

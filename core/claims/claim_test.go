@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"github.com/iden3/go-iden3-core/core"
@@ -13,6 +14,7 @@ import (
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // If generateTest is true, the checked values will be used to generate a test vector
@@ -105,10 +107,17 @@ func TestMetadata(t *testing.T) {
 		var metadata1 Metadata
 		metadata1.Unmarshal(entry)
 		assert.Equal(t, metadata0, metadata1)
+
+		b, err := json.Marshal(metadata1)
+		require.Nil(t, err)
+		var metadata2 Metadata
+		err = json.Unmarshal(b, &metadata2)
+		require.Nil(t, err)
+		require.Equal(t, metadata1, metadata2)
 	}
 
 	claimHeaderTest := ClaimHeader{
-		Type:       *NewClaimTypeNum(42),
+		Type:       NewClaimTypeNum(42),
 		Dest:       ClaimRecipIdenIndex,
 		Expiration: true,
 		Version:    true}
@@ -116,8 +125,8 @@ func TestMetadata(t *testing.T) {
 	{
 		metadata0 := NewMetadata(claimHeaderTest)
 		metadata0.RevNonce = 1234
-		metadata0.Dest = &core.ID{}
-		metadata0.Dest[0] = 0x42
+		id := core.NewID([2]byte{0, 0x42}, [27]byte{})
+		metadata0.Dest = &id
 		metadata0.Expiration = 4567
 		metadata0.Version = 7788
 		entry := &merkletree.Entry{}
@@ -125,6 +134,13 @@ func TestMetadata(t *testing.T) {
 		var metadata1 Metadata
 		metadata1.Unmarshal(entry)
 		assert.Equal(t, metadata0, metadata1)
+
+		b, err := json.Marshal(metadata1)
+		require.Nil(t, err)
+		var metadata2 Metadata
+		err = json.Unmarshal(b, &metadata2)
+		require.Nil(t, err)
+		require.Equal(t, metadata1, metadata2)
 	}
 }
 
