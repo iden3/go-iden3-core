@@ -225,7 +225,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	// claim3 is a claim with expiration at T=350
 
 	header := claims.ClaimHeader{
-		Type:       *claims.NewClaimTypeNum(9999),
+		Type:       claims.NewClaimTypeNum(9999),
 		Dest:       claims.ClaimRecipSelf,
 		Expiration: true,
 		Version:    false,
