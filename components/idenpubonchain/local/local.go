@@ -120,7 +120,7 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpProof []byte,
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *babyjub.PublicKey,
 	stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	ip.rw.Lock()
 	defer ip.rw.Unlock()
@@ -139,7 +139,7 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOpPr
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
-	newState *merkletree.Hash, kOpProof []byte, stateTransitionProof []byte,
+	newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
 	signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	ip.rw.Lock()
 	defer ip.rw.Unlock()

@@ -554,7 +554,11 @@ func (is *Issuer) PublishState() error {
 	}
 
 	// Sign [minor] identity transition from last state to new (current) state.
-	sig, err := is.SignState(SigPrefixSetState, idenStateLast, idenState)
+	sig, err := is.SignState(idenStateLast, idenState)
+	if err != nil {
+		return err
+	}
+	kOp, err := is.kOpComp.Decompress()
 	if err != nil {
 		return err
 	}
@@ -562,7 +566,7 @@ func (is *Issuer) PublishState() error {
 	if is.idenStateOnChain().Equals(&merkletree.HashZero) {
 		// Identity State not present in the Smart Contract. First time
 		// publishing it.
-		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, nil, nil, sig)
+		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, kOp, nil, sig)
 		if err != nil {
 			return fmt.Errorf("Error calling idenstates smart contract initState: %w", err)
 		}
@@ -573,7 +577,7 @@ func (is *Issuer) PublishState() error {
 	} else {
 		// Identity State already present in the Smart Contract.
 		// Update it.
-		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, nil, nil, sig)
+		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, kOp, nil, sig)
 		if err != nil {
 			return fmt.Errorf("Error calling idenstates smart contract setState: %w", err)
 		}
@@ -643,9 +647,9 @@ func (is *Issuer) SignBinary(prefix, msg []byte) (*babyjub.SignatureComp, error)
 }
 
 // SignState signs the Identity State transition (oldState+newState) by the kOp of the issuer.
-func (is *Issuer) SignState(prefix []byte, oldState, newState *merkletree.Hash) (*babyjub.SignatureComp, error) {
+func (is *Issuer) SignState(oldState, newState *merkletree.Hash) (*babyjub.SignatureComp, error) {
 	var prefix31 [31]byte
-	copy(prefix31[:], prefix)
+	copy(prefix31[:], SigPrefixSetState)
 	prefixBigInt := new(big.Int)
 	utils.SetBigIntFromLEBytes(prefixBigInt, prefix31[:])
 
