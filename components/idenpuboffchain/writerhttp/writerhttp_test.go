@@ -78,6 +78,15 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	require.Nil(t, err)
 }
 
+// Assert that IdenPubOffChainWrite follows the IdenPubOffChainWriter interface
+func TestIdenPubOffChainWriteInterface(t *testing.T) {
+	var idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter //nolint:gosimple
+	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(NewConfigDefault("http://foo.bar"), db.NewMemoryStorage())
+	require.Nil(t, err)
+	idenPubOffChainWrite = idenPubOffChainWriteHttp
+	require.NotNil(t, idenPubOffChainWrite)
+}
+
 func initTest() {
 	// Init test
 	err := testgen.InitTest("idenpuboffchainwriterhttp", generateTest)
