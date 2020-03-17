@@ -113,9 +113,7 @@ func StoreJSON(tx Tx, key []byte, v interface{}) error {
 
 func LoadJSON(storage Storage, key []byte, v interface{}) error {
 	vJSON, err := storage.Get(key)
-	if err == ErrNotFound {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 	return json.Unmarshal(vJSON, v)
