@@ -64,6 +64,8 @@ func New(timeNow func() time.Time, blockNow func() uint64) *IdenPubOnChain {
 
 // Sync all the pending writes to the local state.
 func (ip *IdenPubOnChain) Sync() {
+	ip.rw.Lock()
+	defer ip.rw.Unlock()
 	for _, idIdenStateData := range ip.pendingInit {
 		idenStatesData := NewIdenStateHistory()
 		idenStatesData.Add(idIdenStateData.IdenStateData)
