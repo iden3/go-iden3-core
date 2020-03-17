@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"crypto/rand"
-	"errors"
 	"time"
 
 	// "encoding/hex"
@@ -20,7 +19,6 @@ import (
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 )
@@ -46,6 +44,11 @@ const (
 
 	scryptR     = 8
 	scryptDKLen = 32
+)
+
+var (
+	ErrStorageLock     = fmt.Errorf("Unable to acquire storage lock")
+	ErrStorageUnlocked = fmt.Errorf("Storage is not locked")
 )
 
 // prefixes for msg to be signed
@@ -146,6 +149,7 @@ type Storage interface {
 type FileStorage struct {
 	path string
 	lock *flock.Flock
+	rw   sync.RWMutex
 }
 
 // NewFileStorage returns a new FileStorage backed by a file in path.
@@ -155,21 +159,35 @@ func NewFileStorage(path string) *FileStorage {
 
 // Read reads the file contents.
 func (fs *FileStorage) Read() ([]byte, error) {
+	fs.rw.RLock()
+	defer fs.rw.RUnlock()
+	if !fs.lock.Locked() {
+		return nil, ErrStorageUnlocked
+	}
 	return ioutil.ReadFile(fs.path)
 }
 
 // Write writes the data to the file.
 func (fs *FileStorage) Write(data []byte) error {
+	fs.rw.Lock()
+	defer fs.rw.Unlock()
+	if !fs.lock.Locked() {
+		return ErrStorageUnlocked
+	}
 	return ioutil.WriteFile(fs.path, data, 0600)
 }
 
 // TryLocks the storage file with a .lock file.
 func (fs *FileStorage) TryLock() (bool, error) {
+	fs.rw.Lock()
+	defer fs.rw.Unlock()
 	return fs.lock.TryLock()
 }
 
 // Unlocks the storage file and removes the .lock file.
 func (fs *FileStorage) Unlock() error {
+	fs.rw.Lock()
+	defer fs.rw.Unlock()
 	if err := fs.lock.Unlock(); err != nil {
 		return err
 	}
@@ -210,17 +228,14 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 	if ok, err := storage.TryLock(); err != nil {
 		return nil, err
 	} else if !ok {
-		return nil, fmt.Errorf("Unable to acquire storage lock")
+		return nil, ErrStorageLock
 	}
-	log.Info("BabyJub KeyStore storage locked successfully")
+	// log.Info("BabyJub KeyStore storage locked successfully")
 	encryptedKeysJSON, err := storage.Read()
 	if os.IsNotExist(err) {
 		encryptedKeysJSON = []byte{}
 	} else if err != nil {
-		if secondErr := storage.Unlock(); secondErr != nil {
-			return nil, errors.New(fmt.Sprintln("An error occured while trying to unlock storage after an error reading from storage. Error 1:",
-				err, "Error 2:", secondErr))
-		}
+		storage.Unlock() //nolint:errcheck
 		return nil, err
 	}
 	var encryptedKeys KeysStored
@@ -228,10 +243,7 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 		encryptedKeys = make(map[babyjub.PublicKeyComp]EncryptedData)
 	} else {
 		if err := json.Unmarshal(encryptedKeysJSON, &encryptedKeys); err != nil {
-			if secondErr := storage.Unlock(); secondErr != nil {
-				return nil, errors.New(fmt.Sprintln("An error occured while trying to unlock storage after an error unmarshaling JSON. Error 1:",
-					err, "Error 2:", secondErr))
-			}
+			storage.Unlock() //nolint:errcheck
 			return nil, err
 		}
 	}
@@ -244,22 +256,17 @@ func NewKeyStore(storage Storage, params KeyStoreParams) (*KeyStore, error) {
 	runtime.SetFinalizer(ks, func(ks *KeyStore) {
 		// When there are no more references to the key store, clear
 		// the secret keys in the cache and unlock the locked storage.
-		ks.Close()
+		ks.Close() //nolint:errcheck
 	})
 	return ks, nil
 }
 
-func (ks *KeyStore) Close() {
+func (ks *KeyStore) Close() error {
 	zero := [32]byte{}
 	for _, sk := range ks.cache {
 		copy(sk[:], zero[:])
 	}
-	err := ks.storage.Unlock()
-	if err != nil {
-		log.Error("Failed unlocking BabyJub KeyStore storage ", err)
-	} else {
-		log.Info("BabyJub KeyStore storage unlocked")
-	}
+	return ks.storage.Unlock()
 }
 
 // Keys returns the compressed public keys of the key storage.
