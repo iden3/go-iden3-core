@@ -350,24 +350,19 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		idenStateList:         idenStateList,
 		cfg:                   cfg,
 	}
-	println(">>> 0")
 
 	if err := is.loadIdenStateDataOnChain(); err != nil {
 		return nil, err
 	}
-	println(">>> 1")
 	if err := is.loadIdenStatePending(); err != nil {
 		return nil, err
 	}
-	println(">>> 2")
 	if err := is.loadEthTxInitState(); err != nil {
 		return nil, err
 	}
-	println(">>> 3")
 	if err := is.loadEthTxSetState(); err != nil {
 		return nil, err
 	}
-	println(">>> 4")
 
 	if !is.cfg.GenesisOnly {
 		if err := is.SyncIdenStatePublic(); err != nil {
