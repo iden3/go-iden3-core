@@ -76,7 +76,7 @@ func (l *LevelDbStorage) NewTx() (Tx, error) {
 
 // Get retreives a value from a key in the mt.Lvl
 func (l *LevelDbStorage) Get(key []byte) ([]byte, error) {
-	v, err := l.ldb.Get(append(l.prefix, key[:]...), nil)
+	v, err := l.ldb.Get(concat(l.prefix, key[:]), nil)
 	if err == errors.ErrNotFound {
 		return nil, ErrNotFound
 	}
