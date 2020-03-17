@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var rmDirs []string
@@ -213,6 +214,25 @@ func TestMemory(t *testing.T) {
 	testConcatTx(t, NewMemoryStorage())
 	testList(t, NewMemoryStorage())
 	testIterate(t, NewMemoryStorage())
+}
+
+func TestLevelDbInterface(t *testing.T) {
+	var db Storage //nolint:gosimple
+
+	dir, err := ioutil.TempDir("", "db")
+	require.Nil(t, err)
+	rmDirs = append(rmDirs, dir)
+	sto, err := NewLevelDbStorage(dir, false)
+	require.Nil(t, err)
+	db = sto
+	require.NotNil(t, db)
+}
+
+func TestMemoryStorageInterface(t *testing.T) {
+	var db Storage //nolint:gosimple
+
+	db = NewMemoryStorage()
+	require.NotNil(t, db)
 }
 
 func TestMain(m *testing.M) {
