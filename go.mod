@@ -28,7 +28,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/iden3/go-iden3-crypto v0.0.3
+	github.com/iden3/go-iden3-crypto v0.0.4
 	github.com/influxdata/influxdb v1.7.8 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
 	github.com/jackpal/go-nat-pmp v1.0.1 // indirect
