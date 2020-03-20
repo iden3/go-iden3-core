@@ -49,16 +49,16 @@ func NewLeafRevocationsTree(nonce, version uint32) *LeafRevocationsTree {
 // NewLeafRevocationsTreeFromEntry deserializes a LeafRevocationsTree from an Entry.
 func NewLeafRevocationsTreeFromEntry(e *merkletree.Entry) *LeafRevocationsTree {
 	l := &LeafRevocationsTree{}
-	l.Nonce = binary.BigEndian.Uint32(e.Data[0][:4])
-	l.Version = binary.BigEndian.Uint32(e.Data[4][:4])
+	l.Nonce = binary.BigEndian.Uint32(e.Data[0].Bytes()[:4])
+	l.Version = binary.BigEndian.Uint32(e.Data[4].Bytes()[:4])
 	return l
 }
 
 // Entry serializes the leaf into an Entry.
 func (l *LeafRevocationsTree) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
-	binary.BigEndian.PutUint32(e.Data[0][:4], l.Nonce)
-	binary.BigEndian.PutUint32(e.Data[4][:4], l.Version)
+	binary.BigEndian.PutUint32(e.Data[0].Bytes()[:4], l.Nonce)
+	binary.BigEndian.PutUint32(e.Data[4].Bytes()[:4], l.Version)
 	return e
 }
 

@@ -63,15 +63,15 @@ func NewNodeFromBytes(b []byte) (*Node, error) {
 			return nil, ErrNodeDataBadSize
 		}
 		n.ChildL, n.ChildR = &Hash{}, &Hash{}
-		copy(n.ChildL[:], b[:ElemBytesLen])
-		copy(n.ChildR[:], b[ElemBytesLen:ElemBytesLen*2])
+		copy(n.ChildL.v[:], b[:ElemBytesLen])
+		copy(n.ChildR.v[:], b[ElemBytesLen:ElemBytesLen*2])
 	case NodeTypeLeaf:
 		if len(b) != DataLen*ElemBytesLen {
 			return nil, ErrNodeDataBadSize
 		}
 		n.Entry = &Entry{}
 		for i := 0; i < DataLen; i++ {
-			copy(n.Entry.Data[i][:], b[i*ElemBytesLen:(i+1)*ElemBytesLen])
+			copy(n.Entry.Data[i].v[:], b[i*ElemBytesLen:(i+1)*ElemBytesLen])
 		}
 	case NodeTypeEmpty:
 		break
@@ -112,7 +112,7 @@ func (n *Node) Key() *Hash {
 func (n *Node) Value() []byte {
 	switch n.Type {
 	case NodeTypeMiddle: // {Type || ChildL || ChildR}
-		return append([]byte{byte(n.Type)}, append(n.ChildL[:], n.ChildR[:]...)...)
+		return append([]byte{byte(n.Type)}, append(n.ChildL.Bytes(), n.ChildR.Bytes()...)...)
 	case NodeTypeLeaf: // {Type || Data...}
 		return append([]byte{byte(n.Type)}, ElemsBytesToBytes(n.Entry.Data[:])...)
 	case NodeTypeEmpty: // {}

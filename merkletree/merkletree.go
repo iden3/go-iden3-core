@@ -29,18 +29,50 @@ const (
 
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes
 // corresponds to the serialization of an element from mimc7.
-type ElemBytes [ElemBytesLen]byte
+// type ElemBytes [ElemBytesLen]byte
+type ElemBytes struct {
+	v [ElemBytesLen]byte
+}
+
+// NewElemBytes returns a *ElemBytes from a []byte, checking that the slice length is the expected, and that the Element is inside the Finite Field
+func NewElemBytes(b []byte) (*ElemBytes, error) {
+	// check ElemBytesLen
+	if len(b) != ElemBytesLen {
+		return nil, fmt.Errorf("len(b) is %v, should be %v", len(b), ElemBytesLen)
+	}
+
+	// build the ElemBytes
+	var e ElemBytes
+	copy(e.v[:], b)
+
+	// check that the element is inside the Finite Field
+	bi := ElemBytesToBigInt(e)
+	ok := cryptoUtils.CheckBigIntInField(bi)
+	if !ok {
+		return nil, fmt.Errorf("Elem not inside Finite Field")
+	}
+
+	return &e, nil
+}
+
+func (e *ElemBytes) ElemBytes() [ElemBytesLen]byte {
+	return e.v
+}
+
+func (e *ElemBytes) Bytes() []byte {
+	return e.v[:]
+}
 
 // String returns the last 4 bytes of ElemBytes in hex.
 func (e *ElemBytes) String() string {
-	return fmt.Sprintf("%v...", hex.EncodeToString(e[ElemBytesLen-4:]))
+	return fmt.Sprintf("%v...", hex.EncodeToString(e.v[ElemBytesLen-4:]))
 }
 
 // ElemsBytesToBytes serializes an array of ElemBytes to []byte.
 func ElemsBytesToBytes(es []ElemBytes) []byte {
 	bs := make([]byte, len(es)*ElemBytesLen)
 	for i := 0; i < len(es); i++ {
-		copy(bs[i*ElemBytesLen:(i+1)*ElemBytesLen], es[i][:])
+		copy(bs[i*ElemBytesLen:(i+1)*ElemBytesLen], es[i].Bytes())
 	}
 	return bs
 }
@@ -55,20 +87,20 @@ type Index [IndexLen]ElemBytes
 type Data [DataLen]ElemBytes
 
 func (d *Data) String() string {
-	return fmt.Sprintf("%s%s%s%s", hex.EncodeToString(d[0][:]), hex.EncodeToString(d[1][:]),
-		hex.EncodeToString(d[2][:]), hex.EncodeToString(d[3][:]))
+	return fmt.Sprintf("%s%s%s%s", hex.EncodeToString(d[0].Bytes()), hex.EncodeToString(d[1].Bytes()),
+		hex.EncodeToString(d[2].Bytes()), hex.EncodeToString(d[3].Bytes()))
 }
 
 func (d *Data) Bytes() (b [ElemBytesLen * DataLen]byte) {
 	for i := 0; i < DataLen; i++ {
-		copy(b[i*ElemBytesLen:(i+1)*ElemBytesLen], d[i][:])
+		copy(b[i*ElemBytesLen:(i+1)*ElemBytesLen], d[i].Bytes())
 	}
 	return b
 }
 
 func (d1 *Data) Equal(d2 *Data) bool {
-	return bytes.Equal(d1[0][:], d2[0][:]) && bytes.Equal(d1[1][:], d2[1][:]) &&
-		bytes.Equal(d1[2][:], d2[2][:]) && bytes.Equal(d1[3][:], d2[3][:])
+	return bytes.Equal(d1[0].Bytes(), d2[0].Bytes()) && bytes.Equal(d1[1].Bytes(), d2[1].Bytes()) &&
+		bytes.Equal(d1[2].Bytes(), d2[2].Bytes()) && bytes.Equal(d1[3].Bytes(), d2[3].Bytes())
 }
 
 func (d Data) MarshalText() ([]byte, error) {
@@ -115,9 +147,9 @@ var (
 	ErrEntryDataNotMatch = errors.New("Entry data doesn't match the expected one")
 
 	// HashZero is a hash value of zeros, and is the key of an empty node.
-	HashZero = Hash{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	HashZero = Hash{v: [ElemBytesLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 	// ElemBytesOne is a constant element used as a prefix to compute leaf node keys.
-	ElemBytesOne = ElemBytes{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+	ElemBytesOne = ElemBytes{v: [ElemBytesLen]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}}
 	// rootNodeVValue is the Key used to store the current Root in the database
 	rootNodeValue = []byte("currentroot")
 )
@@ -209,7 +241,7 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 		nodeRoot := NewNodeEmpty()
 		k, _ := nodeRoot.Key(), nodeRoot.Value()
 		mt.rootKey = k
-		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey.v[:])
 		if err = tx.Commit(); err != nil {
 			tx.Close()
 			return nil, err
@@ -217,7 +249,7 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 		return &mt, nil
 	}
 	mt.rootKey = &Hash{}
-	copy(mt.rootKey[:], gettedRoot)
+	copy(mt.rootKey.v[:], gettedRoot)
 	return &mt, nil
 }
 
@@ -262,7 +294,7 @@ func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
 		case NodeTypeEmpty:
 			return nil, ErrEntryIndexNotFound
 		case NodeTypeLeaf:
-			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+			if bytes.Equal(hIndex.Bytes(), n.Entry.HIndex().Bytes()) {
 				return &n.Entry.Data, nil
 			} else {
 				return nil, ErrEntryIndexNotFound
@@ -356,7 +388,7 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 		// TODO: delete old node n???  Make this optional???
 		hIndex := n.Entry.HIndex()
 		// Check if leaf node found contains the leaf node we are trying to add
-		if bytes.Equal(hIndex[:], newLeaf.Entry.HIndex()[:]) {
+		if bytes.Equal(hIndex.Bytes(), newLeaf.Entry.HIndex().Bytes()) {
 			return nil, ErrEntryIndexAlreadyExists
 		}
 		pathOldLeaf := getPath(mt.maxLevels, hIndex)
@@ -429,7 +461,7 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 		return err
 	}
 	mt.rootKey = newRootKey
-	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey.Bytes())
 	return nil
 }
 
@@ -621,7 +653,7 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 		return err
 	}
 	mt.rootKey = &Hash{}
-	copy(mt.rootKey[:], v)
+	copy(mt.rootKey.v[:], v)
 
 	return nil
 }
@@ -720,7 +752,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 				return nil, ErrInvalidProofBytes
 			}
 			var sib Hash
-			copy(sib[:], siblingBytes[sibIdx*ElemBytesLen:(sibIdx+1)*ElemBytesLen])
+			copy(sib.v[:], siblingBytes[sibIdx*ElemBytesLen:(sibIdx+1)*ElemBytesLen])
 			p.Siblings = append(p.Siblings, &sib)
 			sibIdx++
 		}
@@ -732,8 +764,8 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
 			return nil, ErrInvalidProofBytes
 		}
-		copy(p.nodeAux.hIndex[:], nodeAuxBytes[:ElemBytesLen])
-		copy(p.nodeAux.hValue[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
+		copy(p.nodeAux.hIndex.v[:], nodeAuxBytes[:ElemBytesLen])
+		copy(p.nodeAux.hValue.v[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
 	}
 	return p, nil
 }
@@ -753,12 +785,12 @@ func (p *Proof) Bytes() []byte {
 	copy(bs[proofFlagsLen:len(p.notempties)+proofFlagsLen], p.notempties[:])
 	siblingsBytes := bs[len(p.notempties)+proofFlagsLen:]
 	for i, k := range p.Siblings {
-		copy(siblingsBytes[i*ElemBytesLen:(i+1)*ElemBytesLen], k[:])
+		copy(siblingsBytes[i*ElemBytesLen:(i+1)*ElemBytesLen], k.Bytes())
 	}
 	if p.nodeAux != nil {
 		bs[0] |= 0x02
-		copy(bs[len(bs)-2*ElemBytesLen:], p.nodeAux.hIndex[:])
-		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hValue[:])
+		copy(bs[len(bs)-2*ElemBytesLen:], p.nodeAux.hIndex.Bytes())
+		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hValue.Bytes())
 	}
 	return bs
 }
@@ -832,7 +864,8 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		case NodeTypeEmpty:
 			return p, nil
 		case NodeTypeLeaf:
-			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+			// if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+			if hIndex.Equals(n.Entry.HIndex()) {
 				p.Existence = true
 				return p, nil
 			} else {
@@ -851,7 +884,8 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		default:
 			return nil, ErrInvalidNodeFound
 		}
-		if !bytes.Equal(siblingKey[:], HashZero[:]) {
+		// if !bytes.Equal(siblingKey[:], HashZero[:]) {
+		if !siblingKey.Equals(&HashZero) {
 			common.SetBitBigEndian(p.notempties[:], uint(p.depth))
 			p.Siblings = append(p.Siblings, siblingKey)
 		}
@@ -865,7 +899,7 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(rootKey[:], rootFromProof[:])
+	return rootKey.Equals(rootFromProof)
 }
 
 // RootFromProof calculates the root that would correspond to a tree whose
@@ -880,7 +914,8 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 		if proof.nodeAux == nil {
 			midKey = &HashZero
 		} else {
-			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
+			// if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
+			if hIndex.Equals(proof.nodeAux.hIndex) {
 				return nil, fmt.Errorf("Non-existence proof being checked against hIndex equal to nodeAux")
 			}
 			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
@@ -907,10 +942,11 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 // GetNode gets a node by key from the MT.  Empty nodes are not stored in the
 // tree; they are all the same and assumed to always exist.
 func (mt *MerkleTree) GetNode(key *Hash) (*Node, error) {
-	if bytes.Equal(key[:], HashZero[:]) {
+	// if bytes.Equal(key[:], HashZero) {
+	if key.Equals(&HashZero) {
 		return NewNodeEmpty(), nil
 	}
-	nBytes, err := mt.storage.Get(key[:])
+	nBytes, err := mt.storage.Get(key.Bytes())
 	if err != nil {
 		return nil, err
 	}
@@ -929,17 +965,17 @@ func (mt *MerkleTree) addNode(tx db.Tx, n *Node) (*Hash, error) {
 	}
 	k, v := n.Key(), n.Value()
 	// Check that the node key doesn't already exist
-	if _, err := tx.Get(k[:]); err == nil {
+	if _, err := tx.Get(k.Bytes()); err == nil {
 		return nil, ErrNodeKeyAlreadyExists
 	}
-	tx.Put(k[:], v)
+	tx.Put(k.Bytes(), v)
 	return k, nil
 }
 
 // dbGet is a helper function to get the node of a key from the internal
 // storage.
 func (mt *MerkleTree) dbGet(k []byte) (NodeType, []byte, error) {
-	if bytes.Equal(k, HashZero[:]) {
+	if bytes.Equal(k, HashZero.Bytes()) {
 		return 0, nil, nil
 	}
 
@@ -972,5 +1008,5 @@ func HexStringToHash(s string) Hash {
 	}
 	var b32 [ElemBytesLen]byte
 	copy(b32[:], b[:32])
-	return Hash(ElemBytes(b32))
+	return Hash(ElemBytes{v: b32})
 }

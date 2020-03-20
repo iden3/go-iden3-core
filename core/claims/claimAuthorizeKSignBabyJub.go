@@ -35,11 +35,11 @@ func NewClaimAuthorizeKSignBabyJubFromEntry(e *merkletree.Entry) *ClaimAuthorize
 	c := &ClaimAuthorizeKSignBabyJub{}
 	c.metadata.Unmarshal(e)
 	sign := []byte{0}
-	copy(sign, e.Data[1][:])
+	copy(sign, e.Data[1].Bytes())
 	if sign[0] == 1 {
 		c.Sign = true
 	}
-	c.Ay = new(big.Int).SetBytes(common.SwapEndianness(e.Data[2][:]))
+	c.Ay = new(big.Int).SetBytes(common.SwapEndianness(e.Data[2].Bytes()))
 	return c
 }
 
@@ -51,9 +51,9 @@ func (c *ClaimAuthorizeKSignBabyJub) Entry() *merkletree.Entry {
 	if c.Sign {
 		sign = []byte{1}
 	}
-	copy(index[1][:], sign)
+	copy(index[1].Bytes(), sign)
 	ayBytes := c.Ay.Bytes()
-	copy(index[2][:], common.SwapEndianness(ayBytes))
+	copy(index[2].Bytes(), common.SwapEndianness(ayBytes))
 	c.metadata.Marshal(e)
 	return e
 }

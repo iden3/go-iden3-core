@@ -24,12 +24,13 @@ func (h *Hash) String() string {
 
 // Hex returns a hex string from the Hash type.
 func (h Hash) Hex() string {
-	return common3.HexEncode(h[:])
+	return common3.HexEncode(h.Bytes())
 }
 
 // Bytes returns a byte array from a Hash.
 func (h Hash) Bytes() []byte {
-	return h[:]
+	// return h.Bytes()
+	return h.v[:]
 }
 
 func (h Hash) MarshalText() ([]byte, error) {
@@ -37,15 +38,15 @@ func (h Hash) MarshalText() ([]byte, error) {
 }
 
 func (h *Hash) UnmarshalText(bs []byte) error {
-	return common3.HexDecodeInto(h[:], bs)
+	return common3.HexDecodeInto(h.v[:], bs)
 }
 
 func ElemBytesToBigInt(elem ElemBytes) *big.Int {
-	return big.NewInt(0).SetBytes(common.SwapEndianness(elem[:]))
+	return big.NewInt(0).SetBytes(common.SwapEndianness(elem.Bytes()[:]))
 }
 
 func (h1 *Hash) Equals(h2 *Hash) bool {
-	return bytes.Equal(h1[:], h2[:])
+	return bytes.Equal(h1.Bytes(), h2.Bytes())
 }
 
 func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
@@ -59,7 +60,7 @@ func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 // BigIntToHash converts a *big.Int to a Hash.
 func BigIntToHash(e *big.Int) (h Hash) {
 	bs := common.SwapEndianness(e.Bytes())
-	copy(h[:], bs)
+	copy(h.v[:], bs)
 	return h
 }
 
@@ -69,7 +70,7 @@ func HashElems(elems ...ElemBytes) *Hash {
 	// mimcHash, err := mimc7.Hash(bigints, nil)
 	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {
-		panic(err)
+		panic(err) // This panic should never be reached, as the ElemBytes constructor checks that the content is inside the Finite Field
 	}
 	h := BigIntToHash(poseidonHash)
 	return &h
@@ -94,7 +95,7 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
 func getPath(numLevels int, hIndex *Hash) []bool {
 	path := make([]bool, numLevels)
 	for n := 0; n < numLevels; n++ {
-		path[n] = common.TestBitBigEndian(hIndex[:], uint(n))
+		path[n] = common.TestBitBigEndian(hIndex.Bytes(), uint(n))
 	}
 	return path
 }
@@ -125,7 +126,7 @@ func HexsToData(_a, _b, _c, _d, _e, _f, _g, _h string) (Data, error) {
 func NewDataFromBytes(b [ElemBytesLen * DataLen]byte) *Data {
 	d := &Data{}
 	for i := 0; i < DataLen; i++ {
-		copy(d[i][:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
+		copy(d[i].v[:], b[i*ElemBytesLen : (i+1)*ElemBytesLen][:])
 	}
 	return d
 }
@@ -160,7 +161,7 @@ func IntsToData(_a, _b, _c, _d, _e, _f, _g, _h int64) Data {
 func BigIntsToData(a, b, c, d, e, f, g, h *big.Int) (data Data) {
 	di := []*big.Int{a, b, c, d, e, f, g, h}
 	for i := 0; i < len(di); i++ {
-		copy(data[i][:], di[i].Bytes())
+		copy(data[i].v[:], di[i].Bytes())
 	}
 	return
 }

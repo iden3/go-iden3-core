@@ -91,10 +91,10 @@ func dataTestOutput(d *merkletree.Data) {
 		return
 	}
 	s := bytes.NewBufferString("")
-	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[0][:]))
-	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[1][:]))
-	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[2][:]))
-	fmt.Fprintf(s, "\t\t\"%v\",", hex.EncodeToString(d[3][:]))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[0].Bytes()))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[1].Bytes()))
+	fmt.Fprintf(s, "\t\t\"%v\"+\n", hex.EncodeToString(d[2].Bytes()))
+	fmt.Fprintf(s, "\t\t\"%v\",", hex.EncodeToString(d[3].Bytes()))
 	fmt.Println(s.String())
 }
 

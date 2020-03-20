@@ -34,11 +34,11 @@ func NewClaimBasicFromEntry(e *merkletree.Entry) *ClaimBasic {
 
 	n := 0
 	for i, start := range []int{ClaimHeaderLen, 0, 0, 0} {
-		n += copy(c.IndexSlot[n:], e.Index()[i][start:EntryFullBytesLen])
+		n += copy(c.IndexSlot[n:], e.Index()[i].Bytes()[start:EntryFullBytesLen])
 	}
 	n = 0
 	for i, start := range []int{ClaimRevNonceLen, 0, 0, 0} {
-		n += copy(c.ValueSlot[n:], e.Value()[i][start:EntryFullBytesLen])
+		n += copy(c.ValueSlot[n:], e.Value()[i].Bytes()[start:EntryFullBytesLen])
 	}
 
 	return c
@@ -50,11 +50,11 @@ func (c *ClaimBasic) Entry() *merkletree.Entry {
 
 	n := 0
 	for i, start := range []int{ClaimHeaderLen, 0, 0, 0} {
-		n += copy(e.Index()[i][start:], c.IndexSlot[n:n+EntryFullBytesLen-start])
+		n += copy(e.Index()[i].Bytes()[start:], c.IndexSlot[n:n+EntryFullBytesLen-start])
 	}
 	n = 0
 	for i, start := range []int{ClaimRevNonceLen, 0, 0, 0} {
-		n += copy(e.Value()[i][start:], c.ValueSlot[n:n+EntryFullBytesLen-start])
+		n += copy(e.Value()[i].Bytes()[start:], c.ValueSlot[n:n+EntryFullBytesLen-start])
 	}
 
 	c.metadata.Marshal(e)

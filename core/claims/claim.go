@@ -20,10 +20,10 @@ var ErrInvalidClaimType = errors.New("invalid claim type")
 
 // ClearMostSigByte sets the most significant byte of the element to 0 to make sure it fits
 // inside the FiniteField over R.
-func ClearMostSigByte(e [merkletree.ElemBytesLen]byte) merkletree.ElemBytes {
-	e[0] = 0
-	return merkletree.ElemBytes(e)
-}
+// func ClearMostSigByte(e [merkletree.ElemBytesLen]byte) merkletree.ElemBytes {
+//         e[0] = 0
+//         return merkletree.ElemBytes(e)
+// }
 
 func GetRevocationNonce(e *merkletree.Entry) uint32 {
 	return binary.BigEndian.Uint32(e.Data[4][:4])
@@ -315,7 +315,7 @@ func (m Metadata) Marshal(e *merkletree.Entry) {
 	switch m.header.Dest {
 	case ClaimRecipSelf:
 	case ClaimRecipIdenIndex:
-		copy(index[1][:], m.Dest[:])
+		copy(index[1][:], m.Dest.Bytes()[:])
 	case ClaimRecipIdenValue:
 		copy(value[1][:], m.Dest[:])
 	default:
@@ -341,19 +341,19 @@ func (m *Metadata) Unmarshal(e *merkletree.Entry) {
 	switch m.header.Dest {
 	case ClaimRecipSelf:
 	case ClaimRecipIdenIndex:
-		copy(m.Dest[:], index[1][:])
+		copy(m.Dest[:], index[1].Bytes())
 	case ClaimRecipIdenValue:
-		copy(m.Dest[:], value[1][:])
+		copy(m.Dest[:], value[1].Bytes())
 	default:
 		panic(fmt.Sprintf("Unexpected header.Dest %v", m.header.Dest))
 	}
 	if m.header.Version {
-		m.Version = binary.BigEndian.Uint32(index[0][ClaimTypeLen+ClaimFlagsLen:])
+		m.Version = binary.BigEndian.Uint32(index[0].Bytes()[ClaimTypeLen+ClaimFlagsLen:])
 	}
 	if m.header.Expiration {
-		m.Expiration = int64(binary.BigEndian.Uint64(value[0][ClaimRevNonceLen:]))
+		m.Expiration = int64(binary.BigEndian.Uint64(value[0].Bytes()[ClaimRevNonceLen:]))
 	}
-	m.RevNonce = binary.BigEndian.Uint32(value[0][:])
+	m.RevNonce = binary.BigEndian.Uint32(value[0].Bytes()[:])
 }
 
 type metadataJSON struct {
