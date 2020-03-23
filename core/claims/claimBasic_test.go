@@ -23,8 +23,10 @@ func TestClaimBasic(t *testing.T) {
 	c0.Metadata().RevNonce = 5678
 	e := c0.Entry()
 	// Check claim against test vector
-	testgen.CheckTestValue(t, "ClaimBasic0_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "ClaimBasic0_HValue", e.HValue().Hex())
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
+	testgen.CheckTestValue(t, "ClaimBasic0_HIndex", hi.Hex())
+	testgen.CheckTestValue(t, "ClaimBasic0_HValue", hv.Hex())
 	testgen.CheckTestValue(t, "ClaimBasic0_dataString", e.Data.String())
 	dataTestOutput(&e.Data)
 	c1 := NewClaimBasicFromEntry(e)
@@ -48,9 +50,11 @@ func TestClaimBasic1(t *testing.T) {
 	// ClaimBasic
 	c0 := NewClaimBasic(indexSlot, valueSlot)
 	e := c0.Entry()
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
 	// Check claim against test vector
-	testgen.CheckTestValue(t, "ClaimBasic1_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "ClaimBasic1_HValue", e.HValue().Hex())
+	testgen.CheckTestValue(t, "ClaimBasic1_HIndex", hi.Hex())
+	testgen.CheckTestValue(t, "ClaimBasic1_HValue", hv.Hex())
 	testgen.CheckTestValue(t, "ClaimBasic1_dataString", e.Data.String())
 	dataTestOutput(&e.Data)
 	c1 := NewClaimBasicFromEntry(e)

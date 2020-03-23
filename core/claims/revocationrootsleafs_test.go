@@ -16,8 +16,10 @@ func TestLeafRootsTree(t *testing.T) {
 	l0 := NewLeafRootsTree(root)
 	e := l0.Entry()
 
-	testgen.CheckTestValue(t, "Leaf0_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "Leaf0_HValue", e.HValue().Hex())
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
+	testgen.CheckTestValue(t, "Leaf0_HIndex", hi.Hex())
+	testgen.CheckTestValue(t, "Leaf0_HValue", hv.Hex())
 	testgen.CheckTestValue(t, "Leaf0_dataString", e.Data.String())
 	l1 := NewLeafRootsTreeFromEntry(e)
 	assert.Equal(t, l0, l1)
@@ -33,8 +35,10 @@ func TestLeafRevocationsTree(t *testing.T) {
 	l0 := NewLeafRevocationsTree(nonce, version)
 	e := l0.Entry()
 
-	testgen.CheckTestValue(t, "Leaf1_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "Leaf1_HValue", e.HValue().Hex())
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
+	testgen.CheckTestValue(t, "Leaf1_HIndex", hi.Hex())
+	testgen.CheckTestValue(t, "Leaf1_HValue", hv.Hex())
 	testgen.CheckTestValue(t, "Leaf1_dataString", e.Data.String())
 	l1 := NewLeafRevocationsTreeFromEntry(e)
 	assert.Equal(t, l0, l1)
@@ -55,7 +59,9 @@ func TestAddLeafRootsTree(t *testing.T) {
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "rootRootsTree0", mt.RootKey().Hex())
 
-	proof, err := mt.GenerateProof(NewLeafRootsTree(root).Entry().HIndex(), nil)
+	hi, err := NewLeafRootsTree(root).Entry().HIndex()
+	assert.Nil(t, err)
+	proof, err := mt.GenerateProof(hi, nil)
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "proofLeafRootsTree", hex.EncodeToString(proof.Bytes()))
 }
@@ -71,7 +77,9 @@ func TestAddLeafRevocationsTree(t *testing.T) {
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "rootRevocationsTree0", mt.RootKey().Hex())
 
-	proof, err := mt.GenerateProof(NewLeafRevocationsTree(nonce, version).Entry().HIndex(), nil)
+	hi, err := NewLeafRevocationsTree(nonce, version).Entry().HIndex()
+	assert.Nil(t, err)
+	proof, err := mt.GenerateProof(hi, nil)
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "proofRevocationsTree", hex.EncodeToString(proof.Bytes()))
 }

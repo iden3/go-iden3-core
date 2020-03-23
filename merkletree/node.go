@@ -83,7 +83,7 @@ func NewNodeFromBytes(b []byte) (*Node, error) {
 
 // LeafKey computes the key of a leaf node given the hIndex and hValue of the
 // entry of the leaf.
-func LeafKey(hIndex, hValue *Hash) *Hash {
+func LeafKey(hIndex, hValue *Hash) (*Hash, error) {
 	// return HashElems(ElemBytesOne, ElemBytes(*hIndex), ElemBytes(*hValue))
 	return HashElemsKey(big.NewInt(1), ElemBytes(*hIndex), ElemBytes(*hValue))
 }
@@ -91,21 +91,32 @@ func LeafKey(hIndex, hValue *Hash) *Hash {
 // Key computes the key of the node by hashing the content in a specific way
 // for each type of node.  This key is used as the hash of the merklee tree for
 // each node.
-func (n *Node) Key() *Hash {
+func (n *Node) Key() (*Hash, error) {
 	if n.key == nil { // Cache the key to avoid repeated hash computations.
 		// NOTE: We are not using the type to calculate the hash!
 		switch n.Type {
 		case NodeTypeMiddle: // H(ChildL || ChildR)
-			n.key = HashElems(ElemBytes(*n.ChildL), ElemBytes(*n.ChildR))
+			var err error
+			n.key, err = HashElems(ElemBytes(*n.ChildL), ElemBytes(*n.ChildR))
+			if err != nil {
+				return nil, err
+			}
 		case NodeTypeLeaf: // H(Data...)
-			n.key = LeafKey(n.Entry.HIndex(), n.Entry.HValue())
+			hi, hv, err := n.Entry.HiHv()
+			if err != nil {
+				return nil, err
+			}
+			n.key, err = LeafKey(hi, hv)
+			if err != nil {
+				return nil, err
+			}
 		case NodeTypeEmpty: // Zero
 			n.key = &HashZero
 		default:
 			n.key = &HashZero
 		}
 	}
-	return n.key
+	return n.key, nil
 }
 
 // Value returns the value of the node.  This is the content that is stored in the backend database.

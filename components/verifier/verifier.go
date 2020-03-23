@@ -47,7 +47,11 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 	}
 	// Verify that the idenState is built from claims merkle tree where the
 	// claim exists.
-	claimsRoot, err := merkletree.RootFromProof(credExist.MtpClaim, credExist.Claim.HIndex(), credExist.Claim.HValue())
+	hi, hv, err := credExist.Claim.HiHv()
+	if err != nil {
+		return err
+	}
+	claimsRoot, err := merkletree.RootFromProof(credExist.MtpClaim, hi, hv)
 	if err != nil {
 		return err
 	}
@@ -107,7 +111,11 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!
 	nonce := claims.GetRevocationNonce(credValid.CredentialExistence.Claim)
 	revLeaf := claims.NewLeafRevocationsTree(nonce, 0xffffffff).Entry()
-	revocationsTreeRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, revLeaf.HIndex(), revLeaf.HValue())
+	hi, hv, err := revLeaf.HiHv()
+	if err != nil {
+		return err
+	}
+	revocationsTreeRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, hi, hv)
 	if err != nil {
 		return err
 	}

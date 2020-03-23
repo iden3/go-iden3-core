@@ -77,7 +77,11 @@ func (h *Holder) HolderGetCredentialValidity(
 	claimMetadata.Unmarshal(credExist.Claim)
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!
 	revLeaf := claims.NewLeafRevocationsTree(claimMetadata.RevNonce, 0xffffffff).Entry()
-	mtpNotNonce, err := publicData.RevocationsTree.GenerateProof(revLeaf.HIndex(), nil)
+	revLeafHi, err := revLeaf.HIndex()
+	if err != nil {
+		return nil, err
+	}
+	mtpNotNonce, err := publicData.RevocationsTree.GenerateProof(revLeafHi, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -83,7 +83,9 @@ func TestEntry(t *testing.T) {
 	// in := testgen.GetTestValue("EntryInts0").([]int64)
 	in := interfaceToInt64Array(testgen.GetTestValue("EntryInts0"))
 	e := NewEntryFromIntArray(in)
-	testgen.CheckTestValue(t, "TestEntry0", hex.EncodeToString(e.HIndex()[:]))
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
+	testgen.CheckTestValue(t, "TestEntry0", hex.EncodeToString(hi[:]))
 }
 
 func TestData(t *testing.T) {
@@ -163,16 +165,24 @@ func TestEntriesIndex(t *testing.T) {
 	// Two entries with different Index generate different hash index
 	in := interfaceToInt64Array(testgen.GetTestValue("EntryInts4"))
 	a := NewEntryFromIntArray(in)
+	aHi, err := a.HIndex()
+	assert.Nil(t, err)
 	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts5"))
 	b := NewEntryFromIntArray(in)
-	assert.NotEqual(t, a.HIndex(), b.HIndex())
+	bHi, err := b.HIndex()
+	assert.Nil(t, err)
+	assert.NotEqual(t, aHi, bHi)
 
 	// Two entries with same Index generate the same hash index
 	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts6"))
 	c := NewEntryFromIntArray(in)
+	cHi, err := c.HIndex()
+	assert.Nil(t, err)
 	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts7"))
 	d := NewEntryFromIntArray(in)
-	assert.Equal(t, c.HIndex(), d.HIndex())
+	dHi, err := d.HIndex()
+	assert.Nil(t, err)
+	assert.Equal(t, cHi, dHi)
 }
 
 func TestGetEntry2(t *testing.T) {
@@ -186,11 +196,13 @@ func TestGetEntry2(t *testing.T) {
 	}
 	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts1"))
 	e = NewEntryFromIntArray(in)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
 	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 
-	data, err := mt.GetDataByIndex(e.HIndex())
+	data, err := mt.GetDataByIndex(hi)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,11 +217,13 @@ func TestGenerateProof1(t *testing.T) {
 
 	in := interfaceToInt64Array(testgen.GetTestValue("EntryInts8"))
 	e := NewEntryFromIntArray(in)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
 	if err := mt.AddEntry(&e); err != nil {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,8 +242,10 @@ func TestGenerateProof4(t *testing.T) {
 	}
 
 	e := NewEntryFromInts(int64(2), 0, 0, 0, 0, 0, 0, 0)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
 
-	data, err := mt.GetDataByIndex(e.HIndex())
+	data, err := mt.GetDataByIndex(hi)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +253,7 @@ func TestGenerateProof4(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,8 +273,10 @@ func TestGenerateProof64(t *testing.T) {
 	}
 
 	e := NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
 
-	data, err := mt.GetDataByIndex(e.HIndex())
+	data, err := mt.GetDataByIndex(hi)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +284,7 @@ func TestGenerateProof64(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,13 +304,15 @@ func TestVerifyProof1(t *testing.T) {
 	}
 
 	e := NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
 
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue())
+	verify := VerifyProof(mt.RootKey(), proof, hi, hv)
 	assert.True(t, verify)
 	proofTestOutput(proof)
 	testgen.CheckTestValue(t, "TestVerifyProof1", hex.EncodeToString(proof.Bytes()))
@@ -310,13 +330,15 @@ func TestVerifyProofEmpty(t *testing.T) {
 	}
 
 	e := NewEntryFromInts(int64(42), 0, 0, 0, 0, 0, 0, 0)
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
 
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	verify := VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue())
+	verify := VerifyProof(mt.RootKey(), proof, hi, hv)
 	assert.True(t, verify)
 	proofTestOutput(proof)
 	testgen.CheckTestValue(t, "TestVerifyProofEmpty", hex.EncodeToString(proof.Bytes()))
@@ -335,18 +357,23 @@ func TestVerifyProofCases(t *testing.T) {
 
 	// Existence proof
 	e := NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
+
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, proof.Existence, true)
-	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
+	assert.True(t, VerifyProof(mt.RootKey(), proof, hi, hv))
 	proofTestOutput(proof)
 	testgen.CheckTestValue(t, "TestVerifyProofCases0", hex.EncodeToString(proof.Bytes()))
 
 	for i := 8; i < 32; i++ {
 		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
-		proof, err = mt.GenerateProof(e.HIndex(), nil)
+		hi, err := e.HIndex()
+		assert.Nil(t, err)
+		proof, err = mt.GenerateProof(hi, nil)
 		assert.Nil(t, err)
 		if debug {
 			fmt.Println(i, proof)
@@ -354,25 +381,29 @@ func TestVerifyProofCases(t *testing.T) {
 	}
 	// Non-existence proof, empty aux
 	e = NewEntryFromInts(int64(12), 0, 0, 0, 0, 0, 0, 0)
-	proof, err = mt.GenerateProof(e.HIndex(), nil)
+	hi, hv, err = e.HiHv()
+	assert.Nil(t, err)
+	proof, err = mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, proof.Existence, false)
 	// assert.True(t, proof.nodeAux == nil)
-	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
+	assert.True(t, VerifyProof(mt.RootKey(), proof, hi, hv))
 	proofTestOutput(proof)
 	testgen.CheckTestValue(t, "TestVerifyProofCases1", hex.EncodeToString(proof.Bytes()))
 
 	// Non-existence proof, diff. node aux
 	e = NewEntryFromInts(int64(10), 0, 0, 0, 0, 0, 0, 0)
-	proof, err = mt.GenerateProof(e.HIndex(), nil)
+	hi, hv, err = e.HiHv()
+	assert.Nil(t, err)
+	proof, err = mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, proof.Existence, false)
 	// assert.True(t, proof.nodeAux != nil)
-	assert.True(t, VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
+	assert.True(t, VerifyProof(mt.RootKey(), proof, hi, hv))
 	proofTestOutput(proof)
 	testgen.CheckTestValue(t, "TestVerifyProofCases2", hex.EncodeToString(proof.Bytes()))
 }
@@ -391,17 +422,23 @@ func TestVerifyProofFalse(t *testing.T) {
 	// Invalid existence proof (node used for verification doesn't
 	// correspond to node in the proof)
 	e := NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
-	proof, err := mt.GenerateProof(e.HIndex(), nil)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
+	proof, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, proof.Existence, true)
 	e1 := NewEntryFromInts(int64(5), 0, 0, 0, int64(5), 0, 0, 0)
-	assert.True(t, !VerifyProof(mt.RootKey(), proof, e1.HIndex(), e1.HValue()))
+	hi, hv, err := e1.HiHv()
+	assert.Nil(t, err)
+	assert.True(t, !VerifyProof(mt.RootKey(), proof, hi, hv))
 
 	// Invalid non-existence proof (Non-existence proof, diff. node aux)
 	e = NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
-	proof, err = mt.GenerateProof(e.HIndex(), nil)
+	hi, err = e.HIndex()
+	assert.Nil(t, err)
+	proof, err = mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,8 +446,10 @@ func TestVerifyProofFalse(t *testing.T) {
 	// Now we change the proof from existence to non-existence, and add e's
 	// data as auxiliary node.
 	proof.Existence = false
-	proof.nodeAux = &nodeAux{hIndex: e.HIndex(), hValue: e.HValue()}
-	assert.True(t, !VerifyProof(mt.RootKey(), proof, e.HIndex(), e.HValue()))
+	hi, hv, err = e.HiHv()
+	assert.Nil(t, err)
+	proof.nodeAux = &nodeAux{hIndex: hi, hValue: hv}
+	assert.True(t, !VerifyProof(mt.RootKey(), proof, hi, hv))
 }
 
 func TestProofFromBytesSmall(t *testing.T) {
@@ -423,7 +462,9 @@ func TestProofFromBytesSmall(t *testing.T) {
 	}
 
 	// Proof of existence, single claim MT
-	proof0, err := mt.GenerateProof(e0.HIndex(), nil)
+	hi, err := e0.HIndex()
+	assert.Nil(t, err)
+	proof0, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,7 +474,9 @@ func TestProofFromBytesSmall(t *testing.T) {
 
 	// Proof of non-existence with aux node, single claim MT
 	e2 := NewEntryFromInts(int64(1), 0, 0, 0, 0, 0, 0, 0)
-	proof2, err := mt.GenerateProof(e2.HIndex(), nil)
+	hi, err = e2.HIndex()
+	assert.Nil(t, err)
+	proof2, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,7 +498,9 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of existence, single claim MT
 	e0 := NewEntryFromInts(0, 0, 0, 0, 0, 0, 0, 0)
-	proof0, err := mt.GenerateProof(e0.HIndex(), nil)
+	hi, err := e0.HIndex()
+	assert.Nil(t, err)
+	proof0, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +510,9 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of non-existence with empty node, single claim MT
 	e1 := NewEntryFromInts(int64(17), 0, 0, 0, 0, 0, 0, 0)
-	proof1, err := mt.GenerateProof(e1.HIndex(), nil)
+	hi, err = e1.HIndex()
+	assert.Nil(t, err)
+	proof1, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +522,9 @@ func TestProofFromBytesBig(t *testing.T) {
 
 	// Proof of non-existence with aux node, single claim MT
 	e2 := NewEntryFromInts(0, int64(17), 0, 0, 0, 0, 0, 0)
-	proof2, err := mt.GenerateProof(e2.HIndex(), nil)
+	hi, err = e2.HIndex()
+	assert.Nil(t, err)
+	proof2, err := mt.GenerateProof(hi, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

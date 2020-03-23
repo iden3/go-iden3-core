@@ -108,7 +108,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	// Cred Exist has bad RootsTreeRoot
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
-	credExistBad.RootsTreeRoot[0] = 0x00
+	credExistBad.RootsTreeRoot[1] ^= 0xff
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
@@ -116,7 +116,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	// Cred Exist has bad IdenState
 	credExistBad = &proof.CredentialExistence{}
 	Copy(credExistBad, credExist)
-	credExistBad.IdenStateData.IdenState[1] = 0x00
+	credExistBad.IdenStateData.IdenState[1] ^= 0xff
 	require.NotEqual(t, credExist, credExistBad)
 	err = verifier.VerifyCredentialExistence(credExistBad)
 	assert.NotNil(t, err)
