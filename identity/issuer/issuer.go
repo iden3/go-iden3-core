@@ -622,7 +622,12 @@ func (is *Issuer) RevokeClaim(claim merkletree.Entrier) error {
 	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
-	data, err := is.claimsTree.GetDataByIndex(claim.Entry().HIndex())
+
+	hi, err := claim.Entry().HIndex()
+	if err != nil {
+		return err
+	}
+	data, err := is.claimsTree.GetDataByIndex(hi)
 	if err != nil {
 		return err
 	}
@@ -711,7 +716,11 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 		return nil, err
 	}
 	claimEntry := claim.Entry()
-	mtpExist, err := generateExistenceMTProof(is.claimsTree, claimEntry.HIndex(),
+	hi, err := claimEntry.HIndex()
+	if err != nil {
+		return nil, err
+	}
+	mtpExist, err := generateExistenceMTProof(is.claimsTree, hi,
 		idenStateTreeRoots.ClaimsTreeRoot)
 	if err != nil {
 		// We were unable to generate a proof from the claims tree

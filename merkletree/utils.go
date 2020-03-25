@@ -63,20 +63,20 @@ func BigIntToHash(e *big.Int) (h Hash) {
 	return h
 }
 
-// HashElems performs a mimc7 hash over the array of ElemBytes.
-func HashElems(elems ...ElemBytes) *Hash {
+// HashElems performs a poseidon hash over the array of ElemBytes.
+func HashElems(elems ...ElemBytes) (*Hash, error) {
 	bigints := ElemBytesToBigInts(elems...)
 	// mimcHash, err := mimc7.Hash(bigints, nil)
 	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	h := BigIntToHash(poseidonHash)
-	return &h
+	return &h, nil
 }
 
-// HashElemsKey performs a mimc7 hash over the array of ElemBytes.
-func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
+// HashElemsKey performs a poseidon hash over the array of ElemBytes.
+func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
 	bigints := ElemBytesToBigInts(elems...)
 	// mimcHash, err := mimc7.Hash(bigints, key)
 	if key != nil {
@@ -84,10 +84,10 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) *Hash {
 	}
 	poseidonHash, err := poseidon.Hash(bigints)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	h := BigIntToHash(poseidonHash)
-	return &h
+	return &h, nil
 }
 
 // getPath returns the binary path, from the root to the leaf.

@@ -23,8 +23,10 @@ func testClaimAuthorizeKSignBabyJub(t *testing.T, i, testKey string) {
 	assert.True(t, merkletree.CheckEntryInField(*c0.Entry()))
 	e := c0.Entry()
 	// Check claim against test vector
-	testgen.CheckTestValue(t, "ClaimAuthorizeKSignBabyJub"+i+"_HIndex", e.HIndex().Hex())
-	testgen.CheckTestValue(t, "ClaimAuthorizeKSignBabyJub"+i+"_HValue", e.HValue().Hex())
+	hi, hv, err := e.HiHv()
+	assert.Nil(t, err)
+	testgen.CheckTestValue(t, "ClaimAuthorizeKSignBabyJub"+i+"_HIndex", hi.Hex())
+	testgen.CheckTestValue(t, "ClaimAuthorizeKSignBabyJub"+i+"_HValue", hv.Hex())
 	testgen.CheckTestValue(t, "ClaimAuthorizeKSignBabyJub"+i+"_dataString", e.Data.String())
 	dataTestOutput(&e.Data)
 	c1 := NewClaimAuthorizeKSignBabyJubFromEntry(e)

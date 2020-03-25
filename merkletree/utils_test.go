@@ -29,25 +29,29 @@ func TestGetSetBitmap(t *testing.T) {
 func TestHashElems(t *testing.T) {
 	in := interfaceToInt64Array(testgen.GetTestValue("TestHashElems0"))
 	d := IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
-	h := HashElems(d[:]...)
+	h, err := HashElems(d[:]...)
+	assert.Nil(t, err)
 	hashTestOutput(h)
 	testgen.CheckTestValue(t, "TestHashElems0", h.Hex())
 
 	in = interfaceToInt64Array(testgen.GetTestValue("TestHashElems1"))
 	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
-	h = HashElems(d[:]...)
+	h, err = HashElems(d[:]...)
+	assert.Nil(t, err)
 	hashTestOutput(h)
 	testgen.CheckTestValue(t, "TestHashElems1", h.Hex())
 
 	in = interfaceToInt64Array(testgen.GetTestValue("TestHashElems2"))
 	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
-	h = HashElems(d[:]...)
+	h, err = HashElems(d[:]...)
+	assert.Nil(t, err)
 	hashTestOutput(h)
 	testgen.CheckTestValue(t, "TestHashElems2", h.Hex())
 
 	in = interfaceToInt64Array(testgen.GetTestValue("EntryInts0"))
 	d = IntsToData(in[0], in[1], in[2], in[3], in[4], in[5], in[6], in[7])
-	h = HashElems(d[:]...)
+	h, err = HashElems(d[:]...)
+	assert.Nil(t, err)
 	hashTestOutput(h)
 	testgen.CheckTestValue(t, "TestHashElems3", h.Hex())
 }

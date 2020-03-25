@@ -145,21 +145,38 @@ func (e *Entry) Value() []ElemBytes {
 	return e.Data[IndexLen:]
 }
 
-// HIndex calculates the hash of the Index of the entry, used to find the path
+// HIndex calculates the hash of the Index of the Entry, used to find the path
 // from the root to the leaf in the MT.
-func (e *Entry) HIndex() *Hash {
+func (e *Entry) HIndex() (*Hash, error) {
+	var err error
 	if e.hIndex == nil { // Cache the hIndex.
 		//e.hIndex = HashElems(e.Index()[:]...)
-		e.hIndex = HashElems(e.Index()...)
+		e.hIndex, err = HashElems(e.Index()...)
 	}
-	return e.hIndex
+	return e.hIndex, err
 }
 
-func (e *Entry) HValue() *Hash {
+// HValue calculates the hash of the Value of the Entry
+func (e *Entry) HValue() (*Hash, error) {
+	var err error
 	if e.hValue == nil { // Cache the hValue.
-		e.hValue = HashElems(e.Value()...)
+		e.hValue, err = HashElems(e.Value()...)
 	}
-	return e.hValue
+	return e.hValue, err
+}
+
+// HiHv returns the HIndex and HValue of the Entry
+func (e *Entry) HiHv() (*Hash, *Hash, error) {
+	hi, err := e.HIndex()
+	if err != nil {
+		return nil, nil, err
+	}
+	hv, err := e.HValue()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return hi, hv, nil
 }
 
 func (e *Entry) Bytes() []byte {
@@ -207,7 +224,10 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 			return nil, err
 		}
 		nodeRoot := NewNodeEmpty()
-		k, _ := nodeRoot.Key(), nodeRoot.Value()
+		k, err := nodeRoot.Key()
+		if err != nil {
+			return nil, err
+		}
 		mt.rootKey = k
 		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
 		if err = tx.Commit(); err != nil {
@@ -262,7 +282,11 @@ func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
 		case NodeTypeEmpty:
 			return nil, ErrEntryIndexNotFound
 		case NodeTypeLeaf:
-			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+			hi, err := n.Entry.HIndex()
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Equal(hIndex[:], hi[:]) {
 				return &n.Entry.Data, nil
 			} else {
 				return nil, ErrEntryIndexNotFound
@@ -290,7 +314,11 @@ func (mt *MerkleTree) EntryExists(entry *Entry, rootKey *Hash) error {
 			return err
 		}
 	}
-	data, err := mt.GetDataByIndex(entry.HIndex())
+	hi, err := entry.HIndex()
+	if err != nil {
+		return err
+	}
+	data, err := mt.GetDataByIndex(hi)
 	if err != nil {
 		return err
 	}
@@ -322,13 +350,22 @@ func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
 		}
 		return mt.addNode(tx, newNodeMiddle)
 	} else {
+		oldLeafKey, err := oldLeaf.Key()
+		if err != nil {
+			return nil, err
+		}
+		newLeafKey, err := newLeaf.Key()
+		if err != nil {
+			return nil, err
+		}
+
 		if pathNewLeaf[lvl] {
-			newNodeMiddle = NewNodeMiddle(oldLeaf.Key(), newLeaf.Key())
+			newNodeMiddle = NewNodeMiddle(oldLeafKey, newLeafKey)
 		} else {
-			newNodeMiddle = NewNodeMiddle(newLeaf.Key(), oldLeaf.Key())
+			newNodeMiddle = NewNodeMiddle(newLeafKey, oldLeafKey)
 		}
 		// We can add newLeaf now.  We don't need to add oldLeaf because it's already in the tree.
-		_, err := mt.addNode(tx, newLeaf)
+		_, err = mt.addNode(tx, newLeaf)
 		if err != nil {
 			return nil, err
 		}
@@ -354,9 +391,16 @@ func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
 		return mt.addNode(tx, newLeaf)
 	case NodeTypeLeaf:
 		// TODO: delete old node n???  Make this optional???
-		hIndex := n.Entry.HIndex()
+		hIndex, err := n.Entry.HIndex()
+		if err != nil {
+			return nil, err
+		}
 		// Check if leaf node found contains the leaf node we are trying to add
-		if bytes.Equal(hIndex[:], newLeaf.Entry.HIndex()[:]) {
+		newLeafHi, err := newLeaf.Entry.HIndex()
+		if err != nil {
+			return nil, err
+		}
+		if bytes.Equal(hIndex[:], newLeafHi[:]) {
 			return nil, ErrEntryIndexAlreadyExists
 		}
 		pathOldLeaf := getPath(mt.maxLevels, hIndex)
@@ -421,7 +465,10 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	}()
 
 	newNodeLeaf := NewNodeLeaf(e)
-	hIndex := e.HIndex()
+	hIndex, err := e.HIndex()
+	if err != nil {
+		return err
+	}
 	path := getPath(mt.maxLevels, hIndex)
 
 	newRootKey, err := mt.addLeaf(tx, newNodeLeaf, mt.rootKey, 0, path)
@@ -478,11 +525,16 @@ func (mt *MerkleTree) GraphViz(w io.Writer, rootKey *Hash) error {
 node [fontname=Monospace,fontsize=10,shape=box]
 `)
 	cnt := 0
+	var errIn error
 	err := mt.Walk(rootKey, func(n *Node) {
+		k, err := n.Key()
+		if err != nil {
+			errIn = err
+		}
 		switch n.Type {
 		case NodeTypeEmpty:
 		case NodeTypeLeaf:
-			fmt.Fprintf(w, "\"%v\" [style=filled];\n", n.Key())
+			fmt.Fprintf(w, "\"%v\" [style=filled];\n", k)
 		case NodeTypeMiddle:
 			lr := [2]string{n.ChildL.String(), n.ChildR.String()}
 			for i := range lr {
@@ -492,11 +544,14 @@ node [fontname=Monospace,fontsize=10,shape=box]
 					cnt++
 				}
 			}
-			fmt.Fprintf(w, "\"%v\" -> {\"%v\" \"%v\"}\n", n.Key(), lr[0], lr[1])
+			fmt.Fprintf(w, "\"%v\" -> {\"%v\" \"%v\"}\n", k, lr[0], lr[1])
 		default:
 		}
 	})
 	fmt.Fprintf(w, "}\n")
+	if errIn != nil {
+		return errIn
+	}
 	return err
 }
 
@@ -513,7 +568,11 @@ func (mt *MerkleTree) DumpTree(w io.Writer, rootKey *Hash) error {
 	var errS error
 	err := mt.Walk(rootKey, func(n *Node) {
 		if n.Type != NodeTypeEmpty {
-			err := serializeKV(w, n.Key().Bytes(), n.Value())
+			k, err := n.Key()
+			if err != nil {
+				errS = err
+			}
+			err = serializeKV(w, k.Bytes(), n.Value())
 			if err != nil {
 				errS = err
 			}
@@ -832,12 +891,16 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		case NodeTypeEmpty:
 			return p, nil
 		case NodeTypeLeaf:
-			if bytes.Equal(hIndex[:], n.Entry.HIndex()[:]) {
+			nHi, nHv, err := n.Entry.HiHv()
+			if err != nil {
+				return nil, err
+			}
+			if bytes.Equal(hIndex[:], nHi[:]) {
 				p.Existence = true
 				return p, nil
 			} else {
 				// We found a leaf whose entry didn't match hIndex
-				p.nodeAux = &nodeAux{hIndex: n.Entry.HIndex(), hValue: n.Entry.HValue()}
+				p.nodeAux = &nodeAux{hIndex: nHi, hValue: nHv}
 				return p, nil
 			}
 		case NodeTypeMiddle:
@@ -873,9 +936,13 @@ func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {
 // hValue.
 func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 	sibIdx := len(proof.Siblings) - 1
+	var err error
 	var midKey *Hash
 	if proof.Existence {
-		midKey = LeafKey(hIndex, hValue)
+		midKey, err = LeafKey(hIndex, hValue)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		if proof.nodeAux == nil {
 			midKey = &HashZero
@@ -883,7 +950,10 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
 				return nil, fmt.Errorf("Non-existence proof being checked against hIndex equal to nodeAux")
 			}
-			midKey = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
+			midKey, err = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	path := getPath(int(proof.depth), hIndex)
@@ -896,9 +966,15 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 			siblingKey = &HashZero
 		}
 		if path[lvl] {
-			midKey = NewNodeMiddle(siblingKey, midKey).Key()
+			midKey, err = NewNodeMiddle(siblingKey, midKey).Key()
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			midKey = NewNodeMiddle(midKey, siblingKey).Key()
+			midKey, err = NewNodeMiddle(midKey, siblingKey).Key()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return midKey, nil
@@ -925,9 +1001,13 @@ func (mt *MerkleTree) addNode(tx db.Tx, n *Node) (*Hash, error) {
 		return nil, ErrNotWritable
 	}
 	if n.Type == NodeTypeEmpty {
-		return n.Key(), nil
+		return n.Key()
 	}
-	k, v := n.Key(), n.Value()
+	k, err := n.Key()
+	if err != nil {
+		return nil, err
+	}
+	v := n.Value()
 	// Check that the node key doesn't already exist
 	if _, err := tx.Get(k[:]); err == nil {
 		return nil, ErrNodeKeyAlreadyExists
