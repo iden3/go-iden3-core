@@ -63,11 +63,32 @@ func BigIntToHash(e *big.Int) (h Hash) {
 	return h
 }
 
-// HashElems performs a poseidon hash over the array of ElemBytes.
-func HashElems(elems ...ElemBytes) (*Hash, error) {
+func ElemBytesToPoseidonInput(elems ...ElemBytes) ([poseidon.T]*big.Int, error) {
 	bigints := ElemBytesToBigInts(elems...)
+
+	z := big.NewInt(0)
+	b := [poseidon.T]*big.Int{z, z, z, z, z, z}
+	copy(b[:poseidon.T], bigints[:])
+
+	return b, nil
+}
+
+// HashElems performs a poseidon hash over the array of ElemBytes.
+// Uses poseidon.PoseidonHash to be compatible with the circom circuits
+// implementations.
+// The maxim slice input size is poseidon.T
+func HashElems(elems ...ElemBytes) (*Hash, error) {
+	if len(elems) > poseidon.T {
+		return nil, fmt.Errorf("HashElems input can not be bigger than %v", poseidon.T)
+	}
+
+	bi, err := ElemBytesToPoseidonInput(elems...)
+	if err != nil {
+		return nil, err
+	}
+
 	// mimcHash, err := mimc7.Hash(bigints, nil)
-	poseidonHash, err := poseidon.Hash(bigints)
+	poseidonHash, err := poseidon.PoseidonHash(bi)
 	if err != nil {
 		return nil, err
 	}
