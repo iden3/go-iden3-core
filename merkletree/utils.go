@@ -87,7 +87,6 @@ func HashElems(elems ...ElemBytes) (*Hash, error) {
 		return nil, err
 	}
 
-	// mimcHash, err := mimc7.Hash(bigints, nil)
 	poseidonHash, err := poseidon.PoseidonHash(bi)
 	if err != nil {
 		return nil, err
@@ -98,12 +97,18 @@ func HashElems(elems ...ElemBytes) (*Hash, error) {
 
 // HashElemsKey performs a poseidon hash over the array of ElemBytes.
 func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
-	bigints := ElemBytesToBigInts(elems...)
-	// mimcHash, err := mimc7.Hash(bigints, key)
-	if key != nil {
-		bigints = append(bigints, []*big.Int{key}...)
+	if len(elems) > poseidon.T-1 {
+		return nil, fmt.Errorf("HashElemsKey input can not be bigger than %v", poseidon.T-1)
 	}
-	poseidonHash, err := poseidon.Hash(bigints)
+	if key == nil {
+		key = new(big.Int).SetInt64(0)
+	}
+	bi, err := ElemBytesToPoseidonInput(elems...)
+	if err != nil {
+		return nil, err
+	}
+	copy(bi[len(elems):], []*big.Int{key})
+	poseidonHash, err := poseidon.PoseidonHash(bi)
 	if err != nil {
 		return nil, err
 	}

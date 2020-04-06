@@ -147,11 +147,13 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 
 // IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
 func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
-	idenState, err := poseidon.Hash(
-		merkletree.ElemBytesToBigInts(
-			merkletree.ElemBytes(*clr),
-			merkletree.ElemBytes(*rer),
-			merkletree.ElemBytes(*ror)))
+	bi, err := merkletree.ElemBytesToPoseidonInput(merkletree.ElemBytes(*clr),
+		merkletree.ElemBytes(*rer),
+		merkletree.ElemBytes(*ror))
+	if err != nil {
+		panic(err)
+	}
+	idenState, err := poseidon.PoseidonHash(bi)
 	if err != nil {
 		panic(err)
 	}
