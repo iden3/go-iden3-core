@@ -166,6 +166,7 @@ func splitSignature(signature *babyjub.SignatureComp) (sigR8 [32]byte, sigS [32]
 func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *babyjub.PublicKey,
 	stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
+		0,
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
@@ -192,6 +193,7 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 	newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
 	signature *babyjub.SignatureComp) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
+		0,
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {

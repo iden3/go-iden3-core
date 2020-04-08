@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "circomlib": "=0.1.2"
+  }
+}
+
