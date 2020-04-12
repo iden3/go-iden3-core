@@ -55,8 +55,8 @@ func (ct ClaimType) MarshalText() ([]byte, error) {
 	switch ct {
 	case ClaimTypeBasic:
 		str = fmt.Sprintf("str:%v", ClaimTypeStringBasic)
-	case ClaimTypeAuthorizeKSignBabyJub:
-		str = fmt.Sprintf("str:%v", ClaimTypeStringAuthorizeKSignBabyJub)
+	case ClaimTypeKeyBabyJub:
+		str = fmt.Sprintf("str:%v", ClaimTypeStringKeyBabyJub)
 	default:
 		str = fmt.Sprintf("hex:%v", common.Hex(ct[:]))
 	}
@@ -70,8 +70,8 @@ func (ct *ClaimType) UnmarshalText(b []byte) error {
 		switch str {
 		case ClaimTypeStringBasic:
 			*ct = ClaimTypeBasic
-		case ClaimTypeStringAuthorizeKSignBabyJub:
-			*ct = ClaimTypeAuthorizeKSignBabyJub
+		case ClaimTypeStringKeyBabyJub:
+			*ct = ClaimTypeKeyBabyJub
 		default:
 			return fmt.Errorf("Unknown ClaimType str:%v", str)
 		}
@@ -105,9 +105,10 @@ var (
 	// ClaimTypeBasic is a simple claim type that can be used for anything.
 	ClaimTypeBasic       = NewClaimTypeNum(0)
 	ClaimTypeStringBasic = "Basic"
-	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
-	ClaimTypeAuthorizeKSignBabyJub       = NewClaimTypeNum(1)
-	ClaimTypeStringAuthorizeKSignBabyJub = "AuthorizeKSignBabyJub"
+
+	// ClaimTypeKeyBabyJub is a claim type to autorize a babyjub public key for signing.
+	ClaimTypeKeyBabyJub       = NewClaimTypeNum(1)
+	ClaimTypeStringKeyBabyJub = "KeyBabyJub"
 
 // 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
 // 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
@@ -148,8 +149,8 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	// case *ClaimTypeAssignName:
 	// 	c := NewClaimAssignNameFromEntry(e)
 	// 	return c, nil
-	case ClaimTypeAuthorizeKSignBabyJub:
-		c := NewClaimAuthorizeKSignBabyJubFromEntry(e)
+	case ClaimTypeKeyBabyJub:
+		c := NewClaimKeyBabyJubFromEntry(e)
 		return c, nil
 	// case *ClaimTypeSetRootKey:
 	// 	c := NewClaimSetRootKeyFromEntry(e)
@@ -268,9 +269,9 @@ var (
 		Dest:       ClaimRecipSelf,
 		Expiration: false,
 		Version:    false}
-	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
-	ClaimHeaderAuthorizeKSignBabyJub = ClaimHeader{
-		Type:       ClaimTypeAuthorizeKSignBabyJub,
+	// ClaimTypeKeyBabyJub is a claim type issued about a babyjub public key.
+	ClaimHeaderKeyBabyJub = ClaimHeader{
+		Type:       ClaimTypeKeyBabyJub,
 		Dest:       ClaimRecipSelf,
 		Expiration: false,
 		Version:    false}
@@ -400,10 +401,10 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("claim header for ClaimType %v is different than expected",
 				ClaimTypeStringBasic)
 		}
-	case ClaimTypeAuthorizeKSignBabyJub:
-		if m.header != ClaimHeaderAuthorizeKSignBabyJub {
+	case ClaimTypeKeyBabyJub:
+		if m.header != ClaimHeaderKeyBabyJub {
 			return fmt.Errorf("claim header for ClaimType %v is different than expected",
-				ClaimTypeStringAuthorizeKSignBabyJub)
+				ClaimTypeStringKeyBabyJub)
 		}
 	default:
 	}

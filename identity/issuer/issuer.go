@@ -224,7 +224,7 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	if err != nil {
 		return nil, err
 	}
-	claimKOp := claims.NewClaimAuthorizeKSignBabyJub(kOp)
+	claimKOp := claims.NewClaimKeyBabyJub(kOp, 1)
 	claimKOp.Metadata().RevNonce = nonce
 	extraGenesisClaimsEntriers := make([]merkletree.Entrier, len(extraGenesisClaims))
 	for i, claim := range extraGenesisClaims {
