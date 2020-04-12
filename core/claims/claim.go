@@ -105,8 +105,13 @@ var (
 	// ClaimTypeBasic is a simple claim type that can be used for anything.
 	ClaimTypeBasic       = NewClaimTypeNum(0)
 	ClaimTypeStringBasic = "Basic"
+
+	// ClaimTypeKeyBabyJub is a claim type to autorize a babyjub public key for signing.
+	ClaimTypeKeyBabyJub       = NewClaimTypeNum(1)
+	ClaimTypeStringKeyBabyJub = "KeyBabyJub"
+
 	// ClaimTypeAuthorizeKSignBabyJub is a claim type to autorize a babyjub public key for signing.
-	ClaimTypeAuthorizeKSignBabyJub       = NewClaimTypeNum(1)
+	ClaimTypeAuthorizeKSignBabyJub       = NewClaimTypeNum(2)
 	ClaimTypeStringAuthorizeKSignBabyJub = "AuthorizeKSignBabyJub"
 
 // 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
@@ -148,8 +153,11 @@ func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	// case *ClaimTypeAssignName:
 	// 	c := NewClaimAssignNameFromEntry(e)
 	// 	return c, nil
+	case ClaimTypeKeyBabyJub:
+		c := NewClaimKeyBabyJubFromEntry(e)
+		return c, nil
 	case ClaimTypeAuthorizeKSignBabyJub:
-		c := NewClaimAuthorizeKSignBabyJubFromEntry(e)
+		c := NewClaimKeyBabyJubFromEntry(e)
 		return c, nil
 	// case *ClaimTypeSetRootKey:
 	// 	c := NewClaimSetRootKeyFromEntry(e)
@@ -265,6 +273,12 @@ var (
 	// ClaimHeaderBasic is a simple claim type that can be used for anything.
 	ClaimHeaderBasic = ClaimHeader{
 		Type:       ClaimTypeBasic,
+		Dest:       ClaimRecipSelf,
+		Expiration: false,
+		Version:    false}
+	// ClaimTypeKeyBabyJub is a claim type issued about a babyjub public key.
+	ClaimHeaderKeyBabyJub = ClaimHeader{
+		Type:       ClaimTypeKeyBabyJub,
 		Dest:       ClaimRecipSelf,
 		Expiration: false,
 		Version:    false}
