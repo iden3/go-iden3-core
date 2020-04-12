@@ -9,7 +9,7 @@ import (
 func NewClaimAuthorizeKSignBabyJub(pk *babyjub.PublicKey) *ClaimKeyBabyJub {
 	return &ClaimKeyBabyJub{
 		metadata: NewMetadata(ClaimHeaderAuthorizeKSignBabyJub),
-		Sign:     babyjub.PointCoordSign(pk.X),
+		Ax:       pk.X,
 		Ay:       pk.Y,
 	}
 }

@@ -12,9 +12,10 @@ import (
 // signing.
 type ClaimKeyBabyJub struct {
 	metadata Metadata
-	// Sign means positive if false, negative if true.
-	Sign bool
-	// Ay is the y coordinate of the baby jub curve point which corresponds
+	// Ax is the x coordinate of the BabyJubJub curve point which corresponds
+	// to the public key.
+	Ax *big.Int
+	// Ay is the y coordinate of the BabyJubJub curve point which corresponds
 	// to the public key.
 	Ay *big.Int
 }
@@ -24,7 +25,7 @@ type ClaimKeyBabyJub struct {
 func NewClaimKeyBabyJub(pk *babyjub.PublicKey) *ClaimKeyBabyJub {
 	return &ClaimKeyBabyJub{
 		metadata: NewMetadata(ClaimHeaderKeyBabyJub),
-		Sign:     babyjub.PointCoordSign(pk.X),
+		Ax:       pk.X,
 		Ay:       pk.Y,
 	}
 }
@@ -34,11 +35,7 @@ func NewClaimKeyBabyJub(pk *babyjub.PublicKey) *ClaimKeyBabyJub {
 func NewClaimKeyBabyJubFromEntry(e *merkletree.Entry) *ClaimKeyBabyJub {
 	c := &ClaimKeyBabyJub{}
 	c.metadata.Unmarshal(e)
-	sign := []byte{0}
-	copy(sign, e.Data[1][:])
-	if sign[0] == 1 {
-		c.Sign = true
-	}
+	c.Ax = new(big.Int).SetBytes(common.SwapEndianness(e.Data[1][:]))
 	c.Ay = new(big.Int).SetBytes(common.SwapEndianness(e.Data[2][:]))
 	return c
 }
@@ -47,11 +44,8 @@ func NewClaimKeyBabyJubFromEntry(e *merkletree.Entry) *ClaimKeyBabyJub {
 func (c *ClaimKeyBabyJub) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	index := e.Index()
-	sign := []byte{0}
-	if c.Sign {
-		sign = []byte{1}
-	}
-	copy(index[1][:], sign)
+	axBytes := c.Ax.Bytes()
+	copy(index[1][:], common.SwapEndianness(axBytes))
 	ayBytes := c.Ay.Bytes()
 	copy(index[2][:], common.SwapEndianness(ayBytes))
 	c.metadata.Marshal(e)
@@ -60,13 +54,4 @@ func (c *ClaimKeyBabyJub) Entry() *merkletree.Entry {
 
 func (c *ClaimKeyBabyJub) Metadata() *Metadata {
 	return &c.metadata
-}
-
-// TODO: Keep the PublicKey in the Claim and only compress it when calling
-// Entry() so that the key is available any time without this extra function.
-// PublicKeyComp returns the compressed form of the public key in this claim
-func (c *ClaimKeyBabyJub) PublicKeyComp() *babyjub.PublicKeyComp {
-	pkc := babyjub.PublicKeyComp(
-		babyjub.PackPoint(c.Ay, c.Sign))
-	return &pkc
 }
