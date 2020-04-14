@@ -1,6 +1,7 @@
 package claims
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"testing"
 
@@ -37,10 +38,18 @@ func testClaimKeyBabyJub(t *testing.T, i, testKey string) {
 	assert.Equal(t, c0, c2)
 	assert.True(t, merkletree.CheckEntryInField(*e))
 	assert.Equal(t, c0.KeyType, c1.KeyType)
+	// check Type
+	ct1 := ClaimType{}
+	binary.BigEndian.PutUint64(ct1[:], 1)
+	assert.Equal(t, ct1, c0.Metadata().header.Type)
 
+	// check KeyType
 	c3 := NewClaimKeyBabyJub(pk, 0)
 	c4 := NewClaimKeyBabyJub(pk, 1)
 	assert.NotEqual(t, c3.KeyType, c4.KeyType)
+	assert.Equal(t, c0.KeyType, c3.KeyType)
+	assert.Equal(t, uint64(0), c3.KeyType)
+	assert.Equal(t, uint64(1), c4.KeyType)
 }
 
 func TestClaimKeyBabyJub(t *testing.T) {
