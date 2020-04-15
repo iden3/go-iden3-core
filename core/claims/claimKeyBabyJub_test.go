@@ -19,7 +19,7 @@ func testClaimKeyBabyJub(t *testing.T, i, testKey string) {
 		panic(err)
 	}
 	pk := k.Public()
-	c0 := NewClaimKeyBabyJub(pk, 0)
+	c0 := NewClaimKeyBabyJub(pk, BabyJubKeyTypeGeneric)
 	c0.Metadata().RevNonce = 5678
 	assert.True(t, merkletree.CheckEntryInField(*c0.Entry()))
 	e := c0.Entry()
@@ -44,12 +44,12 @@ func testClaimKeyBabyJub(t *testing.T, i, testKey string) {
 	assert.Equal(t, ct1, c0.Metadata().header.Type)
 
 	// check KeyType
-	c3 := NewClaimKeyBabyJub(pk, 0)
-	c4 := NewClaimKeyBabyJub(pk, 1)
+	c3 := NewClaimKeyBabyJub(pk, BabyJubKeyTypeGeneric)
+	c4 := NewClaimKeyBabyJub(pk, BabyJubKeyTypeAuthorizeKSign)
 	assert.NotEqual(t, c3.KeyType, c4.KeyType)
 	assert.Equal(t, c0.KeyType, c3.KeyType)
-	assert.Equal(t, uint64(0), c3.KeyType)
-	assert.Equal(t, uint64(1), c4.KeyType)
+	assert.Equal(t, BabyJubKeyTypeGeneric, c3.KeyType)
+	assert.Equal(t, BabyJubKeyTypeAuthorizeKSign, c4.KeyType)
 }
 
 func TestClaimKeyBabyJub(t *testing.T) {
@@ -62,7 +62,7 @@ func TestRandomClaimKeyBabyJub(t *testing.T) {
 		k := babyjub.NewRandPrivKey()
 		pk := k.Public()
 
-		c0 := NewClaimKeyBabyJub(pk, 0)
+		c0 := NewClaimKeyBabyJub(pk, BabyJubKeyTypeGeneric)
 		assert.True(t, merkletree.CheckEntryInField(*c0.Entry()))
 		e := c0.Entry()
 		c1 := NewClaimKeyBabyJubFromEntry(e)

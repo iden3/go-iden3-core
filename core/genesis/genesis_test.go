@@ -48,7 +48,7 @@ func TestCalculateIdGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	kopPub, err := kopComp.Decompress()
 	assert.Nil(t, err)
-	claimKOp := claims.NewClaimKeyBabyJub(kopPub, 1)
+	claimKOp := claims.NewClaimKeyBabyJub(kopPub, claims.BabyJubKeyTypeAuthorizeKSign)
 
 	id, err := CalculateIdGenesis(claimKOp, []merkletree.Entrier{})
 	assert.Nil(t, err)
