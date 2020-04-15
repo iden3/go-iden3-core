@@ -12,7 +12,7 @@ import (
 // ID: base58 ( [ type | root_genesis | checksum ] )
 // where checksum: hash( [type | root_genesis ] )
 // where the hash function is Poseidon
-func CalculateIdGenesis(claimKOp *claims.ClaimAuthorizeKSignBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, error) {
+func CalculateIdGenesis(claimKOp *claims.ClaimKeyBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, error) {
 	// add the claims into an ephemeral merkletree to calculate the genesis root to get that identity
 	clt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
 	if err != nil {
@@ -28,7 +28,7 @@ func CalculateIdGenesis(claimKOp *claims.ClaimAuthorizeKSignBabyJub, extraGenesi
 
 // CalculateIdGenesisMT calculates the Genesis ID from the given claims using
 // the given Claims Merkle Tree and Roots Merkle Tree.
-func CalculateIdGenesisMT(clt *merkletree.MerkleTree, rot *merkletree.MerkleTree, claimKOp *claims.ClaimAuthorizeKSignBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, error) {
+func CalculateIdGenesisMT(clt *merkletree.MerkleTree, rot *merkletree.MerkleTree, claimKOp *claims.ClaimKeyBabyJub, extraGenesisClaims []merkletree.Entrier) (*core.ID, error) {
 	err := clt.AddClaim(claimKOp)
 	if err != nil {
 		return nil, err

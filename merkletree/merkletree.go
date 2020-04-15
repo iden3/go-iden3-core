@@ -50,7 +50,7 @@ func ElemsBytesToBytes(es []ElemBytes) []byte {
 type Index [IndexLen]ElemBytes
 
 // Data is the type used to represent the data stored in an entry of the MT.
-// It consists of 4 elements: e0, e1, e2, e3;
+// It consists of 8 elements: e0, e1, e2, e3, ...;
 // where v = [e0,e1], index = [e2,e3].
 type Data [DataLen]ElemBytes
 
