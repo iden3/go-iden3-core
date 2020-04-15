@@ -20,14 +20,18 @@ type BabyJubKeyType uint64
 // signing.
 type ClaimKeyBabyJub struct {
 	metadata Metadata
+
 	// KeyType is used to specify if the type of usage given to the Key
 	// if 0 is the generic one
 	// if 1 is to AuthorizeKSign Key
 	KeyType BabyJubKeyType
-	// Sign means positive if false, negative if true.
-	Sign bool
-	// Ay is the y coordinate of the baby jub curve point which corresponds
-	// to the public key.
+
+	// Ax is the x coordinate of the BabyJubJub curve point which
+	// corresponds to the public key.
+	Ax *big.Int
+
+	// Ay is the y coordinate of the BabyJubJub curve point which
+	// corresponds to the public key.
 	Ay *big.Int
 }
 
@@ -37,7 +41,7 @@ func NewClaimKeyBabyJub(pk *babyjub.PublicKey, subType BabyJubKeyType) *ClaimKey
 	return &ClaimKeyBabyJub{
 		metadata: NewMetadata(ClaimHeaderKeyBabyJub),
 		KeyType:  subType,
-		Sign:     babyjub.PointCoordSign(pk.X),
+		Ax:       pk.X,
 		Ay:       pk.Y,
 	}
 }
@@ -50,11 +54,7 @@ func NewClaimKeyBabyJubFromEntry(e *merkletree.Entry) *ClaimKeyBabyJub {
 
 	c.KeyType = BabyJubKeyType(binary.BigEndian.Uint64(e.Data[1][:]))
 
-	sign := []byte{0}
-	copy(sign, e.Data[2][:])
-	if sign[0] == 1 {
-		c.Sign = true
-	}
+	c.Ax = new(big.Int).SetBytes(common.SwapEndianness(e.Data[2][:]))
 	c.Ay = new(big.Int).SetBytes(common.SwapEndianness(e.Data[3][:]))
 	return c
 }
@@ -64,30 +64,20 @@ func (c *ClaimKeyBabyJub) Entry() *merkletree.Entry {
 	e := &merkletree.Entry{}
 	index := e.Index()
 
-	var subType [8]byte
-	binary.BigEndian.PutUint64(subType[:], uint64(c.KeyType))
-	copy(index[1][:], subType[:])
+	var keyType [8]byte
+	binary.BigEndian.PutUint64(keyType[:], uint64(c.KeyType))
+	copy(index[1][:], keyType[:])
 
-	sign := []byte{0}
-	if c.Sign {
-		sign = []byte{1}
-	}
-	copy(index[2][:], sign)
+	axBytes := c.Ax.Bytes()
+	copy(index[2][:], common.SwapEndianness(axBytes))
+
 	ayBytes := c.Ay.Bytes()
 	copy(index[3][:], common.SwapEndianness(ayBytes))
+
 	c.metadata.Marshal(e)
 	return e
 }
 
 func (c *ClaimKeyBabyJub) Metadata() *Metadata {
 	return &c.metadata
-}
-
-// TODO: Keep the PublicKey in the Claim and only compress it when calling
-// Entry() so that the key is available any time without this extra function.
-// PublicKeyComp returns the compressed form of the public key in this claim
-func (c *ClaimKeyBabyJub) PublicKeyComp() *babyjub.PublicKeyComp {
-	pkc := babyjub.PublicKeyComp(
-		babyjub.PackPoint(c.Ay, c.Sign))
-	return &pkc
 }
