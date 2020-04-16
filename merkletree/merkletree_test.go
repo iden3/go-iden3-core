@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var debug = false
+var debug = true
 
 // If generateTest is true, the checked values will be used to generate a test vector
 var generateTest = false

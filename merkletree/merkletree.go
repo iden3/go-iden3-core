@@ -840,11 +840,11 @@ func (p *Proof) UnmarshalJSON(bs []byte) error {
 }
 
 // String outputs a multiline string representation of the Proof.
-func (p *Proof) String() string {
-	buf := bytes.NewBufferString("Proof:\n")
-	fmt.Fprintf(buf, "\texistence: %v\n", p.Existence)
-	fmt.Fprintf(buf, "\tdepth: %v\n", p.depth)
-	fmt.Fprintf(buf, "\tnotempties: ")
+func (p Proof) String() string {
+	buf := bytes.NewBufferString("{")
+	fmt.Fprintf(buf, "Existence: %v, ", p.Existence)
+	fmt.Fprintf(buf, "Depth: %v, ", p.depth)
+	fmt.Fprintf(buf, "NotEmpties: ")
 	for i := uint(0); i < p.depth; i++ {
 		if common.TestBitBigEndian(p.notempties[:], i) {
 			fmt.Fprintf(buf, "1")
@@ -852,21 +852,25 @@ func (p *Proof) String() string {
 			fmt.Fprintf(buf, "0")
 		}
 	}
-	fmt.Fprintf(buf, "\n")
-	fmt.Fprintf(buf, "\tsiblings: ")
+	fmt.Fprintf(buf, ", ")
+	fmt.Fprintf(buf, "Siblings: [")
 	sibIdx := 0
 	for i := uint(0); i < p.depth; i++ {
 		if common.TestBitBigEndian(p.notempties[:], i) {
-			fmt.Fprintf(buf, "%v ", p.Siblings[sibIdx])
+			fmt.Fprintf(buf, "%v", p.Siblings[sibIdx])
 			sibIdx++
 		} else {
-			fmt.Fprintf(buf, "0 ")
+			fmt.Fprintf(buf, "0")
+		}
+		if i < p.depth-1 {
+			fmt.Fprintf(buf, ", ")
 		}
 	}
-	fmt.Fprintf(buf, "\n")
+	fmt.Fprintf(buf, "]")
 	if p.nodeAux != nil {
-		fmt.Fprintf(buf, "\tnode aux: hi: %v, ht: %v\n", p.nodeAux.hIndex, p.nodeAux.hValue)
+		fmt.Fprintf(buf, ", NodeAux: {Hi: %v, Hv: %v}}", p.nodeAux.hIndex, p.nodeAux.hValue)
 	}
+	fmt.Fprintf(buf, "}")
 	return buf.String()
 }
 
