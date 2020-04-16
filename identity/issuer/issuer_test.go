@@ -113,6 +113,7 @@ func TestIssuerPublish(t *testing.T) {
 
 	// Sync (finally in the smart contract)
 	idenPubOnChain.Sync()
+	blockN += 10
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, newState, issuer.idenStateOnChain())
@@ -144,6 +145,7 @@ func TestIssuerPublish(t *testing.T) {
 
 	// Sync (finally in the smart contract)
 	idenPubOnChain.Sync()
+	blockN += 10
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, newState, issuer.idenStateOnChain())
@@ -169,6 +171,7 @@ func TestIssuerCredential(t *testing.T) {
 	require.Nil(t, err)
 
 	idenPubOnChain.Sync()
+	blockN += 10
 
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
@@ -191,8 +194,9 @@ func TestIssuerCredential(t *testing.T) {
 	assert.Equal(t, ErrClaimNotYetInOnChainState, err)
 }
 
+var blockN uint64
+
 func TestMain(m *testing.M) {
-	var blockN uint64
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Now()

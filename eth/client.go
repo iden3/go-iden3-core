@@ -23,7 +23,7 @@ var (
 	// ErrReceiptStatusFailed when receiving a failed transaction
 	ErrReceiptStatusFailed = fmt.Errorf("receipt status is failed")
 	// ErrReceiptNotRecieved when unable to retrieve a transaction
-	ErrReceiptNotRecieved = fmt.Errorf("receipt not available")
+	ErrReceiptNotReceived = fmt.Errorf("receipt not available")
 )
 
 const (
@@ -139,6 +139,19 @@ func (c *Client) Call(fn func(*ethclient.Client) error) error {
 // WaitReceipt will block until a transaction is confirmed.  Internally it
 // polls the state every 200 milliseconds.
 func (c *Client) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
+	return c.waitReceipt(tx, context.TODO(), c.ReceiptTimeout)
+}
+
+// GetReceipt will check if a transaction is confirmed and return
+// immediately, waiting at most 1 second and returning error if the transaction
+// is still pending.
+func (c *Client) GetReceipt(tx *types.Transaction) (*types.Receipt, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	return c.waitReceipt(tx, ctx, 0)
+}
+
+func (c *Client) waitReceipt(tx *types.Transaction, ctx context.Context, timeout time.Duration) (*types.Receipt, error) {
 	var err error
 	var receipt *types.Receipt
 
@@ -146,23 +159,35 @@ func (c *Client) WaitReceipt(tx *types.Transaction) (*types.Receipt, error) {
 	log.WithField("tx", txid.Hex()).Debug("Waiting for receipt")
 
 	start := time.Now()
-	for receipt == nil && time.Since(start) < c.ReceiptTimeout {
-		receipt, err = c.client.TransactionReceipt(context.TODO(), txid)
-		if receipt == nil {
-			time.Sleep(200 * time.Millisecond)
+	for {
+		receipt, err = c.client.TransactionReceipt(ctx, txid)
+		if receipt != nil || time.Since(start) >= timeout {
+			break
 		}
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	if receipt != nil && receipt.Status == types.ReceiptStatusFailed {
-		log.WithField("tx", txid.Hex()).Error("WEB3 Failed transaction receipt")
+		log.WithField("tx", txid.Hex()).Error("Failed transaction")
 		return receipt, ErrReceiptStatusFailed
 	}
 
 	if receipt == nil {
-		log.WithField("tx", txid.Hex()).Error("WEB3 Failed transaction")
-		return receipt, ErrReceiptNotRecieved
+		log.WithField("tx", txid.Hex()).WithField("lasterr", err).Debug("Pending transaction / Wait receipt timeout")
+		return receipt, ErrReceiptNotReceived
 	}
-	log.WithField("tx", txid.Hex()).Debug("WEB3 Success transaction")
+	log.WithField("tx", txid.Hex()).Debug("Successfull transaction")
 
 	return receipt, err
+}
+
+// CurrentBlock returns the current block number in the blockchain
+func (c *Client) CurrentBlock() (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Second)
+	defer cancel()
+	header, err := c.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return header.Number, nil
 }
