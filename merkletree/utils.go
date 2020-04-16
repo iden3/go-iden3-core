@@ -120,7 +120,7 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
 func getPath(numLevels int, hIndex *Hash) []bool {
 	path := make([]bool, numLevels)
 	for n := 0; n < numLevels; n++ {
-		path[n] = common.TestBitBigEndian(hIndex[:], uint(n))
+		path[n] = common.TestBit(hIndex[:], uint(n))
 	}
 	return path
 }
