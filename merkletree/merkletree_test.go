@@ -918,6 +918,36 @@ func TestEntryToBytesToEntry(t *testing.T) {
 	}
 }
 
+func TestSiblingsFromProof(t *testing.T) {
+	mt := newTestingMerkle(t, 140)
+	defer mt.Storage().Close()
+
+	for i := 0; i < 64; i++ {
+		e := NewEntryFromInts(int64(i), 0, 0, 0, 0, 0, 0, 0)
+		if err := mt.AddEntry(&e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	e := NewEntryFromInts(int64(4), 0, 0, 0, 0, 0, 0, 0)
+	hi, err := e.HIndex()
+	assert.Nil(t, err)
+
+	proof, err := mt.GenerateProof(hi, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	siblings := SiblingsFromProof(proof)
+	assert.Equal(t, 6, len(siblings))
+	testgen.CheckTestValue(t, "SiblingsFromProof0", siblings[0].Hex())
+	testgen.CheckTestValue(t, "SiblingsFromProof1", siblings[1].Hex())
+	testgen.CheckTestValue(t, "SiblingsFromProof2", siblings[2].Hex())
+	testgen.CheckTestValue(t, "SiblingsFromProof3", siblings[3].Hex())
+	testgen.CheckTestValue(t, "SiblingsFromProof4", siblings[4].Hex())
+	testgen.CheckTestValue(t, "SiblingsFromProof5", siblings[5].Hex())
+}
+
 func initTest() {
 	// Init test
 	err := testgen.InitTest("merkletree", generateTest)

@@ -538,7 +538,7 @@ node [fontname=Monospace,fontsize=10,shape=box]
 		case NodeTypeMiddle:
 			lr := [2]string{n.ChildL.String(), n.ChildR.String()}
 			for i := range lr {
-				if lr[i] == "00000000" {
+				if lr[i] == "00000000..." {
 					lr[i] = fmt.Sprintf("empty%v", cnt)
 					fmt.Fprintf(w, "\"%v\" [style=dashed,label=0];\n", lr[i])
 					cnt++
@@ -553,6 +553,23 @@ node [fontname=Monospace,fontsize=10,shape=box]
 		return errIn
 	}
 	return err
+}
+
+// PrintGraphViz prints directly the GraphViz() output
+func (mt *MerkleTree) PrintGraphViz(rootKey *Hash) error {
+	if rootKey == nil {
+		rootKey = mt.RootKey()
+	}
+	w := bytes.NewBufferString("")
+	fmt.Fprintf(w, "--------\nGraphViz of the MerkleTree with RootKey "+rootKey.Hex()+"\n")
+	err := mt.GraphViz(w, nil)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "End of GraphViz of the MerkleTree with RootKey "+rootKey.Hex()+"\n--------\n")
+
+	fmt.Println(w)
+	return nil
 }
 
 // DumpTree outputs a list of all the key value in hex. Notice that this will
@@ -920,6 +937,21 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		}
 	}
 	return nil, ErrEntryIndexNotFound
+}
+
+// SiblingsFromProof returns all the siblings of the proof. This function is used to generate the siblings input for the circom circuits.
+func SiblingsFromProof(proof *Proof) []*Hash {
+	sibIdx := 0
+	var siblings []*Hash
+	for lvl := 0; lvl < int(proof.depth); lvl++ {
+		if common.TestBitBigEndian(proof.notempties[:], uint(lvl)) {
+			siblings = append(siblings, proof.Siblings[sibIdx])
+			sibIdx++
+		} else {
+			siblings = append(siblings, &HashZero)
+		}
+	}
+	return siblings
 }
 
 // VerifyProof verifies the Merkle Proof for the entry and root.
