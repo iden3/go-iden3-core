@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"strings"
 	"sync"
 
@@ -30,6 +31,16 @@ const (
 // ElemBytes is the basic type used to store data in the MT.  ElemBytes
 // corresponds to the serialization of an element from mimc7.
 type ElemBytes [ElemBytesLen]byte
+
+func NewElemBytesFromBigInt(v *big.Int) (e ElemBytes) {
+	bs := common.SwapEndianness(v.Bytes())
+	copy(e[:], bs)
+	return e
+}
+
+func (e *ElemBytes) BigInt() *big.Int {
+	return new(big.Int).SetBytes(common3.SwapEndianness(e[:]))
+}
 
 // String returns the last 4 bytes of ElemBytes in hex.
 func (e *ElemBytes) String() string {

@@ -134,8 +134,8 @@ const ClaimTypeVersionLen = ClaimTypeLen + ClaimFlagsLen + ClaimVersionLen
 // NewClaimFromEntry deserializes a valid claim type into a Claim.
 func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
 	for _, elemBytes := range e.Data {
-		bigints := merkletree.ElemBytesToBigInt(elemBytes)
-		ok := cryptoUtils.CheckBigIntInField(bigints)
+		bigint := elemBytes.BigInt()
+		ok := cryptoUtils.CheckBigIntInField(bigint)
 		if !ok {
 			return nil, errors.New("Elements not in the Finite Field over R")
 		}

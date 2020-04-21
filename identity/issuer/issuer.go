@@ -700,7 +700,7 @@ func (is *Issuer) SignState(oldState, newState *merkletree.Hash) (*babyjub.Signa
 	prefixBigInt := new(big.Int)
 	utils.SetBigIntFromLEBytes(prefixBigInt, prefix31[:])
 
-	toHash := [poseidon.T]*big.Int{prefixBigInt, merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*oldState)), merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*newState)), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
+	toHash := [poseidon.T]*big.Int{prefixBigInt, oldState.BigInt(), newState.BigInt(), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
 
 	return is.SignElems(toHash)
 }

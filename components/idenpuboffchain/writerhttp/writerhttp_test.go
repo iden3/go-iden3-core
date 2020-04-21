@@ -33,7 +33,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		rootBigInt, err := poseidon.HashBytes([]byte(strconv.Itoa(i)))
 		assert.Nil(t, err)
-		root := merkletree.BigIntToHash(rootBigInt)
+		root := merkletree.NewHashFromBigInt(rootBigInt)
 		err = claims.AddLeafRootsTree(rotMt, &root)
 		assert.Nil(t, err)
 
@@ -100,7 +100,7 @@ func initTest() {
 		if err != nil {
 			panic(err)
 		}
-		testgen.SetTestValue("root0", merkletree.BigIntToHash(root0).Hex())
+		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 		testgen.SetTestValue("nonce0", float64(5))
 		testgen.SetTestValue("version0", float64(5))
 	}

@@ -69,7 +69,7 @@ func initTest() {
 		if err != nil {
 			panic(err)
 		}
-		testgen.SetTestValue("root0", merkletree.BigIntToHash(root0).Hex())
+		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 
 		// TestLeafRevocationsTree
 		testgen.SetTestValue("nonce0", float64(5))
