@@ -1,10 +1,13 @@
 package issuer
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/iden3/go-circom-prover-verifier/parsers"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
@@ -16,10 +19,13 @@ import (
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var idenPubOnChain *idenpubonchainlocal.IdenPubOnChain
 var idenPubOffChain *idenpuboffchanlocal.IdenPubOffChain
+var idenStateZkProofConf *IdenStateZkProofConf
 
 var pass = []byte("my passphrase")
 
@@ -37,7 +43,7 @@ func newIssuer(t *testing.T, genesisOnly bool, idenPubOnChain idenpubonchain.Ide
 	require.Nil(t, err)
 	_, err = Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
 	require.Nil(t, err)
-	issuer, err := Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
+	issuer, err := Load(storage, keyStore, idenPubOnChain, idenStateZkProofConf, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return issuer, storage, keyStore
 }
@@ -45,7 +51,7 @@ func newIssuer(t *testing.T, genesisOnly bool, idenPubOnChain idenpubonchain.Ide
 func TestNewLoadIssuer(t *testing.T) {
 	issuer, storage, keyStore := newIssuer(t, true, nil, nil)
 
-	issuerLoad, err := Load(storage, keyStore, nil, nil)
+	issuerLoad, err := Load(storage, keyStore, nil, nil, nil)
 	require.Nil(t, err)
 
 	assert.Equal(t, issuer.cfg, issuerLoad.cfg)
@@ -194,9 +200,26 @@ func TestIssuerCredential(t *testing.T) {
 	assert.Equal(t, ErrClaimNotYetInOnChainState, err)
 }
 
+func TestIssuerGenZkProofIdenStateUpdate(t *testing.T) {
+	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
+	var oldIdState, newIdState merkletree.Hash
+	newIdState[0] = 0x42
+	proof, err := issuer.GenZkProofIdenStateUpdate(&oldIdState, &newIdState)
+	assert.Nil(t, err)
+
+	// Verify zk proof
+	vkJSON, err := ioutil.ReadFile("/tmp/iden3/idenstatezk/verification_key.json")
+	require.Nil(t, err)
+	vk, err := parsers.ParseVk(vkJSON)
+	require.Nil(t, err)
+	v := verifier.Verify(vk, &proof.Proof, proof.PubSignals)
+	assert.True(t, v)
+}
+
 var blockN uint64
 
 func TestMain(m *testing.M) {
+	log.SetLevel(log.DebugLevel)
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Now()
@@ -207,5 +230,15 @@ func TestMain(m *testing.M) {
 		},
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
+	err := GetIdenStateZKFiles("http://161.35.72.58:9000/idstate/")
+	if err != nil {
+		panic(err)
+	}
+	idenStateZkProofConf = &IdenStateZkProofConf{
+		Levels:              59,
+		PathWitnessCalcWASM: "/tmp/iden3/idenstatezk/circuit.wasm",
+		PathProvingKey:      "/tmp/iden3/idenstatezk/proving_key.json",
+		PathVerifyingKey:    "/tmp/iden3/idenstatezk/verification_key.json",
+	}
 	os.Exit(m.Run())
 }

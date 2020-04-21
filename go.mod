@@ -14,7 +14,7 @@ require (
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
 	github.com/elastic/gosigar v0.10.4 // indirect
-	github.com/ethereum/go-ethereum v1.9.12
+	github.com/ethereum/go-ethereum v1.9.13
 	github.com/fatih/color v1.7.0
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20190607065134-2772fd86a8ff // indirect
@@ -26,7 +26,10 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/iden3/go-iden3-crypto v0.0.4
+	github.com/iden3/go-circom-prover-verifier v0.0.0-20200421172235-6256fcc9dbad
+	github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad
+	github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4
+	github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f
 	github.com/influxdata/influxdb v1.7.8 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
@@ -46,7 +49,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48 // indirect
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.5.1
 	github.com/syndtr/goleveldb v1.0.1-0.20190923125748-758128399b1d
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/wsddn/go-ecdh v0.0.0-20161211032359-48726bab9208 // indirect
@@ -54,7 +57,6 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
-	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20190709231704-1e4459ed25ff // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )

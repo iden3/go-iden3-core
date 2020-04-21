@@ -27,6 +27,7 @@ var blockTs int64
 
 var idenPubOffChain *idenpuboffchanlocal.IdenPubOffChain
 var idenPubOnChain *idenpubonchainlocal.IdenPubOnChain
+var idenStateZkProofConf *issuer.IdenStateZkProofConf
 
 var pass = []byte("my passphrase")
 
@@ -53,7 +54,7 @@ func newIssuer(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	require.Nil(t, err)
 	_, err = issuer.Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
 	require.Nil(t, err)
-	is, err := issuer.Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite)
+	is, err := issuer.Load(storage, keyStore, idenPubOnChain, idenStateZkProofConf, idenPubOffChainWrite)
 	require.Nil(t, err)
 	return is, storage, keyStore
 }
@@ -164,7 +165,8 @@ func newHolder(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	require.Nil(t, err)
 	_, err = holder.Create(cfg, kOp, []claims.Claimer{}, storage, keyStore)
 	require.Nil(t, err)
-	ho, err := holder.Load(storage, keyStore, idenPubOnChain, idenPubOffChainWrite, idenPubOffChainRead)
+	ho, err := holder.Load(storage, keyStore, idenPubOnChain, idenStateZkProofConf,
+		idenPubOffChainWrite, idenPubOffChainRead)
 	require.Nil(t, err)
 	return ho, storage, keyStore
 }
@@ -348,5 +350,9 @@ func TestMain(m *testing.M) {
 		},
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
+	idenStateZkProofConf = &issuer.IdenStateZkProofConf{
+		PathWitnessCalcWASM: "/dev/null",
+		PathProvingKey:      "/dev/null",
+	}
 	os.Exit(m.Run())
 }

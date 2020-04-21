@@ -16,8 +16,9 @@ import (
 func GetIdenStateZKFiles(urlBase string) error {
 	downloadPath := "/tmp/iden3/idenstatezk"
 	filenamesHash := map[string]string{
-		"circuit.wasm":     "7c3958904d30f949187e070a606f87a2483bfad8321818a16b3d5d35739ba2d0",
-		"proving_key.json": "11a04fe1e6566e3e8a2f00032851b2e0999011324d216a0517b006fd0c8695fb",
+		"circuit.wasm":          "7c3958904d30f949187e070a606f87a2483bfad8321818a16b3d5d35739ba2d0",
+		"proving_key.json":      "11a04fe1e6566e3e8a2f00032851b2e0999011324d216a0517b006fd0c8695fb",
+		"verification_key.json": "ef24eabbb0c172ede61f58c737e07876f70e2fd17e95daa06e63abb80c620883",
 	}
 	if err := os.MkdirAll(downloadPath, 0700); err != nil {
 		return err
