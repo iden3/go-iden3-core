@@ -2,9 +2,11 @@ package local
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
@@ -155,5 +157,14 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 		IdenState: newState,
 	}
 	ip.pendingInit = append(ip.pendingInit, &IdIdenStateData{Id: id, IdenStateData: &idenState})
-	return &types.Transaction{}, nil
+	return types.NewTransaction(0, common.Address{}, nil, 0, nil,
+		new(big.Int).SetUint64(ip.blockNow()).Bytes()), nil
+}
+
+// TxConfirmBlocks returns the number of confirmed blocks of transaction tx.
+func (ip *IdenPubOnChain) TxConfirmBlocks(tx *types.Transaction) (*big.Int, error) {
+	blockNumber := new(big.Int).SetBytes(tx.Data())
+	currentBlock := new(big.Int).SetUint64(ip.blockNow())
+	return currentBlock.Sub(currentBlock, blockNumber), nil
+	// return new(big.Int).SetUint64(99999999), nil
 }

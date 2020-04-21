@@ -73,6 +73,8 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
 
+	blockTs += 20
+	blockN += 10
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
@@ -175,9 +177,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	ho, _, _ := newHolder(t, idenPubOnChain, nil, idenPubOffChain)
 
 	//
-	// {Ts: 100, BlockN: 12} -> claim1 is added
+	// {Ts: 1000, BlockN: 120} -> claim1 is added
 	//
-	blockTs, blockN = 100, 12
+	blockTs, blockN = 1000, 120
 
 	// ISSUER: Publish state first time with claim1
 
@@ -194,6 +196,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
 
+	blockTs += 20
+	blockN += 10
+
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
@@ -205,13 +210,13 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	credValidClaim1t1, err := ho.HolderGetCredentialValidity(credExistClaim1)
 	require.Nil(t, err)
 
-	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 50*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
 	assert.Nil(t, err)
 
 	//
-	// {Ts: 200, BlockN: 13} -> claim2 is added
+	// {Ts: 2000, BlockN: 130} -> claim2 is added
 	//
-	blockTs, blockN = 200, 13
+	blockTs, blockN = 2000, 130
 
 	// ISSUER: Publish state a second time with another claim2, claim3
 
@@ -222,7 +227,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = is.IssueClaim(claim2)
 	require.Nil(t, err)
 
-	// claim3 is a claim with expiration at T=350
+	// claim3 is a claim with expiration at T=3500
 
 	header := claims.ClaimHeader{
 		Type:       claims.NewClaimTypeNum(9999),
@@ -231,7 +236,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 		Version:    false,
 	}
 	metadata := claims.NewMetadata(header)
-	metadata.Expiration = 350
+	metadata.Expiration = 3500
 	var entry merkletree.Entry
 	metadata.Marshal(&entry)
 	claim3 := claims.NewClaimGeneric(&entry)
@@ -262,24 +267,24 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.NotNil(t, credValidClaim2t2)
 
 	// Outdated is invalid
-	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 50*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
 	assert.Error(t, err)
 
 	// With more freshness time it's valid
-	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 150*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 1500*time.Second)
 	assert.Nil(t, err)
 
 	// Recent one is valid
-	err = verifier.VerifyCredentialValidity(credValidClaim1t2, 50*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim1t2, 500*time.Second)
 	assert.Nil(t, err)
 
-	err = verifier.VerifyCredentialValidity(credValidClaim2t2, 50*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim2t2, 500*time.Second)
 	assert.Nil(t, err)
 
 	//
-	// {Ts: 300, BlockN: 14} -> claim1 is revoked
+	// {Ts: 3000, BlockN: 140} -> claim1 is revoked
 	//
-	blockTs, blockN = 300, 14
+	blockTs, blockN = 3000, 140
 
 	// ISSUER: Publish state a third time revoking claim1
 
@@ -308,28 +313,28 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.Nil(t, err)
 
 	// C1T2 with long freshness is valid
-	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 250*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 2500*time.Second)
 	assert.Nil(t, err)
 
 	// C2T2 with mid freshness is valid
-	err = verifier.VerifyCredentialValidity(credValidClaim2t2, 150*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim2t2, 1500*time.Second)
 	assert.Nil(t, err)
 
 	// C2T3 with small freshness is valid
-	err = verifier.VerifyCredentialValidity(credValidClaim2t3, 50*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim2t3, 500*time.Second)
 	assert.Nil(t, err)
 
-	// C3T3 has not expired at T=300 (expiration=350)
-	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 1000*time.Second)
+	// C3T3 has not expired at T=3000 (expiration=3500)
+	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 10000*time.Second)
 	assert.Nil(t, err)
 
 	//
-	// {Ts: 400, BlockN: --}
+	// {Ts: 4000, BlockN: --}
 	//
-	blockTs, blockN = 400, 15
+	blockTs, blockN = 4000, 150
 
 	// C3T3 has expired at T=400 (expiration=350)
-	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 1000*time.Second)
+	err = verifier.VerifyCredentialValidity(credValidClaim3t3, 10000*time.Second)
 	assert.Equal(t, ErrClaimExpired, err)
 }
 

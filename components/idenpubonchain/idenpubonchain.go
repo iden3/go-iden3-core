@@ -34,6 +34,7 @@ type IdenPubOnChainer interface {
 	InitState(id *core.ID, genesisState *merkletree.Hash,
 		newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
 		signature *babyjub.SignatureComp) (*types.Transaction, error)
+	TxConfirmBlocks(tx *types.Transaction) (*big.Int, error)
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
 }
 
@@ -214,4 +215,17 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 	} else {
 		return tx, nil
 	}
+}
+
+// TxConfirmBlocks returns the number of confirmed blocks of transaction tx.
+func (ip *IdenPubOnChain) TxConfirmBlocks(tx *types.Transaction) (*big.Int, error) {
+	receipt, err := ip.client.GetReceipt(tx)
+	if err != nil {
+		return nil, err
+	}
+	currentBlock, err := ip.client.CurrentBlock()
+	if err != nil {
+		return nil, err
+	}
+	return currentBlock.Sub(currentBlock, receipt.BlockNumber), nil
 }

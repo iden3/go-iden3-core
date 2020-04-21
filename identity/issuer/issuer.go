@@ -14,17 +14,21 @@ import (
 	"github.com/iden3/go-iden3-core/core/genesis"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
+	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
 	ErrIdenGenesisOnly           = fmt.Errorf("Identity is genesis only")
 	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
+	ErrEthClientNil              = fmt.Errorf("ethClient is nil")
 	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
 	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
 	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
@@ -54,7 +58,7 @@ var (
 )
 
 // ConfigDefault is a default configuration for the Issuer.
-var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140, GenesisOnly: false}
+var ConfigDefault = Config{MaxLevelsClaimsTree: 140, MaxLevelsRevocationTree: 140, MaxLevelsRootsTree: 140, GenesisOnly: false, ConfirmBlocks: 3}
 
 // Config allows configuring the creation of an Issuer.
 type Config struct {
@@ -62,6 +66,7 @@ type Config struct {
 	MaxLevelsRevocationTree int
 	MaxLevelsRootsTree      int
 	GenesisOnly             bool
+	ConfirmBlocks           uint64
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -149,7 +154,7 @@ func (is *Issuer) loadIdenStatePending() error {
 	return nil
 }
 
-// func (is *Issuer) ethTxSetState() *types.Transaction { return is._ethTxSetState }
+func (is *Issuer) ethTxSetState() *types.Transaction { return is._ethTxSetState }
 
 func (is *Issuer) setEthTxSetState(tx db.Tx, v *types.Transaction) error {
 	is._ethTxSetState = v
@@ -161,7 +166,7 @@ func (is *Issuer) loadEthTxSetState() error {
 	return db.LoadJSON(is.storage, dbKeyEthTxSetState, &is._ethTxSetState)
 }
 
-// func (is *Issuer) ethTxInitState() *types.Transaction { return is._ethTxInitState }
+func (is *Issuer) ethTxInitState() *types.Transaction { return is._ethTxInitState }
 
 func (is *Issuer) setEthTxInitState(tx db.Tx, v *types.Transaction) error {
 	is._ethTxInitState = v
@@ -298,6 +303,7 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 // Load creates an Issuer by loading a previously created Issuer (with New).
 func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
+	// ethClient *eth.Client,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
@@ -311,6 +317,9 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		if idenPubOnChain == nil {
 			return nil, ErrIdenPubOnChainNil
 		}
+		// if ethClient == nil {
+		// 	return nil, ErrEthClientNil
+		// }
 		if idenPubOffChainWriter == nil {
 			return nil, ErrIdenPubOffChainWriterNil
 		}
@@ -418,6 +427,33 @@ func (is *Issuer) SyncIdenStatePublic() error {
 	}
 	is.rw.Lock()
 	defer is.rw.Unlock()
+	// If there's a pending state, check that the ethereum Tx was
+	// succsefully and only call GetState when the number of confirmed
+	// blocks is equal or higher than is.cfg.ConfirmBlocks
+	if !is.idenStatePending().Equals(&merkletree.HashZero) {
+		var ethTx *types.Transaction
+		// If idenStateOnChain is zero, the pending state was caused by
+		// InitState.  Otherwise it was a regular SetState.
+		if is.idenStateOnChain().Equals(&merkletree.HashZero) {
+			ethTx = is.ethTxInitState()
+		} else {
+			ethTx = is.ethTxSetState()
+		}
+		confirmBlocks, err := is.idenPubOnChain.TxConfirmBlocks(ethTx)
+		if err == eth.ErrReceiptNotReceived {
+			return nil
+		} else if err != nil {
+			return fmt.Errorf("TxConfirmBlocks: %w", err)
+		}
+		log.WithField("tx", ethTx.Hash().Hex()).
+			WithField("TxConfirmBlocks", confirmBlocks).
+			WithField("cfg.ConfirmBlocks", is.cfg.ConfirmBlocks).
+			Debug("State Update Tx")
+		if confirmBlocks.Cmp(new(big.Int).SetUint64(is.cfg.ConfirmBlocks)) == -1 {
+			return nil
+		}
+	}
+
 	idenStateData, err := is.idenPubOnChain.GetState(is.id)
 	if err == idenpubonchain.ErrIdenNotOnChain {
 		idenStateData = &proof.IdenStateData{
