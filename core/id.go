@@ -157,6 +157,6 @@ func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash)
 	if err != nil {
 		panic(err)
 	}
-	idenStateHash := merkletree.BigIntToHash(idenState)
+	idenStateHash := merkletree.NewHashFromBigInt(idenState)
 	return &idenStateHash
 }

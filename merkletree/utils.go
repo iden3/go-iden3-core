@@ -16,6 +16,14 @@ import (
 // Hash is the type used to represent a hash used in the MT.
 type Hash ElemBytes
 
+func NewHashFromBigInt(e *big.Int) Hash {
+	return Hash(NewElemBytesFromBigInt(e))
+}
+
+func (h *Hash) BigInt() *big.Int {
+	return (*ElemBytes)(h).BigInt()
+}
+
 // String returns the last 4 bytes of Hash in hex.
 func (h *Hash) String() string {
 	//return hex.EncodeToString(h[ElemBytesLen-4:])
@@ -40,10 +48,6 @@ func (h *Hash) UnmarshalText(bs []byte) error {
 	return common3.HexDecodeInto(h[:], bs)
 }
 
-func ElemBytesToBigInt(elem ElemBytes) *big.Int {
-	return big.NewInt(0).SetBytes(common.SwapEndianness(elem[:]))
-}
-
 func (h1 *Hash) Equals(h2 *Hash) bool {
 	return bytes.Equal(h1[:], h2[:])
 }
@@ -51,16 +55,9 @@ func (h1 *Hash) Equals(h2 *Hash) bool {
 func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 	ints := make([]*big.Int, len(elems))
 	for i, elem := range elems {
-		ints[i] = ElemBytesToBigInt(elem)
+		ints[i] = elem.BigInt()
 	}
 	return ints
-}
-
-// BigIntToHash converts a *big.Int to a Hash.
-func BigIntToHash(e *big.Int) (h Hash) {
-	bs := common.SwapEndianness(e.Bytes())
-	copy(h[:], bs)
-	return h
 }
 
 func ElemBytesToPoseidonInput(elems ...ElemBytes) ([poseidon.T]*big.Int, error) {
@@ -91,7 +88,7 @@ func HashElems(elems ...ElemBytes) (*Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := BigIntToHash(poseidonHash)
+	h := NewHashFromBigInt(poseidonHash)
 	return &h, nil
 }
 
@@ -112,7 +109,7 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := BigIntToHash(poseidonHash)
+	h := NewHashFromBigInt(poseidonHash)
 	return &h, nil
 }
 

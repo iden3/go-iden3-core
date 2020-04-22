@@ -47,8 +47,11 @@ const (
 )
 
 var (
-	ErrStorageLock     = fmt.Errorf("Unable to acquire storage lock")
-	ErrStorageUnlocked = fmt.Errorf("Storage is not locked")
+	ErrStorageLock     = fmt.Errorf("unable to acquire storage lock")
+	ErrStorageUnlocked = fmt.Errorf("storage is not locked")
+	ErrKeyNotInCache   = fmt.Errorf("public key not found in the cache.  Maybe it's not unlocked")
+	ErrKeyNotFound     = fmt.Errorf("public key not found in the key store")
+	ErrInvalidEncData  = fmt.Errorf("invalid encrypted data")
 )
 
 // prefixes for msg to be signed
@@ -129,7 +132,7 @@ func DecryptData(encData *EncryptedData, pass []byte) ([]byte, error) {
 	var data []byte
 	data, ok := secretbox.Open(data, encData.EncryptedData, &nonce, &key)
 	if !ok {
-		return nil, fmt.Errorf("Invalid encrypted data")
+		return nil, ErrInvalidEncData
 	}
 	return data, nil
 }
@@ -307,11 +310,14 @@ func (ks *KeyStore) ImportKey(sk babyjub.PrivateKey, pass []byte) (*babyjub.Publ
 	return &pubComp, nil
 }
 
-func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp, pass []byte) (*babyjub.PrivateKey, error) {
-	if err := ks.UnlockKey(pk, pass); err != nil {
-		return nil, err
+func (ks *KeyStore) ExportKey(pk *babyjub.PublicKeyComp) (*babyjub.PrivateKey, error) {
+	ks.rw.RLock()
+	defer ks.rw.RUnlock()
+	sk, ok := ks.cache[*pk]
+	if !ok {
+		return nil, ErrKeyNotInCache
 	}
-	return ks.cache[*pk], nil
+	return sk, nil
 }
 
 // UnlockKey decrypts the key corresponding to the public key pk and loads it
@@ -321,7 +327,7 @@ func (ks *KeyStore) UnlockKey(pk *babyjub.PublicKeyComp, pass []byte) error {
 	defer ks.rw.Unlock()
 	encryptedKey, ok := ks.encryptedKeys[*pk]
 	if !ok {
-		return fmt.Errorf("Public key not found in the key store")
+		return ErrKeyNotFound
 	}
 	skBuf, err := DecryptData(&encryptedKey, pass)
 	if err != nil {
@@ -340,7 +346,7 @@ func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg *big.Int) (*babyjub.
 	defer ks.rw.RUnlock()
 	sk, ok := ks.cache[*pk]
 	if !ok {
-		return nil, fmt.Errorf("Public key not found in the cache.  Is it unlocked?")
+		return nil, ErrKeyNotInCache
 	}
 	sig := sk.SignPoseidon(msg)
 	sigComp := sig.Compress()

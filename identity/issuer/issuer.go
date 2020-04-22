@@ -3,8 +3,11 @@ package issuer
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
@@ -22,19 +25,27 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 
+	"github.com/iden3/go-circom-prover-verifier/parsers"
+	"github.com/iden3/go-circom-prover-verifier/prover"
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
+	witnesscalc "github.com/iden3/go-circom-witnesscalc"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
+	wasm3 "github.com/iden3/go-wasm3"
+
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ErrIdenGenesisOnly           = fmt.Errorf("Identity is genesis only")
+	ErrIdenGenesisOnly           = fmt.Errorf("identity is genesis only")
 	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
+	ErrIdenStateSNARKPathsNil    = fmt.Errorf("idenStateZkProofConf is nil")
 	ErrEthClientNil              = fmt.Errorf("ethClient is nil")
 	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
-	ErrIdenStatePendingNotNil    = fmt.Errorf("Update of the published IdenState is pending")
-	ErrIdenStateOnChainZero      = fmt.Errorf("No IdenState known to be on chain")
-	ErrClaimNotFoundStateOnChain = fmt.Errorf("Claim not found under the on chain identity state")
-	ErrClaimNotFoundClaimsTree   = fmt.Errorf("Claim not found in the claims tree: the claim hasn't been issued")
-	ErrClaimNotYetInOnChainState = fmt.Errorf("Claim has been issued but is not yet under a published on chain identity state")
+	ErrIdenStatePendingNotNil    = fmt.Errorf("update of the published IdenState is pending")
+	ErrIdenStateOnChainZero      = fmt.Errorf("no IdenState known to be on chain")
+	ErrClaimNotFoundStateOnChain = fmt.Errorf("claim not found under the on chain identity state")
+	ErrClaimNotFoundClaimsTree   = fmt.Errorf("claim not found in the claims tree: the claim hasn't been issued")
+	ErrClaimNotYetInOnChainState = fmt.Errorf("claim has been issued but is not yet under a published on chain identity state")
 )
 
 var (
@@ -44,6 +55,8 @@ var (
 	dbPrefixIdenStateList  = []byte("idenstates:")
 	dbKeyConfig            = []byte("config")
 	dbKeyKOp               = []byte("kop")
+	dbKeyClaimKOpHi        = []byte("claimkophi")
+	dbKeyClaimKOpMtp       = []byte("claimkopmtp")
 	dbKeyId                = []byte("id")
 	dbKeyNonceIdx          = []byte("nonceidx")
 	// dbKeyIdenStateOnChain     = []byte("idenstateonchain")
@@ -67,6 +80,15 @@ type Config struct {
 	MaxLevelsRootsTree      int
 	GenesisOnly             bool
 	ConfirmBlocks           uint64
+}
+
+// IdenStateZkProofConf are the paths to the SNARK related files required to
+// generate an identity state update zkSNARK proof.
+type IdenStateZkProofConf struct {
+	PathWitnessCalcWASM string
+	PathProvingKey      string
+	PathVerifyingKey    string
+	Levels              int
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -100,10 +122,11 @@ type Issuer struct {
 	// idenStatePending is a newly calculated identity state that is being
 	// published in the Smart Contract but the transaction to publish it is
 	// still pending.
-	_idenStatePending *merkletree.Hash
-	_ethTxSetState    *types.Transaction
-	_ethTxInitState   *types.Transaction
-	cfg               Config
+	_idenStatePending    *merkletree.Hash
+	_ethTxSetState       *types.Transaction
+	_ethTxInitState      *types.Transaction
+	idenStateZkProofConf *IdenStateZkProofConf
+	cfg                  Config
 }
 
 //
@@ -244,9 +267,19 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	if err != nil {
 		return nil, err
 	}
+	claimKOpHi, err := claimKOp.Entry().HIndex()
+	if err != nil {
+		return nil, err
+	}
+	claimKOpMtp, err := clt.GenerateProof(claimKOpHi, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	tx.Put(dbKeyId, id[:])
 	tx.Put(dbKeyKOp, kOpComp[:])
+	tx.Put(dbKeyClaimKOpHi, claimKOpHi[:])
+	db.StoreJSON(tx, dbKeyClaimKOpMtp, claimKOpMtp)
 
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
@@ -303,12 +336,12 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 // Load creates an Issuer by loading a previously created Issuer (with New).
 func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
-	// ethClient *eth.Client,
+	idenStateZkProofConf *IdenStateZkProofConf,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter) (*Issuer, error) {
 	var cfg Config
 	cfgJSON, err := storage.Get(dbKeyConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting config from storage: %w", err)
+		return nil, fmt.Errorf("error getting config from storage: %w", err)
 	}
 	if err := json.Unmarshal(cfgJSON, &cfg); err != nil {
 		return nil, err
@@ -317,9 +350,20 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		if idenPubOnChain == nil {
 			return nil, ErrIdenPubOnChainNil
 		}
-		// if ethClient == nil {
-		// 	return nil, ErrEthClientNil
-		// }
+		if idenStateZkProofConf == nil {
+			return nil, ErrIdenStateSNARKPathsNil
+		}
+		// Check for read access to files in idenStateZkProofConf
+		_, err := os.Open(idenStateZkProofConf.PathWitnessCalcWASM)
+		if err != nil {
+			return nil, fmt.Errorf("error opening file %v: %w",
+				idenStateZkProofConf.PathWitnessCalcWASM, err)
+		}
+		_, err = os.Open(idenStateZkProofConf.PathProvingKey)
+		if err != nil {
+			return nil, fmt.Errorf("error opening file %v: %w",
+				idenStateZkProofConf.PathProvingKey, err)
+		}
 		if idenPubOffChainWriter == nil {
 			return nil, ErrIdenPubOffChainWriterNil
 		}
@@ -327,7 +371,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 
 	kOpCompBytes, err := storage.Get(dbKeyKOp)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting kop from storage: %w", err)
+		return nil, fmt.Errorf("error getting kop from storage: %w", err)
 	}
 	var kOpComp babyjub.PublicKeyComp
 	copy(kOpComp[:], kOpCompBytes)
@@ -335,13 +379,13 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	var id core.ID
 	idBytes, err := storage.Get(dbKeyId)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting id from storage: %w", err)
+		return nil, fmt.Errorf("error getting id from storage: %w", err)
 	}
 	copy(id[:], idBytes)
 
 	clt, ret, rot, err := loadMTs(&cfg, storage)
 	if err != nil {
-		return nil, fmt.Errorf("Error loading merkle trees from storage: %w", err)
+		return nil, fmt.Errorf("error loading merkle trees from storage: %w", err)
 	}
 
 	nonceGen := NewUniqueNonceGen(db.NewStorageValue(dbKeyNonceIdx))
@@ -360,6 +404,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		storage:               storage,
 		nonceGen:              nonceGen,
 		idenStateList:         idenStateList,
+		idenStateZkProofConf:  idenStateZkProofConf,
 		cfg:                   cfg,
 	}
 
@@ -378,7 +423,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 
 	if !is.cfg.GenesisOnly {
 		if err := is.SyncIdenStatePublic(); err != nil {
-			return nil, fmt.Errorf("Error syncing idenstate from smart contract: %w", err)
+			return nil, fmt.Errorf("error syncing idenstate from smart contract: %w", err)
 		}
 	}
 	return &is, nil
@@ -460,7 +505,7 @@ func (is *Issuer) SyncIdenStatePublic() error {
 			IdenState: &merkletree.HashZero,
 		}
 	} else if err != nil {
-		return fmt.Errorf("Error calling idenstates smart contract getState: %w", err)
+		return fmt.Errorf("error calling idenstates smart contract getState: %w", err)
 	}
 	if is.idenStatePending().Equals(&merkletree.HashZero) {
 		// If there's no IdenState pending to be set on chain, the
@@ -610,7 +655,7 @@ func (is *Issuer) PublishState() error {
 		// publishing it.
 		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, kOp, nil, sig)
 		if err != nil {
-			return fmt.Errorf("Error calling idenstates smart contract initState: %w", err)
+			return fmt.Errorf("error calling idenstates smart contract initState: %w", err)
 		}
 
 		if err := is.setEthTxInitState(tx, ethTx); err != nil {
@@ -621,7 +666,7 @@ func (is *Issuer) PublishState() error {
 		// Update it.
 		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, kOp, nil, sig)
 		if err != nil {
-			return fmt.Errorf("Error calling idenstates smart contract setState: %w", err)
+			return fmt.Errorf("error calling idenstates smart contract setState: %w", err)
 		}
 
 		if err := is.setEthTxSetState(tx, ethTx); err != nil {
@@ -700,7 +745,7 @@ func (is *Issuer) SignState(oldState, newState *merkletree.Hash) (*babyjub.Signa
 	prefixBigInt := new(big.Int)
 	utils.SetBigIntFromLEBytes(prefixBigInt, prefix31[:])
 
-	toHash := [poseidon.T]*big.Int{prefixBigInt, merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*oldState)), merkletree.ElemBytesToBigInt(merkletree.ElemBytes(*newState)), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
+	toHash := [poseidon.T]*big.Int{prefixBigInt, oldState.BigInt(), newState.BigInt(), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
 
 	return is.SignElems(toHash)
 }
@@ -785,6 +830,94 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	}, nil
 }
 
+type ZkProofOut struct {
+	Proof      zktypes.Proof
+	PubSignals []*big.Int
+}
+
+func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
+	provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
+	if err != nil {
+		return nil, err
+	}
+	start := time.Now()
+	pk, err := parsers.ParsePk(provingKeyJson)
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
+
+	runtime := wasm3.NewRuntime(&wasm3.Config{
+		Environment: wasm3.NewEnvironment(),
+		StackSize:   64 * 1024,
+	})
+	defer runtime.Destroy()
+
+	wasmBytes, err := ioutil.ReadFile(is.idenStateZkProofConf.PathWitnessCalcWASM)
+	if err != nil {
+		return nil, err
+	}
+	module, err := runtime.ParseModule(wasmBytes)
+	if err != nil {
+		return nil, err
+	}
+	module, err = runtime.LoadModule(module)
+	if err != nil {
+		return nil, err
+	}
+	witnessCalculator, err := witnesscalc.NewWitnessCalculator(runtime, module)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs := make(map[string]interface{})
+	var idElem merkletree.ElemBytes
+	copy(idElem[:], is.id[:])
+	inputs["id"] = idElem.BigInt()
+
+	sk, err := is.keyStore.ExportKey(is.kOpComp)
+	if err != nil {
+		return nil, err
+	}
+	inputs["userPrivateKey"] = skToBigInt(sk)
+
+	var mtp merkletree.Proof
+	err = db.LoadJSON(is.storage, dbKeyClaimKOpMtp, &mtp)
+	if err != nil {
+		return nil, err
+	}
+	siblings := merkletree.SiblingsFromProof(&mtp)
+	// Add the rest of empty levels to the siblings
+	for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
+		siblings = append(siblings, &merkletree.HashZero)
+	}
+	siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
+	siblingsBigInt := make([]*big.Int, len(siblings))
+	for i, sibling := range siblings {
+		siblingsBigInt[i] = sibling.BigInt()
+	}
+	inputs["siblings"] = siblingsBigInt
+
+	inputs["claimsTreeRoot"] = is.claimsTree.RootKey().BigInt()
+	inputs["oldIdState"] = oldIdState.BigInt()
+	inputs["newIdState"] = newIdState.BigInt()
+
+	start = time.Now()
+	wit, err := witnessCalculator.CalculateWitness(inputs, false)
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("elapsed", time.Now().Sub(start)).Debug("Witness calculated")
+
+	start = time.Now()
+	proof, pubSignals, err := prover.GenerateProof(pk, wit)
+	if err != nil {
+		return nil, err
+	}
+	log.WithField("elapsed", time.Now().Sub(start)).Debug("Proof generated")
+	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
+}
+
 // TODO: Create an Admin struct that exposes the following:
 // - The 3 Merle Trees
 // - RawDump(f func(key, value string))
@@ -792,3 +925,21 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 // - ClaimsDump() map[string]string
 // The return and input types are open to change.  They are based on the old
 // components/idenadminutils/idenadminutils.go
+
+// TODO: Move this to a public place
+func skToBigInt(k *babyjub.PrivateKey) *big.Int {
+	sBuf := babyjub.Blake512(k[:])
+	sBuf32 := [32]byte{}
+	copy(sBuf32[:], sBuf[:32])
+	pruneBuffer(&sBuf32)
+	s := new(big.Int)
+	cryptoUtils.SetBigIntFromLEBytes(s, sBuf32[:])
+	s.Rsh(s, 3)
+	return s
+}
+func pruneBuffer(buf *[32]byte) *[32]byte {
+	buf[0] = buf[0] & 0xF8
+	buf[31] = buf[31] & 0x7F
+	buf[31] = buf[31] | 0x40
+	return buf
+}

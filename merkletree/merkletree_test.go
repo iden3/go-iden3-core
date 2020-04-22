@@ -912,8 +912,8 @@ func TestEntryToBytesToEntry(t *testing.T) {
 		Data: *leafData,
 	}
 	for _, elemBytes := range entry.Data {
-		bigints := ElemBytesToBigInt(elemBytes)
-		ok := cryptoUtils.CheckBigIntInField(bigints)
+		bigint := elemBytes.BigInt()
+		ok := cryptoUtils.CheckBigIntInField(bigint)
 		assert.True(t, ok)
 	}
 }

@@ -48,9 +48,10 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 // New creates a Holder by loading a previously created Holder (with New, and calling the internal Issuer.Load().
 func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	idenPubOnChain idenpubonchain.IdenPubOnChainer,
+	idenStateZkProofConf *issuer.IdenStateZkProofConf,
 	idenPubOffChainWriter idenpuboffchain.IdenPubOffChainWriter,
 	idenPubOffChainReader idenpuboffchain.IdenPubOffChainReader) (*Holder, error) {
-	is, err := issuer.Load(storage, keyStore, idenPubOnChain, idenPubOffChainWriter)
+	is, err := issuer.Load(storage, keyStore, idenPubOnChain, idenStateZkProofConf, idenPubOffChainWriter)
 	if err != nil {
 		return nil, err
 	}
