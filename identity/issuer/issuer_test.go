@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/iden3/go-circom-prover-verifier/parsers"
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
@@ -203,23 +204,35 @@ func TestIssuerCredential(t *testing.T) {
 func TestIssuerGenZkProofIdenStateUpdate(t *testing.T) {
 	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 	var oldIdState, newIdState merkletree.Hash
-	newIdState[0] = 0x42
+	oldIdState[0] = 41
+	newIdState[0] = 42
+	// 1
 	proof, err := issuer.GenZkProofIdenStateUpdate(&oldIdState, &newIdState)
 	assert.Nil(t, err)
 
 	// Verify zk proof
-	vkJSON, err := ioutil.ReadFile("/tmp/iden3/idenstatezk/verification_key.json")
-	require.Nil(t, err)
-	vk, err := parsers.ParseVk(vkJSON)
-	require.Nil(t, err)
 	v := verifier.Verify(vk, &proof.Proof, proof.PubSignals)
 	assert.True(t, v)
+
 }
 
+var vk *zktypes.Vk
 var blockN uint64
 
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
+	err := GetIdenStateZKFiles("http://161.35.72.58:9000/circuit1/")
+	if err != nil {
+		panic(err)
+	}
+	vkJSON, err := ioutil.ReadFile("/tmp/iden3/idenstatezk/verification_key.json")
+	if err != nil {
+		panic(err)
+	}
+	vk, err = parsers.ParseVk(vkJSON)
+	if err != nil {
+		panic(err)
+	}
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Now()
@@ -228,17 +241,15 @@ func TestMain(m *testing.M) {
 			blockN += 1
 			return blockN
 		},
+		vk,
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
-	err := GetIdenStateZKFiles("http://161.35.72.58:9000/idstate/")
-	if err != nil {
-		panic(err)
-	}
 	idenStateZkProofConf = &IdenStateZkProofConf{
-		Levels:              59,
+		Levels:              16,
 		PathWitnessCalcWASM: "/tmp/iden3/idenstatezk/circuit.wasm",
 		PathProvingKey:      "/tmp/iden3/idenstatezk/proving_key.json",
 		PathVerifyingKey:    "/tmp/iden3/idenstatezk/verification_key.json",
+		CacheProvingKey:     true,
 	}
 	os.Exit(m.Run())
 }

@@ -27,7 +27,7 @@ require (
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/iden3/go-circom-prover-verifier v0.0.0-20200421172235-6256fcc9dbad
-	github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad
+	github.com/iden3/go-circom-witnesscalc v0.0.0-20200423133957-b10252d77de1
 	github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4
 	github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f
 	github.com/influxdata/influxdb v1.7.8 // indirect
@@ -60,3 +60,9 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
+
+replace github.com/iden3/go-circom-prover-verifier => ../go-circom-prover-verifier
+
+// replace github.com/iden3/go-circom-witnesscalc => ../go-circom-witnesscalc
+
+// replace github.com/iden3/go-wasm3 => ../new/go-wasm3

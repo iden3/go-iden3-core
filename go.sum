@@ -156,10 +156,14 @@ github.com/huin/goupnp v0.0.0-20161224104101-679507af18f3/go.mod h1:MZ2ZmwcBpvOo
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
+github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0 h1:i462o439ZjprVSFSZLZxcsoAe592sZB1rci2Z8j4wdk=
+github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0/go.mod h1:N0Wam8K1arqPXNWjMo21EXnBPOPp36vB07FNRdD2geA=
 github.com/iden3/go-circom-prover-verifier v0.0.0-20200421172235-6256fcc9dbad h1:GS74U1wCfcFddnwBcsQwj9P98eW+whHS/1C8Bi5RV2c=
 github.com/iden3/go-circom-prover-verifier v0.0.0-20200421172235-6256fcc9dbad/go.mod h1:ZGStP/GSsKbIaLEowo7JmqnWgneFAapA4NrZakHcUk4=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad h1:btw9/uWubgGmCxsI+EV+56c8aPDv6wJrfteLYEE/JQI=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad/go.mod h1:z7PErEUI6NMqWQh+SAwQanuPe2G/29nwgCe0q+uZocw=
+github.com/iden3/go-circom-witnesscalc v0.0.0-20200423133957-b10252d77de1 h1:Bj6+crb/GIg0I4uE+RU1/SfkXR5ak2wf4dC7dCQ1bNo=
+github.com/iden3/go-circom-witnesscalc v0.0.0-20200423133957-b10252d77de1/go.mod h1:1A9n27krmHxlEdoqWG7Pi1rCIfvw26Et23HdyMC6b/Q=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161 h1:m/JbZo+lzlIX02tmV12mKa6010dfJegs2jCsgB23udM=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161/go.mod h1:LLcgB7DLWAUs+8eBSKne+ZHy5z7xtAmlYlEz0M9M8gE=
 github.com/iden3/go-iden3-crypto v0.0.3 h1:/Z4DHEPTKvWSM0F1DOp9tj9cQmifc3F+4QK2Pzu9Pqw=

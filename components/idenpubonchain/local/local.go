@@ -8,11 +8,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
 type IdenStateHistory struct {
@@ -51,16 +52,18 @@ type IdenPubOnChain struct {
 	pendingSet     []*IdIdenStateData
 	timeNow        func() time.Time
 	blockNow       func() uint64
+	verifyingKey   *zktypes.Vk
 }
 
 // New creates a new IdenPubOnChain
-func New(timeNow func() time.Time, blockNow func() uint64) *IdenPubOnChain {
+func New(timeNow func() time.Time, blockNow func() uint64, verifyingKey *zktypes.Vk) *IdenPubOnChain {
 	return &IdenPubOnChain{
 		idenStatesData: make(map[core.ID]*IdenStateHistory),
 		pendingInit:    make([]*IdIdenStateData, 0),
 		pendingSet:     make([]*IdIdenStateData, 0),
 		timeNow:        timeNow,
 		blockNow:       blockNow,
+		verifyingKey:   verifyingKey,
 	}
 }
 
@@ -124,13 +127,17 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *babyjub.PublicKey,
-	stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
+	zkProof *zktypes.Proof) (*types.Transaction, error) {
 	ip.rw.Lock()
 	defer ip.rw.Unlock()
-	_, ok := ip.idenStatesData[*id]
+	idenStatesData, ok := ip.idenStatesData[*id]
 	if !ok {
 		return nil, idenpubonchain.ErrIdenNotOnChain
+	}
+	oldState := idenStatesData.IdenStates[len(idenStatesData.IdenStates)-1].IdenState
+	if !ip.verifyZKP(zkProof, id, oldState, newState) {
+		return nil, fmt.Errorf("zkproof verification failed")
 	}
 	idenState := proof.IdenStateData{
 		BlockN:    ip.blockNow(),
@@ -142,14 +149,16 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *
 }
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
-	newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
-	signature *babyjub.SignatureComp) (*types.Transaction, error) {
+func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState,
+	newState *merkletree.Hash, zkProof *zktypes.Proof) (*types.Transaction, error) {
 	ip.rw.Lock()
 	defer ip.rw.Unlock()
 	_, ok := ip.idenStatesData[*id]
 	if ok {
-		return nil, fmt.Errorf("Identity already exists on chain")
+		return nil, fmt.Errorf("identity already exists on chain")
+	}
+	if !ip.verifyZKP(zkProof, id, genesisState, newState) {
+		return nil, fmt.Errorf("zkproof verification failed")
 	}
 	idenState := proof.IdenStateData{
 		BlockN:    ip.blockNow(),
@@ -166,5 +175,12 @@ func (ip *IdenPubOnChain) TxConfirmBlocks(tx *types.Transaction) (*big.Int, erro
 	blockNumber := new(big.Int).SetBytes(tx.Data())
 	currentBlock := new(big.Int).SetUint64(ip.blockNow())
 	return currentBlock.Sub(currentBlock, blockNumber), nil
-	// return new(big.Int).SetUint64(99999999), nil
+}
+
+func (ip *IdenPubOnChain) verifyZKP(zkProof *zktypes.Proof,
+	id *core.ID, oldState, newState *merkletree.Hash) bool {
+	var idElem merkletree.ElemBytes
+	copy(idElem[:], id[:])
+	publicSignals := []*big.Int{idElem.BigInt(), oldState.BigInt(), newState.BigInt()}
+	return verifier.Verify(ip.verifyingKey, zkProof, publicSignals)
 }

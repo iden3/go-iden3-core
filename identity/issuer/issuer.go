@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	witnesscalc "github.com/iden3/go-circom-witnesscalc"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
@@ -28,9 +29,7 @@ import (
 	"github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
-	witnesscalc "github.com/iden3/go-circom-witnesscalc"
-	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
-	wasm3 "github.com/iden3/go-wasm3"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -49,16 +48,17 @@ var (
 )
 
 var (
-	dbPrefixClaimsTree     = []byte("treeclaims:")
-	dbPrefixRevocationTree = []byte("treerevocation:")
-	dbPrefixRootsTree      = []byte("treeroots:")
-	dbPrefixIdenStateList  = []byte("idenstates:")
-	dbKeyConfig            = []byte("config")
-	dbKeyKOp               = []byte("kop")
-	dbKeyClaimKOpHi        = []byte("claimkophi")
-	dbKeyClaimKOpMtp       = []byte("claimkopmtp")
-	dbKeyId                = []byte("id")
-	dbKeyNonceIdx          = []byte("nonceidx")
+	dbPrefixClaimsTree        = []byte("treeclaims:")
+	dbPrefixRevocationTree    = []byte("treerevocation:")
+	dbPrefixRootsTree         = []byte("treeroots:")
+	dbPrefixIdenStateList     = []byte("idenstates:")
+	dbKeyConfig               = []byte("config")
+	dbKeyKOp                  = []byte("kop")
+	dbKeyClaimKOpHi           = []byte("claimkophi")
+	dbKeyGenesisClaimKOpMtp   = []byte("genclaimkopmtp")
+	dbKeyGenesisClaimTreeRoot = []byte("genclr")
+	dbKeyId                   = []byte("id")
+	dbKeyNonceIdx             = []byte("nonceidx")
 	// dbKeyIdenStateOnChain     = []byte("idenstateonchain")
 	dbKeyIdenStateDataOnChain = []byte("idenstatedataonchain")
 	dbKeyIdenStatePending     = []byte("idenstatepending")
@@ -89,6 +89,8 @@ type IdenStateZkProofConf struct {
 	PathProvingKey      string
 	PathVerifyingKey    string
 	Levels              int
+	CacheProvingKey     bool
+	pk                  *zktypes.Pk
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -279,7 +281,8 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	tx.Put(dbKeyId, id[:])
 	tx.Put(dbKeyKOp, kOpComp[:])
 	tx.Put(dbKeyClaimKOpHi, claimKOpHi[:])
-	db.StoreJSON(tx, dbKeyClaimKOpMtp, claimKOpMtp)
+	db.StoreJSON(tx, dbKeyGenesisClaimKOpMtp, claimKOpMtp)
+	db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.RootKey())
 
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
@@ -641,11 +644,15 @@ func (is *Issuer) PublishState() error {
 	}
 
 	// Sign [minor] identity transition from last state to new (current) state.
-	sig, err := is.SignState(idenStateLast, idenState)
-	if err != nil {
-		return err
-	}
-	kOp, err := is.kOpComp.Decompress()
+	// sig, err := is.SignState(idenStateLast, idenState)
+	// if err != nil {
+	// 	return err
+	// }
+	// kOp, err := is.kOpComp.Decompress()
+	// if err != nil {
+	// 	return err
+	// }
+	zkProofOut, err := is.GenZkProofIdenStateUpdate(idenStateLast, idenState)
 	if err != nil {
 		return err
 	}
@@ -653,7 +660,7 @@ func (is *Issuer) PublishState() error {
 	if is.idenStateOnChain().Equals(&merkletree.HashZero) {
 		// Identity State not present in the Smart Contract. First time
 		// publishing it.
-		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, kOp, nil, sig)
+		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, &zkProofOut.Proof)
 		if err != nil {
 			return fmt.Errorf("error calling idenstates smart contract initState: %w", err)
 		}
@@ -664,7 +671,7 @@ func (is *Issuer) PublishState() error {
 	} else {
 		// Identity State already present in the Smart Contract.
 		// Update it.
-		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, kOp, nil, sig)
+		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, &zkProofOut.Proof)
 		if err != nil {
 			return fmt.Errorf("error calling idenstates smart contract setState: %w", err)
 		}
@@ -836,53 +843,41 @@ type ZkProofOut struct {
 }
 
 func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
-	provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
-	if err != nil {
-		return nil, err
-	}
-	start := time.Now()
-	pk, err := parsers.ParsePk(provingKeyJson)
-	if err != nil {
-		return nil, err
-	}
-	log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
-
-	runtime := wasm3.NewRuntime(&wasm3.Config{
-		Environment: wasm3.NewEnvironment(),
-		StackSize:   64 * 1024,
-	})
-	defer runtime.Destroy()
-
-	wasmBytes, err := ioutil.ReadFile(is.idenStateZkProofConf.PathWitnessCalcWASM)
-	if err != nil {
-		return nil, err
-	}
-	module, err := runtime.ParseModule(wasmBytes)
-	if err != nil {
-		return nil, err
-	}
-	module, err = runtime.LoadModule(module)
-	if err != nil {
-		return nil, err
-	}
-	witnessCalculator, err := witnesscalc.NewWitnessCalculator(runtime, module)
-	if err != nil {
-		return nil, err
+	var pk *zktypes.Pk
+	if !is.idenStateZkProofConf.CacheProvingKey || is.idenStateZkProofConf.pk == nil {
+		provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
+		if err != nil {
+			return nil, err
+		}
+		start := time.Now()
+		pk, err = parsers.ParsePk(provingKeyJson)
+		if err != nil {
+			return nil, err
+		}
+		log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
+		if is.idenStateZkProofConf.CacheProvingKey {
+			is.idenStateZkProofConf.pk = pk
+		}
+	} else {
+		pk = is.idenStateZkProofConf.pk
 	}
 
-	inputs := make(map[string]interface{})
+	inputs := make([]witnesscalc.Input, 0)
+
 	var idElem merkletree.ElemBytes
 	copy(idElem[:], is.id[:])
-	inputs["id"] = idElem.BigInt()
+	inputs = append(inputs, witnesscalc.Input{"id", idElem.BigInt()})
+
+	inputs = append(inputs, witnesscalc.Input{"oldIdState", oldIdState.BigInt()})
 
 	sk, err := is.keyStore.ExportKey(is.kOpComp)
 	if err != nil {
 		return nil, err
 	}
-	inputs["userPrivateKey"] = skToBigInt(sk)
+	inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
 
 	var mtp merkletree.Proof
-	err = db.LoadJSON(is.storage, dbKeyClaimKOpMtp, &mtp)
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
 	if err != nil {
 		return nil, err
 	}
@@ -896,20 +891,23 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	for i, sibling := range siblings {
 		siblingsBigInt[i] = sibling.BigInt()
 	}
-	inputs["siblings"] = siblingsBigInt
+	inputs = append(inputs, witnesscalc.Input{"siblings", siblingsBigInt})
 
-	inputs["claimsTreeRoot"] = is.claimsTree.RootKey().BigInt()
-	inputs["oldIdState"] = oldIdState.BigInt()
-	inputs["newIdState"] = newIdState.BigInt()
-
-	start = time.Now()
-	wit, err := witnessCalculator.CalculateWitness(inputs, false)
+	var genesisClaimTreeRoot merkletree.Hash
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("elapsed", time.Now().Sub(start)).Debug("Witness calculated")
+	inputs = append(inputs, witnesscalc.Input{"claimsTreeRoot", genesisClaimTreeRoot.BigInt()})
 
-	start = time.Now()
+	inputs = append(inputs, witnesscalc.Input{"newIdState", newIdState.BigInt()})
+
+	wit, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
 	if err != nil {
 		return nil, err
@@ -925,21 +923,3 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 // - ClaimsDump() map[string]string
 // The return and input types are open to change.  They are based on the old
 // components/idenadminutils/idenadminutils.go
-
-// TODO: Move this to a public place
-func skToBigInt(k *babyjub.PrivateKey) *big.Int {
-	sBuf := babyjub.Blake512(k[:])
-	sBuf32 := [32]byte{}
-	copy(sBuf32[:], sBuf[:32])
-	pruneBuffer(&sBuf32)
-	s := new(big.Int)
-	cryptoUtils.SetBigIntFromLEBytes(s, sBuf32[:])
-	s.Rsh(s, 3)
-	return s
-}
-func pruneBuffer(buf *[32]byte) *[32]byte {
-	buf[0] = buf[0] & 0xF8
-	buf[31] = buf[31] & 0x7F
-	buf[31] = buf[31] | 0x40
-	return buf
-}
