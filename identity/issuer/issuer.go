@@ -846,6 +846,7 @@ type ZkProofOut struct {
 }
 
 func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
+	fmt.Println("$$$ GenZkProofIdenStateUpdate newState", newIdState.BigInt())
 	var pk *zktypes.Pk
 	if !is.idenStateZkProofConf.CacheProvingKey || is.idenStateZkProofConf.pk == nil {
 		provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
@@ -877,8 +878,11 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("sk, _ := hex.DecodeString(\"%v\")", hex.EncodeToString(sk[:]))
-	inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
+	kOp := sk.Public()
+	fmt.Printf("### scalar: %v -> Public: %v, %v\n", (*big.Int)(sk.Scalar()), kOp.X, kOp.Y)
+	fmt.Printf("sk, _ := hex.DecodeString(\"%v\")\n", hex.EncodeToString(sk[:]))
+	inputs = append(inputs, witnesscalc.Input{"userPrivateKey", (*big.Int)(sk.Scalar())})
+	// inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
 
 	var mtp merkletree.Proof
 	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
@@ -905,6 +909,12 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	inputs = append(inputs, witnesscalc.Input{"claimsTreeRoot", genesisClaimTreeRoot.BigInt()})
 
 	inputs = append(inputs, witnesscalc.Input{"newIdState", newIdState.BigInt()})
+
+	// pubSignals := []*big.Int{
+	// 	idElem.BigInt(),
+	// 	oldIdState.BigInt(),
+	// 	newIdState.BigInt(),
+	// }
 
 	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
 	printInputs(inputs)

@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -63,9 +64,11 @@ func CalculateWitness(wasmFilePath string, inputs []witnesscalc.Input) ([]*big.I
 
 func PrivateKeyToBigInt(k *babyjub.PrivateKey) *big.Int {
 	sBuf := babyjub.Blake512(k[:])
+	// sBuf, _ := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	sBuf32 := [32]byte{}
 	copy(sBuf32[:], sBuf[:32])
 	pruneBuffer(&sBuf32)
+	fmt.Printf("### %v\n", hex.EncodeToString(sBuf32[:]))
 	s := new(big.Int)
 	cryptoUtils.SetBigIntFromLEBytes(s, sBuf32[:])
 	s.Rsh(s, 3)

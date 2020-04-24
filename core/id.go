@@ -141,7 +141,9 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 	var idGenesisBytes [27]byte
 	rootBytes := hash.Bytes()
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
+	// fmt.Println(">>> GENESISSTATE", hex.EncodeToString(rootBytes))
 	id := NewID(TypeBJP0, idGenesisBytes)
+	// fmt.Println(">>> ID                ", hex.EncodeToString(id[:]))
 	return &id
 }
 

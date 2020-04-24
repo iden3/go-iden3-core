@@ -66,3 +66,5 @@ replace github.com/iden3/go-circom-prover-verifier => ../go-circom-prover-verifi
 replace github.com/iden3/go-circom-witnesscalc => ../go-circom-witnesscalc
 
 replace github.com/iden3/go-wasm3 => ../new/go-wasm3
+
+replace github.com/iden3/go-iden3-crypto => ../go-iden3-crypto
