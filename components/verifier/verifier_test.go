@@ -46,13 +46,19 @@ func Copy(dst interface{}, src interface{}) {
 }
 
 func newIssuer(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
-	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
+	idenPubOffChainWrite idenpuboffchain.IdenPubOffChainWriter, skIdx byte) (*issuer.Issuer, db.Storage, *keystore.KeyStore) {
 	cfg := issuer.ConfigDefault
 	storage := db.NewMemoryStorage()
 	ksStorage := keystore.MemStorage([]byte{})
 	keyStore, err := keystore.NewKeyStore(&ksStorage, keystore.LightKeyStoreParams)
 	require.Nil(t, err)
+	//
 	kOp, err := keyStore.NewKey(pass)
+	// DBG BEGIN
+	// var sk babyjub.PrivateKey
+	// sk[0] = skIdx
+	// kOp, err := keyStore.ImportKey(sk, pass)
+	// DBG END
 	require.Nil(t, err)
 	err = keyStore.UnlockKey(kOp, pass)
 	require.Nil(t, err)
@@ -68,7 +74,7 @@ func TestVerifyCredentialExistence(t *testing.T) {
 	indexBytes[0] = 0x42
 	claim := claims.NewClaimBasic(indexBytes, valueBytes)
 
-	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
+	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain, 10)
 	err := is.IssueClaim(claim)
 	require.Nil(t, err)
 
@@ -193,7 +199,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	indexBytes[0] = 0x42
 	claim1 := claims.NewClaimBasic(indexBytes, valueBytes)
 
-	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
+	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain, 11)
 	err := is.IssueClaim(claim1)
 	require.Nil(t, err)
 

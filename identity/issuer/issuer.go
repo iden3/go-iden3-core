@@ -1,6 +1,8 @@
 package issuer
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +29,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 
 	"github.com/iden3/go-circom-prover-verifier/parsers"
+	zkparsers "github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
@@ -874,6 +877,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("sk, _ := hex.DecodeString(\"%v\")", hex.EncodeToString(sk[:]))
 	inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
 
 	var mtp merkletree.Proof
@@ -902,18 +906,86 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 
 	inputs = append(inputs, witnesscalc.Input{"newIdState", newIdState.BigInt()})
 
+	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
+	printInputs(inputs)
+	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
+	// {
+	// 	_, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 	wit, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
 	if err != nil {
 		return nil, err
 	}
 
+	// {
+	// 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	// fmt.Printf(">>> PROOF, PUBISG: %#v @ %#v\n", proof, pubSignals)
+	// 	printProof(proof)
+	// 	PrintPubSignals(pubSignals)
+	// }
 	start := time.Now()
 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
 	if err != nil {
 		return nil, err
 	}
+	// TODO: Verify the proof before returning it
+	// fmt.Printf(">>> PROOF, PUBISG: %#v @ %#v\n", proof, pubSignals)
+	PrintProof(proof)
+	PrintPubSignals(pubSignals)
 	log.WithField("elapsed", time.Now().Sub(start)).Debug("Proof generated")
 	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
+}
+
+func PrintProof(proof *zktypes.Proof) {
+	b, err := zkparsers.ProofToJson(proof)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("proofJSON := `%v`\n", string(b))
+}
+
+func PrintPubSignals(pubSignals []*big.Int) {
+	fmt.Println("pubSignals := []*big.Int{")
+	for _, v := range pubSignals {
+		fmt.Printf("  str2bigInt(\"%v\"),\n", v)
+	}
+	fmt.Println("}")
+}
+
+func printInputs(inputs []witnesscalc.Input) {
+	fmt.Println("inputs := []witnesscalc.Input{")
+	for _, input := range inputs {
+		var vStr string
+		switch v := input.Value.(type) {
+		case *big.Int:
+			vStr = fmt.Sprintf("str2bigInt(\"%v\")", v)
+		case []*big.Int:
+			var b bytes.Buffer
+			b.WriteString("[]interface{}{")
+			for i, val := range v {
+				if val.Cmp(new(big.Int)) == 0 {
+					b.WriteString("new(big.Int)")
+				} else {
+					b.WriteString(fmt.Sprintf("str2bigInt(\"%v\")", v))
+				}
+				if i != len(v)-1 {
+					b.WriteString(",")
+				}
+			}
+			b.WriteString("}")
+			vStr = b.String()
+		default:
+			panic("unexpected input type")
+		}
+		fmt.Printf("  witnesscalc.Input{\"%v\", %v},\n", input.Name, vStr)
+	}
+	fmt.Println("}")
 }
 
 // TODO: Create an Admin struct that exposes the following:

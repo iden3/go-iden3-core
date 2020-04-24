@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"time"
@@ -40,6 +41,14 @@ func CalculateWitnessBinWASM(wasmBytes []byte, inputs []witnesscalc.Input) ([]*b
 		return nil, err
 	}
 	log.WithField("elapsed", time.Now().Sub(start)).Debug("Witness calculated")
+
+	sum := new(big.Int)
+	m := new(big.Int).SetUint64(0x10000)
+	for _, w := range witness {
+		sum.Add(sum, w)
+		sum.Mod(sum, m)
+	}
+	fmt.Printf(">>> SUM: %v\n", sum)
 
 	return witness, err
 }
