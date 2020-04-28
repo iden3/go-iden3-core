@@ -1,8 +1,6 @@
 package zk
 
 import (
-	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"time"
@@ -16,7 +14,6 @@ import (
 )
 
 func CalculateWitnessBinWASM(wasmBytes []byte, inputs map[string]interface{}) ([]*big.Int, error) {
-	// func CalculateWitnessBinWASM(wasmBytes []byte, inputs []witnesscalc.Input) ([]*big.Int, error) {
 	runtime := wasm3.NewRuntime(&wasm3.Config{
 		Environment: wasm3.NewEnvironment(),
 		StackSize:   64 * 1024,
@@ -50,13 +47,11 @@ func CalculateWitnessBinWASM(wasmBytes []byte, inputs map[string]interface{}) ([
 		sum.Add(sum, w)
 		sum.Mod(sum, m)
 	}
-	fmt.Printf(">>> SUM: %v\n", sum)
 
 	return witness, err
 }
 
 func CalculateWitness(wasmFilePath string, inputs map[string]interface{}) ([]*big.Int, error) {
-	// func CalculateWitness(wasmFilePath string, inputs []witnesscalc.Input) ([]*big.Int, error) {
 	wasmBytes, err := ioutil.ReadFile(wasmFilePath)
 	if err != nil {
 		return nil, err
@@ -66,11 +61,9 @@ func CalculateWitness(wasmFilePath string, inputs map[string]interface{}) ([]*bi
 
 func PrivateKeyToBigInt(k *babyjub.PrivateKey) *big.Int {
 	sBuf := babyjub.Blake512(k[:])
-	// sBuf, _ := hex.DecodeString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 	sBuf32 := [32]byte{}
 	copy(sBuf32[:], sBuf[:32])
 	pruneBuffer(&sBuf32)
-	fmt.Printf("### %v\n", hex.EncodeToString(sBuf32[:]))
 	s := new(big.Int)
 	cryptoUtils.SetBigIntFromLEBytes(s, sBuf32[:])
 	s.Rsh(s, 3)

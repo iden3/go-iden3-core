@@ -1,7 +1,6 @@
 package issuer
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -26,27 +25,27 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 
-	// witnesscalc "github.com/iden3/go-circom-witnesscalc"
 	"github.com/iden3/go-circom-prover-verifier/parsers"
-	zkparsers "github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ErrIdenGenesisOnly           = fmt.Errorf("identity is genesis only")
-	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
-	ErrIdenStateSNARKPathsNil    = fmt.Errorf("idenStateZkProofConf is nil")
-	ErrEthClientNil              = fmt.Errorf("ethClient is nil")
-	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
-	ErrIdenStatePendingNotNil    = fmt.Errorf("update of the published IdenState is pending")
-	ErrIdenStateOnChainZero      = fmt.Errorf("no IdenState known to be on chain")
-	ErrClaimNotFoundStateOnChain = fmt.Errorf("claim not found under the on chain identity state")
-	ErrClaimNotFoundClaimsTree   = fmt.Errorf("claim not found in the claims tree: the claim hasn't been issued")
-	ErrClaimNotYetInOnChainState = fmt.Errorf("claim has been issued but is not yet under a published on chain identity state")
+	ErrIdenGenesisOnly                    = fmt.Errorf("identity is genesis only")
+	ErrIdenPubOnChainNil                  = fmt.Errorf("idenPubOnChain is nil")
+	ErrIdenStateSNARKPathsNil             = fmt.Errorf("idenStateZkProofConf is nil")
+	ErrEthClientNil                       = fmt.Errorf("ethClient is nil")
+	ErrIdenPubOffChainWriterNil           = fmt.Errorf("idenPubOffChainWriter is nil")
+	ErrIdenStatePendingNotNil             = fmt.Errorf("update of the published IdenState is pending")
+	ErrIdenStateOnChainZero               = fmt.Errorf("no IdenState known to be on chain")
+	ErrClaimNotFoundStateOnChain          = fmt.Errorf("claim not found under the on chain identity state")
+	ErrClaimNotFoundClaimsTree            = fmt.Errorf("claim not found in the claims tree: the claim hasn't been issued")
+	ErrClaimNotYetInOnChainState          = fmt.Errorf("claim has been issued but is not yet under a published on chain identity state")
+	ErrFailedVerifyZkProofIdenStateUpdate = fmt.Errorf("failed verifing generated zk proof of identity state update")
 )
 
 var (
@@ -93,6 +92,7 @@ type IdenStateZkProofConf struct {
 	Levels              int
 	CacheProvingKey     bool
 	pk                  *zktypes.Pk
+	vk                  *zktypes.Vk
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -845,7 +845,6 @@ type ZkProofOut struct {
 }
 
 func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
-	fmt.Println("$$$ GenZkProofIdenStateUpdate newState", newIdState.BigInt())
 	var pk *zktypes.Pk
 	if !is.idenStateZkProofConf.CacheProvingKey || is.idenStateZkProofConf.pk == nil {
 		provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
@@ -864,43 +863,19 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	} else {
 		pk = is.idenStateZkProofConf.pk
 	}
+	if is.idenStateZkProofConf.vk == nil {
+		vkJSON, err := ioutil.ReadFile(is.idenStateZkProofConf.PathVerifyingKey)
+		if err != nil {
+			panic(err)
+		}
+		vk, err := parsers.ParseVk(vkJSON)
+		if err != nil {
+			panic(err)
+		}
+		is.idenStateZkProofConf.vk = vk
+	}
 
-	// BEGIN inputs map
 	inputs := make(map[string]interface{})
-	/*
-		var idElem merkletree.ElemBytes
-		copy(idElem[:], is.id[:])
-		inputs["id"] = idElem.BigInt()
-
-		sk, err := is.keyStore.ExportKey(is.kOpComp)
-		if err != nil {
-			return nil, err
-		}
-		inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
-
-		var mtp merkletree.Proof
-		err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
-		if err != nil {
-			return nil, err
-		}
-		siblings := merkletree.SiblingsFromProof(&mtp)
-		// Add the rest of empty levels to the siblings
-		for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
-			siblings = append(siblings, &merkletree.HashZero)
-		}
-		siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
-		siblingsBigInt := make([]*big.Int, len(siblings))
-		for i, sibling := range siblings {
-			siblingsBigInt[i] = sibling.BigInt()
-		}
-		inputs["siblings"] = siblingsBigInt
-
-		inputs["claimsTreeRoot"] = is.claimsTree.RootKey().BigInt()
-		inputs["oldIdState"] = oldIdState.BigInt()
-		inputs["newIdState"] = newIdState.BigInt()
-	*/
-
-	// DEBUG
 
 	var idElem merkletree.ElemBytes
 	copy(idElem[:], is.id[:])
@@ -912,11 +887,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	if err != nil {
 		return nil, err
 	}
-	kOp := sk.Public()
-	fmt.Printf("### scalar: %v -> Public: %v, %v\n", (*big.Int)(sk.Scalar()), kOp.X, kOp.Y)
-	fmt.Printf("sk, _ := hex.DecodeString(\"%v\")\n", hex.EncodeToString(sk[:]))
 	inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
-	// inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
 
 	var mtp merkletree.Proof
 	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
@@ -944,144 +915,24 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 
 	inputs["newIdState"] = newIdState.BigInt()
 
-	// END inputs map
-
-	// BEGIN inputs slice
-	/*
-		inputs := make([]witnesscalc.Input, 6)
-
-		var idElem merkletree.ElemBytes
-		copy(idElem[:], is.id[:])
-		inputs[0] = witnesscalc.Input{"id", idElem.BigInt()}
-
-		inputs[1] = witnesscalc.Input{"oldIdState", oldIdState.BigInt()}
-
-		sk, err := is.keyStore.ExportKey(is.kOpComp)
-		if err != nil {
-			return nil, err
-		}
-		kOp := sk.Public()
-		fmt.Printf("### scalar: %v -> Public: %v, %v\n", (*big.Int)(sk.Scalar()), kOp.X, kOp.Y)
-		fmt.Printf("sk, _ := hex.DecodeString(\"%v\")\n", hex.EncodeToString(sk[:]))
-		inputs[2] = witnesscalc.Input{"userPrivateKey", (*big.Int)(sk.Scalar())}
-		// inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
-
-		var mtp merkletree.Proof
-		err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
-		if err != nil {
-			return nil, err
-		}
-		siblings := merkletree.SiblingsFromProof(&mtp)
-		// Add the rest of empty levels to the siblings
-		for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
-			siblings = append(siblings, &merkletree.HashZero)
-		}
-		siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
-		siblingsBigInt := make([]*big.Int, len(siblings))
-		for i, sibling := range siblings {
-			siblingsBigInt[i] = sibling.BigInt()
-		}
-		inputs[3] = witnesscalc.Input{"siblings", siblingsBigInt}
-
-		var genesisClaimTreeRoot merkletree.Hash
-		err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
-		if err != nil {
-			return nil, err
-		}
-		inputs[4] = witnesscalc.Input{"claimsTreeRoot", genesisClaimTreeRoot.BigInt()}
-
-		inputs[5] = witnesscalc.Input{"newIdState", newIdState.BigInt()}
-
-	*/
-	// END inputs slice
-
-	// pubSignals := []*big.Int{
-	// 	idElem.BigInt(),
-	// 	oldIdState.BigInt(),
-	// 	newIdState.BigInt(),
-	// }
-
-	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
-	// printInputs(inputs)
-	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
-	// {
-	// 	_, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
 	wit, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
 	if err != nil {
 		return nil, err
 	}
 
-	// {
-	// 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	// fmt.Printf(">>> PROOF, PUBISG: %#v @ %#v\n", proof, pubSignals)
-	// 	printProof(proof)
-	// 	PrintPubSignals(pubSignals)
-	// }
 	start := time.Now()
 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Verify the proof before returning it
-	// fmt.Printf(">>> PROOF, PUBISG: %#v @ %#v\n", proof, pubSignals)
-	PrintProof(proof)
-	PrintPubSignals(pubSignals)
+	// Verify zk proof
+	if !verifier.Verify(is.idenStateZkProofConf.vk, proof, pubSignals) {
+		return nil, ErrFailedVerifyZkProofIdenStateUpdate
+	}
+
 	log.WithField("elapsed", time.Now().Sub(start)).Debug("Proof generated")
 	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
 }
-
-func PrintProof(proof *zktypes.Proof) {
-	b, err := zkparsers.ProofToJson(proof)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("proofJSON := `%v`\n", string(b))
-}
-
-func PrintPubSignals(pubSignals []*big.Int) {
-	fmt.Println("pubSignals := []*big.Int{")
-	for _, v := range pubSignals {
-		fmt.Printf("  str2bigInt(\"%v\"),\n", v)
-	}
-	fmt.Println("}")
-}
-
-// func printInputs(inputs []witnesscalc.Input) {
-// 	fmt.Println("inputs := []witnesscalc.Input{")
-// 	for _, input := range inputs {
-// 		var vStr string
-// 		switch v := input.Value.(type) {
-// 		case *big.Int:
-// 			vStr = fmt.Sprintf("str2bigInt(\"%v\")", v)
-// 		case []*big.Int:
-// 			var b bytes.Buffer
-// 			b.WriteString("[]interface{}{")
-// 			for i, val := range v {
-// 				if val.Cmp(new(big.Int)) == 0 {
-// 					b.WriteString("new(big.Int)")
-// 				} else {
-// 					b.WriteString(fmt.Sprintf("str2bigInt(\"%v\")", v))
-// 				}
-// 				if i != len(v)-1 {
-// 					b.WriteString(",")
-// 				}
-// 			}
-// 			b.WriteString("}")
-// 			vStr = b.String()
-// 		default:
-// 			panic("unexpected input type")
-// 		}
-// 		fmt.Printf("  witnesscalc.Input{\"%v\", %v},\n", input.Name, vStr)
-// 	}
-// 	fmt.Println("}")
-// }
 
 // TODO: Create an Admin struct that exposes the following:
 // - The 3 Merle Trees

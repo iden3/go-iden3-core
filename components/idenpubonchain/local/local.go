@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	zkparsers "github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
@@ -152,7 +151,6 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState,
 	newState *merkletree.Hash, zkProof *zktypes.Proof) (*types.Transaction, error) {
-	fmt.Println("$$$ InitState newState", newState.BigInt())
 	ip.rw.Lock()
 	defer ip.rw.Unlock()
 	_, ok := ip.idenStatesData[*id]
@@ -185,26 +183,5 @@ func (ip *IdenPubOnChain) verifyZKP(zkProof *zktypes.Proof,
 	copy(idElem[:], id[:])
 	publicSignals := []*big.Int{idElem.BigInt(), oldState.BigInt(), newState.BigInt()}
 	ok := verifier.Verify(ip.verifyingKey, zkProof, publicSignals)
-	fmt.Println("=== BEGIN verifyZKP ===")
-	PrintPubSignals(publicSignals)
-	PrintProof(zkProof)
-	fmt.Println("Verify:", ok)
-	fmt.Println("=== END verifyZKP ===")
 	return ok
-}
-
-func PrintProof(proof *zktypes.Proof) {
-	b, err := zkparsers.ProofToJson(proof)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("proofJSON := `%v`\n", string(b))
-}
-
-func PrintPubSignals(pubSignals []*big.Int) {
-	fmt.Println("pubSignals := []*big.Int{")
-	for _, v := range pubSignals {
-		fmt.Printf("  str2bigInt(\"%v\"),\n", v)
-	}
-	fmt.Println("}")
 }
