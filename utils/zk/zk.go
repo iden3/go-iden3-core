@@ -15,7 +15,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func CalculateWitnessBinWASM(wasmBytes []byte, inputs []witnesscalc.Input) ([]*big.Int, error) {
+func CalculateWitnessBinWASM(wasmBytes []byte, inputs map[string]interface{}) ([]*big.Int, error) {
+	// func CalculateWitnessBinWASM(wasmBytes []byte, inputs []witnesscalc.Input) ([]*big.Int, error) {
 	runtime := wasm3.NewRuntime(&wasm3.Config{
 		Environment: wasm3.NewEnvironment(),
 		StackSize:   64 * 1024,
@@ -54,7 +55,8 @@ func CalculateWitnessBinWASM(wasmBytes []byte, inputs []witnesscalc.Input) ([]*b
 	return witness, err
 }
 
-func CalculateWitness(wasmFilePath string, inputs []witnesscalc.Input) ([]*big.Int, error) {
+func CalculateWitness(wasmFilePath string, inputs map[string]interface{}) ([]*big.Int, error) {
+	// func CalculateWitness(wasmFilePath string, inputs []witnesscalc.Input) ([]*big.Int, error) {
 	wasmBytes, err := ioutil.ReadFile(wasmFilePath)
 	if err != nil {
 		return nil, err

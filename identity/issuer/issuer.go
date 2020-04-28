@@ -1,7 +1,6 @@
 package issuer
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
-	witnesscalc "github.com/iden3/go-circom-witnesscalc"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
@@ -28,6 +26,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 
+	// witnesscalc "github.com/iden3/go-circom-witnesscalc"
 	"github.com/iden3/go-circom-prover-verifier/parsers"
 	zkparsers "github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
@@ -866,13 +865,48 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 		pk = is.idenStateZkProofConf.pk
 	}
 
-	inputs := make([]witnesscalc.Input, 0)
+	// BEGIN inputs map
+	inputs := make(map[string]interface{})
+	/*
+		var idElem merkletree.ElemBytes
+		copy(idElem[:], is.id[:])
+		inputs["id"] = idElem.BigInt()
+
+		sk, err := is.keyStore.ExportKey(is.kOpComp)
+		if err != nil {
+			return nil, err
+		}
+		inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
+
+		var mtp merkletree.Proof
+		err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
+		if err != nil {
+			return nil, err
+		}
+		siblings := merkletree.SiblingsFromProof(&mtp)
+		// Add the rest of empty levels to the siblings
+		for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
+			siblings = append(siblings, &merkletree.HashZero)
+		}
+		siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
+		siblingsBigInt := make([]*big.Int, len(siblings))
+		for i, sibling := range siblings {
+			siblingsBigInt[i] = sibling.BigInt()
+		}
+		inputs["siblings"] = siblingsBigInt
+
+		inputs["claimsTreeRoot"] = is.claimsTree.RootKey().BigInt()
+		inputs["oldIdState"] = oldIdState.BigInt()
+		inputs["newIdState"] = newIdState.BigInt()
+	*/
+
+	// DEBUG
 
 	var idElem merkletree.ElemBytes
 	copy(idElem[:], is.id[:])
-	inputs = append(inputs, witnesscalc.Input{"id", idElem.BigInt()})
+	inputs["id"] = idElem.BigInt()
 
-	inputs = append(inputs, witnesscalc.Input{"oldIdState", oldIdState.BigInt()})
+	inputs["oldIdState"] = oldIdState.BigInt()
 
 	sk, err := is.keyStore.ExportKey(is.kOpComp)
 	if err != nil {
@@ -881,7 +915,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	kOp := sk.Public()
 	fmt.Printf("### scalar: %v -> Public: %v, %v\n", (*big.Int)(sk.Scalar()), kOp.X, kOp.Y)
 	fmt.Printf("sk, _ := hex.DecodeString(\"%v\")\n", hex.EncodeToString(sk[:]))
-	inputs = append(inputs, witnesscalc.Input{"userPrivateKey", (*big.Int)(sk.Scalar())})
+	inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
 	// inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
 
 	var mtp merkletree.Proof
@@ -899,16 +933,67 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	for i, sibling := range siblings {
 		siblingsBigInt[i] = sibling.BigInt()
 	}
-	inputs = append(inputs, witnesscalc.Input{"siblings", siblingsBigInt})
+	inputs["siblings"] = siblingsBigInt
 
 	var genesisClaimTreeRoot merkletree.Hash
 	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
 	if err != nil {
 		return nil, err
 	}
-	inputs = append(inputs, witnesscalc.Input{"claimsTreeRoot", genesisClaimTreeRoot.BigInt()})
+	inputs["claimsTreeRoot"] = genesisClaimTreeRoot.BigInt()
 
-	inputs = append(inputs, witnesscalc.Input{"newIdState", newIdState.BigInt()})
+	inputs["newIdState"] = newIdState.BigInt()
+
+	// END inputs map
+
+	// BEGIN inputs slice
+	/*
+		inputs := make([]witnesscalc.Input, 6)
+
+		var idElem merkletree.ElemBytes
+		copy(idElem[:], is.id[:])
+		inputs[0] = witnesscalc.Input{"id", idElem.BigInt()}
+
+		inputs[1] = witnesscalc.Input{"oldIdState", oldIdState.BigInt()}
+
+		sk, err := is.keyStore.ExportKey(is.kOpComp)
+		if err != nil {
+			return nil, err
+		}
+		kOp := sk.Public()
+		fmt.Printf("### scalar: %v -> Public: %v, %v\n", (*big.Int)(sk.Scalar()), kOp.X, kOp.Y)
+		fmt.Printf("sk, _ := hex.DecodeString(\"%v\")\n", hex.EncodeToString(sk[:]))
+		inputs[2] = witnesscalc.Input{"userPrivateKey", (*big.Int)(sk.Scalar())}
+		// inputs = append(inputs, witnesscalc.Input{"userPrivateKey", zkutils.PrivateKeyToBigInt(sk)})
+
+		var mtp merkletree.Proof
+		err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
+		if err != nil {
+			return nil, err
+		}
+		siblings := merkletree.SiblingsFromProof(&mtp)
+		// Add the rest of empty levels to the siblings
+		for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
+			siblings = append(siblings, &merkletree.HashZero)
+		}
+		siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
+		siblingsBigInt := make([]*big.Int, len(siblings))
+		for i, sibling := range siblings {
+			siblingsBigInt[i] = sibling.BigInt()
+		}
+		inputs[3] = witnesscalc.Input{"siblings", siblingsBigInt}
+
+		var genesisClaimTreeRoot merkletree.Hash
+		err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
+		if err != nil {
+			return nil, err
+		}
+		inputs[4] = witnesscalc.Input{"claimsTreeRoot", genesisClaimTreeRoot.BigInt()}
+
+		inputs[5] = witnesscalc.Input{"newIdState", newIdState.BigInt()}
+
+	*/
+	// END inputs slice
 
 	// pubSignals := []*big.Int{
 	// 	idElem.BigInt(),
@@ -917,7 +1002,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	// }
 
 	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
-	printInputs(inputs)
+	// printInputs(inputs)
 	// fmt.Printf(">>> INPUTS: %#v\n", inputs)
 	// {
 	// 	_, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
@@ -968,35 +1053,35 @@ func PrintPubSignals(pubSignals []*big.Int) {
 	fmt.Println("}")
 }
 
-func printInputs(inputs []witnesscalc.Input) {
-	fmt.Println("inputs := []witnesscalc.Input{")
-	for _, input := range inputs {
-		var vStr string
-		switch v := input.Value.(type) {
-		case *big.Int:
-			vStr = fmt.Sprintf("str2bigInt(\"%v\")", v)
-		case []*big.Int:
-			var b bytes.Buffer
-			b.WriteString("[]interface{}{")
-			for i, val := range v {
-				if val.Cmp(new(big.Int)) == 0 {
-					b.WriteString("new(big.Int)")
-				} else {
-					b.WriteString(fmt.Sprintf("str2bigInt(\"%v\")", v))
-				}
-				if i != len(v)-1 {
-					b.WriteString(",")
-				}
-			}
-			b.WriteString("}")
-			vStr = b.String()
-		default:
-			panic("unexpected input type")
-		}
-		fmt.Printf("  witnesscalc.Input{\"%v\", %v},\n", input.Name, vStr)
-	}
-	fmt.Println("}")
-}
+// func printInputs(inputs []witnesscalc.Input) {
+// 	fmt.Println("inputs := []witnesscalc.Input{")
+// 	for _, input := range inputs {
+// 		var vStr string
+// 		switch v := input.Value.(type) {
+// 		case *big.Int:
+// 			vStr = fmt.Sprintf("str2bigInt(\"%v\")", v)
+// 		case []*big.Int:
+// 			var b bytes.Buffer
+// 			b.WriteString("[]interface{}{")
+// 			for i, val := range v {
+// 				if val.Cmp(new(big.Int)) == 0 {
+// 					b.WriteString("new(big.Int)")
+// 				} else {
+// 					b.WriteString(fmt.Sprintf("str2bigInt(\"%v\")", v))
+// 				}
+// 				if i != len(v)-1 {
+// 					b.WriteString(",")
+// 				}
+// 			}
+// 			b.WriteString("}")
+// 			vStr = b.String()
+// 		default:
+// 			panic("unexpected input type")
+// 		}
+// 		fmt.Printf("  witnesscalc.Input{\"%v\", %v},\n", input.Name, vStr)
+// 	}
+// 	fmt.Println("}")
+// }
 
 // TODO: Create an Admin struct that exposes the following:
 // - The 3 Merle Trees

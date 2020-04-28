@@ -26,8 +26,9 @@ require (
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
+	github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0 // indirect
 	github.com/iden3/go-circom-prover-verifier v0.0.0-20200421172235-6256fcc9dbad
-	github.com/iden3/go-circom-witnesscalc v0.0.0-20200423133957-b10252d77de1
+	github.com/iden3/go-circom-witnesscalc v0.0.0-20200428090142-66259888c6fd
 	github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4
 	github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f
 	github.com/influxdata/influxdb v1.7.8 // indirect
@@ -45,7 +46,7 @@ require (
 	github.com/rjeczalik/notify v0.9.2 // indirect
 	github.com/rs/cors v1.6.0 // indirect
 	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726
-	github.com/sirupsen/logrus v1.4.2
+	github.com/sirupsen/logrus v1.5.0
 	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48 // indirect
 	github.com/steakknife/bloomfilter v0.0.0-20180922174646-6819c0d2a570 // indirect
 	github.com/steakknife/hamming v0.0.0-20180906055917-c99c65617cd3 // indirect
@@ -60,11 +61,3 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
-
-replace github.com/iden3/go-circom-prover-verifier => ../go-circom-prover-verifier
-
-replace github.com/iden3/go-circom-witnesscalc => ../go-circom-witnesscalc
-
-replace github.com/iden3/go-wasm3 => ../new/go-wasm3
-
-replace github.com/iden3/go-iden3-crypto => ../go-iden3-crypto
