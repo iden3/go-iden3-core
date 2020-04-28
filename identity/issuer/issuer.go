@@ -28,37 +28,38 @@ import (
 	"github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
-	witnesscalc "github.com/iden3/go-circom-witnesscalc"
-	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
-	wasm3 "github.com/iden3/go-wasm3"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ErrIdenGenesisOnly           = fmt.Errorf("identity is genesis only")
-	ErrIdenPubOnChainNil         = fmt.Errorf("idenPubOnChain is nil")
-	ErrIdenStateSNARKPathsNil    = fmt.Errorf("idenStateZkProofConf is nil")
-	ErrEthClientNil              = fmt.Errorf("ethClient is nil")
-	ErrIdenPubOffChainWriterNil  = fmt.Errorf("idenPubOffChainWriter is nil")
-	ErrIdenStatePendingNotNil    = fmt.Errorf("update of the published IdenState is pending")
-	ErrIdenStateOnChainZero      = fmt.Errorf("no IdenState known to be on chain")
-	ErrClaimNotFoundStateOnChain = fmt.Errorf("claim not found under the on chain identity state")
-	ErrClaimNotFoundClaimsTree   = fmt.Errorf("claim not found in the claims tree: the claim hasn't been issued")
-	ErrClaimNotYetInOnChainState = fmt.Errorf("claim has been issued but is not yet under a published on chain identity state")
+	ErrIdenGenesisOnly                    = fmt.Errorf("identity is genesis only")
+	ErrIdenPubOnChainNil                  = fmt.Errorf("idenPubOnChain is nil")
+	ErrIdenStateSNARKPathsNil             = fmt.Errorf("idenStateZkProofConf is nil")
+	ErrEthClientNil                       = fmt.Errorf("ethClient is nil")
+	ErrIdenPubOffChainWriterNil           = fmt.Errorf("idenPubOffChainWriter is nil")
+	ErrIdenStatePendingNotNil             = fmt.Errorf("update of the published IdenState is pending")
+	ErrIdenStateOnChainZero               = fmt.Errorf("no IdenState known to be on chain")
+	ErrClaimNotFoundStateOnChain          = fmt.Errorf("claim not found under the on chain identity state")
+	ErrClaimNotFoundClaimsTree            = fmt.Errorf("claim not found in the claims tree: the claim hasn't been issued")
+	ErrClaimNotYetInOnChainState          = fmt.Errorf("claim has been issued but is not yet under a published on chain identity state")
+	ErrFailedVerifyZkProofIdenStateUpdate = fmt.Errorf("failed verifing generated zk proof of identity state update")
 )
 
 var (
-	dbPrefixClaimsTree     = []byte("treeclaims:")
-	dbPrefixRevocationTree = []byte("treerevocation:")
-	dbPrefixRootsTree      = []byte("treeroots:")
-	dbPrefixIdenStateList  = []byte("idenstates:")
-	dbKeyConfig            = []byte("config")
-	dbKeyKOp               = []byte("kop")
-	dbKeyClaimKOpHi        = []byte("claimkophi")
-	dbKeyClaimKOpMtp       = []byte("claimkopmtp")
-	dbKeyId                = []byte("id")
-	dbKeyNonceIdx          = []byte("nonceidx")
+	dbPrefixClaimsTree        = []byte("treeclaims:")
+	dbPrefixRevocationTree    = []byte("treerevocation:")
+	dbPrefixRootsTree         = []byte("treeroots:")
+	dbPrefixIdenStateList     = []byte("idenstates:")
+	dbKeyConfig               = []byte("config")
+	dbKeyKOp                  = []byte("kop")
+	dbKeyClaimKOpHi           = []byte("claimkophi")
+	dbKeyGenesisClaimKOpMtp   = []byte("genclaimkopmtp")
+	dbKeyGenesisClaimTreeRoot = []byte("genclr")
+	dbKeyId                   = []byte("id")
+	dbKeyNonceIdx             = []byte("nonceidx")
 	// dbKeyIdenStateOnChain     = []byte("idenstateonchain")
 	dbKeyIdenStateDataOnChain = []byte("idenstatedataonchain")
 	dbKeyIdenStatePending     = []byte("idenstatepending")
@@ -89,6 +90,46 @@ type IdenStateZkProofConf struct {
 	PathProvingKey      string
 	PathVerifyingKey    string
 	Levels              int
+	CacheProvingKey     bool
+	pk                  *zktypes.Pk
+	vk                  *zktypes.Vk
+}
+
+func (z *IdenStateZkProofConf) Vk() (*zktypes.Vk, error) {
+	if z.vk == nil {
+		vkJSON, err := ioutil.ReadFile(z.PathVerifyingKey)
+		if err != nil {
+			return nil, err
+		}
+		vk, err := parsers.ParseVk(vkJSON)
+		if err != nil {
+			return nil, err
+		}
+		z.vk = vk
+	}
+	return z.vk, nil
+}
+
+func (z *IdenStateZkProofConf) Pk() (*zktypes.Pk, error) {
+	var pk *zktypes.Pk
+	if !z.CacheProvingKey || z.pk == nil {
+		provingKeyJson, err := ioutil.ReadFile(z.PathProvingKey)
+		if err != nil {
+			return nil, err
+		}
+		start := time.Now()
+		pk, err = parsers.ParsePk(provingKeyJson)
+		if err != nil {
+			return nil, err
+		}
+		log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
+		if z.CacheProvingKey {
+			z.pk = pk
+		}
+	} else {
+		pk = z.pk
+	}
+	return pk, nil
 }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
@@ -279,7 +320,8 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	tx.Put(dbKeyId, id[:])
 	tx.Put(dbKeyKOp, kOpComp[:])
 	tx.Put(dbKeyClaimKOpHi, claimKOpHi[:])
-	db.StoreJSON(tx, dbKeyClaimKOpMtp, claimKOpMtp)
+	db.StoreJSON(tx, dbKeyGenesisClaimKOpMtp, claimKOpMtp)
+	db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.RootKey())
 
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
@@ -640,12 +682,7 @@ func (is *Issuer) PublishState() error {
 		return err
 	}
 
-	// Sign [minor] identity transition from last state to new (current) state.
-	sig, err := is.SignState(idenStateLast, idenState)
-	if err != nil {
-		return err
-	}
-	kOp, err := is.kOpComp.Decompress()
+	zkProofOut, err := is.GenZkProofIdenStateUpdate(idenStateLast, idenState)
 	if err != nil {
 		return err
 	}
@@ -653,7 +690,7 @@ func (is *Issuer) PublishState() error {
 	if is.idenStateOnChain().Equals(&merkletree.HashZero) {
 		// Identity State not present in the Smart Contract. First time
 		// publishing it.
-		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, kOp, nil, sig)
+		ethTx, err := is.idenPubOnChain.InitState(is.id, idenStateLast, idenState, &zkProofOut.Proof)
 		if err != nil {
 			return fmt.Errorf("error calling idenstates smart contract initState: %w", err)
 		}
@@ -664,7 +701,7 @@ func (is *Issuer) PublishState() error {
 	} else {
 		// Identity State already present in the Smart Contract.
 		// Update it.
-		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, kOp, nil, sig)
+		ethTx, err := is.idenPubOnChain.SetState(is.id, idenState, &zkProofOut.Proof)
 		if err != nil {
 			return fmt.Errorf("error calling idenstates smart contract setState: %w", err)
 		}
@@ -836,53 +873,31 @@ type ZkProofOut struct {
 }
 
 func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
-	provingKeyJson, err := ioutil.ReadFile(is.idenStateZkProofConf.PathProvingKey)
+	pk, err := is.idenStateZkProofConf.Pk()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading zk pk: %w", err)
 	}
-	start := time.Now()
-	pk, err := parsers.ParsePk(provingKeyJson)
+	vk, err := is.idenStateZkProofConf.Vk()
 	if err != nil {
-		return nil, err
-	}
-	log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
-
-	runtime := wasm3.NewRuntime(&wasm3.Config{
-		Environment: wasm3.NewEnvironment(),
-		StackSize:   64 * 1024,
-	})
-	defer runtime.Destroy()
-
-	wasmBytes, err := ioutil.ReadFile(is.idenStateZkProofConf.PathWitnessCalcWASM)
-	if err != nil {
-		return nil, err
-	}
-	module, err := runtime.ParseModule(wasmBytes)
-	if err != nil {
-		return nil, err
-	}
-	module, err = runtime.LoadModule(module)
-	if err != nil {
-		return nil, err
-	}
-	witnessCalculator, err := witnesscalc.NewWitnessCalculator(runtime, module)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error loading zk vk: %w", err)
 	}
 
 	inputs := make(map[string]interface{})
+
 	var idElem merkletree.ElemBytes
 	copy(idElem[:], is.id[:])
 	inputs["id"] = idElem.BigInt()
+
+	inputs["oldIdState"] = oldIdState.BigInt()
 
 	sk, err := is.keyStore.ExportKey(is.kOpComp)
 	if err != nil {
 		return nil, err
 	}
-	inputs["userPrivateKey"] = skToBigInt(sk)
+	inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
 
 	var mtp merkletree.Proof
-	err = db.LoadJSON(is.storage, dbKeyClaimKOpMtp, &mtp)
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
 	if err != nil {
 		return nil, err
 	}
@@ -898,22 +913,30 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	}
 	inputs["siblings"] = siblingsBigInt
 
-	inputs["claimsTreeRoot"] = is.claimsTree.RootKey().BigInt()
-	inputs["oldIdState"] = oldIdState.BigInt()
-	inputs["newIdState"] = newIdState.BigInt()
-
-	start = time.Now()
-	wit, err := witnessCalculator.CalculateWitness(inputs, false)
+	var genesisClaimTreeRoot merkletree.Hash
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("elapsed", time.Now().Sub(start)).Debug("Witness calculated")
+	inputs["claimsTreeRoot"] = genesisClaimTreeRoot.BigInt()
 
-	start = time.Now()
+	inputs["newIdState"] = newIdState.BigInt()
+
+	wit, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
 	proof, pubSignals, err := prover.GenerateProof(pk, wit)
 	if err != nil {
 		return nil, err
 	}
+	// Verify zk proof
+	if !verifier.Verify(vk, proof, pubSignals) {
+		return nil, ErrFailedVerifyZkProofIdenStateUpdate
+	}
+
 	log.WithField("elapsed", time.Now().Sub(start)).Debug("Proof generated")
 	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
 }
@@ -925,21 +948,3 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 // - ClaimsDump() map[string]string
 // The return and input types are open to change.  They are based on the old
 // components/idenadminutils/idenadminutils.go
-
-// TODO: Move this to a public place
-func skToBigInt(k *babyjub.PrivateKey) *big.Int {
-	sBuf := babyjub.Blake512(k[:])
-	sBuf32 := [32]byte{}
-	copy(sBuf32[:], sBuf[:32])
-	pruneBuffer(&sBuf32)
-	s := new(big.Int)
-	cryptoUtils.SetBigIntFromLEBytes(s, sBuf32[:])
-	s.Rsh(s, 3)
-	return s
-}
-func pruneBuffer(buf *[32]byte) *[32]byte {
-	buf[0] = buf[0] & 0xF8
-	buf[31] = buf[31] & 0x7F
-	buf[31] = buf[31] | 0x40
-	return buf
-}

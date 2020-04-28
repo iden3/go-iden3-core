@@ -2,15 +2,17 @@ package verifier
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 	"time"
 
+	"github.com/iden3/go-circom-prover-verifier/parsers"
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
-	"github.com/iden3/go-iden3-core/merkletree"
-
 	idenpubonchainlocal "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
@@ -18,8 +20,11 @@ import (
 	"github.com/iden3/go-iden3-core/identity/holder"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var blockN uint64
@@ -340,7 +345,24 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.Equal(t, ErrClaimExpired, err)
 }
 
+var _vk *zktypes.Vk
+
 func TestMain(m *testing.M) {
+	log.SetLevel(log.DebugLevel)
+	downloadPath := "/tmp/iden3/idenstatezk"
+	err := issuer.GetIdenStateZKFiles("http://161.35.72.58:9000/circuit1/", downloadPath)
+	if err != nil {
+		panic(err)
+	}
+	vkJSON, err := ioutil.ReadFile(path.Join(downloadPath, "verification_key.json"))
+	if err != nil {
+		panic(err)
+	}
+	vk, err := parsers.ParseVk(vkJSON)
+	if err != nil {
+		panic(err)
+	}
+	_vk = vk
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Unix(blockTs, 0)
@@ -348,11 +370,15 @@ func TestMain(m *testing.M) {
 		func() uint64 {
 			return blockN
 		},
+		vk,
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	idenStateZkProofConf = &issuer.IdenStateZkProofConf{
-		PathWitnessCalcWASM: "/dev/null",
-		PathProvingKey:      "/dev/null",
+		Levels:              16,
+		PathWitnessCalcWASM: path.Join(downloadPath, "circuit.wasm"),
+		PathProvingKey:      path.Join(downloadPath, "proving_key.json"),
+		PathVerifyingKey:    path.Join(downloadPath, "verification_key.json"),
+		CacheProvingKey:     true,
 	}
 	os.Exit(m.Run())
 }

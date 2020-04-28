@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/eth"
@@ -29,11 +30,9 @@ type IdenPubOnChainer interface {
 	GetState(id *core.ID) (*proof.IdenStateData, error)
 	GetStateByBlock(id *core.ID, blockN uint64) (*proof.IdenStateData, error)
 	GetStateByTime(id *core.ID, blockTimestamp int64) (*proof.IdenStateData, error)
-	SetState(id *core.ID, newState *merkletree.Hash, kOp *babyjub.PublicKey,
-		stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error)
+	SetState(id *core.ID, newState *merkletree.Hash, proof *zktypes.Proof) (*types.Transaction, error)
 	InitState(id *core.ID, genesisState *merkletree.Hash,
-		newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
-		signature *babyjub.SignatureComp) (*types.Transaction, error)
+		newState *merkletree.Hash, proof *zktypes.Proof) (*types.Transaction, error)
 	TxConfirmBlocks(tx *types.Transaction) (*big.Int, error)
 	// VerifyProofClaim(pc *proof.ProofClaim) (bool, error)
 }
@@ -164,8 +163,8 @@ func splitSignature(signature *babyjub.SignatureComp) (sigR8 [32]byte, sigS [32]
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *babyjub.PublicKey,
-	stateTransitionProof []byte, signature *babyjub.SignatureComp) (*types.Transaction, error) {
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
+	proof *zktypes.Proof) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
 		0,
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -173,14 +172,11 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *
 			if err != nil {
 				return nil, err
 			}
-			// decompress signature
-			sigD, err := new(babyjub.Signature).Decompress(*signature)
-			if err != nil {
-				return nil, err
-			}
+			// TODO: Pass proof once the new smart contract with zk proof verification is integrated
 			return idenStates.SetState(auth, *newState, *id,
-				[2]*big.Int{kOp.X, kOp.Y}, stateTransitionProof,
-				[2]*big.Int{sigD.R8.X, sigD.R8.Y}, sigD.S)
+				// DUMMY
+				[2]*big.Int{new(big.Int), new(big.Int)}, []byte{},
+				[2]*big.Int{new(big.Int), new(big.Int)}, new(big.Int))
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
@@ -191,8 +187,7 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash, kOp *
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
-	newState *merkletree.Hash, kOp *babyjub.PublicKey, stateTransitionProof []byte,
-	signature *babyjub.SignatureComp) (*types.Transaction, error) {
+	newState *merkletree.Hash, proof *zktypes.Proof) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
 		0,
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
@@ -200,15 +195,12 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 			if err != nil {
 				return nil, err
 			}
-			// decompress signature
-			sigD, err := new(babyjub.Signature).Decompress(*signature)
-			if err != nil {
-				return nil, err
-			}
+			// TODO: Pass proof once the new smart contract with zk proof verification is integrated
 			return idenStates.InitState(auth, *newState,
-				*genesisState, *id, [2]*big.Int{kOp.X, kOp.Y},
-				stateTransitionProof, [2]*big.Int{sigD.R8.X,
-					sigD.R8.Y}, sigD.S)
+				*genesisState, *id,
+				// DUMMY
+				[2]*big.Int{new(big.Int), new(big.Int)}, []byte{},
+				[2]*big.Int{new(big.Int), new(big.Int)}, new(big.Int))
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed initalizating identity state in the Smart Contract (initState): %w", err)
