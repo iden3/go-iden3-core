@@ -238,7 +238,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	header := claims.ClaimHeader{
 		Type:       claims.NewClaimTypeNum(9999),
-		Dest:       claims.ClaimRecipSelf,
+		Subject:    claims.ClaimSubjectSelf,
 		Expiration: true,
 		Version:    false,
 	}

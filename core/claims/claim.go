@@ -5,14 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/crypto"
 	"github.com/iden3/go-iden3-core/merkletree"
-
-	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
@@ -50,42 +46,6 @@ func HashString(s string) (stringHashed [EntryFullBytesLen]byte) {
 // ClaimType is the type used to store a claim type.
 type ClaimType [ClaimTypeLen]byte
 
-func (ct ClaimType) MarshalText() ([]byte, error) {
-	var str string
-	switch ct {
-	case ClaimTypeBasic:
-		str = fmt.Sprintf("str:%v", ClaimTypeStringBasic)
-	case ClaimTypeKeyBabyJub:
-		str = fmt.Sprintf("str:%v", ClaimTypeStringKeyBabyJub)
-	default:
-		str = fmt.Sprintf("hex:%v", common.Hex(ct[:]))
-	}
-	return []byte(str), nil
-}
-
-func (ct *ClaimType) UnmarshalText(b []byte) error {
-	str := string(b)
-	if strings.HasPrefix(str, "str:") {
-		str := strings.TrimPrefix(str, "str:")
-		switch str {
-		case ClaimTypeStringBasic:
-			*ct = ClaimTypeBasic
-		case ClaimTypeStringKeyBabyJub:
-			*ct = ClaimTypeKeyBabyJub
-		default:
-			return fmt.Errorf("Unknown ClaimType str:%v", str)
-		}
-	} else if strings.HasPrefix(str, "hex:") {
-		str := strings.TrimPrefix(str, "hex:")
-		if err := common.HexDecodeInto(ct[:], []byte(str)); err != nil {
-			return err
-		}
-	} else {
-		return fmt.Errorf("invalid ClaimType prefix")
-	}
-	return nil
-}
-
 // NewClaimType creates a ClaimType from a type name.
 func NewClaimType(name string) ClaimType {
 	t := ClaimType{}
@@ -101,122 +61,89 @@ func NewClaimTypeNum(num uint64) ClaimType {
 	return ct
 }
 
-var (
-	// ClaimTypeBasic is a simple claim type that can be used for anything.
-	ClaimTypeBasic       = NewClaimTypeNum(0)
-	ClaimTypeStringBasic = "Basic"
-
-	// ClaimTypeKeyBabyJub is a claim type to autorize a babyjub public key for signing.
-	ClaimTypeKeyBabyJub       = NewClaimTypeNum(1)
-	ClaimTypeStringKeyBabyJub = "KeyBabyJub"
-
-// 	// ClaimTypeSetRootKey is a claim type of the root key of a merkle tree that goes into the relay.
-// 	ClaimTypeSetRootKey = NewClaimTypeNum(2)
-// 	// ClaimTypeAssignName is a claim type to assign a name to an ID
-// 	ClaimTypeAssignName = NewClaimTypeNum(3)
-// 	// ClaimTypeAuthorizeKSignSecp256k1 is a claim type to autorize a secp256k1 public key for signing.
-// 	ClaimTypeAuthorizeKSignSecp256k1 = NewClaimTypeNum(4)
-// 	// ClaimTypeLinkObjectIdentity is a claim type to link an object (represented by a hash) to an identity.
-// 	ClaimTypeLinkObjectIdentity = NewClaimTypeNum(5)
-// 	// ClaimTypeAuthorizeService is a claim type to authorize a Service for the identity that performs the claim
-// 	ClaimTypeAuthorizeService = NewClaimTypeNum(6)
-// 	// ClaimTypeNonce is a claim used to increment the tree nonce to modify the root hash
-// 	ClaimTypeNonce = NewClaimTypeNum(7)
-// 	// ClaimTypeEthId is a claim type to autorize an Eth Address to be used as Id inside Ethereum
-// 	ClaimTypeEthId = NewClaimTypeNum(8)
-// 	// ClaimTypeAuthEthKey is a claim type to authorize an Eth Address directly from a private key, allowing to specify if is used as KDisable (revoke), KReenable (recover), etc
-// 	ClaimTypeAuthEthKey = NewClaimTypeNum(9)
-)
-
 // ClaimTypeVersionLen is the length in bytes of the version and length in a claim.
 const ClaimTypeVersionLen = ClaimTypeLen + ClaimFlagsLen + ClaimVersionLen
 
-// NewClaimFromEntry deserializes a valid claim type into a Claim.
-func NewClaimFromEntry(e *merkletree.Entry) (merkletree.Entrier, error) {
-	for _, elemBytes := range e.Data {
-		bigint := elemBytes.BigInt()
-		ok := cryptoUtils.CheckBigIntInField(bigint)
-		if !ok {
-			return nil, errors.New("Elements not in the Finite Field over R")
-		}
-	}
-	var metadata Metadata
-	metadata.Unmarshal(e)
-	switch metadata.Type() {
-	case ClaimTypeBasic:
-		c := NewClaimBasicFromEntry(e)
-		return c, nil
-	// case *ClaimTypeAssignName:
-	// 	c := NewClaimAssignNameFromEntry(e)
-	// 	return c, nil
-	case ClaimTypeKeyBabyJub:
-		c := NewClaimKeyBabyJubFromEntry(e)
-		return c, nil
-	// case *ClaimTypeSetRootKey:
-	// 	c := NewClaimSetRootKeyFromEntry(e)
-	// 	return c, nil
-	// case *ClaimTypeAuthorizeKSignSecp256k1:
-	// 	return NewClaimAuthorizeKSignSecp256k1FromEntry(e)
-	// case *ClaimTypeLinkObjectIdentity:
-	// 	c := NewClaimLinkObjectIdentityFromEntry(e)
-	// 	return c, nil
-	// case *ClaimTypeAuthorizeService:
-	// 	c := NewClaimAuthorizeServiceFromEntry(e)
-	// 	return c, nil
-	// case *ClaimTypeEthId:
-	// 	c := NewClaimEthIdFromEntry(e)
-	// 	return c, nil
-	// case *ClaimTypeAuthEthKey:
-	// 	c := NewClaimAuthEthKeyFromEntry(e)
-	// 	return c, nil
-	default:
-		return nil, ErrInvalidClaimType
-	}
-}
-
-// ClaimRecip is the flag option to specify a recipient of a claim
-type ClaimRecip byte
+// ClaimSubject is the flag option to specify a recipient of a claim
+type ClaimSubject byte
 
 const (
-	// ClaimRecipSelf is a claim that refers to a property of the issuing
+	// ClaimSubjectSelf is a claim that refers to a property of the issuing
 	// identity.
-	ClaimRecipSelf       ClaimRecip = 0b00
-	ClaimRecipStringSelf string     = "Self"
-	// ClaimRecipIdenIndex is a claim that refers to a property of an
-	// identity found in the index part of the claim.
-	ClaimRecipIdenIndex       ClaimRecip = 0b01
-	ClaimRecipStringIdenIndex string     = "IdenIndex"
-	// ClaimRecipIdenIndex is a claim that refers to a property of an
-	// identity found in the value part of the claim.
-	ClaimRecipIdenValue       ClaimRecip = 0b10
-	ClaimRecipStringIdenValue string     = "IdenValue"
+	ClaimSubjectSelf       ClaimSubject = 0b00
+	ClaimSubjectStringSelf string       = "Self"
+	// ClaimSubjectOtherIden is a claim that refers to a property of
+	// another identity.
+	ClaimSubjectOtherIden       ClaimSubject = 0b01
+	ClaimSubjectStringOtherIden string       = "OtherIden"
+	// ClaimSubjectObject is a claim that refers to a property of an
+	// object.
+	ClaimSubjectObject       ClaimSubject = 0b10
+	ClaimSubjectStringObject string       = "Object"
 )
 
-func (cr ClaimRecip) MarshalText() ([]byte, error) {
+func (cs ClaimSubject) MarshalText() ([]byte, error) {
 	var str string
-	switch cr {
-	case ClaimRecipSelf:
-		str = ClaimRecipStringSelf
-	case ClaimRecipIdenIndex:
-		str = ClaimRecipStringIdenIndex
-	case ClaimRecipIdenValue:
-		str = ClaimRecipStringIdenValue
+	switch cs {
+	case ClaimSubjectSelf:
+		str = ClaimSubjectStringSelf
+	case ClaimSubjectOtherIden:
+		str = ClaimSubjectStringOtherIden
+	case ClaimSubjectObject:
+		str = ClaimSubjectStringObject
 	default:
-		return nil, fmt.Errorf("invalid ClaimRecip")
+		return nil, fmt.Errorf("invalid ClaimSubject")
 	}
 	return []byte(str), nil
 }
 
-func (cr *ClaimRecip) UnmarshalText(b []byte) error {
+func (cs *ClaimSubject) UnmarshalText(b []byte) error {
 	switch string(b) {
-	case ClaimRecipStringSelf:
-		*cr = ClaimRecipSelf
-	case ClaimRecipStringIdenIndex:
-		*cr = ClaimRecipIdenIndex
-	case ClaimRecipStringIdenValue:
-		*cr = ClaimRecipIdenValue
+	case ClaimSubjectStringSelf:
+		*cs = ClaimSubjectSelf
+	case ClaimSubjectStringOtherIden:
+		*cs = ClaimSubjectOtherIden
+	case ClaimSubjectStringObject:
+		*cs = ClaimSubjectObject
 	default:
-		return fmt.Errorf("invalid ClaimRecip")
+		return fmt.Errorf("invalid ClaimSubject")
+	}
+	return nil
+}
+
+// ClaimSubjectPos is the flag option to specify the position of the subject in the claim
+type ClaimSubjectPos byte
+
+const (
+	// ClaimSubjectPosIndex means that the subject is found in the Index of the claim
+	ClaimSubjectPosIndex       ClaimSubjectPos = 0b0
+	ClaimSubjectPosStringIndex string          = "Index"
+	// ClaimSubjectPosIndex means that the subject is found in the Value of the claim
+	ClaimSubjectPosValue       ClaimSubjectPos = 0b1
+	ClaimSubjectPosStringValue string          = "Value"
+)
+
+func (csp ClaimSubjectPos) MarshalText() ([]byte, error) {
+	var str string
+	switch csp {
+	case ClaimSubjectPosIndex:
+		str = ClaimSubjectPosStringIndex
+	case ClaimSubjectPosValue:
+		str = ClaimSubjectPosStringValue
+	default:
+		return nil, fmt.Errorf("invalid ClaimSubjectPos")
+	}
+	return []byte(str), nil
+}
+
+func (csp *ClaimSubjectPos) UnmarshalText(b []byte) error {
+	switch string(b) {
+	case ClaimSubjectPosStringIndex:
+		*csp = ClaimSubjectPosIndex
+	case ClaimSubjectPosStringValue:
+		*csp = ClaimSubjectPosValue
+	default:
+		return fmt.Errorf("invalid ClaimSubjectPos")
 	}
 	return nil
 }
@@ -225,7 +152,8 @@ func (cr *ClaimRecip) UnmarshalText(b []byte) error {
 // type and flags.
 type ClaimHeader struct {
 	Type       ClaimType
-	Dest       ClaimRecip
+	Subject    ClaimSubject
+	SubjectPos ClaimSubjectPos
 	Expiration bool
 	Version    bool
 }
@@ -247,9 +175,10 @@ func (c ClaimHeader) Marshal(e *merkletree.Entry) {
 	copy(index[0][:ClaimTypeLen], c.Type[:])
 	flags0 := &index[0][ClaimTypeLen]
 	*flags0 = 0
-	*flags0 |= byte(c.Dest)
-	*flags0 |= bool2byte(c.Expiration) << 2
-	*flags0 |= bool2byte(c.Version) << 3
+	*flags0 |= byte(c.Subject)
+	*flags0 |= byte(c.SubjectPos) << 2
+	*flags0 |= bool2byte(c.Expiration) << 3
+	*flags0 |= bool2byte(c.Version) << 4
 }
 
 // Unmarshal the ClaimHeader from an entry
@@ -257,25 +186,11 @@ func (c *ClaimHeader) Unmarshal(e *merkletree.Entry) {
 	index := e.Index()
 	copy(c.Type[:], index[0][:ClaimTypeLen])
 	flags0 := index[0][ClaimTypeLen]
-	c.Dest = ClaimRecip(flags0 & 0b00000011)
-	c.Expiration = byte2bool(flags0 & (1 << 2))
-	c.Version = byte2bool(flags0 & (1 << 3))
+	c.Subject = ClaimSubject(flags0 & 0b00000011)
+	c.SubjectPos = ClaimSubjectPos(flags0 & (1 << 2))
+	c.Expiration = byte2bool(flags0 & (1 << 3))
+	c.Version = byte2bool(flags0 & (1 << 4))
 }
-
-var (
-	// ClaimHeaderBasic is a simple claim type that can be used for anything.
-	ClaimHeaderBasic = ClaimHeader{
-		Type:       ClaimTypeBasic,
-		Dest:       ClaimRecipSelf,
-		Expiration: false,
-		Version:    false}
-	// ClaimTypeKeyBabyJub is a claim type issued about a babyjub public key.
-	ClaimHeaderKeyBabyJub = ClaimHeader{
-		Type:       ClaimTypeKeyBabyJub,
-		Dest:       ClaimRecipSelf,
-		Expiration: false,
-		Version:    false}
-)
 
 // Claimer is an intefrace that extends Entrier with a function that
 // returns the claim metadata.
@@ -287,7 +202,7 @@ type Claimer interface {
 // Metadata is a header and generic (some optional) values of a claim.
 type Metadata struct {
 	header     ClaimHeader
-	Dest       *core.ID
+	Subject    *core.ID
 	Expiration int64
 	Version    uint32
 	RevNonce   uint32
@@ -313,14 +228,15 @@ func (m Metadata) Marshal(e *merkletree.Entry) {
 	m.header.Marshal(e)
 	index := e.Index()
 	value := e.Value()
-	switch m.header.Dest {
-	case ClaimRecipSelf:
-	case ClaimRecipIdenIndex:
-		copy(index[1][:], m.Dest[:])
-	case ClaimRecipIdenValue:
-		copy(value[1][:], m.Dest[:])
-	default:
-		panic(fmt.Sprintf("Unexpected header.Dest %v", m.header.Dest))
+	if m.header.Subject != ClaimSubjectSelf {
+		switch m.header.SubjectPos {
+		case ClaimSubjectPosIndex:
+			copy(index[1][:], m.Subject[:])
+		case ClaimSubjectPosValue:
+			copy(value[1][:], m.Subject[:])
+		default:
+			panic(fmt.Sprintf("Unexpected header.SubjectPos %v", m.header.SubjectPos))
+		}
 	}
 	if m.header.Version {
 		binary.BigEndian.PutUint32(index[0][ClaimTypeLen+ClaimFlagsLen:], m.Version)
@@ -336,17 +252,18 @@ func (m *Metadata) Unmarshal(e *merkletree.Entry) {
 	m.header.Unmarshal(e)
 	index := e.Index()
 	value := e.Value()
-	if m.header.Dest != ClaimRecipSelf {
-		m.Dest = &core.ID{}
+	if m.header.Subject != ClaimSubjectSelf {
+		m.Subject = &core.ID{}
 	}
-	switch m.header.Dest {
-	case ClaimRecipSelf:
-	case ClaimRecipIdenIndex:
-		copy(m.Dest[:], index[1][:])
-	case ClaimRecipIdenValue:
-		copy(m.Dest[:], value[1][:])
-	default:
-		panic(fmt.Sprintf("Unexpected header.Dest %v", m.header.Dest))
+	if m.header.Subject != ClaimSubjectSelf {
+		switch m.header.SubjectPos {
+		case ClaimSubjectPosIndex:
+			copy(m.Subject[:], index[1][:])
+		case ClaimSubjectPosValue:
+			copy(m.Subject[:], value[1][:])
+		default:
+			panic(fmt.Sprintf("Unexpected header.SubjectPos %v", m.header.SubjectPos))
+		}
 	}
 	if m.header.Version {
 		m.Version = binary.BigEndian.Uint32(index[0][ClaimTypeLen+ClaimFlagsLen:])
@@ -359,7 +276,8 @@ func (m *Metadata) Unmarshal(e *merkletree.Entry) {
 
 type metadataJSON struct {
 	Type       ClaimType
-	Recip      ClaimRecip
+	Subject    ClaimSubject
+	SubjectPos ClaimSubjectPos
 	ID         *core.ID
 	Expiration *int64
 	Version    *uint32
@@ -370,9 +288,10 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	var metadata metadataJSON
 	h := m.Header()
 	metadata.Type = h.Type
-	metadata.Recip = h.Dest
-	if h.Dest != ClaimRecipSelf {
-		metadata.ID = m.Dest
+	metadata.SubjectPos = h.SubjectPos
+	metadata.Subject = h.Subject
+	if h.Subject != ClaimSubjectSelf {
+		metadata.ID = m.Subject
 	}
 	if h.Expiration {
 		metadata.Expiration = &m.Expiration
@@ -391,25 +310,16 @@ func (m *Metadata) UnmarshalJSON(b []byte) error {
 	}
 	m.header = ClaimHeader{
 		Type:       metadata.Type,
-		Dest:       metadata.Recip,
+		Subject:    metadata.Subject,
+		SubjectPos: metadata.SubjectPos,
 		Expiration: metadata.Expiration != nil,
 		Version:    metadata.Version != nil,
 	}
-	switch m.header.Type {
-	case ClaimTypeBasic:
-		if m.header != ClaimHeaderBasic {
-			return fmt.Errorf("claim header for ClaimType %v is different than expected",
-				ClaimTypeStringBasic)
-		}
-	case ClaimTypeKeyBabyJub:
-		if m.header != ClaimHeaderKeyBabyJub {
-			return fmt.Errorf("claim header for ClaimType %v is different than expected",
-				ClaimTypeStringKeyBabyJub)
-		}
-	default:
+	if err := checkHeader(&m.header); err != nil {
+		return err
 	}
-	if m.header.Dest != ClaimRecipSelf {
-		m.Dest = metadata.ID
+	if m.header.Subject != ClaimSubjectSelf {
+		m.Subject = metadata.ID
 	}
 	if m.header.Expiration {
 		m.Expiration = *metadata.Expiration
