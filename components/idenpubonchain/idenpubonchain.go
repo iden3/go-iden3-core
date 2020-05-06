@@ -190,6 +190,7 @@ func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
 }
 */
 
+/*
 func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
 	numBytes := 256 / 8
 	bs := g1.Marshal()
@@ -216,33 +217,39 @@ func proofToBigInts(proof *zktypes.Proof) (a [2]*big.Int, b [2][2]*big.Int, c [2
 	c = g1ToBigInts(proof.C)
 	return a, b, c
 }
+*/
 
-// SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
-func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
-	proof *zktypes.Proof) (*types.Transaction, error) {
-	if tx, err := ip.client.CallAuth(
-		0,
-		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
-			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
-			if err != nil {
-				return nil, err
-			}
-			proofA, proofB, proofC := proofToBigInts(proof)
-			return idenStates.SetState(auth, newState.BigInt(), id.BigInt(),
-				proofA, proofB, proofC)
-		},
-	); err != nil {
-		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
-	} else {
-		return tx, nil
-	}
+func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
+	numBytes := 256 / 8
+	bs := g1.Marshal()
+	x := new(big.Int).SetBytes(bs[:numBytes])
+	y := new(big.Int).SetBytes(bs[numBytes:])
+	return [2]*big.Int{x, y}
+}
+
+func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
+	numBytes := 256 / 8
+	bs := g2.Marshal()
+	xx := new(big.Int).SetBytes(bs[0*numBytes : 1*numBytes])
+	xy := new(big.Int).SetBytes(bs[1*numBytes : 2*numBytes])
+	yx := new(big.Int).SetBytes(bs[2*numBytes : 3*numBytes])
+	yy := new(big.Int).SetBytes(bs[3*numBytes : 4*numBytes])
+	// return [2][2]*big.Int{[2]*big.Int{xy, xx}, [2]*big.Int{yy, yx}}
+	return [2][2]*big.Int{[2]*big.Int{xx, xy}, [2]*big.Int{yx, yy}}
+}
+
+func proofToBigInts(proof *zktypes.Proof) (a [2]*big.Int, b [2][2]*big.Int, c [2]*big.Int) {
+	a = g1ToBigInts(proof.A)
+	b = g2ToBigInts(proof.B)
+	c = g1ToBigInts(proof.C)
+	return a, b, c
 }
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 	newState *merkletree.Hash, proof *zktypes.Proof) (*types.Transaction, error) {
 	if tx, err := ip.client.CallAuth(
-		0,
+		1000000,
 		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
 			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 			if err != nil {
@@ -255,6 +262,27 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed initalizating identity state in the Smart Contract (initState): %w", err)
+	} else {
+		return tx, nil
+	}
+}
+
+// SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
+func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
+	proof *zktypes.Proof) (*types.Transaction, error) {
+	if tx, err := ip.client.CallAuth(
+		1000000,
+		func(c *ethclient.Client, auth *bind.TransactOpts) (*types.Transaction, error) {
+			idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
+			if err != nil {
+				return nil, err
+			}
+			proofA, proofB, proofC := proofToBigInts(proof)
+			return idenStates.SetState(auth, newState.BigInt(), id.BigInt(),
+				proofA, proofB, proofC)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
 	} else {
 		return tx, nil
 	}
