@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/ethereum/go-ethereum/ethclient"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/core"
@@ -15,6 +16,7 @@ import (
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	// cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 var (
@@ -58,7 +60,7 @@ func New(client *eth.Client, addresses ContractAddresses) *IdenPubOnChain {
 
 // GetState returns the Identity State Data of the given ID from the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
-	var idenState [32]byte
+	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
 	err := ip.client.Call(func(c *ethclient.Client) error {
@@ -66,16 +68,17 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 		if err != nil {
 			return err
 		}
-		blockN, blockTS, idenState, err = idenStates.GetStateDataById(nil, *id)
+		blockN, blockTS, _idenState, err = idenStates.GetStateDataById(nil, id.BigInt())
 		return err
 	})
-	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+	idenState := merkletree.NewHashFromBigInt(_idenState)
+	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChain
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
-		IdenState: (*merkletree.Hash)(&idenState),
+		IdenState: idenState,
 	}, err
 }
 
@@ -96,7 +99,7 @@ func (ip *IdenPubOnChain) GetStateByBlock(id *core.ID, queryBlockN uint64) (*pro
 // is closest (equal or older) to the queryBlockN from the IdenStates Smart
 // Contract.  If a resut is found, BlockN <= queryBlockN.
 func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64) (*proof.IdenStateData, error) {
-	var idenState [32]byte
+	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
 	err := ip.client.Call(func(c *ethclient.Client) error {
@@ -104,16 +107,18 @@ func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64
 		if err != nil {
 			return err
 		}
-		blockN, blockTS, idenState, err = idenStates.GetStateDataByBlock(nil, *id, queryBlockN)
+		blockN, blockTS, _idenState, err = idenStates.GetStateDataByBlock(nil,
+			id.BigInt(), queryBlockN)
 		return err
 	})
-	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+	idenState := merkletree.NewHashFromBigInt(_idenState)
+	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChainOrBlockTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
-		IdenState: (*merkletree.Hash)(&idenState),
+		IdenState: idenState,
 	}, err
 }
 
@@ -134,7 +139,7 @@ func (ip *IdenPubOnChain) GetStateByTime(id *core.ID, queryBlockTs int64) (*proo
 // closest (equal or older) to the queryBlockTs from the IdenStates Smart
 // Contract.  If a resut is found, BlockN <= queryBlockN.
 func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64) (*proof.IdenStateData, error) {
-	var idenState [32]byte
+	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
 	err := ip.client.Call(func(c *ethclient.Client) error {
@@ -142,16 +147,18 @@ func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64)
 		if err != nil {
 			return err
 		}
-		blockN, blockTS, idenState, err = idenStates.GetStateDataByTime(nil, *id, uint64(queryBlockTs))
+		blockN, blockTS, _idenState, err = idenStates.GetStateDataByTime(nil,
+			id.BigInt(), uint64(queryBlockTs))
 		return err
 	})
-	if (*merkletree.Hash)(&idenState).Equals(&merkletree.HashZero) {
+	idenState := merkletree.NewHashFromBigInt(_idenState)
+	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChainOrTimeTooNew
 	}
 	return &proof.IdenStateData{
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
-		IdenState: (*merkletree.Hash)(&idenState),
+		IdenState: idenState,
 	}, err
 }
 
@@ -160,6 +167,54 @@ func splitSignature(signature *babyjub.SignatureComp) (sigR8 [32]byte, sigS [32]
 	copy(sigR8[:], signature[:32])
 	copy(sigS[:], signature[32:])
 	return sigR8, sigS
+}
+
+/*
+func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
+	numBytes := 256 / 8
+	bs := g1.Marshal()
+	x := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[:numBytes]))
+	y := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[numBytes:]))
+	return [2]*big.Int{x, y}
+}
+
+func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
+	numBytes := 256 / 8
+	bs := g2.Marshal()
+	xx := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[0*numBytes : 1*numBytes]))
+	xy := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[1*numBytes : 2*numBytes]))
+	yx := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[2*numBytes : 3*numBytes]))
+	yy := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[3*numBytes : 4*numBytes]))
+	println("DBG swapEndian, swap xy")
+	return [2][2]*big.Int{[2]*big.Int{xy, xx}, [2]*big.Int{yy, yx}}
+}
+*/
+
+func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
+	numBytes := 256 / 8
+	bs := g1.Marshal()
+	x := new(big.Int).SetBytes(bs[:numBytes])
+	y := new(big.Int).SetBytes(bs[numBytes:])
+	return [2]*big.Int{x, y}
+}
+
+func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
+	numBytes := 256 / 8
+	bs := g2.Marshal()
+	xx := new(big.Int).SetBytes(bs[0*numBytes : 1*numBytes])
+	xy := new(big.Int).SetBytes(bs[1*numBytes : 2*numBytes])
+	yx := new(big.Int).SetBytes(bs[2*numBytes : 3*numBytes])
+	yy := new(big.Int).SetBytes(bs[3*numBytes : 4*numBytes])
+	// 	println("DBG no swapEndian, swap xy")
+	// return [2][2]*big.Int{[2]*big.Int{xy, xx}, [2]*big.Int{yy, yx}}
+	return [2][2]*big.Int{[2]*big.Int{xx, xy}, [2]*big.Int{yx, yy}}
+}
+
+func proofToBigInts(proof *zktypes.Proof) (a [2]*big.Int, b [2][2]*big.Int, c [2]*big.Int) {
+	a = g1ToBigInts(proof.A)
+	b = g2ToBigInts(proof.B)
+	c = g1ToBigInts(proof.C)
+	return a, b, c
 }
 
 // SetState updates the Identity State of the given ID in the IdenStates Smart Contract.
@@ -172,11 +227,9 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
 			if err != nil {
 				return nil, err
 			}
-			// TODO: Pass proof once the new smart contract with zk proof verification is integrated
-			return idenStates.SetState(auth, *newState, *id,
-				// DUMMY
-				[2]*big.Int{new(big.Int), new(big.Int)}, []byte{},
-				[2]*big.Int{new(big.Int), new(big.Int)}, new(big.Int))
+			proofA, proofB, proofC := proofToBigInts(proof)
+			return idenStates.SetState(auth, newState.BigInt(), id.BigInt(),
+				proofA, proofB, proofC)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed setting identity state in the Smart Contract (setState): %w", err)
@@ -195,12 +248,10 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState *merkletree.Hash,
 			if err != nil {
 				return nil, err
 			}
-			// TODO: Pass proof once the new smart contract with zk proof verification is integrated
-			return idenStates.InitState(auth, *newState,
-				*genesisState, *id,
-				// DUMMY
-				[2]*big.Int{new(big.Int), new(big.Int)}, []byte{},
-				[2]*big.Int{new(big.Int), new(big.Int)}, new(big.Int))
+			proofA, proofB, proofC := proofToBigInts(proof)
+			return idenStates.InitState(auth, newState.BigInt(),
+				genesisState.BigInt(), id.BigInt(),
+				proofA, proofB, proofC)
 		},
 	); err != nil {
 		return nil, fmt.Errorf("Failed initalizating identity state in the Smart Contract (initState): %w", err)

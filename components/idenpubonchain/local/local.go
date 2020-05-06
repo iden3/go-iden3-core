@@ -8,12 +8,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+	zkparsers "github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/merkletree"
+	// cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 type IdenStateHistory struct {
@@ -148,6 +151,53 @@ func (ip *IdenPubOnChain) SetState(id *core.ID, newState *merkletree.Hash,
 	return &types.Transaction{}, nil
 }
 
+func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
+	numBytes := 256 / 8
+	bs := g1.Marshal()
+	x := new(big.Int).SetBytes(bs[:numBytes])
+	y := new(big.Int).SetBytes(bs[numBytes:])
+	return [2]*big.Int{x, y}
+}
+
+func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
+	numBytes := 256 / 8
+	bs := g2.Marshal()
+	xx := new(big.Int).SetBytes(bs[0*numBytes : 1*numBytes])
+	xy := new(big.Int).SetBytes(bs[1*numBytes : 2*numBytes])
+	yx := new(big.Int).SetBytes(bs[2*numBytes : 3*numBytes])
+	yy := new(big.Int).SetBytes(bs[3*numBytes : 4*numBytes])
+	// return [2][2]*big.Int{[2]*big.Int{xy, xx}, [2]*big.Int{yy, yx}}
+	return [2][2]*big.Int{[2]*big.Int{xx, xy}, [2]*big.Int{yx, yy}}
+}
+
+/*
+func g1ToBigInts(g1 *bn256.G1) [2]*big.Int {
+	numBytes := 256 / 8
+	bs := g1.Marshal()
+	x := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[:numBytes]))
+	y := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[numBytes:]))
+	return [2]*big.Int{x, y}
+}
+
+func g2ToBigInts(g2 *bn256.G2) [2][2]*big.Int {
+	numBytes := 256 / 8
+	bs := g2.Marshal()
+	xx := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[0*numBytes : 1*numBytes]))
+	xy := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[1*numBytes : 2*numBytes]))
+	yx := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[2*numBytes : 3*numBytes]))
+	yy := new(big.Int).SetBytes(cryptoUtils.SwapEndianness(bs[3*numBytes : 4*numBytes]))
+	println("DBG swapEndian, swap xy")
+	return [2][2]*big.Int{[2]*big.Int{xy, xx}, [2]*big.Int{yy, yx}}
+}
+*/
+
+func proofToBigInts(proof *zktypes.Proof) (a [2]*big.Int, b [2][2]*big.Int, c [2]*big.Int) {
+	a = g1ToBigInts(proof.A)
+	b = g2ToBigInts(proof.B)
+	c = g1ToBigInts(proof.C)
+	return a, b, c
+}
+
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
 func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState,
 	newState *merkletree.Hash, zkProof *zktypes.Proof) (*types.Transaction, error) {
@@ -157,6 +207,37 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState,
 	if ok {
 		return nil, fmt.Errorf("identity already exists on chain")
 	}
+
+	fmt.Printf(`    "id": "%v",
+`,
+		id.BigInt().String())
+	fmt.Printf(`    "genesisState": "%v",
+`,
+		genesisState.BigInt().String())
+	fmt.Printf(`    "newState": "%v",
+`,
+		newState.BigInt().String())
+	proofA, proofB, proofC := proofToBigInts(zkProof)
+	fmt.Printf(`    "a": ["%v",
+			    "%v"],
+`,
+		proofA[0], proofA[1])
+	fmt.Printf(`    "b": [
+    			    ["%v",
+			     "%v"],
+			    ["%v",
+			     "%v"]],
+`,
+		proofB[0][0], proofB[0][1], proofB[1][0], proofB[1][1])
+	fmt.Printf(`    "c": ["%v",
+			    "%v"]
+`,
+		proofC[0], proofC[1])
+	proofJSON, err := zkparsers.ProofToJson(zkProof)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("proof:", string(proofJSON))
 	if !ip.verifyZKP(zkProof, id, genesisState, newState) {
 		return nil, fmt.Errorf("zkproof verification failed")
 	}

@@ -222,7 +222,7 @@ var blockN uint64
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
 	downloadPath := "/tmp/iden3/idenstatezk"
-	err := GetIdenStateZKFiles("http://161.35.72.58:9000/circuit1/", downloadPath)
+	err := GetIdenStateZKFiles("http://161.35.72.58:9000/circuit-idstate/", downloadPath)
 	if err != nil {
 		panic(err)
 	}
