@@ -34,7 +34,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 		rootBigInt, err := poseidon.HashBytes([]byte(strconv.Itoa(i)))
 		assert.Nil(t, err)
 		root := merkletree.NewHashFromBigInt(rootBigInt)
-		err = claims.AddLeafRootsTree(rotMt, &root)
+		err = claims.AddLeafRootsTree(rotMt, root)
 		assert.Nil(t, err)
 
 		nonce := uint32(i)

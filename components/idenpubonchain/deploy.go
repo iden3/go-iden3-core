@@ -10,16 +10,12 @@ import (
 )
 
 type StateDepsAddresses struct {
-	PoseidonCircomlib *common.Address
-	Poseidon          *common.Address
-	EddsaBabyJub      *common.Address
+	Verifier *common.Address
 }
 
 type DeployStateResult struct {
-	PoseidonCircomlib eth.ContractData
-	Poseidon          eth.ContractData
-	EddsaBabyJub      eth.ContractData
-	State             eth.ContractData
+	Verifier eth.ContractData
+	State    eth.ContractData
 }
 
 func DeployState(client *eth.Client, depsAddrs *StateDepsAddresses) (DeployStateResult, error) {
@@ -28,52 +24,24 @@ func DeployState(client *eth.Client, depsAddrs *StateDepsAddresses) (DeployState
 	}
 	var result DeployStateResult
 
-	if depsAddrs.PoseidonCircomlib == nil {
-		if contract, err := client.Deploy("PoseidonCircomlib",
+	if depsAddrs.Verifier == nil {
+		if contract, err := client.Deploy("Verifier",
 			func(c *ethclient.Client, auth *bind.TransactOpts) (common.Address,
 				*types.Transaction, interface{}, error) {
-				return contracts.DeployPoseidonUnit(auth, c)
+				return contracts.DeployVerifier(auth, c)
 			}); err != nil {
 			return result, err
 		} else {
-			result.PoseidonCircomlib = contract
+			result.Verifier = contract
 		}
 	} else {
-		result.PoseidonCircomlib.Address = *depsAddrs.PoseidonCircomlib
-	}
-
-	if depsAddrs.Poseidon == nil {
-		if contract, err := client.Deploy("Poseidon",
-			func(c *ethclient.Client, auth *bind.TransactOpts) (common.Address,
-				*types.Transaction, interface{}, error) {
-				return contracts.DeployPoseidon(auth, c, result.PoseidonCircomlib.Address)
-			}); err != nil {
-			return result, err
-		} else {
-			result.Poseidon = contract
-		}
-	} else {
-		result.Poseidon.Address = *depsAddrs.Poseidon
-	}
-
-	if depsAddrs.EddsaBabyJub == nil {
-		if contract, err := client.Deploy("EddsaBabyJub",
-			func(c *ethclient.Client, auth *bind.TransactOpts) (common.Address,
-				*types.Transaction, interface{}, error) {
-				return contracts.DeployEddsaBabyJubJub(auth, c, result.PoseidonCircomlib.Address)
-			}); err != nil {
-			return result, err
-		} else {
-			result.EddsaBabyJub = contract
-		}
-	} else {
-		result.EddsaBabyJub.Address = *depsAddrs.EddsaBabyJub
+		result.Verifier.Address = *depsAddrs.Verifier
 	}
 
 	if contract, err := client.Deploy("State",
 		func(c *ethclient.Client, auth *bind.TransactOpts) (common.Address,
 			*types.Transaction, interface{}, error) {
-			return contracts.DeployState(auth, c, result.PoseidonCircomlib.Address, result.EddsaBabyJub.Address)
+			return contracts.DeployState(auth, c, result.Verifier.Address)
 		}); err != nil {
 		return result, err
 	} else {

@@ -157,6 +157,7 @@ func (ip *IdenPubOnChain) InitState(id *core.ID, genesisState,
 	if ok {
 		return nil, fmt.Errorf("identity already exists on chain")
 	}
+
 	if !ip.verifyZKP(zkProof, id, genesisState, newState) {
 		return nil, fmt.Errorf("zkproof verification failed")
 	}

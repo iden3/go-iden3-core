@@ -16,8 +16,9 @@ import (
 // Hash is the type used to represent a hash used in the MT.
 type Hash ElemBytes
 
-func NewHashFromBigInt(e *big.Int) Hash {
-	return Hash(NewElemBytesFromBigInt(e))
+func NewHashFromBigInt(e *big.Int) *Hash {
+	h := Hash(NewElemBytesFromBigInt(e))
+	return &h
 }
 
 func (h *Hash) BigInt() *big.Int {
@@ -88,8 +89,7 @@ func HashElems(elems ...ElemBytes) (*Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := NewHashFromBigInt(poseidonHash)
-	return &h, nil
+	return NewHashFromBigInt(poseidonHash), nil
 }
 
 // HashElemsKey performs a poseidon hash over the array of ElemBytes.
@@ -109,8 +109,7 @@ func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := NewHashFromBigInt(poseidonHash)
-	return &h, nil
+	return NewHashFromBigInt(poseidonHash), nil
 }
 
 // getPath returns the binary path, from the root to the leaf.

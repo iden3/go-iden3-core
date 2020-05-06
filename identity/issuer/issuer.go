@@ -884,9 +884,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 
 	inputs := make(map[string]interface{})
 
-	var idElem merkletree.ElemBytes
-	copy(idElem[:], is.id[:])
-	inputs["id"] = idElem.BigInt()
+	inputs["id"] = is.id.BigInt()
 
 	inputs["oldIdState"] = oldIdState.BigInt()
 

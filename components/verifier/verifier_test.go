@@ -350,7 +350,7 @@ var _vk *zktypes.Vk
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
 	downloadPath := "/tmp/iden3/idenstatezk"
-	err := issuer.GetIdenStateZKFiles("http://161.35.72.58:9000/circuit1/", downloadPath)
+	err := issuer.GetIdenStateZKFiles("http://161.35.72.58:9000/circuit-idstate/", downloadPath)
 	if err != nil {
 		panic(err)
 	}
