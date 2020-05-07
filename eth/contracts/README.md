@@ -1,9 +1,9 @@
 # State smart contracts
 
 ```
-abigen --sol ~/git/iden3/contracts/contracts/State.sol --alias _setState=setStateInternal --pkg=contracts --out state.go
+abigen --sol ~/git/iden3/contracts/contracts/State.sol --pkg=contracts --out state.go
 ```
-Generated from git@github.com:iden3/contracts.git commit 2b6f1146603afa34d3aec7d18252e8a5dd7eabba.
+Generated from git@github.com:iden3/contracts.git commit `ae3775b85124176df6f19893963d5ef2f463bb08`.
 
 Trusted Setup files sha256:
 ```
