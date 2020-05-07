@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"errors"
+	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/iden3/go-iden3-core/merkletree"
@@ -42,6 +43,12 @@ func (id *ID) String() string {
 // Bytes returns the bytes from the ID
 func (id *ID) Bytes() []byte {
 	return id[:]
+}
+
+func (id *ID) BigInt() *big.Int {
+	var idElem merkletree.ElemBytes
+	copy(idElem[:], id[:])
+	return idElem.BigInt()
 }
 
 func (id1 *ID) Equal(id2 *ID) bool {
@@ -157,6 +164,5 @@ func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash)
 	if err != nil {
 		panic(err)
 	}
-	idenStateHash := merkletree.NewHashFromBigInt(idenState)
-	return &idenStateHash
+	return merkletree.NewHashFromBigInt(idenState)
 }

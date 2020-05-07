@@ -29,7 +29,7 @@ import (
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
-	zkutils "github.com/iden3/go-iden3-core/utils/zk"
+	witnesscalc "github.com/iden3/go-circom-witnesscalc"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -884,9 +884,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 
 	inputs := make(map[string]interface{})
 
-	var idElem merkletree.ElemBytes
-	copy(idElem[:], is.id[:])
-	inputs["id"] = idElem.BigInt()
+	inputs["id"] = is.id.BigInt()
 
 	inputs["oldIdState"] = oldIdState.BigInt()
 
@@ -922,7 +920,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 
 	inputs["newIdState"] = newIdState.BigInt()
 
-	wit, err := zkutils.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
+	wit, err := witnesscalc.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
 	if err != nil {
 		return nil, err
 	}
