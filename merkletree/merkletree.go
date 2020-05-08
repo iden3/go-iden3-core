@@ -902,6 +902,39 @@ func (p Proof) String() string {
 	return buf.String()
 }
 
+// SiblingsFromProof returns all the siblings of the proof. This function is used to generate the siblings input for the circom circuits.
+func SiblingsFromProof(proof *Proof) []*Hash {
+	sibIdx := 0
+	var siblings []*Hash
+	for lvl := 0; lvl < int(proof.depth); lvl++ {
+		if common.TestBitBigEndian(proof.notempties[:], uint(lvl)) {
+			siblings = append(siblings, proof.Siblings[sibIdx])
+			sibIdx++
+		} else {
+			siblings = append(siblings, &HashZero)
+		}
+	}
+	return siblings
+}
+
+func (p *Proof) AllSiblings() []*Hash {
+	return SiblingsFromProof(p)
+}
+
+func (p *Proof) AllSiblingsCircom(levels int) []*big.Int {
+	siblings := p.AllSiblings()
+	// Add the rest of empty levels to the siblings
+	for i := len(siblings); i < levels; i++ {
+		siblings = append(siblings, &HashZero)
+	}
+	siblings = append(siblings, &HashZero) // add extra level for circom compatibility
+	siblingsBigInt := make([]*big.Int, len(siblings))
+	for i, sibling := range siblings {
+		siblingsBigInt[i] = sibling.BigInt()
+	}
+	return siblingsBigInt
+}
+
 // GenerateProof generates the proof of existence (or non-existence) of an
 // Entry's hash Index for a Merkle Tree given the root.
 // If the rootKey is nil, the current merkletree root is used
@@ -952,21 +985,6 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 		}
 	}
 	return nil, ErrEntryIndexNotFound
-}
-
-// SiblingsFromProof returns all the siblings of the proof. This function is used to generate the siblings input for the circom circuits.
-func SiblingsFromProof(proof *Proof) []*Hash {
-	sibIdx := 0
-	var siblings []*Hash
-	for lvl := 0; lvl < int(proof.depth); lvl++ {
-		if common.TestBitBigEndian(proof.notempties[:], uint(lvl)) {
-			siblings = append(siblings, proof.Siblings[sibIdx])
-			sibIdx++
-		} else {
-			siblings = append(siblings, &HashZero)
-		}
-	}
-	return siblings
 }
 
 // VerifyProof verifies the Merkle Proof for the entry and root.

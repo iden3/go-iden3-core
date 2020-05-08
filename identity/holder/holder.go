@@ -2,6 +2,7 @@ package holder
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
@@ -11,6 +12,7 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
+	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -62,10 +64,16 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 	}, nil
 }
 
-// HolderGetCredentialValidity gets a Credential of Validity from a Credential
-// of Existence.  This requires a request to the Issuer IdenStatePubOffChain.
-func (h *Holder) HolderGetCredentialValidity(
-	credExist *proof.CredentialExistence) (*proof.CredentialValidity, error) {
+type CredentialValidityAux struct {
+	IdenStateData  *proof.IdenStateData
+	MtpNotNonce    *merkletree.Proof
+	ClaimsTreeRoot *merkletree.Hash
+	RevTreeRoot    *merkletree.Hash
+	RootsTreeRoot  *merkletree.Hash
+}
+
+func (h *Holder) HolderGetCredentialValidityData(
+	credExist *proof.CredentialExistence) (*CredentialValidityAux, error) {
 	idenStateData, err := h.idenPubOnChain.GetState(credExist.Id)
 	if err != nil {
 		return nil, err
@@ -89,12 +97,78 @@ func (h *Holder) HolderGetCredentialValidity(
 	if mtpNotNonce.Existence {
 		return nil, ErrRevokedClaim
 	}
+	return &CredentialValidityAux{
+		MtpNotNonce:    mtpNotNonce,
+		ClaimsTreeRoot: publicData.ClaimsTreeRoot,
+		RevTreeRoot:    publicData.RevocationsTree.RootKey(),
+		RootsTreeRoot:  publicData.RootsTree.RootKey(),
+	}, nil
+}
+
+// HolderGetCredentialValidity gets a Credential of Validity from a Credential
+// of Existence.  This requires a request to the Issuer IdenStatePubOffChain.
+func (h *Holder) HolderGetCredentialValidity(
+	credExist *proof.CredentialExistence) (*proof.CredentialValidity, error) {
+	credValidData, err := h.HolderGetCredentialValidityData(credExist)
+	if err != nil {
+		return nil, err
+	}
 	return &proof.CredentialValidity{
 		CredentialExistence: *credExist,
-		IdenStateData:       *idenStateData,
-		MtpNotNonce:         mtpNotNonce,
-		ClaimsTreeRoot:      publicData.ClaimsTreeRoot,
-		RootsTreeRoot:       publicData.RootsTree.RootKey(),
+		IdenStateData:       *credValidData.IdenStateData,
+		MtpNotNonce:         credValidData.MtpNotNonce,
+		ClaimsTreeRoot:      credValidData.ClaimsTreeRoot,
+		RootsTreeRoot:       credValidData.RootsTreeRoot,
+	}, nil
+}
+
+type CredentialProofInputs struct {
+	// A
+	Claim [8]*big.Int
+
+	CredExistMtp            []*big.Int
+	CredExistClaimsTreeRoot *big.Int
+
+	// D. issuer proof of claim validity
+	CredValidMtp            []*big.Int
+	CredValidClaimsTreeRoot *big.Int
+	CredValidRevTreeRoot    *big.Int
+	CredValidRootsTreeRoot  *big.Int
+
+	// E. issuer proof of Root (ExistClaimsTreeRoot)
+	CredValidRootMtp []*big.Int
+
+	// F. issuer recent idenState
+	IdenState *big.Int
+}
+
+func (h *Holder) HolderGetCredentialProofInputs(
+	credExist *proof.CredentialExistence, issuerLevels int) (*CredentialProofInputs, error) {
+	credValidData, err := h.HolderGetCredentialValidityData(credExist)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Compute ExistClaimTreeRoot
+	// TODO: Compute RootMtp
+
+	var claim [8]*big.Int
+	for i, elem := range credExist.Claim.Data {
+		claim[i] = elem.BigInt()
+	}
+
+	return &CredentialProofInputs{
+		Claim:                   claim,
+		CredExistMtp:            credExist.MtpClaim.AllSiblingsCircom(issuerLevels),
+		CredExistClaimsTreeRoot: nil,
+
+		CredValidMtp:            credValidData.MtpNotNonce.AllSiblingsCircom(issuerLevels),
+		CredValidClaimsTreeRoot: credValidData.ClaimsTreeRoot.BigInt(),
+		CredValidRevTreeRoot:    nil,
+		CredValidRootsTreeRoot:  credValidData.RootsTreeRoot.BigInt(),
+
+		CredValidRootMtp: nil,
+
+		IdenState: credValidData.IdenStateData.IdenState.BigInt(),
 	}, nil
 }
 

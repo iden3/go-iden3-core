@@ -867,6 +867,43 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	}, nil
 }
 
+type IdOwnershipGenesisInputs struct {
+	Id             *big.Int
+	PrivateKey     *big.Int
+	MtpSiblings    []*big.Int
+	ClaimsTreeRoot *big.Int
+	// RevTreeRoot    *big.Int
+	// RootTreeRoot   *big.Int
+}
+
+func (is *Issuer) GenIdOwnershipGenesisInputs() (*IdOwnershipGenesisInputs, error) {
+	sk, err := is.keyStore.ExportKey(is.kOpComp)
+	if err != nil {
+		return nil, err
+	}
+
+	var mtp merkletree.Proof
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
+	if err != nil {
+		return nil, err
+	}
+	siblings := mtp.AllSiblingsCircom(is.idenStateZkProofConf.Levels)
+
+	var genesisClaimTreeRoot merkletree.Hash
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &IdOwnershipGenesisInputs{
+		Id:             is.id.BigInt(),
+		PrivateKey:     (*big.Int)(sk.Scalar()),
+		MtpSiblings:    siblings,
+		ClaimsTreeRoot: genesisClaimTreeRoot.BigInt(),
+		// RevTreeRoot    :
+		// RootTreeRoot   :
+	}, nil
+}
+
 type ZkProofOut struct {
 	Proof      zktypes.Proof
 	PubSignals []*big.Int
@@ -882,42 +919,18 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 		return nil, fmt.Errorf("error loading zk vk: %w", err)
 	}
 
+	idOwnershipInputs, err := is.GenIdOwnershipGenesisInputs()
+	if err != nil {
+		return nil, fmt.Errorf("error generating idOwnership inputs: %w", err)
+	}
+
 	inputs := make(map[string]interface{})
 
-	inputs["id"] = is.id.BigInt()
-
+	inputs["id"] = idOwnershipInputs.Id
 	inputs["oldIdState"] = oldIdState.BigInt()
-
-	sk, err := is.keyStore.ExportKey(is.kOpComp)
-	if err != nil {
-		return nil, err
-	}
-	inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
-
-	var mtp merkletree.Proof
-	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
-	if err != nil {
-		return nil, err
-	}
-	siblings := merkletree.SiblingsFromProof(&mtp)
-	// Add the rest of empty levels to the siblings
-	for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
-		siblings = append(siblings, &merkletree.HashZero)
-	}
-	siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
-	siblingsBigInt := make([]*big.Int, len(siblings))
-	for i, sibling := range siblings {
-		siblingsBigInt[i] = sibling.BigInt()
-	}
-	inputs["siblings"] = siblingsBigInt
-
-	var genesisClaimTreeRoot merkletree.Hash
-	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
-	if err != nil {
-		return nil, err
-	}
-	inputs["claimsTreeRoot"] = genesisClaimTreeRoot.BigInt()
-
+	inputs["userPrivateKey"] = idOwnershipInputs.PrivateKey
+	inputs["siblings"] = idOwnershipInputs.MtpSiblings
+	inputs["claimsTreeRoot"] = idOwnershipInputs.ClaimsTreeRoot
 	inputs["newIdState"] = newIdState.BigInt()
 
 	wit, err := witnesscalc.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)

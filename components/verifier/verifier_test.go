@@ -2,6 +2,7 @@ package verifier
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -272,6 +273,10 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	credValidClaim2t2, err := ho.HolderGetCredentialValidity(credExistClaim2)
 	assert.Nil(t, err)
 	assert.NotNil(t, credValidClaim2t2)
+
+	credValidClaim1t2JSON, err := json.MarshalIndent(credValidClaim1t2, "", "  ")
+	assert.Nil(t, err)
+	fmt.Printf("%v\n", string(credValidClaim1t2JSON))
 
 	// Outdated is invalid
 	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
