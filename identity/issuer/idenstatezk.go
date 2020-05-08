@@ -62,7 +62,7 @@ func checkHash(filename, hashStr string) error {
 		return err
 	}
 	h := hasher.Sum(nil)
-	if bytes.Compare(h, hash) != 0 {
+	if !bytes.Equal(h, hash) {
 		fmt.Printf("\"%s\": \"%s\",\n", path.Base(filename), hex.EncodeToString(h))
 		return fmt.Errorf("hash mismatch: expected %v but got %v", hashStr, hex.EncodeToString(h))
 	}
