@@ -2,7 +2,6 @@ package verifier
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -256,6 +255,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
 
+	blockTs += 20
+	blockN += 10
+
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
@@ -274,9 +276,23 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, credValidClaim2t2)
 
-	credValidClaim1t2JSON, err := json.MarshalIndent(credValidClaim1t2, "", "  ")
-	assert.Nil(t, err)
-	fmt.Printf("%v\n", string(credValidClaim1t2JSON))
+	// credValidClaim1t2JSON, err := json.MarshalIndent(credValidClaim1t2, "", "  ")
+	// assert.Nil(t, err)
+	// fmt.Printf("%v\n", string(credValidClaim1t2JSON))
+
+	// DEBUG BEGIN
+
+	// hoIdOwnershipGenesisInputs, err := ho.GenIdOwnershipGenesisInputs(16)
+	// assert.Nil(t, err)
+	// credProofInputs, err := ho.HolderGetCredentialProofInputs(hoIdOwnershipGenesisInputs, credExistClaim2, 16)
+	// assert.Nil(t, err)
+	// assert.NotNil(t, credProofInputs)
+
+	// credProofInputsJSON, err := json.MarshalIndent(credProofInputs, "", "  ")
+	// assert.Nil(t, err)
+	// fmt.Printf("%v\n", string(credProofInputsJSON))
+
+	// DEBUG END
 
 	// Outdated is invalid
 	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
@@ -306,6 +322,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = is.PublishState()
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
+
+	blockTs += 20
+	blockN += 10
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)

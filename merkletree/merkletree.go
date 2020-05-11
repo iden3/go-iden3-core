@@ -764,11 +764,11 @@ func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
 	return nil
 }
 
-// nodeAux contains the auxiliary node used in a non-existence proof.
-type nodeAux struct {
+// NodeAux contains the auxiliary node used in a non-existence proof.
+type NodeAux struct {
 	//key    *Hash
-	hIndex *Hash
-	hValue *Hash
+	HIndex *Hash
+	HValue *Hash
 }
 
 // proofFlagsLen is the byte length of the flags in the proof header (first 32
@@ -785,7 +785,7 @@ type Proof struct {
 	notempties [ElemBytesLen - proofFlagsLen]byte
 	// Siblings is a list of non-empty sibling keys.
 	Siblings []*Hash
-	nodeAux  *nodeAux
+	NodeAux  *NodeAux
 }
 
 // NewProofFromBytes parses a byte array into a Proof.
@@ -814,13 +814,13 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 	}
 
 	if !p.Existence && ((bs[0] & 0x02) != 0) {
-		p.nodeAux = &nodeAux{hIndex: &Hash{}, hValue: &Hash{}}
+		p.NodeAux = &NodeAux{HIndex: &Hash{}, HValue: &Hash{}}
 		nodeAuxBytes := siblingBytes[len(p.Siblings)*ElemBytesLen:]
 		if len(nodeAuxBytes) != 2*ElemBytesLen {
 			return nil, ErrInvalidProofBytes
 		}
-		copy(p.nodeAux.hIndex[:], nodeAuxBytes[:ElemBytesLen])
-		copy(p.nodeAux.hValue[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
+		copy(p.NodeAux.HIndex[:], nodeAuxBytes[:ElemBytesLen])
+		copy(p.NodeAux.HValue[:], nodeAuxBytes[ElemBytesLen:2*ElemBytesLen])
 	}
 	return p, nil
 }
@@ -828,7 +828,7 @@ func NewProofFromBytes(bs []byte) (*Proof, error) {
 // Bytes serializes a Proof into a byte array.
 func (p *Proof) Bytes() []byte {
 	bsLen := proofFlagsLen + len(p.notempties) + ElemBytesLen*len(p.Siblings)
-	if p.nodeAux != nil {
+	if p.NodeAux != nil {
 		bsLen += 2 * ElemBytesLen
 	}
 	bs := make([]byte, bsLen)
@@ -842,10 +842,10 @@ func (p *Proof) Bytes() []byte {
 	for i, k := range p.Siblings {
 		copy(siblingsBytes[i*ElemBytesLen:(i+1)*ElemBytesLen], k[:])
 	}
-	if p.nodeAux != nil {
+	if p.NodeAux != nil {
 		bs[0] |= 0x02
-		copy(bs[len(bs)-2*ElemBytesLen:], p.nodeAux.hIndex[:])
-		copy(bs[len(bs)-1*ElemBytesLen:], p.nodeAux.hValue[:])
+		copy(bs[len(bs)-2*ElemBytesLen:], p.NodeAux.HIndex[:])
+		copy(bs[len(bs)-1*ElemBytesLen:], p.NodeAux.HValue[:])
 	}
 	return bs
 }
@@ -895,8 +895,8 @@ func (p Proof) String() string {
 		}
 	}
 	fmt.Fprintf(buf, "]")
-	if p.nodeAux != nil {
-		fmt.Fprintf(buf, ", NodeAux: {Hi: %v, Hv: %v}}", p.nodeAux.hIndex, p.nodeAux.hValue)
+	if p.NodeAux != nil {
+		fmt.Fprintf(buf, ", NodeAux: {Hi: %v, Hv: %v}}", p.NodeAux.HIndex, p.NodeAux.HValue)
 	}
 	fmt.Fprintf(buf, "}")
 	return buf.String()
@@ -965,7 +965,7 @@ func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error)
 				return p, nil
 			} else {
 				// We found a leaf whose entry didn't match hIndex
-				p.nodeAux = &nodeAux{hIndex: nHi, hValue: nHv}
+				p.NodeAux = &NodeAux{HIndex: nHi, HValue: nHv}
 				return p, nil
 			}
 		case NodeTypeMiddle:
@@ -1009,13 +1009,13 @@ func RootFromProof(proof *Proof, hIndex, hValue *Hash) (*Hash, error) {
 			return nil, err
 		}
 	} else {
-		if proof.nodeAux == nil {
+		if proof.NodeAux == nil {
 			midKey = &HashZero
 		} else {
-			if bytes.Equal(hIndex[:], proof.nodeAux.hIndex[:]) {
+			if bytes.Equal(hIndex[:], proof.NodeAux.HIndex[:]) {
 				return nil, fmt.Errorf("Non-existence proof being checked against hIndex equal to nodeAux")
 			}
-			midKey, err = LeafKey(proof.nodeAux.hIndex, proof.nodeAux.hValue)
+			midKey, err = LeafKey(proof.NodeAux.HIndex, proof.NodeAux.HValue)
 			if err != nil {
 				return nil, err
 			}

@@ -668,7 +668,7 @@ func (is *Issuer) PublishState() error {
 	if err != nil {
 		return err
 	}
-	idenStateLast, _, err := is.getIdenStateByIdx(tx, idenStateListLen-1)
+	idenStateLast, idenStateTreeRootsLast, err := is.getIdenStateByIdx(tx, idenStateListLen-1)
 	if err != nil {
 		return err
 	}
@@ -676,6 +676,15 @@ func (is *Issuer) PublishState() error {
 	if idenState.Equals(idenStateLast) {
 		// IdenState hasn't changed, there's no need to do anything!
 		return nil
+	}
+
+	// If the ClaimsTreeRoot has changed (claims have been added), add the
+	// ClaimsTreeRoot to the RootsTree.
+	if !idenStateTreeRoots.ClaimsTreeRoot.Equals(idenStateTreeRootsLast.ClaimsTreeRoot) {
+		if err := claims.AddLeafRootsTree(is.rootsTree, idenStateTreeRoots.ClaimsTreeRoot); err != nil {
+			return err
+		}
+		idenState, idenStateTreeRoots = is.state()
 	}
 
 	if err := is.idenStateList.Append(tx, idenState[:], &idenStateTreeRoots); err != nil {
@@ -876,7 +885,7 @@ type IdOwnershipGenesisInputs struct {
 	// RootTreeRoot   *big.Int
 }
 
-func (is *Issuer) GenIdOwnershipGenesisInputs() (*IdOwnershipGenesisInputs, error) {
+func (is *Issuer) GenIdOwnershipGenesisInputs(levels int) (*IdOwnershipGenesisInputs, error) {
 	sk, err := is.keyStore.ExportKey(is.kOpComp)
 	if err != nil {
 		return nil, err
@@ -887,7 +896,7 @@ func (is *Issuer) GenIdOwnershipGenesisInputs() (*IdOwnershipGenesisInputs, erro
 	if err != nil {
 		return nil, err
 	}
-	siblings := mtp.AllSiblingsCircom(is.idenStateZkProofConf.Levels)
+	siblings := mtp.AllSiblingsCircom(levels)
 
 	var genesisClaimTreeRoot merkletree.Hash
 	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
@@ -919,7 +928,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 		return nil, fmt.Errorf("error loading zk vk: %w", err)
 	}
 
-	idOwnershipInputs, err := is.GenIdOwnershipGenesisInputs()
+	idOwnershipInputs, err := is.GenIdOwnershipGenesisInputs(is.idenStateZkProofConf.Levels)
 	if err != nil {
 		return nil, fmt.Errorf("error generating idOwnership inputs: %w", err)
 	}

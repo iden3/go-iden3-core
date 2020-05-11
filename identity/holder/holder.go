@@ -17,7 +17,8 @@ import (
 )
 
 var (
-	ErrRevokedClaim = fmt.Errorf("Revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+	ErrRevokedClaim = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+	ErrRootNotFound = fmt.Errorf("claims tree root not found in roots tree.")
 )
 
 var ConfigDefault = Config{Config: issuer.ConfigDefault}
@@ -70,6 +71,7 @@ type CredentialValidityAux struct {
 	ClaimsTreeRoot *merkletree.Hash
 	RevTreeRoot    *merkletree.Hash
 	RootsTreeRoot  *merkletree.Hash
+	PublicData     *idenpuboffchain.PublicData
 }
 
 func (h *Holder) HolderGetCredentialValidityData(
@@ -98,10 +100,12 @@ func (h *Holder) HolderGetCredentialValidityData(
 		return nil, ErrRevokedClaim
 	}
 	return &CredentialValidityAux{
+		IdenStateData:  idenStateData,
 		MtpNotNonce:    mtpNotNonce,
 		ClaimsTreeRoot: publicData.ClaimsTreeRoot,
 		RevTreeRoot:    publicData.RevocationsTree.RootKey(),
 		RootsTreeRoot:  publicData.RootsTree.RootKey(),
+		PublicData:     publicData,
 	}, nil
 }
 
@@ -124,49 +128,100 @@ func (h *Holder) HolderGetCredentialValidity(
 
 type CredentialProofInputs struct {
 	// A
-	Claim [8]*big.Int
+	Claim []*big.Int `mapstructure:"claim"`
 
-	CredExistMtp            []*big.Int
-	CredExistClaimsTreeRoot *big.Int
+	// B. holder proof of claimKOp in the genesis
+	PrivateKey             *big.Int   `mapstructure:"hoKOpSk"`
+	ClaimKOpMtp            []*big.Int `mapstructure:"hoClaimKOpMtp"`
+	ClaimKOpClaimsTreeRoot *big.Int   `mapstructure:"hoClaimKOpClaimsTreeRoot"`
+
+	// C. issuer proof of claim existence
+	CredExistMtp            []*big.Int `mapstructure:"isProofExistMtp"`
+	CredExistClaimsTreeRoot *big.Int   `mapstructure:"isProofExistClaimsTreeRoot"`
 
 	// D. issuer proof of claim validity
-	CredValidMtp            []*big.Int
-	CredValidClaimsTreeRoot *big.Int
-	CredValidRevTreeRoot    *big.Int
-	CredValidRootsTreeRoot  *big.Int
+	CredValidNotRevMtp      []*big.Int `mapstructure:"isProofValidNotRevMtp"`
+	CredValidNotRevMtpAux   *big.Int   `mapstructure:"isProofValidNotRevMtpAux"`
+	CredValidNotRevMtpAuxHi *big.Int   `mapstructure:"isProofValidNotRevMtpAuxHi"`
+	CredValidNotRevMtpAuxHv *big.Int   `mapstructure:"isProofValidNotRevMtpAuxHv"`
+	CredValidClaimsTreeRoot *big.Int   `mapstructure:"isProofValidClaimsTreeRoot"`
+	CredValidRevTreeRoot    *big.Int   `mapstructure:"isProofValidRevTreeRoot"`
+	CredValidRootsTreeRoot  *big.Int   `mapstructure:"isProofValidRootsTreeRoot"`
 
 	// E. issuer proof of Root (ExistClaimsTreeRoot)
-	CredValidRootMtp []*big.Int
+	CredValidRootMtp []*big.Int `mapstructure:"isProofRootMtp"`
 
 	// F. issuer recent idenState
-	IdenState *big.Int
+	IdenState *big.Int `mapstructure:"isIdenState"`
 }
 
 func (h *Holder) HolderGetCredentialProofInputs(
+	idOwnershipGenesisInputs *issuer.IdOwnershipGenesisInputs,
 	credExist *proof.CredentialExistence, issuerLevels int) (*CredentialProofInputs, error) {
 	credValidData, err := h.HolderGetCredentialValidityData(credExist)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: Compute ExistClaimTreeRoot
-	// TODO: Compute RootMtp
+	hi, err := credExist.Claim.HIndex()
+	if err != nil {
+		return nil, err
+	}
+	hv, err := credExist.Claim.HValue()
+	if err != nil {
+		return nil, err
+	}
+	credExistClaimsTreeRoot, err := merkletree.RootFromProof(credExist.MtpClaim, hi, hv)
+	if err != nil {
+		return nil, err
+	}
 
-	var claim [8]*big.Int
+	var claimBigInts [8]*big.Int
 	for i, elem := range credExist.Claim.Data {
-		claim[i] = elem.BigInt()
+		claimBigInts[i] = elem.BigInt()
+	}
+
+	// TODO: Compute RootMtp
+	rootLeaf := claims.NewLeafRootsTree(*credExistClaimsTreeRoot).Entry()
+	rootLeafHi, err := rootLeaf.HIndex()
+	if err != nil {
+		return nil, err
+	}
+	mtpRoot, err := credValidData.PublicData.RootsTree.GenerateProof(rootLeafHi, nil)
+	if err != nil {
+		return nil, err
+	}
+	if !mtpRoot.Existence {
+		return nil, ErrRootNotFound
+	}
+
+	credValidNotRevMtpAux := new(big.Int)
+	credValidNotRevMtpAuxHi := new(big.Int)
+	credValidNotRevMtpAuxHv := new(big.Int)
+	if credValidData.MtpNotNonce.NodeAux != nil {
+		credValidNotRevMtpAux = new(big.Int).SetUint64(1)
+		credValidNotRevMtpAuxHi = credValidData.MtpNotNonce.NodeAux.HIndex.BigInt()
+		credValidNotRevMtpAuxHv = credValidData.MtpNotNonce.NodeAux.HValue.BigInt()
 	}
 
 	return &CredentialProofInputs{
-		Claim:                   claim,
-		CredExistMtp:            credExist.MtpClaim.AllSiblingsCircom(issuerLevels),
-		CredExistClaimsTreeRoot: nil,
+		PrivateKey:             idOwnershipGenesisInputs.PrivateKey,
+		ClaimKOpMtp:            idOwnershipGenesisInputs.MtpSiblings,
+		ClaimKOpClaimsTreeRoot: idOwnershipGenesisInputs.ClaimsTreeRoot,
 
-		CredValidMtp:            credValidData.MtpNotNonce.AllSiblingsCircom(issuerLevels),
+		Claim:                   claimBigInts[:],
+		CredExistMtp:            credExist.MtpClaim.AllSiblingsCircom(issuerLevels),
+		CredExistClaimsTreeRoot: credExistClaimsTreeRoot.BigInt(),
+
+		CredValidNotRevMtp:      credValidData.MtpNotNonce.AllSiblingsCircom(issuerLevels),
+		CredValidNotRevMtpAux:   credValidNotRevMtpAux,
+		CredValidNotRevMtpAuxHi: credValidNotRevMtpAuxHi,
+		CredValidNotRevMtpAuxHv: credValidNotRevMtpAuxHv,
+
 		CredValidClaimsTreeRoot: credValidData.ClaimsTreeRoot.BigInt(),
-		CredValidRevTreeRoot:    nil,
+		CredValidRevTreeRoot:    credValidData.RevTreeRoot.BigInt(),
 		CredValidRootsTreeRoot:  credValidData.RootsTreeRoot.BigInt(),
 
-		CredValidRootMtp: nil,
+		CredValidRootMtp: mtpRoot.AllSiblingsCircom(issuerLevels),
 
 		IdenState: credValidData.IdenStateData.IdenState.BigInt(),
 	}, nil

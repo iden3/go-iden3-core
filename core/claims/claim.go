@@ -22,7 +22,7 @@ func ClearMostSigByte(e [merkletree.ElemBytesLen]byte) merkletree.ElemBytes {
 }
 
 func GetRevocationNonce(e *merkletree.Entry) uint32 {
-	return binary.BigEndian.Uint32(e.Data[4][:4])
+	return binary.LittleEndian.Uint32(e.Data[4][:4])
 }
 
 const (
@@ -57,6 +57,7 @@ func NewClaimType(name string) ClaimType {
 // NewClaimTypeNum to set type to a claim.
 func NewClaimTypeNum(num uint64) ClaimType {
 	ct := ClaimType{}
+	// TODO: Update to LittleEndian (needs update in circuits/buildClaimKeyBBJJ.circom
 	binary.BigEndian.PutUint64(ct[:], num)
 	return ct
 }
@@ -239,12 +240,12 @@ func (m Metadata) Marshal(e *merkletree.Entry) {
 		}
 	}
 	if m.header.Version {
-		binary.BigEndian.PutUint32(index[0][ClaimTypeLen+ClaimFlagsLen:], m.Version)
+		binary.LittleEndian.PutUint32(index[0][ClaimTypeLen+ClaimFlagsLen:], m.Version)
 	}
 	if m.header.Expiration {
-		binary.BigEndian.PutUint64(value[0][ClaimRevNonceLen:], uint64(m.Expiration))
+		binary.LittleEndian.PutUint64(value[0][ClaimRevNonceLen:], uint64(m.Expiration))
 	}
-	binary.BigEndian.PutUint32(value[0][:], m.RevNonce)
+	binary.LittleEndian.PutUint32(value[0][:], m.RevNonce)
 }
 
 // Unmarshal the Metadata from an entry
@@ -266,12 +267,12 @@ func (m *Metadata) Unmarshal(e *merkletree.Entry) {
 		}
 	}
 	if m.header.Version {
-		m.Version = binary.BigEndian.Uint32(index[0][ClaimTypeLen+ClaimFlagsLen:])
+		m.Version = binary.LittleEndian.Uint32(index[0][ClaimTypeLen+ClaimFlagsLen:])
 	}
 	if m.header.Expiration {
-		m.Expiration = int64(binary.BigEndian.Uint64(value[0][ClaimRevNonceLen:]))
+		m.Expiration = int64(binary.LittleEndian.Uint64(value[0][ClaimRevNonceLen:]))
 	}
-	m.RevNonce = binary.BigEndian.Uint32(value[0][:])
+	m.RevNonce = binary.LittleEndian.Uint32(value[0][:])
 }
 
 type metadataJSON struct {
