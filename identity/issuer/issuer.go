@@ -897,6 +897,10 @@ func (is *Issuer) GenIdOwnershipGenesisInputs(levels int) (*IdOwnershipGenesisIn
 		return nil, err
 	}
 	siblings := mtp.AllSiblingsCircom(levels)
+	if len(siblings) != levels+1 {
+		return nil, fmt.Errorf("number of mtp siblings in genesis ClaimTree (%v) "+
+			"is higher than requested levels (%v)", len(siblings), levels+1)
+	}
 
 	var genesisClaimTreeRoot merkletree.Hash
 	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)

@@ -16,6 +16,10 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
+const (
+	ErrStrTooManySiblings = "number of mtp siblings in %v (%v) is higher than requested levels (%v)"
+)
+
 var (
 	ErrRevokedClaim = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
 	ErrRootNotFound = fmt.Errorf("claims tree root not found in roots tree.")
@@ -141,7 +145,7 @@ type CredentialProofInputs struct {
 
 	// D. issuer proof of claim validity
 	CredValidNotRevMtp      []*big.Int `mapstructure:"isProofValidNotRevMtp"`
-	CredValidNotRevMtpAux   *big.Int   `mapstructure:"isProofValidNotRevMtpAux"`
+	CredValidNotRevMtpNoAux *big.Int   `mapstructure:"isProofValidNotRevMtpNoAux"`
 	CredValidNotRevMtpAuxHi *big.Int   `mapstructure:"isProofValidNotRevMtpAuxHi"`
 	CredValidNotRevMtpAuxHv *big.Int   `mapstructure:"isProofValidNotRevMtpAuxHv"`
 	CredValidClaimsTreeRoot *big.Int   `mapstructure:"isProofValidClaimsTreeRoot"`
@@ -194,13 +198,26 @@ func (h *Holder) HolderGetCredentialProofInputs(
 		return nil, ErrRootNotFound
 	}
 
-	credValidNotRevMtpAux := new(big.Int)
+	credValidNotRevMtpNoAux := new(big.Int).SetUint64(1) // TODO: Confirm this
 	credValidNotRevMtpAuxHi := new(big.Int)
 	credValidNotRevMtpAuxHv := new(big.Int)
 	if credValidData.MtpNotNonce.NodeAux != nil {
-		credValidNotRevMtpAux = new(big.Int).SetUint64(1)
+		credValidNotRevMtpNoAux = new(big.Int)
 		credValidNotRevMtpAuxHi = credValidData.MtpNotNonce.NodeAux.HIndex.BigInt()
 		credValidNotRevMtpAuxHv = credValidData.MtpNotNonce.NodeAux.HValue.BigInt()
+	}
+
+	credExistMtp := credExist.MtpClaim.AllSiblingsCircom(issuerLevels)
+	if len(credExistMtp) != issuerLevels+1 {
+		return nil, fmt.Errorf(ErrStrTooManySiblings, "ClaimTree", len(credExistMtp), issuerLevels+1)
+	}
+	credValidNotRevMtp := credValidData.MtpNotNonce.AllSiblingsCircom(issuerLevels)
+	if len(credValidNotRevMtp) != issuerLevels+1 {
+		return nil, fmt.Errorf(ErrStrTooManySiblings, "RevTree", len(credValidNotRevMtp), issuerLevels+1)
+	}
+	credValidRootMtp := mtpRoot.AllSiblingsCircom(issuerLevels)
+	if len(credValidRootMtp) != issuerLevels+1 {
+		return nil, fmt.Errorf(ErrStrTooManySiblings, "RootsTree", len(credValidRootMtp), issuerLevels+1)
 	}
 
 	return &CredentialProofInputs{
@@ -209,11 +226,11 @@ func (h *Holder) HolderGetCredentialProofInputs(
 		ClaimKOpClaimsTreeRoot: idOwnershipGenesisInputs.ClaimsTreeRoot,
 
 		Claim:                   claimBigInts[:],
-		CredExistMtp:            credExist.MtpClaim.AllSiblingsCircom(issuerLevels),
+		CredExistMtp:            credExistMtp,
 		CredExistClaimsTreeRoot: credExistClaimsTreeRoot.BigInt(),
 
-		CredValidNotRevMtp:      credValidData.MtpNotNonce.AllSiblingsCircom(issuerLevels),
-		CredValidNotRevMtpAux:   credValidNotRevMtpAux,
+		CredValidNotRevMtp:      credValidNotRevMtp,
+		CredValidNotRevMtpNoAux: credValidNotRevMtpNoAux,
 		CredValidNotRevMtpAuxHi: credValidNotRevMtpAuxHi,
 		CredValidNotRevMtpAuxHv: credValidNotRevMtpAuxHv,
 
@@ -221,7 +238,7 @@ func (h *Holder) HolderGetCredentialProofInputs(
 		CredValidRevTreeRoot:    credValidData.RevTreeRoot.BigInt(),
 		CredValidRootsTreeRoot:  credValidData.RootsTreeRoot.BigInt(),
 
-		CredValidRootMtp: mtpRoot.AllSiblingsCircom(issuerLevels),
+		CredValidRootMtp: credValidRootMtp,
 
 		IdenState: credValidData.IdenStateData.IdenState.BigInt(),
 	}, nil
