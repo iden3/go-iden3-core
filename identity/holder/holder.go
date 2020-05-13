@@ -3,7 +3,11 @@ package holder
 import (
 	"fmt"
 	"math/big"
+	"time"
 
+	"github.com/iden3/go-circom-prover-verifier/prover"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
+	witnesscalc "github.com/iden3/go-circom-witnesscalc"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
@@ -13,7 +17,10 @@ import (
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -21,8 +28,9 @@ const (
 )
 
 var (
-	ErrRevokedClaim = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
-	ErrRootNotFound = fmt.Errorf("claims tree root not found in roots tree.")
+	ErrRevokedClaim                  = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+	ErrRootNotFound                  = fmt.Errorf("claims tree root not found in roots tree.")
+	ErrFailedVerifyZkProofCredential = fmt.Errorf("failed verifing generated zk proof of credential")
 )
 
 var ConfigDefault = Config{Config: issuer.ConfigDefault}
@@ -161,11 +169,9 @@ type CredentialProofInputs struct {
 
 func (h *Holder) HolderGetCredentialProofInputs(
 	idOwnershipGenesisInputs *issuer.IdOwnershipGenesisInputs,
-	credExist *proof.CredentialExistence, issuerLevels int) (*CredentialProofInputs, error) {
-	credValidData, err := h.HolderGetCredentialValidityData(credExist)
-	if err != nil {
-		return nil, err
-	}
+	credExist *proof.CredentialExistence,
+	credValidData *CredentialValidityAux,
+	issuerLevels int) (*CredentialProofInputs, error) {
 	hi, err := credExist.Claim.HIndex()
 	if err != nil {
 		return nil, err
@@ -243,12 +249,75 @@ func (h *Holder) HolderGetCredentialProofInputs(
 	}, nil
 }
 
+type ZkProofCredOut struct {
+	ZkProofOut      zkutils.ZkProofOut
+	IssuerID        *core.ID
+	IdenStateBlockN uint64
+}
+
 func (h *Holder) HolderGenZkProofCredential(
 	credExist *proof.CredentialExistence,
 	addInputs func(inputs map[string]interface{}) error,
 	idOwnershipLevels, issuerLevels int,
-	circuitWASMPath, provingKeyPath string) (*int, error) {
-	return nil, fmt.Errorf("TODO")
+	zkFiles *zkutils.ZkFiles) (*ZkProofCredOut, error) {
+
+	pk, err := zkFiles.ProvingKey()
+	if err != nil {
+		return nil, fmt.Errorf("error loading zk pk: %w", err)
+	}
+	vk, err := zkFiles.VerificationKey()
+	if err != nil {
+		return nil, fmt.Errorf("error loading zk vk: %w", err)
+	}
+	witnessCalcWASM, err := zkFiles.WitnessCalcWASM()
+	if err != nil {
+		return nil, fmt.Errorf("error loading zk witnessCalc WASM: %w", err)
+	}
+
+	idOwnershipInputs, err := h.GenIdOwnershipGenesisInputs(idOwnershipLevels)
+	if err != nil {
+		return nil, err
+	}
+	credValidData, err := h.HolderGetCredentialValidityData(credExist)
+	if err != nil {
+		return nil, err
+	}
+	credProofInputs, err := h.HolderGetCredentialProofInputs(idOwnershipInputs,
+		credExist, credValidData, issuerLevels)
+	if err != nil {
+		return nil, err
+	}
+
+	inputs, err := zkutils.InputsToMapStrings(credProofInputs)
+	if err != nil {
+		return nil, err
+	}
+	delete(inputs, "claim")
+	if err := addInputs(inputs); err != nil {
+		return nil, err
+	}
+
+	wit, err := witnesscalc.CalculateWitnessBinWASM(witnessCalcWASM, inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	start := time.Now()
+	proof, pubSignals, err := prover.GenerateProof(pk, wit)
+	if err != nil {
+		return nil, err
+	}
+	// Verify zk proof
+	if !verifier.Verify(vk, proof, pubSignals) {
+		return nil, ErrFailedVerifyZkProofCredential
+	}
+
+	log.WithField("elapsed", time.Since(start)).Debug("Proof generated")
+	return &ZkProofCredOut{
+		ZkProofOut:      zkutils.ZkProofOut{Proof: *proof, PubSignals: pubSignals},
+		IssuerID:        credExist.Id,
+		IdenStateBlockN: credValidData.IdenStateData.BlockN,
+	}, nil
 }
 
 // HolderImportCredentialExistence imports a received Credential of Existence into the ClaimsDB.

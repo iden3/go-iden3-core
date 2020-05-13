@@ -2,15 +2,18 @@ package verifier
 
 import (
 	"fmt"
+	"math/big"
 	"reflect"
 	"time"
 
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
+	"github.com/iden3/go-circom-prover-verifier/verifier"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/merkletree"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 )
 
 var (
@@ -19,6 +22,7 @@ var (
 	ErrMtpExistence                   = fmt.Errorf("The Merkle Tree Proof is of existence")
 	ErrCalculatedIdenStateDoesntMatch = fmt.Errorf("Calculated IdenState doesn't match the one in the credential")
 	ErrClaimExpired                   = fmt.Errorf("Expired claim")
+	ErrFailedVerifyZkProofCredential  = fmt.Errorf("failed verifing generated zk proof of credential")
 )
 
 type Verifier struct {
@@ -61,7 +65,7 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 		return ErrCalculatedIdenStateDoesntMatch
 	}
 
-	// Verify that the IdenStateData from the eistence credential is in the smart contract.
+	// Verify that the IdenStateData from the existence credential is in the smart contract.
 	idenStateDataOnChain, err := v.idenPubOnChain.GetStateByBlock(credExist.Id, credExist.IdenStateData.BlockN)
 	if err != nil {
 		return err
@@ -136,12 +140,36 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 	return nil
 }
 
+// VerifyZkProofCredential verifies a zkp of a credential. For now expiration
+// is not checked.
 func (v *Verifier) VerifyZkProofCredential(
-	publicInputs map[string]interface{},
 	zkProof *zktypes.Proof,
-	idenStateBlockTs uint64,
-	verifyingKeyPath string,
-	freshness time.Duration,
-) error {
-	return fmt.Errorf("TODO")
+	pubSignals []*big.Int,
+	issuerID *core.ID,
+	idenStateBlockN uint64,
+	zkFiles *zkutils.ZkFiles,
+	freshness time.Duration) error {
+
+	vk, err := zkFiles.VerificationKey()
+	if err != nil {
+		return fmt.Errorf("error loading zk vk: %w", err)
+	}
+
+	// Verify the zkp
+	if !verifier.Verify(vk, zkProof, pubSignals) {
+		return ErrFailedVerifyZkProofCredential
+	}
+
+	// Verify that the IdenState used in the proof corresponds to the
+	// issuerID at idenStateBlockN in the smart contract.
+	idenState := merkletree.NewHashFromBigInt(pubSignals[0])
+	idenStateDataOnChain, err := v.idenPubOnChain.GetStateByBlock(issuerID, idenStateBlockN)
+	if err != nil {
+		return err
+	}
+	if idenStateDataOnChain.BlockN != idenStateBlockN ||
+		!idenStateDataOnChain.IdenState.Equals(idenState) {
+		return ErrIdenStateOnChainDoesntMatch
+	}
+	return nil
 }

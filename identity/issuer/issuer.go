@@ -25,7 +25,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 
 	"github.com/iden3/go-circom-prover-verifier/prover"
-	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
 	witnesscalc "github.com/iden3/go-circom-witnesscalc"
 
@@ -84,52 +83,9 @@ type Config struct {
 // IdenStateZkProofConf are the paths to the SNARK related files required to
 // generate an identity state update zkSNARK proof.
 type IdenStateZkProofConf struct {
-	// PathWitnessCalcWASM string
-	// PathProvingKey      string
-	// PathVerifyingKey    string
 	Levels int
 	Files  zkutils.ZkFiles
-	// CacheProvingKey     bool
-	// pk                  *zktypes.Pk
-	// vk                  *zktypes.Vk
 }
-
-// func (z *IdenStateZkProofConf) Vk() (*zktypes.Vk, error) {
-// 	if z.vk == nil {
-// 		vkJSON, err := ioutil.ReadFile(z.PathVerifyingKey)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		vk, err := parsers.ParseVk(vkJSON)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		z.vk = vk
-// 	}
-// 	return z.vk, nil
-// }
-//
-// func (z *IdenStateZkProofConf) Pk() (*zktypes.Pk, error) {
-// 	var pk *zktypes.Pk
-// 	if !z.CacheProvingKey || z.pk == nil {
-// 		provingKeyJson, err := ioutil.ReadFile(z.PathProvingKey)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		start := time.Now()
-// 		pk, err = parsers.ParsePk(provingKeyJson)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
-// 		if z.CacheProvingKey {
-// 			z.pk = pk
-// 		}
-// 	} else {
-// 		pk = z.pk
-// 	}
-// 	return pk, nil
-// }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
 type IdenStateTreeRoots struct {
@@ -912,12 +868,7 @@ func (is *Issuer) GenIdOwnershipGenesisInputs(levels int) (*IdOwnershipGenesisIn
 	}, nil
 }
 
-type ZkProofOut struct {
-	Proof      zktypes.Proof
-	PubSignals []*big.Int
-}
-
-func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
+func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*zkutils.ZkProofOut, error) {
 	pk, err := is.idenStateZkProofConf.Files.ProvingKey()
 	if err != nil {
 		return nil, fmt.Errorf("error loading zk pk: %w", err)
@@ -961,7 +912,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	}
 
 	log.WithField("elapsed", time.Since(start)).Debug("Proof generated")
-	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
+	return &zkutils.ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
 }
 
 // TODO: Create an Admin struct that exposes the following:

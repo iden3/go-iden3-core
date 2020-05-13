@@ -17,6 +17,7 @@ import (
 	"github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 
+	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -333,4 +334,32 @@ func (z *ZkFiles) WitnessCalcWASM() ([]byte, error) {
 		return nil, err
 	}
 	return z.witnessCalcWASM, nil
+}
+
+func InputsToMapStrings(inputs interface{}) (map[string]interface{}, error) {
+	var inputsMap map[string]interface{}
+	if err := mapstructure.Decode(inputs, &inputsMap); err != nil {
+		return nil, err
+	}
+	inputsStrings := make(map[string]interface{})
+	for key, value := range inputsMap {
+		switch v := value.(type) {
+		case *big.Int:
+			inputsStrings[key] = v.String()
+		case []*big.Int:
+			vs := make([]string, len(v))
+			for i, v := range v {
+				vs[i] = v.String()
+			}
+			inputsStrings[key] = vs
+		default:
+			panic(fmt.Sprintf("Type: %T", value))
+		}
+	}
+	return inputsStrings, nil
+}
+
+type ZkProofOut struct {
+	Proof      zktypes.Proof
+	PubSignals []*big.Int
 }
