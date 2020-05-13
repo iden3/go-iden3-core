@@ -359,6 +359,9 @@ func TestMain(m *testing.M) {
 			VerificationKey: "473952ff80aef85403005eb12d1e78a3f66b1cc11e7bd55d6bfe94e0b5577640",
 			WitnessCalcWASM: "8eafd9314c4d2664a23bf98a4f42cd0c29984960ae3544747ba5fbd60905c41f",
 		}, true)
+	// if err := zkFiles.DebugDownloadPrintHashes(); err != nil {
+	// 	panic(err)
+	// }
 	if err := zkFiles.LoadAll(); err != nil {
 		panic(err)
 	}

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
@@ -144,6 +145,37 @@ func NewZkFiles(url, path string, hashes ZkFilesHashes, cacheProvingKey bool) *Z
 		hashes:          hashes,
 		cacheProvingKey: cacheProvingKey,
 	}
+}
+
+func (z *ZkFiles) DebugDownloadPrintHashes() error {
+	dir, err := ioutil.TempDir("", "zkfiles")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(dir) // clean up
+	var hashes [3][]byte
+	for i, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
+		url := fmt.Sprintf("%s/%s", z.Url, basename)
+		filename := path.Join(dir, basename)
+		if err := download(url, filename); err != nil {
+			return err
+		}
+		h, err := calcHash(filename)
+		if err != nil {
+			return err
+		}
+		hashes[i] = h
+	}
+	s := fmt.Sprintf("%#v", ZkFilesHashes{
+		ProvingKey:      hex.EncodeToString(hashes[0]),
+		VerificationKey: hex.EncodeToString(hashes[1]),
+		WitnessCalcWASM: hex.EncodeToString(hashes[2]),
+	})
+	s = strings.ReplaceAll(s, "{", "{\n\t")
+	s = strings.ReplaceAll(s, ", ", ",\n\t")
+	s = strings.ReplaceAll(s, "}", ",\n}")
+	fmt.Println(s)
+	return nil
 }
 
 func (z *ZkFiles) downloadCheckFile(basename, hash string) error {
