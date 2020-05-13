@@ -243,6 +243,14 @@ func (h *Holder) HolderGetCredentialProofInputs(
 	}, nil
 }
 
+func (h *Holder) HolderGenZkProofCredential(
+	credExist *proof.CredentialExistence,
+	addInputs func(inputs map[string]interface{}) error,
+	idOwnershipLevels, issuerLevels int,
+	circuitWASMPath, provingKeyPath string) (*int, error) {
+	return nil, fmt.Errorf("TODO")
+}
+
 // HolderImportCredentialExistence imports a received Credential of Existence into the ClaimsDB.
 // func (h *Holder) HolderImportCredentialExistence(credExist *proof.ProofClaim) error {
 // 	return fmt.Errorf("TODO: Implement ClaimDB")

@@ -2,13 +2,10 @@ package verifier
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
-	"path"
 	"testing"
 	"time"
 
-	"github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
@@ -21,6 +18,7 @@ import (
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -351,24 +349,25 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.Equal(t, ErrClaimExpired, err)
 }
 
-var _vk *zktypes.Vk
+var vk *zktypes.Vk
 
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
-	downloadPath := "/tmp/iden3/idenstatezk"
-	err := issuer.GetIdenStateZKFiles("http://161.35.72.58:9000/circuit-idstate/", downloadPath)
+	zkFiles := zkutils.NewZkFiles("http://161.35.72.58:9000/circuit-idstate/", "/tmp/iden3/idenstatezk",
+		zkutils.ZkFilesHashes{
+			ProvingKey:      "2c72fceb10323d8b274dbd7649a63c1b6a11fff3a1e4cd7f5ec12516f32ec452",
+			VerificationKey: "473952ff80aef85403005eb12d1e78a3f66b1cc11e7bd55d6bfe94e0b5577640",
+			WitnessCalcWASM: "8eafd9314c4d2664a23bf98a4f42cd0c29984960ae3544747ba5fbd60905c41f",
+		}, true)
+	if err := zkFiles.LoadAll(); err != nil {
+		panic(err)
+	}
+
+	var err error
+	vk, err = zkFiles.VerificationKey()
 	if err != nil {
 		panic(err)
 	}
-	vkJSON, err := ioutil.ReadFile(path.Join(downloadPath, "verification_key.json"))
-	if err != nil {
-		panic(err)
-	}
-	vk, err := parsers.ParseVk(vkJSON)
-	if err != nil {
-		panic(err)
-	}
-	_vk = vk
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Unix(blockTs, 0)
@@ -380,11 +379,8 @@ func TestMain(m *testing.M) {
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	idenStateZkProofConf = &issuer.IdenStateZkProofConf{
-		Levels:              16,
-		PathWitnessCalcWASM: path.Join(downloadPath, "circuit.wasm"),
-		PathProvingKey:      path.Join(downloadPath, "proving_key.json"),
-		PathVerifyingKey:    path.Join(downloadPath, "verification_key.json"),
-		CacheProvingKey:     true,
+		Levels: 16,
+		Files:  *zkFiles,
 	}
 	os.Exit(m.Run())
 }

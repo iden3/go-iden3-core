@@ -3,9 +3,7 @@ package issuer
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"sync"
 	"time"
 
@@ -20,12 +18,12 @@ import (
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 
-	"github.com/iden3/go-circom-prover-verifier/parsers"
 	"github.com/iden3/go-circom-prover-verifier/prover"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-circom-prover-verifier/verifier"
@@ -86,51 +84,52 @@ type Config struct {
 // IdenStateZkProofConf are the paths to the SNARK related files required to
 // generate an identity state update zkSNARK proof.
 type IdenStateZkProofConf struct {
-	PathWitnessCalcWASM string
-	PathProvingKey      string
-	PathVerifyingKey    string
-	Levels              int
-	CacheProvingKey     bool
-	pk                  *zktypes.Pk
-	vk                  *zktypes.Vk
+	// PathWitnessCalcWASM string
+	// PathProvingKey      string
+	// PathVerifyingKey    string
+	Levels int
+	Files  zkutils.ZkFiles
+	// CacheProvingKey     bool
+	// pk                  *zktypes.Pk
+	// vk                  *zktypes.Vk
 }
 
-func (z *IdenStateZkProofConf) Vk() (*zktypes.Vk, error) {
-	if z.vk == nil {
-		vkJSON, err := ioutil.ReadFile(z.PathVerifyingKey)
-		if err != nil {
-			return nil, err
-		}
-		vk, err := parsers.ParseVk(vkJSON)
-		if err != nil {
-			return nil, err
-		}
-		z.vk = vk
-	}
-	return z.vk, nil
-}
-
-func (z *IdenStateZkProofConf) Pk() (*zktypes.Pk, error) {
-	var pk *zktypes.Pk
-	if !z.CacheProvingKey || z.pk == nil {
-		provingKeyJson, err := ioutil.ReadFile(z.PathProvingKey)
-		if err != nil {
-			return nil, err
-		}
-		start := time.Now()
-		pk, err = parsers.ParsePk(provingKeyJson)
-		if err != nil {
-			return nil, err
-		}
-		log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
-		if z.CacheProvingKey {
-			z.pk = pk
-		}
-	} else {
-		pk = z.pk
-	}
-	return pk, nil
-}
+// func (z *IdenStateZkProofConf) Vk() (*zktypes.Vk, error) {
+// 	if z.vk == nil {
+// 		vkJSON, err := ioutil.ReadFile(z.PathVerifyingKey)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		vk, err := parsers.ParseVk(vkJSON)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		z.vk = vk
+// 	}
+// 	return z.vk, nil
+// }
+//
+// func (z *IdenStateZkProofConf) Pk() (*zktypes.Pk, error) {
+// 	var pk *zktypes.Pk
+// 	if !z.CacheProvingKey || z.pk == nil {
+// 		provingKeyJson, err := ioutil.ReadFile(z.PathProvingKey)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		start := time.Now()
+// 		pk, err = parsers.ParsePk(provingKeyJson)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
+// 		if z.CacheProvingKey {
+// 			z.pk = pk
+// 		}
+// 	} else {
+// 		pk = z.pk
+// 	}
+// 	return pk, nil
+// }
 
 // IdenStateTreeRoots is the set of the three roots of each Identity Merkle Tree.
 type IdenStateTreeRoots struct {
@@ -399,16 +398,8 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 		if idenStateZkProofConf == nil {
 			return nil, ErrIdenStateSNARKPathsNil
 		}
-		// Check for read access to files in idenStateZkProofConf
-		_, err := os.Open(idenStateZkProofConf.PathWitnessCalcWASM)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %v: %w",
-				idenStateZkProofConf.PathWitnessCalcWASM, err)
-		}
-		_, err = os.Open(idenStateZkProofConf.PathProvingKey)
-		if err != nil {
-			return nil, fmt.Errorf("error opening file %v: %w",
-				idenStateZkProofConf.PathProvingKey, err)
+		if err := idenStateZkProofConf.Files.LoadAll(); err != nil {
+			return nil, fmt.Errorf("error loading zk files: %w", err)
 		}
 		if idenPubOffChainWriter == nil {
 			return nil, ErrIdenPubOffChainWriterNil
@@ -927,11 +918,11 @@ type ZkProofOut struct {
 }
 
 func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.Hash) (*ZkProofOut, error) {
-	pk, err := is.idenStateZkProofConf.Pk()
+	pk, err := is.idenStateZkProofConf.Files.ProvingKey()
 	if err != nil {
 		return nil, fmt.Errorf("error loading zk pk: %w", err)
 	}
-	vk, err := is.idenStateZkProofConf.Vk()
+	vk, err := is.idenStateZkProofConf.Files.VerificationKey()
 	if err != nil {
 		return nil, fmt.Errorf("error loading zk vk: %w", err)
 	}
@@ -950,7 +941,11 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 	inputs["claimsTreeRoot"] = idOwnershipInputs.ClaimsTreeRoot
 	inputs["newIdState"] = newIdState.BigInt()
 
-	wit, err := witnesscalc.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
+	witnessCalcWASM, err := is.idenStateZkProofConf.Files.WitnessCalcWASM()
+	if err != nil {
+		return nil, fmt.Errorf("error loading zk witnessCalc WASM: %w", err)
+	}
+	wit, err := witnesscalc.CalculateWitnessBinWASM(witnessCalcWASM, inputs)
 	if err != nil {
 		return nil, err
 	}

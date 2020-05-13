@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
@@ -133,4 +134,14 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 		return ErrIdenStateOnChainDoesntMatch
 	}
 	return nil
+}
+
+func (v *Verifier) VerifyZkProofCredential(
+	publicInputs map[string]interface{},
+	zkProof *zktypes.Proof,
+	idenStateBlockTs uint64,
+	verifyingKeyPath string,
+	freshness time.Duration,
+) error {
+	return fmt.Errorf("TODO")
 }
