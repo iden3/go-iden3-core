@@ -11,6 +11,7 @@ import (
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	idenpubonchainlocal "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
@@ -174,6 +175,16 @@ func newHolder(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	return ho, storage, keyStore
 }
 
+func newClaimDemo(id *core.ID, index, value []byte) claims.Claimer {
+	indexBytes, valueBytes := [claims.IndexSubjectSlotLen]byte{}, [claims.ValueSlotLen]byte{}
+	if len(index) > 248/8*2 || len(value) > 248/8*3 {
+		panic("index or value too long")
+	}
+	copy(indexBytes[152/8:], index[:])
+	copy(valueBytes[216/8:], value[:])
+	return claims.NewClaimOtherIden(id, indexBytes, valueBytes)
+}
+
 func TestVerifyCredentialValidity(t *testing.T) {
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
 		return time.Unix(blockTs, 0)
@@ -188,9 +199,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state first time with claim1
 
-	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
-	indexBytes[0] = 0x42
-	claim1 := claims.NewClaimBasic(indexBytes, valueBytes)
+	claim1 := newClaimDemo(ho.ID(), []byte("foo"), []byte("bar"))
 
 	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
 	err := is.IssueClaim(claim1)
@@ -225,9 +234,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state a second time with another claim2, claim3
 
-	indexBytes, valueBytes = [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
-	indexBytes[0] = 0x48
-	claim2 := claims.NewClaimBasic(indexBytes, valueBytes)
+	claim2 := newClaimDemo(ho.ID(), []byte("1234"), []byte("5678"))
 
 	err = is.IssueClaim(claim2)
 	require.Nil(t, err)
@@ -350,24 +357,38 @@ func TestVerifyCredentialValidity(t *testing.T) {
 }
 
 var vk *zktypes.Vk
+var zkFilesCredential *zkutils.ZkFiles
 
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
-	zkFiles := zkutils.NewZkFiles("http://161.35.72.58:9000/circuit-idstate/", "/tmp/iden3/idenstatezk",
+	zkFilesIdenState := zkutils.NewZkFiles("http://161.35.72.58:9000/circuit-idstate", "/tmp/iden3/idenstatezk",
 		zkutils.ZkFilesHashes{
 			ProvingKey:      "2c72fceb10323d8b274dbd7649a63c1b6a11fff3a1e4cd7f5ec12516f32ec452",
 			VerificationKey: "473952ff80aef85403005eb12d1e78a3f66b1cc11e7bd55d6bfe94e0b5577640",
 			WitnessCalcWASM: "8eafd9314c4d2664a23bf98a4f42cd0c29984960ae3544747ba5fbd60905c41f",
 		}, true)
-	// if err := zkFiles.DebugDownloadPrintHashes(); err != nil {
+	// if err := zkFilesIdenState.DebugDownloadPrintHashes(); err != nil {
 	// 	panic(err)
 	// }
-	if err := zkFiles.LoadAll(); err != nil {
+	if err := zkFilesIdenState.LoadAll(); err != nil {
+		panic(err)
+	}
+
+	zkFilesCredential = zkutils.NewZkFiles("http://161.35.72.58:9000/credentialDemoWrapper", "/tmp/iden3/credentialzk",
+		zkutils.ZkFilesHashes{
+			ProvingKey:      "6d5bbfe45f36c0a9263df0236292d4d7fa4e081fa80a7801fdaefc00171a83ed",
+			VerificationKey: "12a730890e85e33d8bf0f2e54db41dcff875c2dc49011d7e2a283185f47ac0de",
+			WitnessCalcWASM: "6b3c28c4842e04129674eb71dc84d76dd8b290c84987929d54d890b7b8bed211",
+		}, true)
+	// if err := zkFilesCredential.DebugDownloadPrintHashes(); err != nil {
+	// 	panic(err)
+	// }
+	if err := zkFilesCredential.LoadAll(); err != nil {
 		panic(err)
 	}
 
 	var err error
-	vk, err = zkFiles.VerificationKey()
+	vk, err = zkFilesIdenState.VerificationKey()
 	if err != nil {
 		panic(err)
 	}
@@ -383,7 +404,7 @@ func TestMain(m *testing.M) {
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	idenStateZkProofConf = &issuer.IdenStateZkProofConf{
 		Levels: 16,
-		Files:  *zkFiles,
+		Files:  *zkFilesIdenState,
 	}
 	os.Exit(m.Run())
 }
