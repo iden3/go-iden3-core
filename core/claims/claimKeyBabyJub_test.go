@@ -41,6 +41,7 @@ func testClaimKeyBabyJub(t *testing.T, i, testKey string) {
 
 	// check Type
 	ct1 := ClaimType{}
+	// TODO: Update to LittleEndian once claimtype is little endian
 	binary.BigEndian.PutUint64(ct1[:], 1)
 	assert.Equal(t, ct1, c0.Metadata().header.Type)
 

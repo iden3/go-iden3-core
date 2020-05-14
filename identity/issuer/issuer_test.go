@@ -137,10 +137,10 @@ func TestIssuerPublish(t *testing.T) {
 	require.Nil(t, err)
 
 	oldState := newState
-	newState, _ = issuer.State()
 
 	// Publishing state update
 	err = issuer.PublishState()
+	newState, _ = issuer.State()
 	require.Nil(t, err)
 	assert.Equal(t, oldState, issuer.idenStateOnChain())
 	assert.Equal(t, newState, issuer.idenStatePending())

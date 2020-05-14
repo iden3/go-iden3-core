@@ -448,7 +448,7 @@ func TestVerifyProofFalse(t *testing.T) {
 	proof.Existence = false
 	hi, hv, err = e.HiHv()
 	assert.Nil(t, err)
-	proof.nodeAux = &nodeAux{hIndex: hi, hValue: hv}
+	proof.NodeAux = &NodeAux{HIndex: hi, HValue: hv}
 	assert.True(t, !VerifyProof(mt.RootKey(), proof, hi, hv))
 }
 

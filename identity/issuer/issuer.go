@@ -122,7 +122,7 @@ func (z *IdenStateZkProofConf) Pk() (*zktypes.Pk, error) {
 		if err != nil {
 			return nil, err
 		}
-		log.WithField("elapsed", time.Now().Sub(start)).Debug("Parsed proving key")
+		log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
 		if z.CacheProvingKey {
 			z.pk = pk
 		}
@@ -320,8 +320,12 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	tx.Put(dbKeyId, id[:])
 	tx.Put(dbKeyKOp, kOpComp[:])
 	tx.Put(dbKeyClaimKOpHi, claimKOpHi[:])
-	db.StoreJSON(tx, dbKeyGenesisClaimKOpMtp, claimKOpMtp)
-	db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.RootKey())
+	if err := db.StoreJSON(tx, dbKeyGenesisClaimKOpMtp, claimKOpMtp); err != nil {
+		return nil, err
+	}
+	if err := db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.RootKey()); err != nil {
+		return nil, err
+	}
 
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
@@ -668,7 +672,7 @@ func (is *Issuer) PublishState() error {
 	if err != nil {
 		return err
 	}
-	idenStateLast, _, err := is.getIdenStateByIdx(tx, idenStateListLen-1)
+	idenStateLast, idenStateTreeRootsLast, err := is.getIdenStateByIdx(tx, idenStateListLen-1)
 	if err != nil {
 		return err
 	}
@@ -676,6 +680,15 @@ func (is *Issuer) PublishState() error {
 	if idenState.Equals(idenStateLast) {
 		// IdenState hasn't changed, there's no need to do anything!
 		return nil
+	}
+
+	// If the ClaimsTreeRoot has changed (claims have been added), add the
+	// ClaimsTreeRoot to the RootsTree.
+	if !idenStateTreeRoots.ClaimsTreeRoot.Equals(idenStateTreeRootsLast.ClaimsTreeRoot) {
+		if err := claims.AddLeafRootsTree(is.rootsTree, idenStateTreeRoots.ClaimsTreeRoot); err != nil {
+			return err
+		}
+		idenState, idenStateTreeRoots = is.state()
 	}
 
 	if err := is.idenStateList.Append(tx, idenState[:], &idenStateTreeRoots); err != nil {
@@ -867,6 +880,47 @@ func (is *Issuer) GenCredentialExistence(claim merkletree.Entrier) (*proof.Crede
 	}, nil
 }
 
+type IdOwnershipGenesisInputs struct {
+	Id             *big.Int
+	PrivateKey     *big.Int
+	MtpSiblings    []*big.Int
+	ClaimsTreeRoot *big.Int
+	// RevTreeRoot    *big.Int
+	// RootTreeRoot   *big.Int
+}
+
+func (is *Issuer) GenIdOwnershipGenesisInputs(levels int) (*IdOwnershipGenesisInputs, error) {
+	sk, err := is.keyStore.ExportKey(is.kOpComp)
+	if err != nil {
+		return nil, err
+	}
+
+	var mtp merkletree.Proof
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
+	if err != nil {
+		return nil, err
+	}
+	siblings := mtp.AllSiblingsCircom(levels)
+	if len(siblings) != levels+1 {
+		return nil, fmt.Errorf("number of mtp siblings in genesis ClaimTree (%v) "+
+			"is higher than requested levels (%v)", len(siblings), levels+1)
+	}
+
+	var genesisClaimTreeRoot merkletree.Hash
+	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &IdOwnershipGenesisInputs{
+		Id:             is.id.BigInt(),
+		PrivateKey:     (*big.Int)(sk.Scalar()),
+		MtpSiblings:    siblings,
+		ClaimsTreeRoot: genesisClaimTreeRoot.BigInt(),
+		// RevTreeRoot    :
+		// RootTreeRoot   :
+	}, nil
+}
+
 type ZkProofOut struct {
 	Proof      zktypes.Proof
 	PubSignals []*big.Int
@@ -882,42 +936,18 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 		return nil, fmt.Errorf("error loading zk vk: %w", err)
 	}
 
+	idOwnershipInputs, err := is.GenIdOwnershipGenesisInputs(is.idenStateZkProofConf.Levels)
+	if err != nil {
+		return nil, fmt.Errorf("error generating idOwnership inputs: %w", err)
+	}
+
 	inputs := make(map[string]interface{})
 
-	inputs["id"] = is.id.BigInt()
-
+	inputs["id"] = idOwnershipInputs.Id
 	inputs["oldIdState"] = oldIdState.BigInt()
-
-	sk, err := is.keyStore.ExportKey(is.kOpComp)
-	if err != nil {
-		return nil, err
-	}
-	inputs["userPrivateKey"] = (*big.Int)(sk.Scalar())
-
-	var mtp merkletree.Proof
-	err = db.LoadJSON(is.storage, dbKeyGenesisClaimKOpMtp, &mtp)
-	if err != nil {
-		return nil, err
-	}
-	siblings := merkletree.SiblingsFromProof(&mtp)
-	// Add the rest of empty levels to the siblings
-	for i := len(siblings); i < is.idenStateZkProofConf.Levels; i++ {
-		siblings = append(siblings, &merkletree.HashZero)
-	}
-	siblings = append(siblings, &merkletree.HashZero) // add extra level for circom compatibility
-	siblingsBigInt := make([]*big.Int, len(siblings))
-	for i, sibling := range siblings {
-		siblingsBigInt[i] = sibling.BigInt()
-	}
-	inputs["siblings"] = siblingsBigInt
-
-	var genesisClaimTreeRoot merkletree.Hash
-	err = db.LoadJSON(is.storage, dbKeyGenesisClaimTreeRoot, &genesisClaimTreeRoot)
-	if err != nil {
-		return nil, err
-	}
-	inputs["claimsTreeRoot"] = genesisClaimTreeRoot.BigInt()
-
+	inputs["userPrivateKey"] = idOwnershipInputs.PrivateKey
+	inputs["siblings"] = idOwnershipInputs.MtpSiblings
+	inputs["claimsTreeRoot"] = idOwnershipInputs.ClaimsTreeRoot
 	inputs["newIdState"] = newIdState.BigInt()
 
 	wit, err := witnesscalc.CalculateWitness(is.idenStateZkProofConf.PathWitnessCalcWASM, inputs)
@@ -935,7 +965,7 @@ func (is *Issuer) GenZkProofIdenStateUpdate(oldIdState, newIdState *merkletree.H
 		return nil, ErrFailedVerifyZkProofIdenStateUpdate
 	}
 
-	log.WithField("elapsed", time.Now().Sub(start)).Debug("Proof generated")
+	log.WithField("elapsed", time.Since(start)).Debug("Proof generated")
 	return &ZkProofOut{Proof: *proof, PubSignals: pubSignals}, nil
 }
 

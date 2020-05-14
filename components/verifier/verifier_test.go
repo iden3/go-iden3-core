@@ -255,6 +255,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
 
+	blockTs += 20
+	blockN += 10
+
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
 
@@ -301,6 +304,9 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = is.PublishState()
 	require.Nil(t, err)
 	idenPubOnChain.Sync()
+
+	blockTs += 20
+	blockN += 10
 
 	err = is.SyncIdenStatePublic()
 	require.Nil(t, err)
