@@ -182,6 +182,8 @@ github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4 h1:C+WGAJM
 github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
 github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f h1:3c4OK2ufLtTs2ieQm3EsmjZB0WYhh9x/V00ZBClmgCc=
 github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
+github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec h1:uQR2IqYOH/y0f4NNdYnw5iw6CCVbWiuA2iVd0pdyXWU=
+github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
 github.com/influxdata/influxdb v1.7.8 h1:oXd5TjXzU1b+xyFaH/8Ij+nCoUgyuO3ZDpgCuo62yg0=
 github.com/influxdata/influxdb v1.7.8/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=

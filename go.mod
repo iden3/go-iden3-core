@@ -30,7 +30,7 @@ require (
 	github.com/iden3/go-circom-prover-verifier v0.0.0-20200507101508-1aa316cbd2cf
 	github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429
 	github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4
-	github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f
+	github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec
 	github.com/influxdata/influxdb v1.7.8 // indirect
 	github.com/ipfsconsortium/go-ipfsc v0.0.0-20190116161836-3629ecc1f76f
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
