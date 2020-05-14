@@ -2,18 +2,17 @@ package verifier
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"math/big"
 	"os"
-	"path"
 	"testing"
 	"time"
 
-	"github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	idenpuboffchanlocal "github.com/iden3/go-iden3-core/components/idenpuboffchain/local"
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	idenpubonchainlocal "github.com/iden3/go-iden3-core/components/idenpubonchain/local"
+	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/db"
@@ -21,6 +20,7 @@ import (
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
 	"github.com/iden3/go-iden3-core/merkletree"
+	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,6 +35,10 @@ var idenPubOnChain *idenpubonchainlocal.IdenPubOnChain
 var idenStateZkProofConf *issuer.IdenStateZkProofConf
 
 var pass = []byte("my passphrase")
+
+// credentialDemoWrapper SMT proof level values
+const idOwnershipLevels = 4
+const issuerLevels = 16
 
 func Copy(dst interface{}, src interface{}) {
 	srcJSON, err := json.Marshal(src)
@@ -176,6 +180,16 @@ func newHolder(t *testing.T, idenPubOnChain idenpubonchain.IdenPubOnChainer,
 	return ho, storage, keyStore
 }
 
+func newClaimDemo(id *core.ID, index, value []byte) claims.Claimer {
+	indexBytes, valueBytes := [claims.IndexSubjectSlotLen]byte{}, [claims.ValueSlotLen]byte{}
+	if len(index) > 248/8*2 || len(value) > 248/8*3 {
+		panic("index or value too long")
+	}
+	copy(indexBytes[152/8:], index[:])
+	copy(valueBytes[216/8:], value[:])
+	return claims.NewClaimOtherIden(id, indexBytes, valueBytes)
+}
+
 func TestVerifyCredentialValidity(t *testing.T) {
 	verifier := NewWithTimeNow(idenPubOnChain, func() time.Time {
 		return time.Unix(blockTs, 0)
@@ -190,9 +204,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state first time with claim1
 
-	indexBytes, valueBytes := [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
-	indexBytes[0] = 0x42
-	claim1 := claims.NewClaimBasic(indexBytes, valueBytes)
+	claim1 := newClaimDemo(ho.ID(), []byte("foo"), []byte("bar"))
 
 	is, _, _ := newIssuer(t, idenPubOnChain, idenPubOffChain)
 	err := is.IssueClaim(claim1)
@@ -220,6 +232,34 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
 	assert.Nil(t, err)
 
+	// HOLDER + VERIFIER - Zero Knowledge Proof
+
+	addInputs := func(inputs map[string]interface{}) error {
+		var metadata claims.Metadata
+		metadata.Unmarshal(credExistClaim1.Claim)
+		data := credExistClaim1.Claim.Data
+		inputs["claimI2_3"] = []*big.Int{data[0*4+2].BigInt(), data[0*4+3].BigInt()}
+		inputs["claimV1_3"] = []*big.Int{data[1*4+1].BigInt(), data[1*4+2].BigInt(), data[1*4+2].BigInt()}
+		inputs["id"] = ho.ID().BigInt()
+		inputs["revNonce"] = new(big.Int).SetUint64(uint64(metadata.RevNonce))
+
+		return nil
+	}
+	zkProofCredOut, err := ho.HolderGenZkProofCredential(credExistClaim1, addInputs,
+		idOwnershipLevels, issuerLevels, zkFilesCredential)
+	require.Nil(t, err)
+	require.NotNil(t, zkProofCredOut)
+
+	err = verifier.VerifyZkProofCredential(
+		&zkProofCredOut.ZkProofOut.Proof,
+		zkProofCredOut.ZkProofOut.PubSignals,
+		zkProofCredOut.IssuerID,
+		zkProofCredOut.IdenStateBlockN,
+		zkFilesCredential,
+		500*time.Second,
+	)
+	assert.Nil(t, err)
+
 	//
 	// {Ts: 2000, BlockN: 130} -> claim2 is added
 	//
@@ -227,9 +267,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 
 	// ISSUER: Publish state a second time with another claim2, claim3
 
-	indexBytes, valueBytes = [claims.IndexSlotLen]byte{}, [claims.ValueSlotLen]byte{}
-	indexBytes[0] = 0x48
-	claim2 := claims.NewClaimBasic(indexBytes, valueBytes)
+	claim2 := newClaimDemo(ho.ID(), []byte("1234"), []byte("5678"))
 
 	err = is.IssueClaim(claim2)
 	require.Nil(t, err)
@@ -275,6 +313,34 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	credValidClaim2t2, err := ho.HolderGetCredentialValidity(credExistClaim2)
 	assert.Nil(t, err)
 	assert.NotNil(t, credValidClaim2t2)
+
+	// HOLDER + VERIFIER - Zero Knowledge Proof
+
+	addInputs = func(inputs map[string]interface{}) error {
+		var metadata claims.Metadata
+		metadata.Unmarshal(credExistClaim2.Claim)
+		data := credExistClaim2.Claim.Data
+		inputs["claimI2_3"] = []*big.Int{data[0*4+2].BigInt(), data[0*4+3].BigInt()}
+		inputs["claimV1_3"] = []*big.Int{data[1*4+1].BigInt(), data[1*4+2].BigInt(), data[1*4+2].BigInt()}
+		inputs["id"] = ho.ID().BigInt()
+		inputs["revNonce"] = new(big.Int).SetUint64(uint64(metadata.RevNonce))
+
+		return nil
+	}
+	zkProofCredOut, err = ho.HolderGenZkProofCredential(credExistClaim2, addInputs,
+		idOwnershipLevels, issuerLevels, zkFilesCredential)
+	require.Nil(t, err)
+	require.NotNil(t, zkProofCredOut)
+
+	err = verifier.VerifyZkProofCredential(
+		&zkProofCredOut.ZkProofOut.Proof,
+		zkProofCredOut.ZkProofOut.PubSignals,
+		zkProofCredOut.IssuerID,
+		zkProofCredOut.IdenStateBlockN,
+		zkFilesCredential,
+		500*time.Second,
+	)
+	assert.Nil(t, err)
 
 	// Outdated is invalid
 	err = verifier.VerifyCredentialValidity(credValidClaim1t1, 500*time.Second)
@@ -351,24 +417,42 @@ func TestVerifyCredentialValidity(t *testing.T) {
 	assert.Equal(t, ErrClaimExpired, err)
 }
 
-var _vk *zktypes.Vk
+var vk *zktypes.Vk
+var zkFilesCredential *zkutils.ZkFiles
 
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
-	downloadPath := "/tmp/iden3/idenstatezk"
-	err := issuer.GetIdenStateZKFiles("http://161.35.72.58:9000/circuit-idstate/", downloadPath)
+	zkFilesIdenState := zkutils.NewZkFiles("http://161.35.72.58:9000/circuit-idstate", "/tmp/iden3/idenstatezk",
+		zkutils.ZkFilesHashes{
+			ProvingKey:      "2c72fceb10323d8b274dbd7649a63c1b6a11fff3a1e4cd7f5ec12516f32ec452",
+			VerificationKey: "473952ff80aef85403005eb12d1e78a3f66b1cc11e7bd55d6bfe94e0b5577640",
+			WitnessCalcWASM: "8eafd9314c4d2664a23bf98a4f42cd0c29984960ae3544747ba5fbd60905c41f",
+		}, true)
+	// if err := zkFilesIdenState.DebugDownloadPrintHashes(); err != nil {
+	// 	panic(err)
+	// }
+	if err := zkFilesIdenState.LoadAll(); err != nil {
+		panic(err)
+	}
+
+	zkFilesCredential = zkutils.NewZkFiles("http://161.35.72.58:9000/credentialDemoWrapper", "/tmp/iden3/credentialzk",
+		zkutils.ZkFilesHashes{
+			ProvingKey:      "6d5bbfe45f36c0a9263df0236292d4d7fa4e081fa80a7801fdaefc00171a83ed",
+			VerificationKey: "12a730890e85e33d8bf0f2e54db41dcff875c2dc49011d7e2a283185f47ac0de",
+			WitnessCalcWASM: "6b3c28c4842e04129674eb71dc84d76dd8b290c84987929d54d890b7b8bed211",
+		}, true)
+	// if err := zkFilesCredential.DebugDownloadPrintHashes(); err != nil {
+	// 	panic(err)
+	// }
+	if err := zkFilesCredential.LoadAll(); err != nil {
+		panic(err)
+	}
+
+	var err error
+	vk, err = zkFilesIdenState.VerificationKey()
 	if err != nil {
 		panic(err)
 	}
-	vkJSON, err := ioutil.ReadFile(path.Join(downloadPath, "verification_key.json"))
-	if err != nil {
-		panic(err)
-	}
-	vk, err := parsers.ParseVk(vkJSON)
-	if err != nil {
-		panic(err)
-	}
-	_vk = vk
 	idenPubOnChain = idenpubonchainlocal.New(
 		func() time.Time {
 			return time.Unix(blockTs, 0)
@@ -380,11 +464,8 @@ func TestMain(m *testing.M) {
 	)
 	idenPubOffChain = idenpuboffchanlocal.NewIdenPubOffChain("http://foo.bar")
 	idenStateZkProofConf = &issuer.IdenStateZkProofConf{
-		Levels:              16,
-		PathWitnessCalcWASM: path.Join(downloadPath, "circuit.wasm"),
-		PathProvingKey:      path.Join(downloadPath, "proving_key.json"),
-		PathVerifyingKey:    path.Join(downloadPath, "verification_key.json"),
-		CacheProvingKey:     true,
+		Levels: 16,
+		Files:  *zkFilesIdenState,
 	}
 	os.Exit(m.Run())
 }
