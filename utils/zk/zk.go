@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,6 +19,7 @@ import (
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
 	"github.com/iden3/go-circom-prover-verifier/parsers"
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
+	"github.com/iden3/go-iden3-core/common"
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -438,4 +440,33 @@ func InputsToMapStrings(inputs interface{}) (map[string]interface{}, error) {
 type ZkProofOut struct {
 	Proof      zktypes.Proof
 	PubSignals []*big.Int
+}
+
+// PubSignals is a helper wrapper type over []*big.Int that is JSON friendly.
+type PubSignals []*big.Int
+
+func (p PubSignals) MarshalJSON() ([]byte, error) {
+	aux := make([]string, len(p))
+	for i, v := range p {
+		// We use LittleEndian here!
+		aux[i] = hex.EncodeToString(common.SwapEndianness(v.Bytes()))
+	}
+	return json.Marshal(aux)
+}
+
+func (p *PubSignals) UnmarshalJSON(data []byte) error {
+	var aux []string
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	vs := make([]*big.Int, len(aux))
+	for i, v := range aux {
+		bs, err := hex.DecodeString(v)
+		if err != nil {
+			return err
+		}
+		vs[i] = new(big.Int).SetBytes(common.SwapEndianness(bs))
+	}
+	*p = vs
+	return nil
 }

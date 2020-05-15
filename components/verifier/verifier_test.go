@@ -239,7 +239,7 @@ func TestVerifyCredentialValidity(t *testing.T) {
 		metadata.Unmarshal(credExistClaim1.Claim)
 		data := credExistClaim1.Claim.Data
 		inputs["claimI2_3"] = []*big.Int{data[0*4+2].BigInt(), data[0*4+3].BigInt()}
-		inputs["claimV1_3"] = []*big.Int{data[1*4+1].BigInt(), data[1*4+2].BigInt(), data[1*4+2].BigInt()}
+		inputs["claimV1_3"] = []*big.Int{data[1*4+1].BigInt(), data[1*4+2].BigInt(), data[1*4+3].BigInt()}
 		inputs["id"] = ho.ID().BigInt()
 		inputs["revNonce"] = new(big.Int).SetUint64(uint64(metadata.RevNonce))
 
