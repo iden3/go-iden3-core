@@ -11,8 +11,8 @@ import (
 )
 
 type LevelDbStorage struct {
-	ldb    *leveldb.DB
-	prefix []byte
+	Ldb    *leveldb.DB
+	Prefix []byte
 }
 
 type LevelDbStorageTx struct {
