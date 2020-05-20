@@ -80,14 +80,15 @@ func TestIssuerPublish(t *testing.T) {
 	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
-	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+	idenStatePending, _ := issuer.idenStatePending()
+	assert.Equal(t, &merkletree.HashZero, idenStatePending)
 
 	tx, err := issuer.storage.NewTx()
 	require.Nil(t, err)
 	idenStateListLen, err := issuer.idenStateList.Length(tx)
 	require.Nil(t, err)
 	assert.Equal(t, uint32(1), idenStateListLen)
-	idenStateLast, _, err := issuer.getIdenStateByIdx(tx, idenStateListLen-1)
+	idenStateLast, _, err := issuer.getIdenStateByIdx(tx, -1)
 	assert.Nil(t, err)
 	genesisState, _ := issuer.state()
 	assert.Equal(t, idenStateLast, genesisState)
@@ -109,13 +110,15 @@ func TestIssuerPublish(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
 	newState, _ := issuer.State()
-	assert.Equal(t, newState, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, newState, idenStatePending)
 
 	// Sync (not yet on the smart contract)
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, &merkletree.HashZero, issuer.idenStateOnChain())
-	assert.Equal(t, newState, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, newState, idenStatePending)
 
 	// Sync (finally in the smart contract)
 	idenPubOnChain.Sync()
@@ -123,7 +126,8 @@ func TestIssuerPublish(t *testing.T) {
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, newState, issuer.idenStateOnChain())
-	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, &merkletree.HashZero, idenStatePending)
 
 	//
 	// State Update
@@ -141,13 +145,15 @@ func TestIssuerPublish(t *testing.T) {
 	newState, _ = issuer.State()
 	require.Nil(t, err)
 	assert.Equal(t, oldState, issuer.idenStateOnChain())
-	assert.Equal(t, newState, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, newState, idenStatePending)
 
 	// Sync (not yet on the smart contract)
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, oldState, issuer.idenStateOnChain())
-	assert.Equal(t, newState, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, newState, idenStatePending)
 
 	// Sync (finally in the smart contract)
 	idenPubOnChain.Sync()
@@ -155,7 +161,8 @@ func TestIssuerPublish(t *testing.T) {
 	err = issuer.SyncIdenStatePublic()
 	require.Nil(t, err)
 	assert.Equal(t, newState, issuer.idenStateOnChain())
-	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+	idenStatePending, _ = issuer.idenStatePending()
+	assert.Equal(t, &merkletree.HashZero, idenStatePending)
 }
 
 func TestIssuerCredential(t *testing.T) {
@@ -183,7 +190,8 @@ func TestIssuerCredential(t *testing.T) {
 	require.Nil(t, err)
 	newState, _ := issuer.State()
 	assert.Equal(t, newState, issuer.idenStateOnChain())
-	assert.Equal(t, &merkletree.HashZero, issuer.idenStatePending())
+	idenStatePending, _ := issuer.idenStatePending()
+	assert.Equal(t, &merkletree.HashZero, idenStatePending)
 
 	_, err = issuer.GenCredentialExistence(claim0)
 	assert.Nil(t, err)
