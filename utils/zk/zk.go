@@ -175,6 +175,53 @@ func NewZkFiles(url, path string, hashes ZkFilesHashes, cacheProvingKey bool) *Z
 	}
 }
 
+func (z *ZkFiles) insecureDownload(basename string) error {
+	if err := os.MkdirAll(z.Path, 0700); err != nil {
+		return err
+	}
+	filename := path.Join(z.Path, basename)
+	_, err := os.Stat(filename)
+	if err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	url := fmt.Sprintf("%s/%s", z.Url, basename)
+	log.WithField("filename", filename).WithField("url", url).Debug("Downloading zk file")
+	if err := download(url, filename); err != nil {
+		return err
+	}
+	return nil
+}
+
+// InsecureDownloadAll downloads all the zk files but doesn't check the hashes.
+func (z *ZkFiles) InsecureDownloadAll() error {
+	for _, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
+		if err := z.insecureDownload(basename); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// InsecureCalcHashes calculates the hashes of the zkfiles without checking them.
+func (z *ZkFiles) InsecureCalcHashes() (*ZkFilesHashes, error) {
+	var hashes [3][]byte
+	for i, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
+		filename := path.Join(z.Path, basename)
+		h, err := calcHash(filename)
+		if err != nil {
+			return nil, err
+		}
+		hashes[i] = h
+	}
+	return &ZkFilesHashes{
+		ProvingKey:      hex.EncodeToString(hashes[0]),
+		VerificationKey: hex.EncodeToString(hashes[1]),
+		WitnessCalcWASM: hex.EncodeToString(hashes[2]),
+	}, nil
+}
+
 // DebugDownloadPrintHashes is a helper function that downloads all the zk
 // files in a temporary directory, calculates their hashes, and prints the code
 // of the `ZkFilesHashes` with the calculated hashes, ready to be pasted in
@@ -185,24 +232,15 @@ func (z *ZkFiles) DebugDownloadPrintHashes() error {
 		return err
 	}
 	defer os.RemoveAll(dir) // clean up
-	var hashes [3][]byte
-	for i, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
-		url := fmt.Sprintf("%s/%s", z.Url, basename)
-		filename := path.Join(dir, basename)
-		if err := download(url, filename); err != nil {
-			return err
-		}
-		h, err := calcHash(filename)
-		if err != nil {
-			return err
-		}
-		hashes[i] = h
+	z0 := NewZkFiles(z.Url, dir, ZkFilesHashes{}, false)
+	if err := z0.InsecureDownloadAll(); err != nil {
+		return nil
 	}
-	s := fmt.Sprintf("%#v", ZkFilesHashes{
-		ProvingKey:      hex.EncodeToString(hashes[0]),
-		VerificationKey: hex.EncodeToString(hashes[1]),
-		WitnessCalcWASM: hex.EncodeToString(hashes[2]),
-	})
+	hashes, err := z0.InsecureCalcHashes()
+	if err != nil {
+		return err
+	}
+	s := fmt.Sprintf("%#v", hashes)
 	s = strings.ReplaceAll(s, "{", "{\n\t")
 	s = strings.ReplaceAll(s, ", ", ",\n\t")
 	s = strings.ReplaceAll(s, "}", ",\n}")
