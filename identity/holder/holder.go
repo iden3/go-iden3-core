@@ -29,9 +29,10 @@ const (
 )
 
 var (
-	ErrRevokedClaim                  = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
-	ErrRootNotFound                  = fmt.Errorf("claims tree root not found in roots tree.")
-	ErrFailedVerifyZkProofCredential = fmt.Errorf("failed verifing generated zk proof of credential")
+	ErrRevokedClaim                   = fmt.Errorf("revocation nonce exists in the Revocation Tree.  The claim is revoked.")
+	ErrRootNotFound                   = fmt.Errorf("claims tree root not found in roots tree.")
+	ErrFailedVerifyZkProofCredential  = fmt.Errorf("failed verifing generated zk proof of credential")
+	ErrCalculatedIdenStateDoesntMatch = fmt.Errorf("Calculated IdenState from public data doesn't match the one queried")
 )
 
 var ConfigDefault = Config{Config: issuer.ConfigDefault}
@@ -100,6 +101,14 @@ func (h *Holder) HolderGetCredentialValidityData(
 	if err != nil {
 		return nil, err
 	}
+
+	// Verify that the returned public data is consistent with the queried IdenState
+	idenState := core.IdenState(publicData.ClaimsTreeRoot, publicData.RevocationsTree.RootKey(),
+		publicData.RootsTree.RootKey())
+	if !idenState.Equals(idenStateData.IdenState) {
+		return nil, ErrCalculatedIdenStateDoesntMatch
+	}
+
 	var claimMetadata claims.Metadata
 	claimMetadata.Unmarshal(credExist.Claim)
 	// NOTE: Once we add versions, this will require some changes that need to be thought properly!

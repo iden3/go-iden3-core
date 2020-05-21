@@ -242,7 +242,6 @@ func NewMerkleTree(storage db.Storage, maxLevels int) (*MerkleTree, error) {
 		mt.rootKey = k
 		mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
 		if err = tx.Commit(); err != nil {
-			tx.Close()
 			return nil, err
 		}
 		return &mt, nil
@@ -464,16 +463,7 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 		return err
 	}
 	mt.Lock()
-	defer func() {
-		if err == nil {
-			if err := tx.Commit(); err != nil {
-				tx.Close()
-			}
-		} else {
-			tx.Close()
-		}
-		mt.Unlock()
-	}()
+	defer mt.Unlock()
 
 	newNodeLeaf := NewNodeLeaf(e)
 	hIndex, err := e.HIndex()
@@ -488,6 +478,10 @@ func (mt *MerkleTree) AddEntry(e *Entry) error {
 	}
 	mt.rootKey = newRootKey
 	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -681,16 +675,7 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 		return err
 	}
 	mt.Lock()
-	defer func() {
-		if err == nil {
-			if err := tx.Commit(); err != nil {
-				tx.Close()
-			}
-		} else {
-			tx.Close()
-		}
-		mt.Unlock()
-	}()
+	defer mt.Unlock()
 
 	r := bufio.NewReader(i)
 	for {
@@ -705,6 +690,10 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 
 	v, err := tx.Get(rootNodeValue)
 	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 	mt.rootKey = &Hash{}
