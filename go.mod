@@ -27,7 +27,7 @@ require (
 	github.com/howeyc/fsnotify v0.9.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0 // indirect
-	github.com/iden3/go-circom-prover-verifier v0.0.0-20200515100033-bedd64cc7062
+	github.com/iden3/go-circom-prover-verifier v0.0.0-20200521141907-e652f3475367
 	github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429
 	github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4
 	github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec
