@@ -42,9 +42,9 @@ func (e *ElemBytes) BigInt() *big.Int {
 	return new(big.Int).SetBytes(common3.SwapEndianness(e[:]))
 }
 
-// String returns the last 4 bytes of ElemBytes in hex.
+// String returns the first 4 bytes of ElemBytes in hex.
 func (e *ElemBytes) String() string {
-	return fmt.Sprintf("%v...", hex.EncodeToString(e[ElemBytesLen-4:]))
+	return fmt.Sprintf("%v...", hex.EncodeToString(e[:4]))
 }
 
 // ElemsBytesToBytes serializes an array of ElemBytes to []byte.

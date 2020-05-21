@@ -146,10 +146,26 @@ type ZkFilesHashes struct {
 	WitnessCalcWASM string
 }
 
+type ProvingKeyFormat string
+
+const (
+	ProvingKeyFormatJSON  = "json"
+	ProvingKeyFormatBin   = "bin"
+	ProvingKeyFormatGoBin = "go.bin"
+)
+
+type ZkFilesBasename struct {
+	ProvingKey      string
+	VerificationKey string
+	WitnessCalcWASM string
+}
+
 // ZkFiles allows convenient access to the files required for zk proving and verifying.
 type ZkFiles struct {
 	Url                 string
 	Path                string
+	basename            ZkFilesBasename
+	provingKeyFormat    ProvingKeyFormat
 	hashes              ZkFilesHashes
 	cacheProvingKey     bool
 	pathProvingKey      string
@@ -166,12 +182,19 @@ type ZkFiles struct {
 // quite big: setting `cacheProvingKey` to false will make the ZkFiles not
 // keep it in memory after requesting it, parsing it from disk every time it is
 // required.  The rest of the files are always cached.
-func NewZkFiles(url, path string, hashes ZkFilesHashes, cacheProvingKey bool) *ZkFiles {
+func NewZkFiles(url, path string, provingKeyFormat ProvingKeyFormat, hashes ZkFilesHashes, cacheProvingKey bool) *ZkFiles {
+	basename := ZkFilesBasename{
+		ProvingKey:      fmt.Sprintf("proving_key.%v", provingKeyFormat),
+		VerificationKey: "verification_key.json",
+		WitnessCalcWASM: "circuit.wasm",
+	}
 	return &ZkFiles{
-		Url:             url,
-		Path:            path,
-		hashes:          hashes,
-		cacheProvingKey: cacheProvingKey,
+		Url:              url,
+		Path:             path,
+		basename:         basename,
+		provingKeyFormat: provingKeyFormat,
+		hashes:           hashes,
+		cacheProvingKey:  cacheProvingKey,
 	}
 }
 
@@ -196,7 +219,7 @@ func (z *ZkFiles) insecureDownload(basename string) error {
 
 // InsecureDownloadAll downloads all the zk files but doesn't check the hashes.
 func (z *ZkFiles) InsecureDownloadAll() error {
-	for _, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
+	for _, basename := range []string{z.basename.ProvingKey, z.basename.VerificationKey, z.basename.WitnessCalcWASM} {
 		if err := z.insecureDownload(basename); err != nil {
 			return err
 		}
@@ -207,7 +230,7 @@ func (z *ZkFiles) InsecureDownloadAll() error {
 // InsecureCalcHashes calculates the hashes of the zkfiles without checking them.
 func (z *ZkFiles) InsecureCalcHashes() (*ZkFilesHashes, error) {
 	var hashes [3][]byte
-	for i, basename := range []string{"proving_key.json", "verification_key.json", "circuit.wasm"} {
+	for i, basename := range []string{z.basename.ProvingKey, z.basename.VerificationKey, z.basename.WitnessCalcWASM} {
 		filename := path.Join(z.Path, basename)
 		h, err := calcHash(filename)
 		if err != nil {
@@ -226,13 +249,13 @@ func (z *ZkFiles) InsecureCalcHashes() (*ZkFilesHashes, error) {
 // files in a temporary directory, calculates their hashes, and prints the code
 // of the `ZkFilesHashes` with the calculated hashes, ready to be pasted in
 // real code.
-func (z *ZkFiles) DebugDownloadPrintHashes() error {
+func (z *ZkFiles) DebugDownloadPrintHashes(provingKeyFormat ProvingKeyFormat) error {
 	dir, err := ioutil.TempDir("", "zkfiles")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir) // clean up
-	z0 := NewZkFiles(z.Url, dir, ZkFilesHashes{}, false)
+	z0 := NewZkFiles(z.Url, dir, provingKeyFormat, ZkFilesHashes{}, false)
 	if err := z0.InsecureDownloadAll(); err != nil {
 		return nil
 	}
@@ -276,7 +299,7 @@ func (z *ZkFiles) DownloadProvingKey() error {
 	if err := os.MkdirAll(z.Path, 0700); err != nil {
 		return err
 	}
-	basename := "proving_key.json"
+	basename := z.basename.ProvingKey
 	if err := z.downloadCheckFile(basename, z.hashes.ProvingKey); err != nil {
 		return err
 	}
@@ -289,7 +312,7 @@ func (z *ZkFiles) DownloadVerificationKey() error {
 	if err := os.MkdirAll(z.Path, 0700); err != nil {
 		return err
 	}
-	basename := "verification_key.json"
+	basename := z.basename.VerificationKey
 	if err := z.downloadCheckFile(basename, z.hashes.VerificationKey); err != nil {
 		return err
 	}
@@ -302,7 +325,7 @@ func (z *ZkFiles) DownloadWitnessCalcWASM() error {
 	if err := os.MkdirAll(z.Path, 0700); err != nil {
 		return err
 	}
-	basename := "circuit.wasm"
+	basename := z.basename.WitnessCalcWASM
 	if err := z.downloadCheckFile(basename, z.hashes.WitnessCalcWASM); err != nil {
 		return err
 	}
@@ -325,14 +348,40 @@ func (z *ZkFiles) DownloadAll() error {
 }
 
 func (z *ZkFiles) loadProvingKey() (*zktypes.Pk, error) {
-	provingKeyJson, err := ioutil.ReadFile(z.pathProvingKey)
-	if err != nil {
-		return nil, err
-	}
 	start := time.Now()
-	pk, err := parsers.ParsePk(provingKeyJson)
-	if err != nil {
-		return nil, err
+	var pk *zktypes.Pk
+	switch z.provingKeyFormat {
+	case ProvingKeyFormatJSON:
+		provingKeyBytes, err := ioutil.ReadFile(z.pathProvingKey)
+		if err != nil {
+			return nil, err
+		}
+		pk, err = parsers.ParsePk(provingKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+	case ProvingKeyFormatBin:
+		f, err := os.Open(z.pathProvingKey)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		pk, err = parsers.ParsePkBin(f)
+		if err != nil {
+			return nil, err
+		}
+	case ProvingKeyFormatGoBin:
+		f, err := os.Open(z.pathProvingKey)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		pk, err = parsers.ParsePkGoBin(f)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid proving key format %v", z.provingKeyFormat)
 	}
 	log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
 	return pk, nil

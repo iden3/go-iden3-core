@@ -423,6 +423,7 @@ var zkFilesCredential *zkutils.ZkFiles
 func TestMain(m *testing.M) {
 	log.SetLevel(log.DebugLevel)
 	zkFilesIdenState := zkutils.NewZkFiles("http://161.35.72.58:9000/circuit-idstate", "/tmp/iden3/idenstatezk-verifier",
+		zkutils.ProvingKeyFormatJSON,
 		zkutils.ZkFilesHashes{
 			ProvingKey:      "2c72fceb10323d8b274dbd7649a63c1b6a11fff3a1e4cd7f5ec12516f32ec452",
 			VerificationKey: "473952ff80aef85403005eb12d1e78a3f66b1cc11e7bd55d6bfe94e0b5577640",
@@ -436,6 +437,7 @@ func TestMain(m *testing.M) {
 	}
 
 	zkFilesCredential = zkutils.NewZkFiles("http://161.35.72.58:9000/credentialDemoWrapper", "/tmp/iden3/credentialzk",
+		zkutils.ProvingKeyFormatJSON,
 		zkutils.ZkFilesHashes{
 			ProvingKey:      "6d5bbfe45f36c0a9263df0236292d4d7fa4e081fa80a7801fdaefc00171a83ed",
 			VerificationKey: "12a730890e85e33d8bf0f2e54db41dcff875c2dc49011d7e2a283185f47ac0de",

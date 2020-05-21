@@ -97,6 +97,7 @@ func (h *Holder) HolderGetCredentialValidityData(
 	if err != nil {
 		return nil, err
 	}
+	log.WithField("state", idenStateData.IdenState).Debug("Holder.idenPubOnChain.GetState()")
 	publicData, err := h.idenPubOffChainReader.GetPublicData(credExist.IdenPubUrl, credExist.Id, idenStateData.IdenState)
 	if err != nil {
 		return nil, err
