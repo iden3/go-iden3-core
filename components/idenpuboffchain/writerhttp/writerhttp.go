@@ -32,7 +32,7 @@ type Config struct {
 }
 
 func NewConfigDefault(url string) *Config {
-	return &Config{CacheLen: 1, Url: url}
+	return &Config{CacheLen: 4, Url: url}
 }
 
 // IdenPubOffChainWriteHttp satisfies the IdenPubOffChainWriter interface, and stores in a leveldb the published RootsTree & RevocationsTree to be returned when requested.
@@ -81,6 +81,10 @@ func (i *IdenPubOffChainWriteHttp) Url() string {
 	return i.cfg.Url
 }
 
+func keyIdx(key []byte, idx byte) []byte {
+	return []byte(fmt.Sprintf("%s-%02x", string(key), idx))
+}
+
 // Publish publishes the RootsTree and RevocationsTree to the configured way of publishing
 func (i *IdenPubOffChainWriteHttp) Publish(id *core.ID, publicData *idenpuboffchain.PublicData) error {
 	// RootsTree
@@ -104,28 +108,23 @@ func (i *IdenPubOffChainWriteHttp) Publish(id *core.ID, publicData *idenpuboffch
 		return err
 	}
 	i.rw.Lock()
-	defer func() {
-		if err == nil {
-			if err := tx.Commit(); err != nil {
-				tx.Close()
-			}
-		} else {
-			tx.Close()
-		}
-		i.rw.Unlock()
-	}()
+	defer i.rw.Unlock()
 
 	cacheIdx, err := i.nextCacheIdx(tx)
 	if err != nil {
 		return err
 	}
 
-	tx.Put(append(dbKeyIdenState, cacheIdx), publicData.IdenState[:])
-	tx.Put(append(dbKeyClaimsRoot, cacheIdx), publicData.ClaimsTreeRoot[:])
-	tx.Put(append(dbKeyRootsRoot, cacheIdx), publicData.RootsTreeRoot[:])
-	tx.Put(append(dbKeyRootsTree, cacheIdx), rotBlob)
-	tx.Put(append(dbKeyRevocationsRoot, cacheIdx), publicData.RevocationsTreeRoot[:])
-	tx.Put(append(dbKeyRevocationsTree, cacheIdx), retBlob)
+	tx.Put(keyIdx(dbKeyIdenState, cacheIdx), publicData.IdenState[:])
+	tx.Put(keyIdx(dbKeyClaimsRoot, cacheIdx), publicData.ClaimsTreeRoot[:])
+	tx.Put(keyIdx(dbKeyRootsRoot, cacheIdx), publicData.RootsTreeRoot[:])
+	tx.Put(keyIdx(dbKeyRootsTree, cacheIdx), rotBlob)
+	tx.Put(keyIdx(dbKeyRevocationsRoot, cacheIdx), publicData.RevocationsTreeRoot[:])
+	tx.Put(keyIdx(dbKeyRevocationsTree, cacheIdx), retBlob)
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -182,10 +181,10 @@ func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash
 			return nil, err
 		}
 	} else {
-		idx := byte(0)
-		for ; idx < i.cfg.CacheLen; idx++ {
+		cacheIdx = byte(0)
+		for ; cacheIdx < i.cfg.CacheLen; cacheIdx++ {
 			// idenState
-			idenState, err := tx.Get(append(dbKeyIdenState, idx))
+			idenState, err := tx.Get(keyIdx(dbKeyIdenState, cacheIdx))
 			if err != nil {
 				return nil, err
 			}
@@ -193,38 +192,38 @@ func (i *IdenPubOffChainWriteHttp) GetPublicData(queryIdenState *merkletree.Hash
 				break
 			}
 		}
-		if idx == i.cfg.CacheLen {
+		if cacheIdx == i.cfg.CacheLen {
 			return nil, ErrIdenStateNotFound
 		}
 	}
 	// idenState
-	idenState, err := tx.Get(append(dbKeyIdenState, cacheIdx))
+	idenState, err := tx.Get(keyIdx(dbKeyIdenState, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
 
 	// claims tree root
-	cltRoot, err := tx.Get(append(dbKeyClaimsRoot, cacheIdx))
+	cltRoot, err := tx.Get(keyIdx(dbKeyClaimsRoot, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
 
 	// revocations tree
-	retRoot, err := tx.Get(append(dbKeyRevocationsRoot, cacheIdx))
+	retRoot, err := tx.Get(keyIdx(dbKeyRevocationsRoot, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
-	ret, err := tx.Get(append(dbKeyRevocationsTree, cacheIdx))
+	ret, err := tx.Get(keyIdx(dbKeyRevocationsTree, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
 
 	// roots tree
-	rotRoot, err := tx.Get(append(dbKeyRootsRoot, cacheIdx))
+	rotRoot, err := tx.Get(keyIdx(dbKeyRootsRoot, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
-	rot, err := tx.Get(append(dbKeyRootsTree, cacheIdx))
+	rot, err := tx.Get(keyIdx(dbKeyRootsTree, cacheIdx))
 	if err != nil {
 		return nil, err
 	}
