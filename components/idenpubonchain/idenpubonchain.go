@@ -61,14 +61,16 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
-	err := ip.client.Call(func(c *ethclient.Client) error {
+	if err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
 		}
 		blockN, blockTS, _idenState, err = idenStates.GetStateDataById(nil, id.BigInt())
 		return err
-	})
+	}); err != nil {
+		return nil, err
+	}
 	idenState := merkletree.NewHashFromBigInt(_idenState)
 	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChain
@@ -77,7 +79,7 @@ func (ip *IdenPubOnChain) GetState(id *core.ID) (*proof.IdenStateData, error) {
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
 		IdenState: idenState,
-	}, err
+	}, nil
 }
 
 // GetStateByBlock returns the Identity State Data of the given ID published at
@@ -100,7 +102,7 @@ func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64
 	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
-	err := ip.client.Call(func(c *ethclient.Client) error {
+	if err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
@@ -108,7 +110,9 @@ func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64
 		blockN, blockTS, _idenState, err = idenStates.GetStateDataByBlock(nil,
 			id.BigInt(), queryBlockN)
 		return err
-	})
+	}); err != nil {
+		return nil, err
+	}
 	idenState := merkletree.NewHashFromBigInt(_idenState)
 	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChainOrBlockTooNew
@@ -117,7 +121,7 @@ func (ip *IdenPubOnChain) GetStateClosestToBlock(id *core.ID, queryBlockN uint64
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
 		IdenState: idenState,
-	}, err
+	}, nil
 }
 
 // GetStateByTime returns the Identity State Data of the given ID published at
@@ -140,7 +144,7 @@ func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64)
 	var _idenState *big.Int
 	var blockN uint64
 	var blockTS uint64
-	err := ip.client.Call(func(c *ethclient.Client) error {
+	if err := ip.client.Call(func(c *ethclient.Client) error {
 		idenStates, err := contracts.NewState(ip.addresses.IdenStates, c)
 		if err != nil {
 			return err
@@ -148,7 +152,9 @@ func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64)
 		blockN, blockTS, _idenState, err = idenStates.GetStateDataByTime(nil,
 			id.BigInt(), uint64(queryBlockTs))
 		return err
-	})
+	}); err != nil {
+		return nil, err
+	}
 	idenState := merkletree.NewHashFromBigInt(_idenState)
 	if idenState.Equals(&merkletree.HashZero) {
 		return nil, ErrIdenNotOnChainOrTimeTooNew
@@ -157,7 +163,7 @@ func (ip *IdenPubOnChain) GetStateClosestToTime(id *core.ID, queryBlockTs int64)
 		BlockN:    blockN,
 		BlockTs:   int64(blockTS),
 		IdenState: idenState,
-	}, err
+	}, nil
 }
 
 // InitState initializes the first Identity State of the given ID in the IdenStates Smart Contract.
