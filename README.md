@@ -3,7 +3,7 @@
 Go implementation of the iden3 system.
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/iden3/go-iden3-core)](https://goreportcard.com/report/github.com/iden3/go-iden3-core)
-[![Build Status](https://travis-ci.org/iden3/go-iden3-core.svg?branch=master)](https://travis-ci.org/iden3/go-iden3-core)
+[![Test Status](https://github.com/iden3/go-iden3-core/workflows/Test/badge.svg)](https://github.com/iden3/go-iden3-core/actions?query=workflow%3ATest)
 
 ## Install
 ```
