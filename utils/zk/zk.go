@@ -98,13 +98,33 @@ func download(url, filename string) error {
 	}
 	defer resp.Body.Close()
 
-	f, err := os.Create(filename)
+	if !(200 <= resp.StatusCode && resp.StatusCode < 300) {
+		msg, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("HTTP Status: %v (%v) for %v", resp.Status, string(msg), url)
+	}
+
+	filenameTmp := fmt.Sprintf("%v.tmp", filename)
+	f, err := os.Create(filenameTmp)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
+	if _, err = io.Copy(f, resp.Body); err != nil {
+		return err
+	}
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err = os.Rename(filenameTmp, filename); err != nil {
+		return err
+	}
+
 	return err
 }
 
@@ -383,6 +403,7 @@ func (z *ZkFiles) loadProvingKey() (*zktypes.Pk, error) {
 	default:
 		return nil, fmt.Errorf("invalid proving key format %v", z.provingKeyFormat)
 	}
+
 	log.WithField("elapsed", time.Since(start)).Debug("Parsed proving key")
 	return pk, nil
 }
