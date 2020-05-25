@@ -367,10 +367,7 @@ func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []
 // of the msg byte slice.
 func (ks *KeyStore) SignRaw(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
 	// h, err := mimc7.HashBytes(msg)
-	h, err := poseidon.HashBytes(msg)
-	if err != nil {
-		return nil, err
-	}
+	h := poseidon.HashBytes(msg)
 	return ks.SignElem(pk, h)
 }
 
@@ -400,9 +397,6 @@ func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureCo
 // VerifySignatureRaw verifies that the signature sigComp of the poseidon hash of
 // the msg byte slice was signed with the public key pkComp.
 func VerifySignatureRaw(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
-	h, err := poseidon.HashBytes(msg)
-	if err != nil {
-		return false, err
-	}
+	h := poseidon.HashBytes(msg)
 	return VerifySignatureElem(pkComp, h, sigComp)
 }

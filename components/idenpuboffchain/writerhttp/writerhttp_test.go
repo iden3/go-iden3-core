@@ -31,8 +31,7 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 
 	// add some leafs to both MerkleTrees
 	for i := 0; i < 10; i++ {
-		rootBigInt, err := poseidon.HashBytes([]byte(strconv.Itoa(i)))
-		assert.Nil(t, err)
+		rootBigInt := poseidon.HashBytes([]byte(strconv.Itoa(i)))
 		root := merkletree.NewHashFromBigInt(rootBigInt)
 		err = claims.AddLeafRootsTree(rotMt, root)
 		assert.Nil(t, err)
@@ -96,10 +95,7 @@ func initTest() {
 	}
 	// Add input data to the test vector
 	if generateTest {
-		root0, err := poseidon.HashBytes([]byte("root0"))
-		if err != nil {
-			panic(err)
-		}
+		root0 := poseidon.HashBytes([]byte("root0"))
 		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 		testgen.SetTestValue("nonce0", float64(5))
 		testgen.SetTestValue("version0", float64(5))
