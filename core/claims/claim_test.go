@@ -76,10 +76,7 @@ func initTest() {
 		testgen.SetTestValue("1_privateKey", "9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")
 
 		// TestLeafRootsTree
-		root0, err := poseidon.HashBytes([]byte("root0"))
-		if err != nil {
-			panic(err)
-		}
+		root0 := poseidon.HashBytes([]byte("root0"))
 		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 
 		// TestLeafRevocationsTree
