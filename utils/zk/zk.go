@@ -21,6 +21,7 @@ import (
 	zktypes "github.com/iden3/go-circom-prover-verifier/types"
 	"github.com/iden3/go-iden3-core/common"
 
+	"github.com/gofrs/flock"
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
 )
@@ -80,7 +81,47 @@ func PrintProof(proof *zktypes.Proof) {
 		proofC[0], proofC[1])
 }
 
-func download(url, filename string) error {
+func download(url, filename string) (err error) {
+	// If the file already exists, return early
+	_, err = os.Stat(filename)
+	if err == nil {
+		log.WithField("filename", filename).Debug("ZkFile already exists, skipping download")
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	filenameTmp := fmt.Sprintf("%v.tmp", filename)
+	lock := flock.New(filenameTmp + ".lock")
+	for {
+		ok, err := lock.TryLock()
+		if err != nil {
+			return err
+		}
+		if ok {
+			defer func() {
+				lock.Unlock()
+				if err = lock.Unlock(); err != nil {
+					return
+				}
+				err = os.Remove(filenameTmp + ".lock")
+				return
+			}()
+			break
+		}
+		log.WithField("filename", filename).Debug("ZkFile downloading locked, waiting...")
+		time.Sleep(200 * time.Millisecond)
+	}
+	// The file may have been downloaded before aquiring the lock, so check again if it exists
+	_, err = os.Stat(filename)
+	if err == nil {
+		log.WithField("filename", filename).Debug("ZkFile already exists, skipping download")
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	log.WithField("filename", filename).WithField("url", url).Debug("Downloading zk file")
 	dialTimeout := func(network, addr string) (net.Conn, error) {
 		return net.DialTimeout(network, addr, time.Duration(2*time.Second))
 	}
@@ -106,7 +147,6 @@ func download(url, filename string) error {
 		return fmt.Errorf("HTTP Status: %v (%v) for %v", resp.Status, string(msg), url)
 	}
 
-	filenameTmp := fmt.Sprintf("%v.tmp", filename)
 	f, err := os.Create(filenameTmp)
 	if err != nil {
 		return err
@@ -223,14 +263,7 @@ func (z *ZkFiles) insecureDownload(basename string) error {
 		return err
 	}
 	filename := path.Join(z.Path, basename)
-	_, err := os.Stat(filename)
-	if err == nil {
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
-	}
 	url := fmt.Sprintf("%s/%s", z.Url, basename)
-	log.WithField("filename", filename).WithField("url", url).Debug("Downloading zk file")
 	if err := download(url, filename); err != nil {
 		return err
 	}
@@ -293,18 +326,7 @@ func (z *ZkFiles) DebugDownloadPrintHashes(provingKeyFormat ProvingKeyFormat) er
 
 func (z *ZkFiles) downloadCheckFile(basename, hash string) error {
 	filename := path.Join(z.Path, basename)
-	_, err := os.Stat(filename)
-	if err == nil {
-		if err := checkHash(filename, hash); err != nil {
-			return err
-		}
-		// log.WithField("filename", filename).Debug("Skipping downloading zk file")
-		return nil
-	} else if !os.IsNotExist(err) {
-		return err
-	}
 	url := fmt.Sprintf("%s/%s", z.Url, basename)
-	log.WithField("filename", filename).WithField("url", url).Debug("Downloading zk file")
 	if err := download(url, filename); err != nil {
 		return err
 	}
