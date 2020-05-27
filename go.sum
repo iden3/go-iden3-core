@@ -182,6 +182,8 @@ github.com/iden3/go-circom-witnesscalc v0.0.0-20200428090142-66259888c6fd h1:Z1O
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200428090142-66259888c6fd/go.mod h1:c3FEU+iwM55k0lvzpwkCk5ljmv+gV2nnkCVHiuUDxFo=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429 h1:UTGpt2GCsNNC2sSYS6iBUDnR75HiCkogHdVSI2JyUsk=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429/go.mod h1:c3FEU+iwM55k0lvzpwkCk5ljmv+gV2nnkCVHiuUDxFo=
+github.com/iden3/go-circom-witnesscalc v0.0.0-20200527122314-25592ab9b33b h1:+nQkFL1RdUjAUT9C59K/qyZ+5xOGqjFkAGOZYqijOJ0=
+github.com/iden3/go-circom-witnesscalc v0.0.0-20200527122314-25592ab9b33b/go.mod h1:hfw0CzjWlsvZOtOxXsiet+ZuN5YJCSNKvOa4VSsjjvI=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161 h1:m/JbZo+lzlIX02tmV12mKa6010dfJegs2jCsgB23udM=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161/go.mod h1:LLcgB7DLWAUs+8eBSKne+ZHy5z7xtAmlYlEz0M9M8gE=
 github.com/iden3/go-iden3-crypto v0.0.3 h1:/Z4DHEPTKvWSM0F1DOp9tj9cQmifc3F+4QK2Pzu9Pqw=

@@ -28,7 +28,7 @@ require (
 	github.com/huin/goupnp v1.0.0 // indirect
 	github.com/iancoleman/orderedmap v0.0.0-20190318233801-ac98e3ecb4b0 // indirect
 	github.com/iden3/go-circom-prover-verifier v0.0.0-20200522153011-ec6920aa1169
-	github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429
+	github.com/iden3/go-circom-witnesscalc v0.0.0-20200527122314-25592ab9b33b
 	github.com/iden3/go-iden3-crypto v0.0.5-0.20200525100545-2c471ab54594
 	github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec
 	github.com/influxdata/influxdb v1.7.8 // indirect
