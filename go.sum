@@ -174,6 +174,8 @@ github.com/iden3/go-circom-prover-verifier v0.0.0-20200522114338-94dc934f6236 h1
 github.com/iden3/go-circom-prover-verifier v0.0.0-20200522114338-94dc934f6236/go.mod h1:ZGStP/GSsKbIaLEowo7JmqnWgneFAapA4NrZakHcUk4=
 github.com/iden3/go-circom-prover-verifier v0.0.0-20200522153011-ec6920aa1169 h1:KRWJ4cX/UllnHTH0c7BLtZu+CzANADoi7bxtIuvhzZ4=
 github.com/iden3/go-circom-prover-verifier v0.0.0-20200522153011-ec6920aa1169/go.mod h1:ZGStP/GSsKbIaLEowo7JmqnWgneFAapA4NrZakHcUk4=
+github.com/iden3/go-circom-prover-verifier v0.0.1 h1:gfmAwhvUB0Wya++dGfgvMYPsLzJf34Yw6x269CnhOP0=
+github.com/iden3/go-circom-prover-verifier v0.0.1/go.mod h1:1FkpX4nUXxYcY2fpzqd27wHHEnWeo1v1nwDnz2TgBRo=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad h1:btw9/uWubgGmCxsI+EV+56c8aPDv6wJrfteLYEE/JQI=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200422084858-35bc2e54a6ad/go.mod h1:z7PErEUI6NMqWQh+SAwQanuPe2G/29nwgCe0q+uZocw=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200423133957-b10252d77de1 h1:Bj6+crb/GIg0I4uE+RU1/SfkXR5ak2wf4dC7dCQ1bNo=
@@ -184,6 +186,8 @@ github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429 h1:UTG
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200429093613-a13396c6e429/go.mod h1:c3FEU+iwM55k0lvzpwkCk5ljmv+gV2nnkCVHiuUDxFo=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200527122314-25592ab9b33b h1:+nQkFL1RdUjAUT9C59K/qyZ+5xOGqjFkAGOZYqijOJ0=
 github.com/iden3/go-circom-witnesscalc v0.0.0-20200527122314-25592ab9b33b/go.mod h1:hfw0CzjWlsvZOtOxXsiet+ZuN5YJCSNKvOa4VSsjjvI=
+github.com/iden3/go-circom-witnesscalc v0.0.1 h1:ksRJ4LPRzus6mrGrMYij1ZPfYWfpLS9ippoAbipiYsA=
+github.com/iden3/go-circom-witnesscalc v0.0.1/go.mod h1:xjT1BlFZDBioHOlbD75SmZZLC1d1AfOycqbSa/1QRJU=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161 h1:m/JbZo+lzlIX02tmV12mKa6010dfJegs2jCsgB23udM=
 github.com/iden3/go-iden3-crypto v0.0.3-0.20190831180703-c95c95b7b161/go.mod h1:LLcgB7DLWAUs+8eBSKne+ZHy5z7xtAmlYlEz0M9M8gE=
 github.com/iden3/go-iden3-crypto v0.0.3 h1:/Z4DHEPTKvWSM0F1DOp9tj9cQmifc3F+4QK2Pzu9Pqw=
@@ -194,10 +198,14 @@ github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4 h1:C+WGAJM
 github.com/iden3/go-iden3-crypto v0.0.5-0.20200421133134-14c3144613d4/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
 github.com/iden3/go-iden3-crypto v0.0.5-0.20200525100545-2c471ab54594 h1:QMZqlVn1U+UNnIdeV3VEtE+cnPyWGHNK5ckKcxMhyj4=
 github.com/iden3/go-iden3-crypto v0.0.5-0.20200525100545-2c471ab54594/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
+github.com/iden3/go-iden3-crypto v0.0.5 h1:inCSm5a+ry+nbpVTL/9+m6UcIwSv6nhUm0tnIxEbcps=
+github.com/iden3/go-iden3-crypto v0.0.5/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
 github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f h1:3c4OK2ufLtTs2ieQm3EsmjZB0WYhh9x/V00ZBClmgCc=
 github.com/iden3/go-wasm3 v0.0.0-20200407092348-656263e6984f/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec h1:uQR2IqYOH/y0f4NNdYnw5iw6CCVbWiuA2iVd0pdyXWU=
 github.com/iden3/go-wasm3 v0.0.0-20200514131940-7bb78777b8ec/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
+github.com/iden3/go-wasm3 v0.0.1 h1:pEtyMJcCZtG6VyV2k5xU/46EN2FvLog563vmwKciLic=
+github.com/iden3/go-wasm3 v0.0.1/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/influxdata/influxdb v1.2.3-0.20180221223340-01288bdb0883/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
 github.com/influxdata/influxdb v1.7.8 h1:oXd5TjXzU1b+xyFaH/8Ij+nCoUgyuO3ZDpgCuo62yg0=
 github.com/influxdata/influxdb v1.7.8/go.mod h1:qZna6X/4elxqT3yI9iZYdZrWWdeFOOprn86kgg4+IzY=
