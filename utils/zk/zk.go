@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
@@ -234,6 +235,7 @@ type ZkFiles struct {
 	verificationKey     *zktypes.Vk
 	pathWitnessCalcWASM string
 	witnessCalcWASM     []byte
+	m                   sync.Mutex
 }
 
 // NewZkFiles creates a new ZkFiles that will try to use the zk files from
@@ -272,6 +274,8 @@ func (z *ZkFiles) insecureDownload(basename string) error {
 
 // InsecureDownloadAll downloads all the zk files but doesn't check the hashes.
 func (z *ZkFiles) InsecureDownloadAll() error {
+	z.m.Lock()
+	defer z.m.Unlock()
 	for _, basename := range []string{z.basename.ProvingKey, z.basename.VerificationKey, z.basename.WitnessCalcWASM} {
 		if err := z.insecureDownload(basename); err != nil {
 			return err
@@ -282,6 +286,8 @@ func (z *ZkFiles) InsecureDownloadAll() error {
 
 // InsecureCalcHashes calculates the hashes of the zkfiles without checking them.
 func (z *ZkFiles) InsecureCalcHashes() (*ZkFilesHashes, error) {
+	z.m.Lock()
+	defer z.m.Unlock()
 	var hashes [3][]byte
 	for i, basename := range []string{z.basename.ProvingKey, z.basename.VerificationKey, z.basename.WitnessCalcWASM} {
 		filename := path.Join(z.Path, basename)
@@ -336,43 +342,48 @@ func (z *ZkFiles) downloadCheckFile(basename, hash string) error {
 	return nil
 }
 
-// DownloadProvingKey downloads the ProvingKey and checks its hash.
-func (z *ZkFiles) DownloadProvingKey() error {
+func (z *ZkFiles) downloadFile(basename, hash string, filePath *string) error {
 	if err := os.MkdirAll(z.Path, 0700); err != nil {
 		return err
 	}
-	basename := z.basename.ProvingKey
-	if err := z.downloadCheckFile(basename, z.hashes.ProvingKey); err != nil {
+	if err := z.downloadCheckFile(basename, hash); err != nil {
 		return err
 	}
-	z.pathProvingKey = path.Join(z.Path, basename)
+	*filePath = path.Join(z.Path, basename)
 	return nil
+}
+
+// DownloadProvingKey downloads the ProvingKey and checks its hash.
+func (z *ZkFiles) DownloadProvingKey() error {
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.downloadProvingKey()
+}
+
+func (z *ZkFiles) downloadProvingKey() error {
+	return z.downloadFile(z.basename.ProvingKey, z.hashes.ProvingKey, &z.pathProvingKey)
 }
 
 // DownloadVerificationKey downloads the VerificationKey and checks its hash.
 func (z *ZkFiles) DownloadVerificationKey() error {
-	if err := os.MkdirAll(z.Path, 0700); err != nil {
-		return err
-	}
-	basename := z.basename.VerificationKey
-	if err := z.downloadCheckFile(basename, z.hashes.VerificationKey); err != nil {
-		return err
-	}
-	z.pathVerificationKey = path.Join(z.Path, basename)
-	return nil
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.downloadVerificationKey()
+}
+
+func (z *ZkFiles) downloadVerificationKey() error {
+	return z.downloadFile(z.basename.VerificationKey, z.hashes.VerificationKey, &z.pathVerificationKey)
 }
 
 // DownloadWitnessCalcWASM downloads the WitnessCalcWASM and checks its hash.
 func (z *ZkFiles) DownloadWitnessCalcWASM() error {
-	if err := os.MkdirAll(z.Path, 0700); err != nil {
-		return err
-	}
-	basename := z.basename.WitnessCalcWASM
-	if err := z.downloadCheckFile(basename, z.hashes.WitnessCalcWASM); err != nil {
-		return err
-	}
-	z.pathWitnessCalcWASM = path.Join(z.Path, basename)
-	return nil
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.downloadWitnessCalcWASM()
+}
+
+func (z *ZkFiles) downloadWitnessCalcWASM() error {
+	return z.downloadFile(z.basename.WitnessCalcWASM, z.hashes.WitnessCalcWASM, &z.pathWitnessCalcWASM)
 }
 
 // DownloadAll downloads all the zk files and checks their hashes.
@@ -389,7 +400,7 @@ func (z *ZkFiles) DownloadAll() error {
 	return nil
 }
 
-func (z *ZkFiles) loadProvingKey() (*zktypes.Pk, error) {
+func (z *ZkFiles) parseProvingKey() (*zktypes.Pk, error) {
 	start := time.Now()
 	var pk *zktypes.Pk
 	switch z.provingKeyFormat {
@@ -432,17 +443,23 @@ func (z *ZkFiles) loadProvingKey() (*zktypes.Pk, error) {
 
 // LoadProvingKey loads the ProvingKey, downloading it if necessary.
 func (z *ZkFiles) LoadProvingKey() error {
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.loadProvingKey()
+}
+
+func (z *ZkFiles) loadProvingKey() error {
 	if z.provingKey != nil {
 		// log.Debug("zkfiles: proving key already loaded")
 		return nil
 	}
 	if z.pathProvingKey == "" {
-		if err := z.DownloadProvingKey(); err != nil {
+		if err := z.downloadProvingKey(); err != nil {
 			return err
 		}
 	}
 	if z.cacheProvingKey {
-		if pk, err := z.loadProvingKey(); err != nil {
+		if pk, err := z.parseProvingKey(); err != nil {
 			return err
 		} else {
 			z.provingKey = pk
@@ -453,12 +470,18 @@ func (z *ZkFiles) LoadProvingKey() error {
 
 // LoadVerificationKey loads the VerificationKey, downloading it if necessary.
 func (z *ZkFiles) LoadVerificationKey() error {
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.loadVerificationKey()
+}
+
+func (z *ZkFiles) loadVerificationKey() error {
 	if z.verificationKey != nil {
 		// log.Debug("zkfiles: verification key already loaded")
 		return nil
 	}
 	if z.pathVerificationKey == "" {
-		if err := z.DownloadVerificationKey(); err != nil {
+		if err := z.downloadVerificationKey(); err != nil {
 			return err
 		}
 	}
@@ -476,12 +499,18 @@ func (z *ZkFiles) LoadVerificationKey() error {
 
 // LoadWitnessCalcWASM loads the WitnessCalcWASM, downloading it if necessary.
 func (z *ZkFiles) LoadWitnessCalcWASM() error {
+	z.m.Lock()
+	defer z.m.Unlock()
+	return z.loadWitnessCalcWASM()
+}
+
+func (z *ZkFiles) loadWitnessCalcWASM() error {
 	if z.witnessCalcWASM != nil {
 		// log.Debug("zkfiles: witnessCalc WASM already loaded")
 		return nil
 	}
 	if z.pathWitnessCalcWASM == "" {
-		if err := z.DownloadWitnessCalcWASM(); err != nil {
+		if err := z.downloadWitnessCalcWASM(); err != nil {
 			return err
 		}
 	}
@@ -509,13 +538,15 @@ func (z *ZkFiles) LoadAll() error {
 
 // ProvingKey returns the ProvingKey, downloading and loading it if necessary.
 func (z *ZkFiles) ProvingKey() (*zktypes.Pk, error) {
-	if err := z.LoadProvingKey(); err != nil {
+	z.m.Lock()
+	defer z.m.Unlock()
+	if err := z.loadProvingKey(); err != nil {
 		return nil, err
 	}
 	var pk *zktypes.Pk
 	if !z.cacheProvingKey {
 		var err error
-		pk, err = z.loadProvingKey()
+		pk, err = z.parseProvingKey()
 		if err != nil {
 			return nil, err
 		}
@@ -527,7 +558,9 @@ func (z *ZkFiles) ProvingKey() (*zktypes.Pk, error) {
 
 // VerificationKey returns the VerificationKey, downloading and loading it if necessary.
 func (z *ZkFiles) VerificationKey() (*zktypes.Vk, error) {
-	if err := z.LoadVerificationKey(); err != nil {
+	z.m.Lock()
+	defer z.m.Unlock()
+	if err := z.loadVerificationKey(); err != nil {
 		return nil, err
 	}
 	return z.verificationKey, nil
@@ -535,7 +568,9 @@ func (z *ZkFiles) VerificationKey() (*zktypes.Vk, error) {
 
 // WitnessCalcWASM returns the WitnessCalcWASM byte slice, downloading and loading it if necessary.
 func (z *ZkFiles) WitnessCalcWASM() ([]byte, error) {
-	if err := z.LoadWitnessCalcWASM(); err != nil {
+	z.m.Lock()
+	defer z.m.Unlock()
+	if err := z.loadWitnessCalcWASM(); err != nil {
 		return nil, err
 	}
 	return z.witnessCalcWASM, nil
