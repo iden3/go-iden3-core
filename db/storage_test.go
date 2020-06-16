@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -198,6 +199,61 @@ func testList(t *testing.T, sto Storage) {
 
 }
 
+type Buffer struct {
+	bytes.Buffer
+}
+
+func (b *Buffer) Close() error {
+	return nil
+}
+
+func testExportImport(t *testing.T, sto Storage) {
+	kv0 := KV{make([]byte, 2), make([]byte, 3)}
+	kv1 := KV{make([]byte, 4), make([]byte, 200)}
+	kv2 := KV{make([]byte, 201), make([]byte, 5)}
+	kv3 := KV{make([]byte, 202), make([]byte, 203)}
+	kvs := []KV{kv0, kv1, kv2, kv3}
+
+	c := byte(1)
+	for _, kv := range kvs {
+		for i := range kv.K {
+			kv.K[i] = c
+		}
+		c += 1
+		for i := range kv.V {
+			kv.V[i] = c
+		}
+		c += 1
+	}
+
+	// Insert
+	tx, _ := sto.NewTx()
+	for _, kv := range kvs {
+		tx.Put(kv.K, kv.V)
+	}
+	require.Nil(t, tx.Commit())
+
+	buf := new(Buffer)
+
+	// Export
+	require.Nil(t, Export(sto, buf))
+
+	stoCpy := NewMemoryStorage()
+
+	// Import
+	require.Nil(t, Import(stoCpy, buf))
+
+	i := 0
+	// Compare
+	stoCpy.Iterate(func(key, value []byte) (bool, error) {
+		assert.Equal(t, kvs[i].K, key)
+		assert.Equal(t, kvs[i].V, value)
+		i += 1
+		return true, nil
+	})
+	assert.Equal(t, len(kvs), i)
+}
+
 func TestLevelDb(t *testing.T) {
 	testReturnKnownErrIfNotExists(t, levelDbStorage(t))
 	testStorageInsertGet(t, levelDbStorage(t))
@@ -205,6 +261,7 @@ func TestLevelDb(t *testing.T) {
 	testConcatTx(t, levelDbStorage(t))
 	testList(t, levelDbStorage(t))
 	testIterate(t, levelDbStorage(t))
+	testExportImport(t, levelDbStorage(t))
 }
 
 func TestMemory(t *testing.T) {
@@ -214,6 +271,7 @@ func TestMemory(t *testing.T) {
 	testConcatTx(t, NewMemoryStorage())
 	testList(t, NewMemoryStorage())
 	testIterate(t, NewMemoryStorage())
+	testExportImport(t, NewMemoryStorage())
 }
 
 func TestLevelDbInterface(t *testing.T) {
