@@ -19,8 +19,8 @@ import (
 	"github.com/iden3/go-iden3-core/identity/holder"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/merkletree"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
+	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

@@ -12,8 +12,8 @@ import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/core/proof"
-	"github.com/iden3/go-iden3-core/merkletree"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
+	"github.com/iden3/go-merkletree"
 )
 
 var (
@@ -65,7 +65,7 @@ func (v *Verifier) VerifyCredentialExistence(credExist *proof.CredentialExistenc
 	if err != nil {
 		return err
 	}
-	claimsRoot, err := merkletree.RootFromProof(credExist.MtpClaim, hi, hv)
+	claimsRoot, err := merkletree.RootFromProof(credExist.MtpClaim, hi.BigInt(), hv.BigInt())
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (v *Verifier) VerifyCredentialValidity(credValid *proof.CredentialValidity,
 	if err != nil {
 		return err
 	}
-	revocationsTreeRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, hi, hv)
+	revocationsTreeRoot, err := merkletree.RootFromProof(credValid.MtpNotNonce, hi.BigInt(), hv.BigInt())
 	if err != nil {
 		return err
 	}

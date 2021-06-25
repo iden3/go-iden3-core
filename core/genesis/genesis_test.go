@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/iden3/go-iden3-core/core/claims"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/assert"
 )
 

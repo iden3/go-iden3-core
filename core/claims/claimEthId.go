@@ -2,7 +2,7 @@ package claims
 
 // import (
 // 	"github.com/ethereum/go-ethereum/common"
-// 	"github.com/iden3/go-iden3-core/merkletree"
+// 	"github.com/iden3/go-merkletree"
 // )
 //
 // // ClaimEthId is a claim to authorize an ethereum address for the identity. The address can be of a counterfactual smart contract, or a direct address from a private key

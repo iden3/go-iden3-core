@@ -6,7 +6,7 @@ import (
 	"github.com/iden3/go-iden3-core/components/httpclient"
 	"github.com/iden3/go-iden3-core/components/idenpuboffchain"
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
 )
 
 // IdenPubOffChainReadHttp satisfies the IdenPubOffChainRead interface, and reads the off chain public state of an identity from a IdenPubOffChainWriteHttp.

@@ -2,6 +2,7 @@ package writerhttp
 
 import (
 	"fmt"
+	"github.com/iden3/go-merkletree/db/memory"
 	"os"
 	"strconv"
 	"testing"
@@ -10,9 +11,9 @@ import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/db"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,11 +23,11 @@ var generateTest = false
 
 func TestHttpPublicGetPublicData(t *testing.T) {
 	// create RootsTree & RevocationsTree
-	cltMt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	cltMt, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
-	rotMt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	rotMt, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
-	retMt, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	retMt, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), 140)
 	assert.Nil(t, err)
 
 	// add some leafs to both MerkleTrees
@@ -42,20 +43,20 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
-	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.RootKey().Hex())
-	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.RootKey().Hex())
+	testgen.CheckTestValue(t, "rootRootsTree1", rotMt.Root().Hex())
+	testgen.CheckTestValue(t, "rootRevocationsTree1", retMt.Root().Hex())
 
 	idenPubOffChainWriteHttp, err := NewIdenPubOffChainWriteHttp(NewConfigDefault("http://foo.bar"), db.NewMemoryStorage())
 	require.Nil(t, err)
 
-	idenState := core.IdenState(cltMt.RootKey(), retMt.RootKey(), rotMt.RootKey())
+	idenState := core.IdenState(cltMt.Root(), retMt.Root(), rotMt.Root())
 
 	publicData := idenpuboffchain.PublicData{
 		IdenState:           idenState,
-		ClaimsTreeRoot:      cltMt.RootKey(),
-		RevocationsTreeRoot: retMt.RootKey(),
+		ClaimsTreeRoot:      cltMt.Root(),
+		RevocationsTreeRoot: retMt.Root(),
 		RevocationsTree:     retMt,
-		RootsTreeRoot:       rotMt.RootKey(),
+		RootsTreeRoot:       rotMt.Root(),
 		RootsTree:           rotMt,
 	}
 
@@ -65,9 +66,9 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 	pubDataBlobs, err := idenPubOffChainWriteHttp.GetPublicData(nil)
 	assert.Nil(t, err)
 	testgen.CheckTestValue(t, "rootRootsTree1", pubDataBlobs.RootsTreeRoot.Hex())
-	assert.Equal(t, rotMt.RootKey().Hex(), pubDataBlobs.RootsTreeRoot.Hex())
+	assert.Equal(t, rotMt.Root().Hex(), pubDataBlobs.RootsTreeRoot.Hex())
 	testgen.CheckTestValue(t, "rootRevocationsTree1", pubDataBlobs.RevocationsTreeRoot.Hex())
-	assert.Equal(t, retMt.RootKey().Hex(), pubDataBlobs.RevocationsTreeRoot.Hex())
+	assert.Equal(t, retMt.Root().Hex(), pubDataBlobs.RevocationsTreeRoot.Hex())
 
 	pubDataBlobs2, err := idenPubOffChainWriteHttp.GetPublicData(idenState)
 	assert.Nil(t, err)

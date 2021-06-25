@@ -16,9 +16,9 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/identity/issuer"
 	"github.com/iden3/go-iden3-core/keystore"
-	"github.com/iden3/go-iden3-core/merkletree"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"

@@ -1,4 +1,4 @@
-package merkletree
+package merkletree_old
 
 import (
 	"fmt"

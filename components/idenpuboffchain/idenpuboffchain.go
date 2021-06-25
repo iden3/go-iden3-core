@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/db"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree/db/memory"
 )
 
 var (
@@ -48,11 +48,11 @@ type PublicData struct {
 // memory storage.  It also checks the validity of the tree roots against the
 // identity state.
 func NewPublicDataFromBlobs(publicDataBlobs *PublicDataBlobs) (*PublicData, error) {
-	revocationsTree, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	revocationsTree, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, err
 	}
-	rootsTree, err := merkletree.NewMerkleTree(db.NewMemoryStorage(), 140)
+	rootsTree, err := merkletree.NewMerkleTree(memory.NewMemoryStorage(), 140)
 	if err != nil {
 		return nil, err
 	}
@@ -60,17 +60,17 @@ func NewPublicDataFromBlobs(publicDataBlobs *PublicDataBlobs) (*PublicData, erro
 	if err = revocationsTree.ImportTree(bytes.NewReader(publicDataBlobs.RevocationsTree)); err != nil {
 		return nil, err
 	}
-	if !revocationsTree.RootKey().Equals(&publicDataBlobs.RevocationsTreeRoot) {
+	if !revocationsTree.Root().Equals(&publicDataBlobs.RevocationsTreeRoot) {
 		return nil, fmt.Errorf("Imported revocations tree root (%v) doesn't match the expected root (%v)",
-			revocationsTree.RootKey(), publicDataBlobs.RevocationsTreeRoot)
+			revocationsTree.Root(), publicDataBlobs.RevocationsTreeRoot)
 	}
 
 	if err = rootsTree.ImportTree(bytes.NewReader(publicDataBlobs.RootsTree)); err != nil {
 		return nil, err
 	}
-	if !rootsTree.RootKey().Equals(&publicDataBlobs.RootsTreeRoot) {
+	if !rootsTree.Root().Equals(&publicDataBlobs.RootsTreeRoot) {
 		return nil, fmt.Errorf("Imported roots tree root (%v) doesn't match the expected root (%v)",
-			rootsTree.RootKey(), publicDataBlobs.RootsTreeRoot)
+			rootsTree.Root(), publicDataBlobs.RootsTreeRoot)
 	}
 	idenState := core.IdenState(&publicDataBlobs.ClaimsTreeRoot,
 		&publicDataBlobs.RevocationsTreeRoot, &publicDataBlobs.RootsTreeRoot)

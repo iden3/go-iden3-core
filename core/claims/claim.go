@@ -8,7 +8,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/crypto"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
 )
 
 // ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.

@@ -1,4 +1,4 @@
-package merkletree
+package merkletree_old
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 // Hash is the type used to represent a hash used in the MT.
@@ -61,56 +60,56 @@ func ElemBytesToBigInts(elems ...ElemBytes) []*big.Int {
 	return ints
 }
 
-func ElemBytesToPoseidonInput(elems ...ElemBytes) ([poseidon.T]*big.Int, error) {
-	bigints := ElemBytesToBigInts(elems...)
-
-	z := big.NewInt(0)
-	b := [poseidon.T]*big.Int{z, z, z, z, z, z}
-	copy(b[:poseidon.T], bigints[:])
-
-	return b, nil
-}
-
-// HashElems performs a poseidon hash over the array of ElemBytes.
-// Uses poseidon.PoseidonHash to be compatible with the circom circuits
-// implementations.
-// The maxim slice input size is poseidon.T
-func HashElems(elems ...ElemBytes) (*Hash, error) {
-	if len(elems) > poseidon.T {
-		return nil, fmt.Errorf("HashElems input can not be bigger than %v", poseidon.T)
-	}
-
-	bi, err := ElemBytesToPoseidonInput(elems...)
-	if err != nil {
-		return nil, err
-	}
-
-	poseidonHash, err := poseidon.PoseidonHash(bi)
-	if err != nil {
-		return nil, err
-	}
-	return NewHashFromBigInt(poseidonHash), nil
-}
-
-// HashElemsKey performs a poseidon hash over the array of ElemBytes.
-func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
-	if len(elems) > poseidon.T-1 {
-		return nil, fmt.Errorf("HashElemsKey input can not be bigger than %v", poseidon.T-1)
-	}
-	if key == nil {
-		key = new(big.Int).SetInt64(0)
-	}
-	bi, err := ElemBytesToPoseidonInput(elems...)
-	if err != nil {
-		return nil, err
-	}
-	copy(bi[len(elems):], []*big.Int{key})
-	poseidonHash, err := poseidon.PoseidonHash(bi)
-	if err != nil {
-		return nil, err
-	}
-	return NewHashFromBigInt(poseidonHash), nil
-}
+//func ElemBytesToPoseidonInput(elems ...ElemBytes) ([poseidon.T]*big.Int, error) {
+//	bigints := ElemBytesToBigInts(elems...)
+//
+//	z := big.NewInt(0)
+//	b := [poseidon.T]*big.Int{z, z, z, z, z, z}
+//	copy(b[:poseidon.T], bigints[:])
+//
+//	return b, nil
+//}
+//
+//// HashElems performs a poseidon hash over the array of ElemBytes.
+//// Uses poseidon.PoseidonHash to be compatible with the circom circuits
+//// implementations.
+//// The maxim slice input size is poseidon.T
+//func HashElems(elems ...ElemBytes) (*Hash, error) {
+//	if len(elems) > poseidon.T {
+//		return nil, fmt.Errorf("HashElems input can not be bigger than %v", poseidon.T)
+//	}
+//
+//	bi, err := ElemBytesToPoseidonInput(elems...)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	poseidonHash, err := poseidon.PoseidonHash(bi)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return NewHashFromBigInt(poseidonHash), nil
+//}
+//
+//// HashElemsKey performs a poseidon hash over the array of ElemBytes.
+//func HashElemsKey(key *big.Int, elems ...ElemBytes) (*Hash, error) {
+//	if len(elems) > poseidon.T-1 {
+//		return nil, fmt.Errorf("HashElemsKey input can not be bigger than %v", poseidon.T-1)
+//	}
+//	if key == nil {
+//		key = new(big.Int).SetInt64(0)
+//	}
+//	bi, err := ElemBytesToPoseidonInput(elems...)
+//	if err != nil {
+//		return nil, err
+//	}
+//	copy(bi[len(elems):], []*big.Int{key})
+//	poseidonHash, err := poseidon.PoseidonHash(bi)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return NewHashFromBigInt(poseidonHash), nil
+//}
 
 // getPath returns the binary path, from the root to the leaf.
 func getPath(numLevels int, hIndex *Hash) []bool {

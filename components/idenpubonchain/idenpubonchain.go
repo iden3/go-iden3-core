@@ -13,8 +13,8 @@ import (
 	"github.com/iden3/go-iden3-core/core/proof"
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/eth/contracts"
-	"github.com/iden3/go-iden3-core/merkletree"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
+	"github.com/iden3/go-merkletree"
 )
 
 var (

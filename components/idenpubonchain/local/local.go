@@ -13,7 +13,7 @@ import (
 	"github.com/iden3/go-iden3-core/components/idenpubonchain"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
 )
 
 type IdenStateHistory struct {

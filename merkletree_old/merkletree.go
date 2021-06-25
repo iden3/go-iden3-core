@@ -1,4 +1,4 @@
-package merkletree
+package merkletree_old
 
 import (
 	"bufio"
@@ -7,15 +7,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/iden3/go-iden3-core/db"
+	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 	"io"
 	"math/big"
-	"strings"
 	"sync"
 
 	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-core/db"
-	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 )
 
 const (
@@ -144,73 +143,73 @@ type Entry struct {
 	hValue *Hash
 }
 
-type Entrier interface {
-	Entry() *Entry
-}
-
-func (e *Entry) Index() []ElemBytes {
-	return e.Data[:IndexLen]
-}
-
-func (e *Entry) Value() []ElemBytes {
-	return e.Data[IndexLen:]
-}
-
-// HIndex calculates the hash of the Index of the Entry, used to find the path
-// from the root to the leaf in the MT.
-func (e *Entry) HIndex() (*Hash, error) {
-	var err error
-	if e.hIndex == nil { // Cache the hIndex.
-		//e.hIndex = HashElems(e.Index()[:]...)
-		e.hIndex, err = HashElems(e.Index()...)
-	}
-	return e.hIndex, err
-}
-
-// HValue calculates the hash of the Value of the Entry
-func (e *Entry) HValue() (*Hash, error) {
-	var err error
-	if e.hValue == nil { // Cache the hValue.
-		e.hValue, err = HashElems(e.Value()...)
-	}
-	return e.hValue, err
-}
-
-// HiHv returns the HIndex and HValue of the Entry
-func (e *Entry) HiHv() (*Hash, *Hash, error) {
-	hi, err := e.HIndex()
-	if err != nil {
-		return nil, nil, err
-	}
-	hv, err := e.HValue()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return hi, hv, nil
-}
-
-func (e *Entry) Bytes() []byte {
-	b := e.Data.Bytes()
-	return b[:]
-}
-
-func (e1 *Entry) Equal(e2 *Entry) bool {
-	return e1.Data.Equal(&e2.Data)
-}
-
-func (e Entry) MarshalText() ([]byte, error) {
-	return []byte(common3.HexEncode(e.Bytes())), nil
-}
-
-func (e *Entry) UnmarshalText(text []byte) error {
-	return e.Data.UnmarshalText(text)
-}
-
-func (e *Entry) Clone() *Entry {
-	data := NewDataFromBytes(e.Data.Bytes())
-	return &Entry{Data: *data}
-}
+//type Entrier interface {
+//	Entry() *Entry
+//}
+//
+//func (e *Entry) Index() []ElemBytes {
+//	return e.Data[:IndexLen]
+//}
+//
+//func (e *Entry) Value() []ElemBytes {
+//	return e.Data[IndexLen:]
+//}
+//
+//// HIndex calculates the hash of the Index of the Entry, used to find the path
+//// from the root to the leaf in the MT.
+//func (e *Entry) HIndex() (*Hash, error) {
+//	var err error
+//	if e.hIndex == nil { // Cache the hIndex.
+//		//e.hIndex = HashElems(e.Index()[:]...)
+//		e.hIndex, err = HashElems(e.Index()...)
+//	}
+//	return e.hIndex, err
+//}
+//
+//// HValue calculates the hash of the Value of the Entry
+//func (e *Entry) HValue() (*Hash, error) {
+//	var err error
+//	if e.hValue == nil { // Cache the hValue.
+//		e.hValue, err = HashElems(e.Value()...)
+//	}
+//	return e.hValue, err
+//}
+//
+//// HiHv returns the HIndex and HValue of the Entry
+//func (e *Entry) HiHv() (*Hash, *Hash, error) {
+//	hi, err := e.HIndex()
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//	hv, err := e.HValue()
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//
+//	return hi, hv, nil
+//}
+//
+//func (e *Entry) Bytes() []byte {
+//	b := e.Data.Bytes()
+//	return b[:]
+//}
+//
+//func (e1 *Entry) Equal(e2 *Entry) bool {
+//	return e1.Data.Equal(&e2.Data)
+//}
+//
+//func (e Entry) MarshalText() ([]byte, error) {
+//	return []byte(common3.HexEncode(e.Bytes())), nil
+//}
+//
+//func (e *Entry) UnmarshalText(text []byte) error {
+//	return e.Data.UnmarshalText(text)
+//}
+//
+//func (e *Entry) Clone() *Entry {
+//	data := NewDataFromBytes(e.Data.Bytes())
+//	return &Entry{Data: *data}
+//}
 
 //MerkleTree is the struct with the main elements of the Merkle Tree
 type MerkleTree struct {
@@ -278,164 +277,164 @@ func (mt *MerkleTree) MaxLevels() int {
 	return mt.maxLevels
 }
 
-// GetDataByIndex returns the data from the MT in the position of the hash of
-// the index (hIndex)
-func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
-	path := getPath(mt.maxLevels, hIndex)
-	nextKey := mt.RootKey()
-	for lvl := 0; lvl < mt.maxLevels; lvl++ {
-		n, err := mt.GetNode(nextKey)
-		if err != nil {
-			return nil, err
-		}
-		switch n.Type {
-		case NodeTypeEmpty:
-			return nil, ErrEntryIndexNotFound
-		case NodeTypeLeaf:
-			hi, err := n.Entry.HIndex()
-			if err != nil {
-				return nil, err
-			}
-			if bytes.Equal(hIndex[:], hi[:]) {
-				return &n.Entry.Data, nil
-			} else {
-				return nil, ErrEntryIndexNotFound
-			}
-		case NodeTypeMiddle:
-			if path[lvl] {
-				nextKey = n.ChildR
-			} else {
-				nextKey = n.ChildL
-			}
-		default:
-			return nil, ErrInvalidNodeFound
-		}
-	}
-	return nil, ErrEntryIndexNotFound
-}
-
-// EntryExists checks if a given entry is in the merkle tree starting from the
-// rootKey.  If rootKey is nil, the current merkle tree root is used.
-func (mt *MerkleTree) EntryExists(entry *Entry, rootKey *Hash) error {
-	var err error
-	if rootKey != nil {
-		mt, err = mt.Snapshot(rootKey)
-		if err != nil {
-			return err
-		}
-	}
-	hi, err := entry.HIndex()
-	if err != nil {
-		return err
-	}
-	data, err := mt.GetDataByIndex(hi)
-	if err != nil {
-		return err
-	}
-	foundEntry := &Entry{Data: *data}
-	if !foundEntry.Equal(entry) {
-		return ErrEntryDataNotMatch
-	}
-	return nil
-}
-
-// pushLeaf recursively pushes an existing oldLeaf down until its path diverges
-// from newLeaf, at which point both leafs are stored, all while updating the
-// path.
-func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
-	lvl int, pathNewLeaf []bool, pathOldLeaf []bool) (*Hash, error) {
-	if lvl > mt.maxLevels-2 {
-		return nil, ErrReachedMaxLevel
-	}
-	var newNodeMiddle *Node
-	if pathNewLeaf[lvl] == pathOldLeaf[lvl] { // We need to go deeper!
-		nextKey, err := mt.pushLeaf(tx, newLeaf, oldLeaf, lvl+1, pathNewLeaf, pathOldLeaf)
-		if err != nil {
-			return nil, err
-		}
-		if pathNewLeaf[lvl] {
-			newNodeMiddle = NewNodeMiddle(&HashZero, nextKey) // go right
-		} else {
-			newNodeMiddle = NewNodeMiddle(nextKey, &HashZero) // go left
-		}
-		return mt.addNode(tx, newNodeMiddle)
-	} else {
-		oldLeafKey, err := oldLeaf.Key()
-		if err != nil {
-			return nil, err
-		}
-		newLeafKey, err := newLeaf.Key()
-		if err != nil {
-			return nil, err
-		}
-
-		if pathNewLeaf[lvl] {
-			newNodeMiddle = NewNodeMiddle(oldLeafKey, newLeafKey)
-		} else {
-			newNodeMiddle = NewNodeMiddle(newLeafKey, oldLeafKey)
-		}
-		// We can add newLeaf now.  We don't need to add oldLeaf because it's already in the tree.
-		_, err = mt.addNode(tx, newLeaf)
-		if err != nil {
-			return nil, err
-		}
-		return mt.addNode(tx, newNodeMiddle)
-	}
-}
-
-// addLeaf recursively adds a newLeaf in the MT while updating the path.
-func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
-	lvl int, path []bool) (*Hash, error) {
-	var err error
-	var nextKey *Hash
-	if lvl > mt.maxLevels-1 {
-		return nil, ErrReachedMaxLevel
-	}
-	n, err := mt.GetNode(key)
-	if err != nil {
-		return nil, err
-	}
-	switch n.Type {
-	case NodeTypeEmpty:
-		// We can add newLeaf now
-		return mt.addNode(tx, newLeaf)
-	case NodeTypeLeaf:
-		// TODO: delete old node n???  Make this optional???
-		hIndex, err := n.Entry.HIndex()
-		if err != nil {
-			return nil, err
-		}
-		// Check if leaf node found contains the leaf node we are trying to add
-		newLeafHi, err := newLeaf.Entry.HIndex()
-		if err != nil {
-			return nil, err
-		}
-		if bytes.Equal(hIndex[:], newLeafHi[:]) {
-			return nil, ErrEntryIndexAlreadyExists
-		}
-		pathOldLeaf := getPath(mt.maxLevels, hIndex)
-		// We need to push newLeaf down until its path diverges from n's path
-		return mt.pushLeaf(tx, newLeaf, n, lvl, path, pathOldLeaf)
-	case NodeTypeMiddle:
-		// We need to go deeper, continue traversing the tree, left or right depending on path
-		var newNodeMiddle *Node
-		if path[lvl] {
-			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildR, lvl+1, path) // go right
-			newNodeMiddle = NewNodeMiddle(n.ChildL, nextKey)
-		} else {
-			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildL, lvl+1, path) // go left
-			newNodeMiddle = NewNodeMiddle(nextKey, n.ChildR)
-		}
-		if err != nil {
-			return nil, err
-		}
-		// TODO: delete old node n???  Make this optional???
-		// Update the node to reflect the modified child
-		return mt.addNode(tx, newNodeMiddle)
-	default:
-		return nil, ErrInvalidNodeFound
-	}
-}
+//// GetDataByIndex returns the data from the MT in the position of the hash of
+//// the index (hIndex)
+//func (mt *MerkleTree) GetDataByIndex(hIndex *Hash) (*Data, error) {
+//	path := getPath(mt.maxLevels, hIndex)
+//	nextKey := mt.RootKey()
+//	for lvl := 0; lvl < mt.maxLevels; lvl++ {
+//		n, err := mt.GetNode(nextKey)
+//		if err != nil {
+//			return nil, err
+//		}
+//		switch n.Type {
+//		case NodeTypeEmpty:
+//			return nil, ErrEntryIndexNotFound
+//		case NodeTypeLeaf:
+//			hi, err := n.Entry.HIndex()
+//			if err != nil {
+//				return nil, err
+//			}
+//			if bytes.Equal(hIndex[:], hi[:]) {
+//				return &n.Entry.Data, nil
+//			} else {
+//				return nil, ErrEntryIndexNotFound
+//			}
+//		case NodeTypeMiddle:
+//			if path[lvl] {
+//				nextKey = n.ChildR
+//			} else {
+//				nextKey = n.ChildL
+//			}
+//		default:
+//			return nil, ErrInvalidNodeFound
+//		}
+//	}
+//	return nil, ErrEntryIndexNotFound
+//}
+//
+//// EntryExists checks if a given entry is in the merkle tree starting from the
+//// rootKey.  If rootKey is nil, the current merkle tree root is used.
+//func (mt *MerkleTree) EntryExists(entry *Entry, rootKey *Hash) error {
+//	var err error
+//	if rootKey != nil {
+//		mt, err = mt.Snapshot(rootKey)
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	hi, err := entry.HIndex()
+//	if err != nil {
+//		return err
+//	}
+//	data, err := mt.GetDataByIndex(hi)
+//	if err != nil {
+//		return err
+//	}
+//	foundEntry := &Entry{Data: *data}
+//	if !foundEntry.Equal(entry) {
+//		return ErrEntryDataNotMatch
+//	}
+//	return nil
+//}
+//
+//// pushLeaf recursively pushes an existing oldLeaf down until its path diverges
+//// from newLeaf, at which point both leafs are stored, all while updating the
+//// path.
+//func (mt *MerkleTree) pushLeaf(tx db.Tx, newLeaf *Node, oldLeaf *Node,
+//	lvl int, pathNewLeaf []bool, pathOldLeaf []bool) (*Hash, error) {
+//	if lvl > mt.maxLevels-2 {
+//		return nil, ErrReachedMaxLevel
+//	}
+//	var newNodeMiddle *Node
+//	if pathNewLeaf[lvl] == pathOldLeaf[lvl] { // We need to go deeper!
+//		nextKey, err := mt.pushLeaf(tx, newLeaf, oldLeaf, lvl+1, pathNewLeaf, pathOldLeaf)
+//		if err != nil {
+//			return nil, err
+//		}
+//		if pathNewLeaf[lvl] {
+//			newNodeMiddle = NewNodeMiddle(&HashZero, nextKey) // go right
+//		} else {
+//			newNodeMiddle = NewNodeMiddle(nextKey, &HashZero) // go left
+//		}
+//		return mt.addNode(tx, newNodeMiddle)
+//	} else {
+//		oldLeafKey, err := oldLeaf.Key()
+//		if err != nil {
+//			return nil, err
+//		}
+//		newLeafKey, err := newLeaf.Key()
+//		if err != nil {
+//			return nil, err
+//		}
+//
+//		if pathNewLeaf[lvl] {
+//			newNodeMiddle = NewNodeMiddle(oldLeafKey, newLeafKey)
+//		} else {
+//			newNodeMiddle = NewNodeMiddle(newLeafKey, oldLeafKey)
+//		}
+//		// We can add newLeaf now.  We don't need to add oldLeaf because it's already in the tree.
+//		_, err = mt.addNode(tx, newLeaf)
+//		if err != nil {
+//			return nil, err
+//		}
+//		return mt.addNode(tx, newNodeMiddle)
+//	}
+//}
+//
+//// addLeaf recursively adds a newLeaf in the MT while updating the path.
+//func (mt *MerkleTree) addLeaf(tx db.Tx, newLeaf *Node, key *Hash,
+//	lvl int, path []bool) (*Hash, error) {
+//	var err error
+//	var nextKey *Hash
+//	if lvl > mt.maxLevels-1 {
+//		return nil, ErrReachedMaxLevel
+//	}
+//	n, err := mt.GetNode(key)
+//	if err != nil {
+//		return nil, err
+//	}
+//	switch n.Type {
+//	case NodeTypeEmpty:
+//		// We can add newLeaf now
+//		return mt.addNode(tx, newLeaf)
+//	case NodeTypeLeaf:
+//		// TODO: delete old node n???  Make this optional???
+//		hIndex, err := n.Entry.HIndex()
+//		if err != nil {
+//			return nil, err
+//		}
+//		// Check if leaf node found contains the leaf node we are trying to add
+//		newLeafHi, err := newLeaf.Entry.HIndex()
+//		if err != nil {
+//			return nil, err
+//		}
+//		if bytes.Equal(hIndex[:], newLeafHi[:]) {
+//			return nil, ErrEntryIndexAlreadyExists
+//		}
+//		pathOldLeaf := getPath(mt.maxLevels, hIndex)
+//		// We need to push newLeaf down until its path diverges from n's path
+//		return mt.pushLeaf(tx, newLeaf, n, lvl, path, pathOldLeaf)
+//	case NodeTypeMiddle:
+//		// We need to go deeper, continue traversing the tree, left or right depending on path
+//		var newNodeMiddle *Node
+//		if path[lvl] {
+//			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildR, lvl+1, path) // go right
+//			newNodeMiddle = NewNodeMiddle(n.ChildL, nextKey)
+//		} else {
+//			nextKey, err = mt.addLeaf(tx, newLeaf, n.ChildL, lvl+1, path) // go left
+//			newNodeMiddle = NewNodeMiddle(nextKey, n.ChildR)
+//		}
+//		if err != nil {
+//			return nil, err
+//		}
+//		// TODO: delete old node n???  Make this optional???
+//		// Update the node to reflect the modified child
+//		return mt.addNode(tx, newNodeMiddle)
+//	default:
+//		return nil, ErrInvalidNodeFound
+//	}
+//}
 
 func CheckEntryInField(e Entry) bool {
 	bigints := ElemBytesToBigInts(e.Data[:]...)
@@ -443,47 +442,47 @@ func CheckEntryInField(e Entry) bool {
 	return ok
 }
 
-// AddClaim adds the Claim that fullfills the Entrier interface to the MerkleTree
-func (mt *MerkleTree) AddClaim(e Entrier) error {
-	return mt.AddEntry(e.Entry())
-}
-
-// AddEntry adds the Entry to the MerkleTree
-func (mt *MerkleTree) AddEntry(e *Entry) error {
-	// verify that the MerkleTree is writable
-	if !mt.writable {
-		return ErrNotWritable
-	}
-	// verfy that the ElemBytes are valid and fit inside the mimc7 field.
-	if !CheckEntryInField(*e) {
-		return errors.New("Elements not inside the Finite Field over R")
-	}
-	tx, err := mt.storage.NewTx()
-	if err != nil {
-		return err
-	}
-	mt.Lock()
-	defer mt.Unlock()
-
-	newNodeLeaf := NewNodeLeaf(e)
-	hIndex, err := e.HIndex()
-	if err != nil {
-		return err
-	}
-	path := getPath(mt.maxLevels, hIndex)
-
-	newRootKey, err := mt.addLeaf(tx, newNodeLeaf, mt.rootKey, 0, path)
-	if err != nil {
-		return err
-	}
-	mt.rootKey = newRootKey
-	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
-
-	if err := tx.Commit(); err != nil {
-		return err
-	}
-	return nil
-}
+//// AddClaim adds the Claim that fullfills the Entrier interface to the MerkleTree
+//func (mt *MerkleTree) AddClaim(e Entrier) error {
+//	return mt.AddEntry(e.Entry())
+//}
+//
+//// AddEntry adds the Entry to the MerkleTree
+//func (mt *MerkleTree) AddEntry(e *Entry) error {
+//	// verify that the MerkleTree is writable
+//	if !mt.writable {
+//		return ErrNotWritable
+//	}
+//	// verfy that the ElemBytes are valid and fit inside the mimc7 field.
+//	if !CheckEntryInField(*e) {
+//		return errors.New("Elements not inside the Finite Field over R")
+//	}
+//	tx, err := mt.storage.NewTx()
+//	if err != nil {
+//		return err
+//	}
+//	mt.Lock()
+//	defer mt.Unlock()
+//
+//	newNodeLeaf := NewNodeLeaf(e)
+//	hIndex, err := e.HIndex()
+//	if err != nil {
+//		return err
+//	}
+//	path := getPath(mt.maxLevels, hIndex)
+//
+//	newRootKey, err := mt.addLeaf(tx, newNodeLeaf, mt.rootKey, 0, path)
+//	if err != nil {
+//		return err
+//	}
+//	mt.rootKey = newRootKey
+//	mt.dbInsert(tx, rootNodeValue, DBEntryTypeRoot, mt.rootKey[:])
+//
+//	if err := tx.Commit(); err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
 // walk is a helper recursive function to iterate over all tree branches
 func (mt *MerkleTree) walk(key *Hash, f func(*Node)) error {
@@ -702,56 +701,56 @@ func (mt *MerkleTree) ImportTree(i io.Reader) error {
 	return nil
 }
 
-// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
-// them to w.  The output is JSON encoded with claims in hex.
-func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
-	fmt.Fprintf(w, "[\n")
-	err := mt.Walk(rootKey, func(n *Node) {
-		if n.Type == NodeTypeLeaf {
-			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
-		}
-	})
-	fmt.Fprintf(w, "]\n")
-	return err
-}
-
-// DumpClaims outputs a list of all the claims in hex.
-func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
-	var dumpedClaims []string
-	err := mt.Walk(rootKey, func(n *Node) {
-		if n.Type == NodeTypeLeaf {
-			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Entry.Bytes()))
-		}
-	})
-	return dumpedClaims, err
-}
-
-// ImportClaims parses and adds the dumped list of claims in hex from the
-// DumpClaims function.
-func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
-	for _, c := range dumpedClaims {
-		c = strings.TrimPrefix(c, "0x")
-		if len(c) != 2*ElemBytesLen*DataLen { // 2*ElemBytesLen because is in Hexadecimal string, so each byte is represented by 2 char
-			return fmt.Errorf("hex length different than %d", 2*ElemBytesLen*DataLen)
-		}
-		var err error
-		var e Entry
-		var d Data
-		var dataBytes [ElemBytesLen * DataLen]byte
-		err = common3.HexDecodeInto(dataBytes[:], []byte(c))
-		if err != nil {
-			return err
-		}
-		d = *NewDataFromBytes(dataBytes)
-		e.Data = d
-
-		err = mt.AddEntry(&e)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
+//// DumpClaimsIoWriter uses Walk function to get all the Claims of the tree and write
+//// them to w.  The output is JSON encoded with claims in hex.
+//func (mt *MerkleTree) DumpClaimsIoWriter(w io.Writer, rootKey *Hash) error {
+//	fmt.Fprintf(w, "[\n")
+//	err := mt.Walk(rootKey, func(n *Node) {
+//		if n.Type == NodeTypeLeaf {
+//			fmt.Fprintf(w, "	\"%v\",\n", common3.HexEncode(n.Entry.Bytes()))
+//		}
+//	})
+//	fmt.Fprintf(w, "]\n")
+//	return err
+//}
+//
+//// DumpClaims outputs a list of all the claims in hex.
+//func (mt *MerkleTree) DumpClaims(rootKey *Hash) ([]string, error) {
+//	var dumpedClaims []string
+//	err := mt.Walk(rootKey, func(n *Node) {
+//		if n.Type == NodeTypeLeaf {
+//			dumpedClaims = append(dumpedClaims, common3.HexEncode(n.Entry.Bytes()))
+//		}
+//	})
+//	return dumpedClaims, err
+//}
+//
+//// ImportClaims parses and adds the dumped list of claims in hex from the
+//// DumpClaims function.
+//func (mt *MerkleTree) ImportDumpedClaims(dumpedClaims []string) error {
+//	for _, c := range dumpedClaims {
+//		c = strings.TrimPrefix(c, "0x")
+//		if len(c) != 2*ElemBytesLen*DataLen { // 2*ElemBytesLen because is in Hexadecimal string, so each byte is represented by 2 char
+//			return fmt.Errorf("hex length different than %d", 2*ElemBytesLen*DataLen)
+//		}
+//		var err error
+//		var e Entry
+//		var d Data
+//		var dataBytes [ElemBytesLen * DataLen]byte
+//		err = common3.HexDecodeInto(dataBytes[:], []byte(c))
+//		if err != nil {
+//			return err
+//		}
+//		d = *NewDataFromBytes(dataBytes)
+//		e.Data = d
+//
+//		err = mt.AddEntry(&e)
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
 // NodeAux contains the auxiliary node used in a non-existence proof.
 type NodeAux struct {
@@ -924,57 +923,57 @@ func (p *Proof) AllSiblingsCircom(levels int) []*big.Int {
 	return siblingsBigInt
 }
 
-// GenerateProof generates the proof of existence (or non-existence) of an
-// Entry's hash Index for a Merkle Tree given the root.
-// If the rootKey is nil, the current merkletree root is used
-func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error) {
-	p := &Proof{}
-	var siblingKey *Hash
-
-	path := getPath(mt.maxLevels, hIndex)
-	if rootKey == nil {
-		rootKey = mt.RootKey()
-	}
-	nextKey := rootKey
-	for p.depth = 0; p.depth < uint(mt.maxLevels); p.depth++ {
-		n, err := mt.GetNode(nextKey)
-		if err != nil {
-			return nil, err
-		}
-		switch n.Type {
-		case NodeTypeEmpty:
-			return p, nil
-		case NodeTypeLeaf:
-			nHi, nHv, err := n.Entry.HiHv()
-			if err != nil {
-				return nil, err
-			}
-			if bytes.Equal(hIndex[:], nHi[:]) {
-				p.Existence = true
-				return p, nil
-			} else {
-				// We found a leaf whose entry didn't match hIndex
-				p.NodeAux = &NodeAux{HIndex: nHi, HValue: nHv}
-				return p, nil
-			}
-		case NodeTypeMiddle:
-			if path[p.depth] {
-				nextKey = n.ChildR
-				siblingKey = n.ChildL
-			} else {
-				nextKey = n.ChildL
-				siblingKey = n.ChildR
-			}
-		default:
-			return nil, ErrInvalidNodeFound
-		}
-		if !bytes.Equal(siblingKey[:], HashZero[:]) {
-			common.SetBitBigEndian(p.notempties[:], uint(p.depth))
-			p.Siblings = append(p.Siblings, siblingKey)
-		}
-	}
-	return nil, ErrEntryIndexNotFound
-}
+//// GenerateProof generates the proof of existence (or non-existence) of an
+//// Entry's hash Index for a Merkle Tree given the root.
+//// If the rootKey is nil, the current merkletree root is used
+//func (mt *MerkleTree) GenerateProof(hIndex *Hash, rootKey *Hash) (*Proof, error) {
+//	p := &Proof{}
+//	var siblingKey *Hash
+//
+//	path := getPath(mt.maxLevels, hIndex)
+//	if rootKey == nil {
+//		rootKey = mt.RootKey()
+//	}
+//	nextKey := rootKey
+//	for p.depth = 0; p.depth < uint(mt.maxLevels); p.depth++ {
+//		n, err := mt.GetNode(nextKey)
+//		if err != nil {
+//			return nil, err
+//		}
+//		switch n.Type {
+//		case NodeTypeEmpty:
+//			return p, nil
+//		case NodeTypeLeaf:
+//			nHi, nHv, err := n.Entry.HiHv()
+//			if err != nil {
+//				return nil, err
+//			}
+//			if bytes.Equal(hIndex[:], nHi[:]) {
+//				p.Existence = true
+//				return p, nil
+//			} else {
+//				// We found a leaf whose entry didn't match hIndex
+//				p.NodeAux = &NodeAux{HIndex: nHi, HValue: nHv}
+//				return p, nil
+//			}
+//		case NodeTypeMiddle:
+//			if path[p.depth] {
+//				nextKey = n.ChildR
+//				siblingKey = n.ChildL
+//			} else {
+//				nextKey = n.ChildL
+//				siblingKey = n.ChildR
+//			}
+//		default:
+//			return nil, ErrInvalidNodeFound
+//		}
+//		if !bytes.Equal(siblingKey[:], HashZero[:]) {
+//			common.SetBitBigEndian(p.notempties[:], uint(p.depth))
+//			p.Siblings = append(p.Siblings, siblingKey)
+//		}
+//	}
+//	return nil, ErrEntryIndexNotFound
+//}
 
 // VerifyProof verifies the Merkle Proof for the entry and root.
 func VerifyProof(rootKey *Hash, proof *Proof, hIndex, hValue *Hash) bool {

@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
 )
 
 type ClaimGeneric struct {
@@ -68,4 +68,15 @@ func ClaimArrayToHexArray(claims []merkletree.Entrier) []string {
 		hexs = append(hexs, h)
 	}
 	return hexs
+}
+
+// HexStringToHash decodes a hex string into a Hash.
+func HexStringToHash(s string) merkletree.Hash {
+	b, err := common3.HexDecode(s)
+	if err != nil {
+		panic(err)
+	}
+	var hash merkletree.Hash
+	copy(hash[:], b[:32])
+	return hash
 }

@@ -4,7 +4,7 @@ package claims
 // 	"encoding/binary"
 //
 // 	"github.com/ethereum/go-ethereum/common"
-// 	"github.com/iden3/go-iden3-core/merkletree"
+// 	"github.com/iden3/go-merkletree"
 // )
 //
 // // EthKeyTypeLen is the length in bytes of the type in a claim

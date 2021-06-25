@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	"github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 )
 
 const (

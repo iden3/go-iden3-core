@@ -5,7 +5,7 @@ package claims
 // 	"errors"
 //
 // 	"github.com/iden3/go-iden3-core/core"
-// 	"github.com/iden3/go-iden3-core/merkletree"
+// 	"github.com/iden3/go-merkletree"
 // 	cryptoConstants "github.com/iden3/go-iden3-crypto/constants"
 // 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
 // )

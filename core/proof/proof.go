@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree"
 	// "github.com/iden3/go-iden3-crypto/babyjub"
 )
 

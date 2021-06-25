@@ -4,7 +4,7 @@ package claims
 // 	"crypto/ecdsa"
 //
 // 	"github.com/ethereum/go-ethereum/crypto"
-// 	"github.com/iden3/go-iden3-core/merkletree"
+// 	"github.com/iden3/go-merkletree"
 // )
 //
 // // ClaimAuthorizeKSignSecp256k1 is a claim to autorize a public key for signing.

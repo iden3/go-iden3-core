@@ -4,8 +4,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/mock"
 )
 

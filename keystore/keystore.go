@@ -2,8 +2,6 @@ package keystore
 
 import (
 	"crypto/rand"
-	"time"
-
 	// "encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -15,10 +13,9 @@ import (
 	"sync"
 
 	"github.com/gofrs/flock"
-	"github.com/iden3/go-iden3-core/common"
 	common3 "github.com/iden3/go-iden3-core/common"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	//"github.com/iden3/go-iden3-crypto/poseidon"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/scrypt"
 )
@@ -355,21 +352,21 @@ func (ks *KeyStore) SignElem(pk *babyjub.PublicKeyComp, msg *big.Int) (*babyjub.
 
 // Sign uses the key corresponding to the public key pk to sign the mimc7 hash
 // of the [prefix | date | msg] byte slice.
-func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []byte) (*babyjub.SignatureComp, int64, error) {
-	date := time.Now()
-	msg := append(prefix, common.Uint64ToEthBytes(uint64(date.Unix()))...)
-	msg = append(msg, rawMsg...)
-	sig, err := ks.SignRaw(pk, msg)
-	return sig, date.Unix(), err
-}
+//func (ks *KeyStore) Sign(pk *babyjub.PublicKeyComp, prefix PrefixType, rawMsg []byte) (*babyjub.SignatureComp, int64, error) {
+//	date := time.Now()
+//	msg := append(prefix, common.Uint64ToEthBytes(uint64(date.Unix()))...)
+//	msg = append(msg, rawMsg...)
+//	sig, err := ks.SignRaw(pk, msg)
+//	return sig, date.Unix(), err
+//}
 
 // SignRaw uses the key corresponding to the public key pk to sign the mimc7/poseidon hash
 // of the msg byte slice.
-func (ks *KeyStore) SignRaw(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
-	// h, err := mimc7.HashBytes(msg)
-	h := poseidon.HashBytes(msg)
-	return ks.SignElem(pk, h)
-}
+//func (ks *KeyStore) SignRaw(pk *babyjub.PublicKeyComp, msg []byte) (*babyjub.SignatureComp, error) {
+//	// h, err := mimc7.HashBytes(msg)
+//	h := poseidon.HashBytes(msg)
+//	return ks.SignElem(pk, h)
+//}
 
 // VerifySignatureElem verifies that the signature sigComp of the field element
 // msg was signed with the public key pkComp.
@@ -388,15 +385,15 @@ func VerifySignatureElem(pkComp *babyjub.PublicKeyComp, msg *big.Int, sigComp *b
 
 // VerifySignature verifies that the signature sigComp of the poseidon hash of
 // the [prefix | date | msg] byte slice was signed with the public key pkComp.
-func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, prefix PrefixType, date int64, rawMsg []byte) (bool, error) {
-	msg := append(prefix, common.Uint64ToEthBytes(uint64(date))...)
-	msg = append(msg, rawMsg...)
-	return VerifySignatureRaw(pkComp, sigComp, msg)
-}
+//func VerifySignature(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, prefix PrefixType, date int64, rawMsg []byte) (bool, error) {
+//	msg := append(prefix, common.Uint64ToEthBytes(uint64(date))...)
+//	msg = append(msg, rawMsg...)
+//	return VerifySignatureRaw(pkComp, sigComp, msg)
+//}
 
 // VerifySignatureRaw verifies that the signature sigComp of the poseidon hash of
 // the msg byte slice was signed with the public key pkComp.
-func VerifySignatureRaw(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
-	h := poseidon.HashBytes(msg)
-	return VerifySignatureElem(pkComp, h, sigComp)
-}
+//func VerifySignatureRaw(pkComp *babyjub.PublicKeyComp, sigComp *babyjub.SignatureComp, msg []byte) (bool, error) {
+//	h := poseidon.HashBytes(msg)
+//	return VerifySignatureElem(pkComp, h, sigComp)
+//}

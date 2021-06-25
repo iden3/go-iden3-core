@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-core/testgen"
+	"github.com/iden3/go-merkletree"
 	"github.com/stretchr/testify/assert"
 )
 
