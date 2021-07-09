@@ -18,7 +18,7 @@ import (
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/keystore"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
@@ -293,7 +293,7 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	if err != nil {
 		return nil, err
 	}
-	claimKOpMtp, err := clt.GenerateProof(claimKOpHi, nil)
+	claimKOpMtp, _, err := clt.GenerateProof(claimKOpHi.BigInt(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func Create(cfg Config, kOpComp *babyjub.PublicKeyComp, extraGenesisClaims []cla
 	if err := db.StoreJSON(tx, dbKeyGenesisClaimKOpMtp, claimKOpMtp); err != nil {
 		return nil, err
 	}
-	if err := db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.RootKey()); err != nil {
+	if err := db.StoreJSON(tx, dbKeyGenesisClaimTreeRoot, clt.Root()); err != nil {
 		return nil, err
 	}
 
@@ -450,7 +450,7 @@ func Load(storage db.Storage, keyStore *keystore.KeyStore,
 
 // state returns the current Identity State and the three merkle tree roots.
 func (is *Issuer) state() (*merkletree.Hash, IdenStateTreeRoots) {
-	clr, rer, ror := is.claimsTree.RootKey(), is.revocationsTree.RootKey(), is.rootsTree.RootKey()
+	clr, rer, ror := is.claimsTree.Root(), is.revocationsTree.Root(), is.rootsTree.Root()
 	idenState := core.IdenState(clr, rer, ror)
 	return idenState, IdenStateTreeRoots{
 		ClaimsTreeRoot:      clr,
@@ -598,7 +598,7 @@ func (is *Issuer) IssueClaim(claim claims.Claimer) error {
 		return err
 	}
 	claim.Metadata().RevNonce = nonce
-	err = is.claimsTree.AddClaim(claim)
+	err = is.claimsTree.AddEntry(claim.Entry())
 	if err != nil {
 		return err
 	}
@@ -815,14 +815,14 @@ func (is *Issuer) SignState(oldState, newState *merkletree.Hash) (*babyjub.Signa
 	prefixBigInt := new(big.Int)
 	utils.SetBigIntFromLEBytes(prefixBigInt, prefix31[:])
 
-	toHash := [poseidon.T]*big.Int{prefixBigInt, oldState.BigInt(), newState.BigInt(), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
+	toHash := []*big.Int{prefixBigInt, oldState.BigInt(), newState.BigInt(), big.NewInt(0), big.NewInt(0), big.NewInt(0)}
 
 	return is.SignElems(toHash)
 }
 
 // SignElems signs a [poseidon.T]*big.Int of elements in *big.Int format
-func (is *Issuer) SignElems(toHash [poseidon.T]*big.Int) (*babyjub.SignatureComp, error) {
-	e, err := poseidon.PoseidonHash(toHash)
+func (is *Issuer) SignElems(toHash []*big.Int) (*babyjub.SignatureComp, error) {
+	e, err := poseidon.Hash(toHash)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +830,7 @@ func (is *Issuer) SignElems(toHash [poseidon.T]*big.Int) (*babyjub.SignatureComp
 }
 
 func generateExistenceMTProof(mt *merkletree.MerkleTree, hi, root *merkletree.Hash) (*merkletree.Proof, error) {
-	mtp, err := mt.GenerateProof(hi, root)
+	mtp, _, err := mt.GenerateProof(hi.BigInt(), root)
 	if err != nil {
 		return nil, err
 	}

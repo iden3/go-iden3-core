@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	common3 "github.com/iden3/go-iden3-core/common"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 type ClaimGeneric struct {

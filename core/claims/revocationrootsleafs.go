@@ -3,7 +3,7 @@ package claims
 import (
 	"encoding/binary"
 
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 // LeafRootsTree contains the root to be inserted in the leaf

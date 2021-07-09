@@ -7,7 +7,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/common"
 	cryptoUtils "github.com/iden3/go-iden3-crypto/utils"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 var (

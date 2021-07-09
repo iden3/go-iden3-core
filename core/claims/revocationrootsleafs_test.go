@@ -2,11 +2,11 @@ package claims
 
 import (
 	"encoding/hex"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/iden3/go-merkletree-sql/db/memory"
 	"testing"
 
 	"github.com/iden3/go-iden3-core/testgen"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/stretchr/testify/assert"
 )
 

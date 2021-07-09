@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-merkletree"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/iden3/go-merkletree-sql"
+	"github.com/iden3/go-merkletree-sql/db/memory"
 )
 
 var (

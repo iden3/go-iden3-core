@@ -2,7 +2,7 @@ package claims
 
 import (
 	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 const (

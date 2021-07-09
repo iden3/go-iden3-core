@@ -2,7 +2,8 @@ package writerhttp
 
 import (
 	"fmt"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/iden3/go-iden3-core/crypto"
+	"github.com/iden3/go-merkletree-sql/db/memory"
 	"os"
 	"strconv"
 	"testing"
@@ -12,8 +13,7 @@ import (
 	"github.com/iden3/go-iden3-core/core/claims"
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/testgen"
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +32,8 @@ func TestHttpPublicGetPublicData(t *testing.T) {
 
 	// add some leafs to both MerkleTrees
 	for i := 0; i < 10; i++ {
-		rootBigInt := poseidon.HashBytes([]byte(strconv.Itoa(i)))
+		rootBigInt, err := crypto.PoseidonHashBytes([]byte(strconv.Itoa(i)))
+		assert.Nil(t, err)
 		root := merkletree.NewHashFromBigInt(rootBigInt)
 		err = claims.AddLeafRootsTree(rotMt, root)
 		assert.Nil(t, err)
@@ -96,7 +97,7 @@ func initTest() {
 	}
 	// Add input data to the test vector
 	if generateTest {
-		root0 := poseidon.HashBytes([]byte("root0"))
+		root0, _ := crypto.PoseidonHashBytes([]byte("root0"))
 		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 		testgen.SetTestValue("nonce0", float64(5))
 		testgen.SetTestValue("version0", float64(5))

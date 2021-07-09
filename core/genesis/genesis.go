@@ -3,8 +3,8 @@ package genesis
 import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/claims"
-	"github.com/iden3/go-merkletree"
-	"github.com/iden3/go-merkletree/db/memory"
+	"github.com/iden3/go-merkletree-sql"
+	"github.com/iden3/go-merkletree-sql/db/memory"
 )
 
 // CalculateIdGenesis calculates the ID given the input claims using memory Merkle Trees.

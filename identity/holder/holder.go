@@ -18,7 +18,7 @@ import (
 	"github.com/iden3/go-iden3-core/keystore"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
 	"github.com/iden3/go-iden3-crypto/babyjub"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -104,8 +104,8 @@ func (h *Holder) HolderGetCredentialValidityData(
 	}
 
 	// Verify that the returned public data is consistent with the queried IdenState
-	idenState := core.IdenState(publicData.ClaimsTreeRoot, publicData.RevocationsTree.RootKey(),
-		publicData.RootsTree.RootKey())
+	idenState := core.IdenState(publicData.ClaimsTreeRoot, publicData.RevocationsTree.Root(),
+		publicData.RootsTree.Root())
 	if !idenState.Equals(idenStateData.IdenState) {
 		return nil, ErrCalculatedIdenStateDoesntMatch
 	}
@@ -118,7 +118,7 @@ func (h *Holder) HolderGetCredentialValidityData(
 	if err != nil {
 		return nil, err
 	}
-	mtpNotNonce, err := publicData.RevocationsTree.GenerateProof(revLeafHi, nil)
+	mtpNotNonce, _, err := publicData.RevocationsTree.GenerateProof(revLeafHi, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,8 @@ func (h *Holder) HolderGetCredentialValidityData(
 		IdenStateData:  idenStateData,
 		MtpNotNonce:    mtpNotNonce,
 		ClaimsTreeRoot: publicData.ClaimsTreeRoot,
-		RevTreeRoot:    publicData.RevocationsTree.RootKey(),
-		RootsTreeRoot:  publicData.RootsTree.RootKey(),
+		RevTreeRoot:    publicData.RevocationsTree.Root(),
+		RootsTreeRoot:  publicData.RootsTree.Root(),
 		PublicData:     publicData,
 	}, nil
 }
@@ -213,7 +213,7 @@ func (h *Holder) HolderGetCredentialProofInputs(
 	if err != nil {
 		return nil, err
 	}
-	mtpRoot, err := credValidData.PublicData.RootsTree.GenerateProof(rootLeafHi, nil)
+	mtpRoot, _, err := credValidData.PublicData.RootsTree.GenerateProof(rootLeafHi.BigInt(), nil)
 	if err != nil {
 		return nil, err
 	}

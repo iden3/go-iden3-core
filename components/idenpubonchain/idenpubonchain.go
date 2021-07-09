@@ -14,7 +14,7 @@ import (
 	"github.com/iden3/go-iden3-core/eth"
 	"github.com/iden3/go-iden3-core/eth/contracts"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 var (

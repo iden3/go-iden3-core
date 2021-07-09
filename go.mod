@@ -23,7 +23,7 @@ require (
 	github.com/iden3/go-circom-prover-verifier v0.0.1
 	github.com/iden3/go-circom-witnesscalc v0.0.1
 	github.com/iden3/go-iden3-crypto v0.0.6-0.20210308142348-8f85683b2cef
-	github.com/iden3/go-merkletree v0.0.0-20210308143313-8b63ca866189
+	github.com/iden3/go-merkletree-sql v1.0.0-pre3
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.0
 	github.com/pborman/uuid v1.2.0 // indirect
@@ -40,4 +40,4 @@ require (
 	gopkg.in/go-playground/validator.v9 v9.29.1
 )
 
-replace github.com/iden3/go-merkletree v0.0.0-20210308143313-8b63ca866189 => ../go-merkletree
+replace github.com/iden3/go-merkletree-sql => ../go-merkletree-sql

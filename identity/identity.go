@@ -3,8 +3,7 @@ package identity
 import (
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/core/proof"
-	"github.com/iden3/go-iden3-core/merkletree_old"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 // Issuer is an interface of an Identity that is only capable of issuing
@@ -13,11 +12,11 @@ import (
 // update functions should fail.
 type Issuer interface {
 	ID() *core.ID
-	GenCredentialExistence(claim merkletree_old.Entrier) (*proof.CredentialExistence, error)
-	IssueClaim(claim merkletree_old.Entrier) error
+	GenCredentialExistence(claim merkletree.Entrier) (*proof.CredentialExistence, error)
+	IssueClaim(claim merkletree.Entrier) error
 	PublishState() error
-	RevokeClaim(claim merkletree_old.Entrier) error
-	UpdateClaim(hIndex *merkletree.Hash, value []merkletree_old.ElemBytes) error
+	RevokeClaim(claim merkletree.Entrier) error
+	UpdateClaim(hIndex *merkletree.Hash, value []merkletree.ElemBytes) error
 	Sign(string) (string, error)
 	SignBinary(string) (string, error)
 }

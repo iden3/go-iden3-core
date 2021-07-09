@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	common3 "github.com/iden3/go-iden3-core/common"
+	"github.com/iden3/go-iden3-core/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEncryptDecrypt(t *testing.T) {
@@ -26,10 +27,10 @@ func TestKeyStore(t *testing.T) {
 	assert.Equal(t, nil, err)
 	pk, err := ks.NewKey(pass)
 	assert.Equal(t, nil, err)
-	fmt.Println("pk", common3.Hex(pk[:]))
+	fmt.Println("pk", common.Hex(pk[:]))
 	fmt.Printf("encryptedKeys %+v\n", ks.encryptedKeys)
 	fmt.Println("storage", string(storage))
-	fmt.Println("keys", common3.Hex(ks.Keys()[0][:]))
+	fmt.Println("keys", common.Hex(ks.Keys()[0][:]))
 
 	// Unlock key
 	err = ks.UnlockKey(pk, pass)
@@ -58,9 +59,9 @@ func TestSignVerify(t *testing.T) {
 	pk, err := ks.NewKey(pass)
 	assert.Equal(t, nil, err)
 	var sk [32]byte
-	if _, err := hex.Decode(sk[:], []byte("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")); err != nil {
-		panic(err)
-	}
+	_, err = hex.Decode(sk[:], []byte("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"))
+	require.Nil(t, err)
+
 	_, err = ks.ImportKey(sk, pass)
 	assert.Equal(t, nil, err)
 

@@ -1,7 +1,7 @@
 package claims
 
 import (
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 const (

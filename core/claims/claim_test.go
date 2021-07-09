@@ -2,6 +2,7 @@ package claims
 
 import (
 	"bytes"
+	"github.com/iden3/go-iden3-core/crypto"
 	"os"
 	"testing"
 
@@ -11,8 +12,7 @@ import (
 
 	"github.com/iden3/go-iden3-core/core"
 	"github.com/iden3/go-iden3-core/testgen"
-	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +76,7 @@ func initTest() {
 		testgen.SetTestValue("1_privateKey", "9b3260823e7b07dd26ef357ccfed23c10bcef1c85940baa3d02bbf29461bbbbe")
 
 		// TestLeafRootsTree
-		root0 := poseidon.HashBytes([]byte("root0"))
+		root0, _ := crypto.PoseidonHashBytes([]byte("root0"))
 		testgen.SetTestValue("root0", merkletree.NewHashFromBigInt(root0).Hex())
 
 		// TestLeafRevocationsTree

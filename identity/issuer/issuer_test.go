@@ -16,7 +16,7 @@ import (
 	"github.com/iden3/go-iden3-core/db"
 	"github.com/iden3/go-iden3-core/keystore"
 	zkutils "github.com/iden3/go-iden3-core/utils/zk"
-	"github.com/iden3/go-merkletree"
+	"github.com/iden3/go-merkletree-sql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -61,7 +61,7 @@ func TestNewLoadIssuer(t *testing.T) {
 func TestIssuerGenesis(t *testing.T) {
 	issuer, _, _ := newIssuer(t, true, nil, nil)
 
-	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
+	assert.Equal(t, issuer.revocationsTree.Root(), &merkletree.HashZero)
 
 	idenState, _ := issuer.state()
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
@@ -70,7 +70,7 @@ func TestIssuerGenesis(t *testing.T) {
 func TestIssuerFull(t *testing.T) {
 	issuer, _, _ := newIssuer(t, false, idenPubOnChain, idenPubOffChain)
 
-	assert.Equal(t, issuer.revocationsTree.RootKey(), &merkletree.HashZero)
+	assert.Equal(t, issuer.revocationsTree.Root(), &merkletree.HashZero)
 
 	idenState, _ := issuer.state()
 	assert.Equal(t, core.IdGenesisFromIdenState(idenState), issuer.ID())
