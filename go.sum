@@ -203,8 +203,8 @@ github.com/iden3/go-circom-prover-verifier v0.0.1/go.mod h1:1FkpX4nUXxYcY2fpzqd2
 github.com/iden3/go-circom-witnesscalc v0.0.1 h1:ksRJ4LPRzus6mrGrMYij1ZPfYWfpLS9ippoAbipiYsA=
 github.com/iden3/go-circom-witnesscalc v0.0.1/go.mod h1:xjT1BlFZDBioHOlbD75SmZZLC1d1AfOycqbSa/1QRJU=
 github.com/iden3/go-iden3-crypto v0.0.5/go.mod h1:XKw1oDwYn2CIxKOtr7m/mL5jMn4mLOxAxtZBRxQBev8=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20210308142348-8f85683b2cef h1:72PG9b2eDlLqKszJVLrsoJbpt4CtgJLhKOjH1MJqCVY=
-github.com/iden3/go-iden3-crypto v0.0.6-0.20210308142348-8f85683b2cef/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
+github.com/iden3/go-iden3-crypto v0.0.6 h1:YmhaPys18EMjBQcDUOSoYt74iL5dcH1JkuOqyKyeOYc=
+github.com/iden3/go-iden3-crypto v0.0.6/go.mod h1:oBgthFLboAWi9feaBUFy7OxEcyn9vA1khHSL/WwWFyg=
 github.com/iden3/go-wasm3 v0.0.1 h1:pEtyMJcCZtG6VyV2k5xU/46EN2FvLog563vmwKciLic=
 github.com/iden3/go-wasm3 v0.0.1/go.mod h1:j+TcAB94Dfrjlu5kJt83h2OqAU+oyNUTwNZnQyII1sI=
 github.com/imkira/go-interpol v1.1.0/go.mod h1:z0h2/2T3XF8kyEPpRgJ3kmNv+C43p+I/CoI+jC3w2iA=
