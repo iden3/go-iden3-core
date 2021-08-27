@@ -1,6 +1,6 @@
 module github.com/iden3/go-iden3-core
 
-go 1.13
+go 1.14
 
 require (
 	github.com/allegro/bigcache v1.2.1 // indirect
@@ -23,7 +23,7 @@ require (
 	github.com/iden3/go-circom-prover-verifier v0.0.1
 	github.com/iden3/go-circom-witnesscalc v0.0.1
 	github.com/iden3/go-iden3-crypto v0.0.6
-	github.com/iden3/go-merkletree-sql v1.0.0-pre4
+	github.com/iden3/go-merkletree-sql v1.0.0-pre5
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.0
 	github.com/pborman/uuid v1.2.0 // indirect
