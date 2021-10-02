@@ -1,4 +1,4 @@
-package claims
+package core
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOne(t *testing.T) {
+func TestNewClaim(t *testing.T) {
 	var schemaHash SchemaHash
 	claim, err := NewClaim(schemaHash, WithFlagExpiration(true))
 	require.NoError(t, err)

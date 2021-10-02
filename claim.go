@@ -1,4 +1,4 @@
-package claims
+package core
 
 import (
 	"encoding/binary"
@@ -46,7 +46,6 @@ var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 const schemaHashLn = 16
 
 type SchemaHash [schemaHashLn]byte
-type ID [31]byte
 
 // DataSlot length is 253 bits, highest 3 bits should be zeros
 type DataSlot [32]byte
