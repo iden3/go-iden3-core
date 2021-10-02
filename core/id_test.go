@@ -6,16 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/iden3/go-iden3-core/testgen"
 	"github.com/stretchr/testify/assert"
 )
-
-var generateTest = false
 
 type Hash [32]byte
 
@@ -34,24 +30,24 @@ func hashBytes(b ...[]byte) (hash Hash) {
 func TestIDparsers(t *testing.T) {
 	// Generate ID0
 	var typ0 [2]byte
-	typ0Hex, _ := hex.DecodeString(testgen.GetTestValue("typ0").(string))
+	typ0Hex, _ := hex.DecodeString("0000")
 	copy(typ0[:], typ0Hex[:2])
 	var genesis0 [27]byte
-	genesis032bytes := hashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis032bytes := hashBytes([]byte("genesistest"))
 	copy(genesis0[:], genesis032bytes[:])
 	id0 := NewID(typ0, genesis0)
 	// Check ID0
-	testgen.CheckTestValue(t, "idString0", id0.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf", id0.String())
 	// Generate ID1
 	var typ1 [2]byte
-	typ1Hex, _ := hex.DecodeString(testgen.GetTestValue("typ1").(string))
+	typ1Hex, _ := hex.DecodeString("0001")
 	copy(typ1[:], typ1Hex[:2])
 	var genesis1 [27]byte
-	genesis132bytes := hashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis132bytes := hashBytes([]byte("genesistest"))
 	copy(genesis1[:], genesis132bytes[:])
 	id1 := NewID(typ1, genesis1)
 	// Check ID1
-	testgen.CheckTestValue(t, "idString1", id1.String())
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2Xh6", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
 	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
@@ -61,27 +57,31 @@ func TestIDparsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	testgen.CheckTestValue(t, "idString0", id0FromBytes.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+		id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	testgen.CheckTestValue(t, "idString1", id1FromBytes.String())
+	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2Xh6",
+		id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	testgen.CheckTestValue(t, "idString0", id0FromString.String())
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+		id0FromString.String())
 }
 
 func TestIDjsonParser(t *testing.T) {
-	id, err := IDFromString(testgen.GetTestValue("idStringInput").(string))
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
 	assert.Nil(t, err)
 	idj, err := json.Marshal(&id)
 	assert.Nil(t, err)
-	testgen.CheckTestValue(t, "idString2", strings.Replace(string(idj), "\"", "", 2))
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+		strings.Replace(string(idj), "\"", "", 2))
 	var idp ID
 	err = json.Unmarshal(idj, &idp)
 	assert.Nil(t, err)
@@ -101,7 +101,7 @@ func TestIDjsonParser(t *testing.T) {
 func TestCheckChecksum(t *testing.T) {
 	typ := TypeBJP0
 	var genesis [27]byte
-	genesis32bytes := hashBytes([]byte(testgen.GetTestValue("genesisUnhashedString0").(string)))
+	genesis32bytes := hashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
 
 	id := NewID(typ, genesis)
@@ -126,7 +126,7 @@ func TestCheckChecksum(t *testing.T) {
 	id = NewID(typ, genesis)
 	// changedGenesis := utils.HashBytes([]byte("changedgenesis"))
 	var changedGenesis [27]byte
-	changedGenesis32bytes := hashBytes([]byte(testgen.GetTestValue("genesisUnhashedString1").(string)))
+	changedGenesis32bytes := hashBytes([]byte("changedgenesis"))
 	copy(changedGenesis[:], changedGenesis32bytes[:27])
 
 	copy(id[2:27], changedGenesis[:])
@@ -136,34 +136,4 @@ func TestCheckChecksum(t *testing.T) {
 	var empty [31]byte
 	_, err := IDFromBytes(empty[:])
 	assert.Equal(t, errors.New("IDFromBytes error: byte array empty"), err)
-}
-
-func initTest() {
-	// If generateTest is true, the checked values will be used to generate a test vector
-	// Init test
-	err := testgen.InitTest("id", generateTest)
-	if err != nil {
-		fmt.Println("error initializing test data:", err)
-		return
-	}
-	// Add input data to the test vector
-	if generateTest {
-		testgen.SetTestValue("genesisUnhashedString0", "genesistest")
-		testgen.SetTestValue("genesisUnhashedString1", "changedgenesis")
-		testgen.SetTestValue("typ0", hex.EncodeToString([]byte{0x00, 0x00}))
-		testgen.SetTestValue("typ1", hex.EncodeToString([]byte{0x00, 0x01}))
-		testgen.SetTestValue("babyJub", "28156abe7fe2fd433dc9df969286b96666489bac508612d0e16593e944c4f69f")
-		testgen.SetTestValue("addr", "0xe0fbce58cfaa72812103f003adce3f284fe5fc7c")
-		testgen.SetTestValue("idStringInput", "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
-		testgen.SetTestValue("kOp", "0x117f0a278b32db7380b078cdb451b509a2ed591664d1bac464e8c35a90646796")
-	}
-}
-
-func TestMain(m *testing.M) {
-	initTest()
-	result := m.Run()
-	if err := testgen.StopTest(); err != nil {
-		panic(fmt.Errorf("Error stopping test: %w", err))
-	}
-	os.Exit(result)
 }

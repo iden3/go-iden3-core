@@ -13,7 +13,6 @@ $ go get github.com/iden3/go-iden3-core
 ## Documentation
 
 Go Modules documentation:
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/testgen?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/testgen) testgen
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/keystore?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/keystore) keystore
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/identity?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/identity) identity
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/identity/issuer?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/identity/issuer) identity/issuer
