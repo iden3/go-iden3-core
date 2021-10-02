@@ -6,8 +6,7 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/iden3/go-iden3-core/merkletree"
-	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 var (
@@ -153,16 +152,16 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 }
 
 // IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
-func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
-	bi, err := merkletree.ElemBytesToPoseidonInput(merkletree.ElemBytes(*clr),
-		merkletree.ElemBytes(*rer),
-		merkletree.ElemBytes(*ror))
-	if err != nil {
-		panic(err)
-	}
-	idenState, err := poseidon.PoseidonHash(bi)
-	if err != nil {
-		panic(err)
-	}
-	return merkletree.NewHashFromBigInt(idenState)
-}
+//func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
+//	bi, err := merkletree.ElemBytesToPoseidonInput(merkletree.ElemBytes(*clr),
+//		merkletree.ElemBytes(*rer),
+//		merkletree.ElemBytes(*ror))
+//	if err != nil {
+//		panic(err)
+//	}
+//	idenState, err := poseidon.PoseidonHash(bi)
+//	if err != nil {
+//		panic(err)
+//	}
+//	return merkletree.NewHashFromBigInt(idenState)
+//}

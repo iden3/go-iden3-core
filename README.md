@@ -14,7 +14,6 @@ $ go get github.com/iden3/go-iden3-core
 
 Go Modules documentation:
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/testgen?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/testgen) testgen
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/merkletree?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/merkletree) merkletree
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/keystore?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/keystore) keystore
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/identity?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/identity) identity
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/identity/issuer?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/identity/issuer) identity/issuer
@@ -28,7 +27,6 @@ Go Modules documentation:
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/common?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/common) common
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/utils?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/utils) utils
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/utils/noncedb?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/utils/noncedb) utils/noncedb
-- [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/db?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/db) db
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/components?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components) components
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/components/httpclient?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/httpclient) components/httpclient
 - [![GoDoc](https://godoc.org/github.com/iden3/go-iden3-core/components/idenpubonchain?status.svg)](https://godoc.org/github.com/iden3/go-iden3-core/components/idenpubonchain) components/idenpubonchain

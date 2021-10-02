@@ -2,332 +2,298 @@ package claims
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"errors"
-	"fmt"
+	"time"
 
-	"github.com/iden3/go-iden3-core/core"
-	"github.com/iden3/go-iden3-core/crypto"
-	"github.com/iden3/go-iden3-core/merkletree"
+	"github.com/iden3/go-merkletree-sql"
 )
 
-// ErrInvalidClaimType indicates a type error when parsing an Entry into a claim.
-var ErrInvalidClaimType = errors.New("invalid claim type")
+/*
+Claim structure
 
-// ClearMostSigByte sets the most significant byte of the element to 0 to make sure it fits
-// inside the FiniteField over R.
-func ClearMostSigByte(e [merkletree.ElemBytesLen]byte) merkletree.ElemBytes {
-	e[0] = 0
-	return merkletree.ElemBytes(e)
+Index:
+ i_0: [ 128  bits ] claim schema
+      [ 32 bits ] option flags
+          [3] Subject:
+            000: A.1 Self
+            001: invalid
+            010: A.2.i OtherIden Index
+            011: A.2.v OtherIden Value
+            100: B.i Object Index
+            101: B.v Object Value
+          [1] Expiration: bool
+          [1] Updatable: bool
+          [27] 0
+      [ 32 bits ] version (optional?)
+      [ 61 bits ] 0 - reserved for future use
+ i_1: [ 248 bits] identity (case b) (optional)
+      [  5 bits ] 0
+ i_2: [ 253 bits] 0
+ i_3: [ 253 bits] 0
+Value:
+ v_0: [ 64 bits ]  revocation nonce
+      [ 64 bits ]  expiration date (optional)
+      [ 125 bits] 0 - reserved
+ v_1: [ 248 bits] identity (case c) (optional)
+      [  5 bits ] 0
+ v_2: [ 253 bits] 0
+ v_3: [ 253 bits] 0
+*/
+
+var ErrDataOverflow = errors.New("data should not take more then 253 bits")
+var ErrIncorrectIDPosition = errors.New("incorrect ID position")
+
+const schemaHashLn = 16
+
+type SchemaHash [schemaHashLn]byte
+type ID [31]byte
+
+// DataSlot length is 253 bits, highest 3 bits should be zeros
+type DataSlot [32]byte
+
+type int253 [32]byte
+
+type Claim struct {
+	index [4]int253
+	value [4]int253
 }
 
-func GetRevocationNonce(e *merkletree.Entry) uint32 {
-	return binary.LittleEndian.Uint32(e.Data[4][:4])
-}
+type Subject byte
 
 const (
-	// ClaimTypeLen is the length in bytes of the type in a claim.
-	ClaimTypeLen       = 64 / 8
-	ClaimFlagsLen      = 32 / 8
-	ClaimHeaderLen     = ClaimTypeLen + ClaimFlagsLen
-	ClaimVersionLen    = 32 / 8
-	ClaimRevNonceLen   = 32 / 8
-	ClaimExpirationLen = 64 / 8
-	EntryFullBytesLen  = 248 / 8
+	SubjectSelf           Subject = iota // 000
+	SubjectInvalid                       // 001
+	SubjectOtherIdenIndex                // 010
+	SubjectOtherIdenValue                // 011
+	SubjectObjectIndex                   // 100
+	SubjectObjectValue                   // 101
 )
 
-// HashString takes the first 31 bytes of a hash applied to string
-func HashString(s string) (stringHashed [EntryFullBytesLen]byte) {
-	hash := crypto.HashBytes([]byte(s))
-	copy(stringHashed[:], hash[len(hash)-EntryFullBytesLen:])
-	return stringHashed
-}
-
-// ClaimType is the type used to store a claim type.
-type ClaimType [ClaimTypeLen]byte
-
-// NewClaimType creates a ClaimType from a type name.
-func NewClaimType(name string) ClaimType {
-	t := ClaimType{}
-	h := crypto.HashBytes([]byte(name))
-	copy(t[:ClaimTypeLen], h[len(h)-ClaimTypeLen:])
-	return t
-}
-
-// NewClaimTypeNum to set type to a claim.
-func NewClaimTypeNum(num uint64) ClaimType {
-	ct := ClaimType{}
-	// TODO: Update to LittleEndian (needs update in circuits/buildClaimKeyBBJJ.circom
-	binary.BigEndian.PutUint64(ct[:], num)
-	return ct
-}
-
-// ClaimTypeVersionLen is the length in bytes of the version and length in a claim.
-const ClaimTypeVersionLen = ClaimTypeLen + ClaimFlagsLen + ClaimVersionLen
-
-// ClaimSubject is the flag option to specify a recipient of a claim
-type ClaimSubject byte
+type IDPosition uint8
 
 const (
-	// ClaimSubjectSelf is a claim that refers to a property of the issuing
-	// identity.
-	ClaimSubjectSelf       ClaimSubject = 0b00
-	ClaimSubjectStringSelf string       = "Self"
-	// ClaimSubjectOtherIden is a claim that refers to a property of
-	// another identity.
-	ClaimSubjectOtherIden       ClaimSubject = 0b10
-	ClaimSubjectStringOtherIden string       = "OtherIden"
-	// ClaimSubjectObject is a claim that refers to a property of an
-	// object.
-	ClaimSubjectObject       ClaimSubject = 0b01
-	ClaimSubjectStringObject string       = "Object"
+	idPositionUndefined IDPosition = iota
+	IDPositionIndex
+	IDPositionValue
 )
-
-func (cs ClaimSubject) MarshalText() ([]byte, error) {
-	var str string
-	switch cs {
-	case ClaimSubjectSelf:
-		str = ClaimSubjectStringSelf
-	case ClaimSubjectOtherIden:
-		str = ClaimSubjectStringOtherIden
-	case ClaimSubjectObject:
-		str = ClaimSubjectStringObject
-	default:
-		return nil, fmt.Errorf("invalid ClaimSubject")
-	}
-	return []byte(str), nil
-}
-
-func (cs *ClaimSubject) UnmarshalText(b []byte) error {
-	switch string(b) {
-	case ClaimSubjectStringSelf:
-		*cs = ClaimSubjectSelf
-	case ClaimSubjectStringOtherIden:
-		*cs = ClaimSubjectOtherIden
-	case ClaimSubjectStringObject:
-		*cs = ClaimSubjectObject
-	default:
-		return fmt.Errorf("invalid ClaimSubject")
-	}
-	return nil
-}
-
-// ClaimSubjectPos is the flag option to specify the position of the subject in the claim
-type ClaimSubjectPos byte
 
 const (
-	// ClaimSubjectPosIndex means that the subject is found in the Index of the claim
-	ClaimSubjectPosIndex       ClaimSubjectPos = 0b0
-	ClaimSubjectPosStringIndex string          = "Index"
-	// ClaimSubjectPosIndex means that the subject is found in the Value of the claim
-	ClaimSubjectPosValue       ClaimSubjectPos = 0b1
-	ClaimSubjectPosStringValue string          = "Value"
+	flagsByteIdx         = 16
+	flagExpirationBitIdx = 3
+	flagUpdatableBitIdx  = 4
+	int253mask           = byte(0b11100000)
 )
 
-func (csp ClaimSubjectPos) MarshalText() ([]byte, error) {
-	var str string
-	switch csp {
-	case ClaimSubjectPosIndex:
-		str = ClaimSubjectPosStringIndex
-	case ClaimSubjectPosValue:
-		str = ClaimSubjectPosStringValue
-	default:
-		return nil, fmt.Errorf("invalid ClaimSubjectPos")
+type Option func(*Claim) error
+
+func WithFlagExpiration(val bool) Option {
+	return func(c *Claim) error {
+		c.SetFlagExpiration(val)
+		return nil
 	}
-	return []byte(str), nil
 }
 
-func (csp *ClaimSubjectPos) UnmarshalText(b []byte) error {
-	switch string(b) {
-	case ClaimSubjectPosStringIndex:
-		*csp = ClaimSubjectPosIndex
-	case ClaimSubjectPosStringValue:
-		*csp = ClaimSubjectPosValue
-	default:
-		return fmt.Errorf("invalid ClaimSubjectPos")
+func WithFlagUpdatable(val bool) Option {
+	return func(c *Claim) error {
+		c.SetFlagUpdatable(val)
+		return nil
 	}
-	return nil
 }
 
-// ClaimHeader represents the first bytes of the claim index and contains its
-// type and flags.
-type ClaimHeader struct {
-	Type       ClaimType
-	Subject    ClaimSubject
-	SubjectPos ClaimSubjectPos
-	Expiration bool
-	Version    bool
-}
-
-func bool2byte(b bool) byte {
-	if b {
-		return 1
+func WithVersion(ver uint32) Option {
+	return func(c *Claim) error {
+		c.SetVersion(ver)
+		return nil
 	}
-	return 0
 }
 
-func byte2bool(b byte) bool {
-	return b != 0
+func WithIndexID(id ID) Option {
+	return func(c *Claim) error {
+		c.SetIndexID(id)
+		return nil
+	}
 }
 
-// Marshal the ClaimHeader into an entry
-func (c ClaimHeader) Marshal(e *merkletree.Entry) {
-	index := e.Index()
-	copy(index[0][:ClaimTypeLen], c.Type[:])
-	flags0 := &index[0][ClaimTypeLen]
-	*flags0 = 0
-	*flags0 |= byte(c.Subject)
-	*flags0 |= byte(c.SubjectPos) << 2
-	*flags0 |= bool2byte(c.Expiration) << 3
-	*flags0 |= bool2byte(c.Version) << 4
+func WithValueID(id ID) Option {
+	return func(c *Claim) error {
+		c.SetValueID(id)
+		return nil
+	}
 }
 
-// Unmarshal the ClaimHeader from an entry
-func (c *ClaimHeader) Unmarshal(e *merkletree.Entry) {
-	index := e.Index()
-	copy(c.Type[:], index[0][:ClaimTypeLen])
-	flags0 := index[0][ClaimTypeLen]
-	c.Subject = ClaimSubject(flags0 & 0b00000011)
-	c.SubjectPos = ClaimSubjectPos(flags0 & (1 << 2))
-	c.Expiration = byte2bool(flags0 & (1 << 3))
-	c.Version = byte2bool(flags0 & (1 << 4))
-}
-
-// Claimer is an intefrace that extends Entrier with a function that
-// returns the claim metadata.
-type Claimer interface {
-	merkletree.Entrier
-	Metadata() *Metadata
-}
-
-// Metadata is a header and generic (some optional) values of a claim.
-type Metadata struct {
-	header     ClaimHeader
-	Subject    *core.ID
-	Expiration int64
-	Version    uint32
-	RevNonce   uint32
-}
-
-// NewMetadata creates a new Metadata with a specific header.
-func NewMetadata(header ClaimHeader) Metadata {
-	return Metadata{header: header}
-}
-
-// Header returns the header from the metadata.
-func (m *Metadata) Header() ClaimHeader {
-	return m.header
-}
-
-// Type returns the claim type from the header in the metadata.
-func (m *Metadata) Type() ClaimType {
-	return m.header.Type
-}
-
-// Marshal the Metadata into an entry
-func (m Metadata) Marshal(e *merkletree.Entry) {
-	m.header.Marshal(e)
-	index := e.Index()
-	value := e.Value()
-	if m.header.Subject != ClaimSubjectSelf {
-		switch m.header.SubjectPos {
-		case ClaimSubjectPosIndex:
-			copy(index[1][:], m.Subject[:])
-		case ClaimSubjectPosValue:
-			copy(value[1][:], m.Subject[:])
+func WithID(id ID, pos IDPosition) Option {
+	return func(c *Claim) error {
+		switch pos {
+		case IDPositionIndex:
+			c.SetIndexID(id)
+		case IDPositionValue:
+			c.SetValueID(id)
 		default:
-			panic(fmt.Sprintf("Unexpected header.SubjectPos %v", m.header.SubjectPos))
+			return ErrIncorrectIDPosition
+		}
+		return nil
+	}
+}
+
+func WithRevocationNonce(nonce uint64) Option {
+	return func(c *Claim) error {
+		c.SetRevocationNonce(nonce)
+		return nil
+	}
+}
+
+func WithExpirationDate(dt time.Time) Option {
+	return func(c *Claim) error {
+		c.SetExpirationDate(dt)
+		return nil
+	}
+}
+
+func WithIndexSlot3(data DataSlot) Option {
+	return func(c *Claim) error {
+		return c.SetIndexSlot3(data)
+	}
+}
+
+func WithIndexSlot4(data DataSlot) Option {
+	return func(c *Claim) error {
+		return c.SetIndexSlot4(data)
+	}
+}
+
+func WithValueSlot3(data DataSlot) Option {
+	return func(c *Claim) error {
+		return c.SetValueSlot3(data)
+	}
+}
+
+func WithValueSlot4(data DataSlot) Option {
+	return func(c *Claim) error {
+		return c.SetValueSlot4(data)
+	}
+}
+
+func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
+	c := &Claim{}
+	c.SetSchemaHash(schemaHash)
+	for _, o := range options {
+		err := o(c)
+		if err != nil {
+			return nil, err
 		}
 	}
-	if m.header.Version {
-		binary.LittleEndian.PutUint32(index[0][ClaimTypeLen+ClaimFlagsLen:], m.Version)
-	}
-	if m.header.Expiration {
-		binary.LittleEndian.PutUint64(value[0][ClaimRevNonceLen:], uint64(m.Expiration))
-	}
-	binary.LittleEndian.PutUint32(value[0][:], m.RevNonce)
+	return c, nil
 }
 
-// Unmarshal the Metadata from an entry
-func (m *Metadata) Unmarshal(e *merkletree.Entry) {
-	m.header.Unmarshal(e)
-	index := e.Index()
-	value := e.Value()
-	if m.header.Subject != ClaimSubjectSelf {
-		m.Subject = &core.ID{}
-	}
-	if m.header.Subject != ClaimSubjectSelf {
-		switch m.header.SubjectPos {
-		case ClaimSubjectPosIndex:
-			copy(m.Subject[:], index[1][:])
-		case ClaimSubjectPosValue:
-			copy(m.Subject[:], value[1][:])
-		default:
-			panic(fmt.Sprintf("Unexpected header.SubjectPos %v", m.header.SubjectPos))
-		}
-	}
-	if m.header.Version {
-		m.Version = binary.LittleEndian.Uint32(index[0][ClaimTypeLen+ClaimFlagsLen:])
-	}
-	if m.header.Expiration {
-		m.Expiration = int64(binary.LittleEndian.Uint64(value[0][ClaimRevNonceLen:]))
-	}
-	m.RevNonce = binary.LittleEndian.Uint32(value[0][:])
+func (c *Claim) SetSchemaHash(schema SchemaHash) {
+	copy(c.index[0][:schemaHashLn], schema[:])
 }
 
-type metadataJSON struct {
-	Type       ClaimType
-	Subject    ClaimSubject
-	SubjectPos ClaimSubjectPos
-	ID         *core.ID
-	Expiration *int64
-	Version    *uint32
-	RevNonce   uint32
+func (c *Claim) setSubject(s Subject) {
+	// clean first 3 bits
+	c.index[0][9] &= 0b11111000
+	c.index[0][9] |= byte(s)
 }
 
-func (m Metadata) MarshalJSON() ([]byte, error) {
-	var metadata metadataJSON
-	h := m.Header()
-	metadata.Type = h.Type
-	metadata.SubjectPos = h.SubjectPos
-	metadata.Subject = h.Subject
-	if h.Subject != ClaimSubjectSelf {
-		metadata.ID = m.Subject
+func (c *Claim) SetFlagExpiration(val bool) {
+	if val {
+		c.index[0][flagsByteIdx] |= byte(1) << flagExpirationBitIdx
+	} else {
+		c.index[0][flagsByteIdx] &= ^(byte(1) << flagExpirationBitIdx)
 	}
-	if h.Expiration {
-		metadata.Expiration = &m.Expiration
-	}
-	if h.Version {
-		metadata.Version = &m.Version
-	}
-	metadata.RevNonce = m.RevNonce
-	return json.Marshal(metadata)
 }
 
-func (m *Metadata) UnmarshalJSON(b []byte) error {
-	var metadata metadataJSON
-	if err := json.Unmarshal(b, &metadata); err != nil {
-		return err
+func (c *Claim) SetFlagUpdatable(val bool) {
+	if val {
+		c.index[0][flagsByteIdx] |= byte(1) << flagUpdatableBitIdx
+	} else {
+		c.index[0][flagsByteIdx] &= ^(byte(1) << flagUpdatableBitIdx)
 	}
-	m.header = ClaimHeader{
-		Type:       metadata.Type,
-		Subject:    metadata.Subject,
-		SubjectPos: metadata.SubjectPos,
-		Expiration: metadata.Expiration != nil,
-		Version:    metadata.Version != nil,
+}
+
+func (c *Claim) SetVersion(ver uint32) {
+	binary.LittleEndian.PutUint32(c.index[0][20:24], ver)
+}
+
+func (c *Claim) SetIndexID(id ID) {
+	c.resetValueID()
+	c.setSubject(SubjectOtherIdenIndex)
+	copy(c.index[1][:], id[:])
+}
+
+func (c *Claim) resetIndexID() {
+	var zeroID ID
+	copy(c.index[1][:], zeroID[:])
+}
+
+func (c *Claim) SetValueID(id ID) {
+	c.resetIndexID()
+	c.setSubject(SubjectOtherIdenValue)
+	copy(c.value[1][:], id[:])
+}
+
+func (c *Claim) resetValueID() {
+	var zeroID ID
+	copy(c.value[1][:], zeroID[:])
+}
+
+func (c *Claim) ResetID() {
+	c.resetIndexID()
+	c.resetValueID()
+	c.setSubject(SubjectSelf)
+}
+
+func (c *Claim) SetRevocationNonce(nonce uint64) {
+	binary.LittleEndian.PutUint64(c.value[0][:8], nonce)
+}
+
+func (c *Claim) SetExpirationDate(dt time.Time) {
+	binary.LittleEndian.PutUint64(c.value[0][8:16], uint64(dt.Unix()))
+}
+
+func (c *Claim) SetIndexSlot3(data DataSlot) error {
+	if !isInt253compatible(data) {
+		return ErrDataOverflow
 	}
-	if err := checkHeader(&m.header); err != nil {
-		return err
-	}
-	if m.header.Subject != ClaimSubjectSelf {
-		m.Subject = metadata.ID
-	}
-	if m.header.Expiration {
-		m.Expiration = *metadata.Expiration
-	}
-	if m.header.Version {
-		m.Version = *metadata.Version
-	}
-	m.RevNonce = metadata.RevNonce
+	copy(c.index[2][:], data[:])
 	return nil
+}
+
+func (c *Claim) SetIndexSlot4(data DataSlot) error {
+	if !isInt253compatible(data) {
+		return ErrDataOverflow
+	}
+	copy(c.index[3][:], data[:])
+	return nil
+}
+
+func (c *Claim) SetValueSlot3(data DataSlot) error {
+	if !isInt253compatible(data) {
+		return ErrDataOverflow
+	}
+	copy(c.value[2][:], data[:])
+	return nil
+}
+
+func (c *Claim) SetValueSlot4(data DataSlot) error {
+	if !isInt253compatible(data) {
+		return ErrDataOverflow
+	}
+	copy(c.value[3][:], data[:])
+	return nil
+}
+
+func isInt253compatible(data DataSlot) bool {
+	return data[len(data)-1]&int253mask == 0
+}
+
+func (c *Claim) TreeEntry() merkletree.Entry {
+	var e merkletree.Entry
+	for i := range c.index {
+		copy(e.Data[i][:], c.index[i][:])
+	}
+	for i := range c.value {
+		copy(e.Data[i+len(c.index)][:], c.value[i][:])
+	}
+	return e
 }
