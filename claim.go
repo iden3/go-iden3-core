@@ -154,7 +154,7 @@ func WithIndexData(slotA, slotB DataSlot) Option {
 	}
 }
 
-func WithValueSlot3(slotA, slotB DataSlot) Option {
+func WithValueData(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
 		return c.SetValueData(slotA, slotB)
 	}
