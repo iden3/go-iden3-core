@@ -148,27 +148,15 @@ func WithExpirationDate(dt time.Time) Option {
 	}
 }
 
-func WithIndexSlot3(data DataSlot) Option {
+func WithIndexData(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
-		return c.SetIndexSlot3(data)
+		return c.SetIndexData(slotA, slotB)
 	}
 }
 
-func WithIndexSlot4(data DataSlot) Option {
+func WithValueSlot3(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
-		return c.SetIndexSlot4(data)
-	}
-}
-
-func WithValueSlot3(data DataSlot) Option {
-	return func(c *Claim) error {
-		return c.SetValueSlot3(data)
-	}
-}
-
-func WithValueSlot4(data DataSlot) Option {
-	return func(c *Claim) error {
-		return c.SetValueSlot4(data)
+		return c.SetValueData(slotA, slotB)
 	}
 }
 
@@ -250,35 +238,23 @@ func (c *Claim) SetExpirationDate(dt time.Time) {
 	binary.LittleEndian.PutUint64(c.value[0][8:16], uint64(dt.Unix()))
 }
 
-func (c *Claim) SetIndexSlot3(data DataSlot) error {
-	if !isInt253compatible(data) {
+func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
+	if !isInt253compatible(slotA) || !isInt253compatible(slotB) {
 		return ErrDataOverflow
 	}
-	copy(c.index[2][:], data[:])
+
+	copy(c.index[2][:], slotA[:])
+	copy(c.index[3][:], slotB[:])
 	return nil
 }
 
-func (c *Claim) SetIndexSlot4(data DataSlot) error {
-	if !isInt253compatible(data) {
+func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
+	if !isInt253compatible(slotA) || !isInt253compatible(slotB) {
 		return ErrDataOverflow
 	}
-	copy(c.index[3][:], data[:])
-	return nil
-}
 
-func (c *Claim) SetValueSlot3(data DataSlot) error {
-	if !isInt253compatible(data) {
-		return ErrDataOverflow
-	}
-	copy(c.value[2][:], data[:])
-	return nil
-}
-
-func (c *Claim) SetValueSlot4(data DataSlot) error {
-	if !isInt253compatible(data) {
-		return ErrDataOverflow
-	}
-	copy(c.value[3][:], data[:])
+	copy(c.value[2][:], slotA[:])
+	copy(c.value[3][:], slotB[:])
 	return nil
 }
 
