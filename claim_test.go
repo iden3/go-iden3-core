@@ -3,6 +3,8 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -54,4 +56,59 @@ func TestMerketreeEntryHash(t *testing.T) {
 	require.Equal(t,
 		"2351654555892372227640888372176282444150254868378439619268573230312091195718",
 		string(hvt))
+}
+
+func TestClaim_GetSchemaHash(t *testing.T) {
+	var sc SchemaHash
+	n, err := rand.Read(sc[:])
+	require.NoError(t, err)
+	require.Equal(t, schemaHashLn, n)
+	claim, err := NewClaim(sc)
+	require.NoError(t, err)
+	require.True(t, bytes.Equal(sc[:], claim.index[0][:schemaHashLn]))
+}
+
+func TestClaim_GetFlagUpdatable(t *testing.T) {
+	var sc SchemaHash
+	claim, err := NewClaim(sc)
+	require.NoError(t, err)
+	require.False(t, claim.GetFlagUpdatable())
+
+	claim.SetFlagUpdatable(true)
+	require.True(t, claim.GetFlagUpdatable())
+
+	claim.SetFlagUpdatable(false)
+	require.False(t, claim.GetFlagUpdatable())
+
+	claim, err = NewClaim(sc, WithFlagUpdatable(true))
+	require.NoError(t, err)
+	require.True(t, claim.GetFlagUpdatable())
+
+	claim, err = NewClaim(sc, WithFlagUpdatable(false))
+	require.NoError(t, err)
+	require.False(t, claim.GetFlagUpdatable())
+}
+
+func TestClaim_GetVersion(t *testing.T) {
+	var sc SchemaHash
+	ver := uint32(rand.Int63n(math.MaxUint32))
+	claim, err := NewClaim(sc, WithVersion(ver))
+	require.NoError(t, err)
+	require.Equal(t, ver, claim.GetVersion())
+
+	ver2 := uint32(rand.Int63n(math.MaxUint32))
+	claim.SetVersion(ver2)
+	require.Equal(t, ver2, claim.GetVersion())
+}
+
+func TestClaim_GetRevocationNonce(t *testing.T) {
+	var sc SchemaHash
+	nonce := uint64(rand.Int63())
+	claim, err := NewClaim(sc, WithRevocationNonce(nonce))
+	require.NoError(t, err)
+	require.Equal(t, nonce, claim.GetRevocationNonce())
+
+	nonce2 := uint64(rand.Int63())
+	claim.SetRevocationNonce(nonce2)
+	require.Equal(t, nonce2, claim.GetRevocationNonce())
 }

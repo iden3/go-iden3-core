@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -42,10 +43,17 @@ Value:
 
 var ErrDataOverflow = errors.New("data should not take more then 253 bits")
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
+var ErrNoID = errors.New("ID is not set")
 
 const schemaHashLn = 16
 
 type SchemaHash [schemaHashLn]byte
+
+func (sc SchemaHash) MarshalText() ([]byte, error) {
+	dst := make([]byte, hex.EncodedLen(len(sc)))
+	hex.Encode(dst, sc[:])
+	return dst, nil
+}
 
 // DataSlot length is 253 bits, highest 3 bits should be zeros
 type DataSlot [32]byte
@@ -176,10 +184,23 @@ func (c *Claim) SetSchemaHash(schema SchemaHash) {
 	copy(c.index[0][:schemaHashLn], schema[:])
 }
 
+func (c *Claim) GetSchemaHash() SchemaHash {
+	var schemaHash SchemaHash
+	copy(schemaHash[:], c.index[0][:schemaHashLn])
+	return schemaHash
+}
+
 func (c *Claim) setSubject(s Subject) {
 	// clean first 3 bits
 	c.index[0][9] &= 0b11111000
 	c.index[0][9] |= byte(s)
+}
+
+func (c *Claim) getSubject() Subject {
+	sbj := c.index[0][9]
+	// clean all except first 3 bits
+	sbj &= 0b00000111
+	return Subject(sbj)
 }
 
 func (c *Claim) SetFlagExpiration(val bool) {
@@ -198,8 +219,17 @@ func (c *Claim) SetFlagUpdatable(val bool) {
 	}
 }
 
+func (c *Claim) GetFlagUpdatable() bool {
+	mask := byte(1) << flagUpdatableBitIdx
+	return c.index[0][flagsByteIdx]&mask > 0
+}
+
 func (c *Claim) SetVersion(ver uint32) {
 	binary.LittleEndian.PutUint32(c.index[0][20:24], ver)
+}
+
+func (c *Claim) GetVersion() uint32 {
+	return binary.LittleEndian.Uint32(c.index[0][20:24])
 }
 
 func (c *Claim) SetIndexID(id ID) {
@@ -213,6 +243,12 @@ func (c *Claim) resetIndexID() {
 	copy(c.index[1][:], zeroID[:])
 }
 
+func (c *Claim) getIndexID() ID {
+	var id ID
+	copy(id[:], c.index[1][:])
+	return id
+}
+
 func (c *Claim) SetValueID(id ID) {
 	c.resetIndexID()
 	c.setSubject(SubjectOtherIdenValue)
@@ -224,18 +260,44 @@ func (c *Claim) resetValueID() {
 	copy(c.value[1][:], zeroID[:])
 }
 
+func (c *Claim) getValueID() ID {
+	var id ID
+	copy(id[:], c.value[1][:])
+	return id
+}
+
 func (c *Claim) ResetID() {
 	c.resetIndexID()
 	c.resetValueID()
 	c.setSubject(SubjectSelf)
 }
 
+func (c *Claim) GetID() (ID, error) {
+	var id ID
+	switch c.getSubject() {
+	case SubjectOtherIdenIndex:
+		return c.getIndexID(), nil
+	case SubjectOtherIdenValue:
+		return c.getValueID(), nil
+	default:
+		return id, ErrNoID
+	}
+}
+
 func (c *Claim) SetRevocationNonce(nonce uint64) {
 	binary.LittleEndian.PutUint64(c.value[0][:8], nonce)
 }
 
+func (c *Claim) GetRevocationNonce() uint64 {
+	return binary.LittleEndian.Uint64(c.value[0][:8])
+}
+
 func (c *Claim) SetExpirationDate(dt time.Time) {
 	binary.LittleEndian.PutUint64(c.value[0][8:16], uint64(dt.Unix()))
+}
+
+func (c *Claim) GetExpirationDate() time.Time {
+	return time.Unix(int64(binary.LittleEndian.Uint64(c.value[0][8:16])), 0)
 }
 
 func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
@@ -271,4 +333,15 @@ func (c *Claim) TreeEntry() merkletree.Entry {
 		copy(e.Data[i+len(c.index)][:], c.value[i][:])
 	}
 	return e
+}
+
+func (c *Claim) Clone() *Claim {
+	var newClaim Claim
+	for i := range c.index {
+		copy(newClaim.index[i][:], c.index[i][:])
+	}
+	for i := range c.value {
+		copy(newClaim.value[i][:], c.value[i][:])
+	}
+	return &newClaim
 }
