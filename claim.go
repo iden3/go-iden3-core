@@ -93,13 +93,6 @@ const (
 
 type Option func(*Claim) error
 
-func WithFlagExpiration(val bool) Option {
-	return func(c *Claim) error {
-		c.SetFlagExpiration(val)
-		return nil
-	}
-}
-
 func WithFlagUpdatable(val bool) Option {
 	return func(c *Claim) error {
 		c.SetFlagUpdatable(val)
@@ -203,12 +196,17 @@ func (c *Claim) getSubject() Subject {
 	return Subject(sbj)
 }
 
-func (c *Claim) SetFlagExpiration(val bool) {
+func (c *Claim) setFlagExpiration(val bool) {
 	if val {
 		c.index[0][flagsByteIdx] |= byte(1) << flagExpirationBitIdx
 	} else {
 		c.index[0][flagsByteIdx] &= ^(byte(1) << flagExpirationBitIdx)
 	}
+}
+
+func (c *Claim) getFlagExpiration() bool {
+	mask := byte(1) << flagExpirationBitIdx
+	return c.index[0][flagsByteIdx]&mask > 0
 }
 
 func (c *Claim) SetFlagUpdatable(val bool) {
@@ -293,11 +291,25 @@ func (c *Claim) GetRevocationNonce() uint64 {
 }
 
 func (c *Claim) SetExpirationDate(dt time.Time) {
+	c.setFlagExpiration(true)
 	binary.LittleEndian.PutUint64(c.value[0][8:16], uint64(dt.Unix()))
 }
 
-func (c *Claim) GetExpirationDate() time.Time {
-	return time.Unix(int64(binary.LittleEndian.Uint64(c.value[0][8:16])), 0)
+func (c *Claim) ResetExpirationDate() {
+	c.setFlagExpiration(false)
+	memset(c.value[0][8:16], 0)
+}
+
+// GetExpirationDate returns expiration date and flag. Flag is true if
+// expiration date is present, false if null.
+func (c *Claim) GetExpirationDate() (time.Time, bool) {
+	if c.getFlagExpiration() {
+		expirationDate :=
+			time.Unix(int64(binary.LittleEndian.Uint64(c.value[0][8:16])), 0)
+		return expirationDate, true
+	} else {
+		return time.Time{}, false
+	}
 }
 
 func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
@@ -344,4 +356,14 @@ func (c *Claim) Clone() *Claim {
 		copy(newClaim.value[i][:], c.value[i][:])
 	}
 	return &newClaim
+}
+
+func memset(arr []byte, v byte) {
+	if len(arr) == 0 {
+		return
+	}
+	arr[0] = v
+	for ptr := 1; ptr < len(arr); ptr *= 2 {
+		copy(arr[ptr:], arr[:ptr])
+	}
 }

@@ -6,13 +6,14 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewClaim(t *testing.T) {
 	var schemaHash SchemaHash
-	claim, err := NewClaim(schemaHash, WithFlagExpiration(true))
+	claim, err := NewClaim(schemaHash, WithFlagUpdatable(true))
 	require.NoError(t, err)
 	require.Zero(t, claim.value)
 	for i := 1; i < 4; i++ {
@@ -20,12 +21,16 @@ func TestNewClaim(t *testing.T) {
 	}
 	for i := 0; i < 32; i++ {
 		if i == 16 {
-			require.Equal(t, byte(0b1000), claim.index[0][i],
+			require.Equal(t, byte(0b10000), claim.index[0][i],
 				int253ToString(claim.index[0]))
 		} else {
 			require.Zero(t, claim.index[0][i], int253ToString(claim.index[0]))
 		}
 	}
+
+	dt, ok := claim.GetExpirationDate()
+	require.True(t, dt.IsZero())
+	require.False(t, ok)
 }
 
 func int253ToString(i int253) string {
@@ -38,7 +43,7 @@ func int253ToString(i int253) string {
 
 func TestMerketreeEntryHash(t *testing.T) {
 	var schemaHash SchemaHash
-	claim, err := NewClaim(schemaHash, WithFlagExpiration(true))
+	claim, err := NewClaim(schemaHash, WithFlagUpdatable(true))
 	require.NoError(t, err)
 	e := claim.TreeEntry()
 
@@ -48,7 +53,7 @@ func TestMerketreeEntryHash(t *testing.T) {
 	hit, err := hi.MarshalText()
 	require.NoError(t, err)
 	require.Equal(t,
-		"19580667809762269956733050858122189693671367180755664752787058228636503413656",
+		"19905260441950906049955646784794273651462264973332746773406911374272567544299",
 		string(hit))
 
 	hvt, err := hv.MarshalText()
@@ -111,4 +116,26 @@ func TestClaim_GetRevocationNonce(t *testing.T) {
 	nonce2 := uint64(rand.Int63())
 	claim.SetRevocationNonce(nonce2)
 	require.Equal(t, nonce2, claim.GetRevocationNonce())
+}
+
+func TestClaim_ExpirationDate(t *testing.T) {
+	var sh SchemaHash
+	expDate := time.Now().Truncate(time.Second)
+	c1, err := NewClaim(sh, WithExpirationDate(expDate))
+	require.NoError(t, err)
+
+	expDate2, ok := c1.GetExpirationDate()
+	require.True(t, ok)
+	require.True(t, expDate2.Equal(expDate), "%v != %v", expDate, expDate2)
+
+	c1.ResetExpirationDate()
+	expDate2, ok = c1.GetExpirationDate()
+	require.False(t, ok)
+	require.True(t, expDate2.IsZero())
+
+	expDate3 := expDate.Add(10 * time.Second)
+	c1.SetExpirationDate(expDate3)
+	expDate2, ok = c1.GetExpirationDate()
+	require.True(t, ok)
+	require.True(t, expDate2.Equal(expDate3), "%v != %v", expDate, expDate3)
 }
