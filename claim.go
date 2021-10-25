@@ -4,8 +4,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"time"
 
+	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql"
 )
 
@@ -41,7 +43,7 @@ Value:
  v_3: [ 253 bits] 0
 */
 
-var ErrDataOverflow = errors.New("data should not take more then 253 bits")
+var ErrDataOverflow = errors.New("data does not fits SNARK size")
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 var ErrNoID = errors.New("ID is not set")
 
@@ -57,6 +59,25 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 
 // DataSlot length is 253 bits, highest 3 bits should be zeros
 type DataSlot [32]byte
+
+func (ds DataSlot) ToInt() *big.Int {
+	return new(big.Int).SetBytes(utils.SwapEndianness(ds[:]))
+}
+
+func NewDataSlotFromInt(i *big.Int) (DataSlot, error) {
+	var s DataSlot
+	bs := i.Bytes()
+	// may be this check is redundant because of CheckBigIntInField, but just
+	// in case.
+	if len(bs) > len(s) {
+		return s, ErrDataOverflow
+	}
+	if !utils.CheckBigIntInField(i) {
+		return s, ErrDataOverflow
+	}
+	copy(s[:], utils.SwapEndianness(bs))
+	return s, nil
+}
 
 type int253 [32]byte
 
@@ -88,7 +109,6 @@ const (
 	flagsByteIdx         = 16
 	flagExpirationBitIdx = 3
 	flagUpdatableBitIdx  = 4
-	int253mask           = byte(0b11100000)
 )
 
 type Option func(*Claim) error
@@ -313,7 +333,8 @@ func (c *Claim) GetExpirationDate() (time.Time, bool) {
 }
 
 func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
-	if !isInt253compatible(slotA) || !isInt253compatible(slotB) {
+	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
+	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
 	}
 
@@ -323,17 +344,14 @@ func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
 }
 
 func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
-	if !isInt253compatible(slotA) || !isInt253compatible(slotB) {
+	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
+	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
 	}
 
 	copy(c.value[2][:], slotA[:])
 	copy(c.value[3][:], slotB[:])
 	return nil
-}
-
-func isInt253compatible(data DataSlot) bool {
-	return data[len(data)-1]&int253mask == 0
 }
 
 func (c *Claim) TreeEntry() merkletree.Entry {

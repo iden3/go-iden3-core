@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math"
+	"math/big"
 	"math/rand"
 	"testing"
 	"time"
@@ -138,4 +139,48 @@ func TestClaim_ExpirationDate(t *testing.T) {
 	expDate2, ok = c1.GetExpirationDate()
 	require.True(t, ok)
 	require.True(t, expDate2.Equal(expDate3), "%v != %v", expDate, expDate3)
+}
+
+func toInt(t testing.TB, s string) *big.Int {
+	t.Helper()
+	i, ok := new(big.Int).SetString(s, 10)
+	require.True(t, ok, s)
+	return i
+}
+
+func TestIntSize(t *testing.T) {
+	iX := toInt(t, "16243864111864693853212588481963275789994876191154110553066821559749894481761")
+	iY := toInt(t, "7078462697308959301666117070269719819629678436794910510259518359026273676830")
+	vX := toInt(t, "12448278679517811784508557734102986855579744384337338465055621486538311281772")
+	vY := toInt(t, "9260608685281348956030279125705000716237952776955782848598673606545494194823")
+
+	ixSlot, err := NewDataSlotFromInt(iX)
+	require.NoError(t, err)
+	iySlot, err := NewDataSlotFromInt(iY)
+	require.NoError(t, err)
+	vxSlot, err := NewDataSlotFromInt(vX)
+	require.NoError(t, err)
+	vySlot, err := NewDataSlotFromInt(vY)
+	require.NoError(t, err)
+	_, err = NewClaim(SchemaHash{},
+		WithIndexData(ixSlot, iySlot),
+		WithValueData(vxSlot, vySlot))
+	require.NoError(t, err)
+}
+
+func TestNewDataSlotFromInt(t *testing.T) {
+	ds, err := NewDataSlotFromInt(toInt(t,
+		"16243864111864693853212588481963275789994876191154110553066821559749894481761"))
+	require.NoError(t, err)
+	expected := DataSlot{
+		0x61, 0x27, 0xa0, 0xeb, 0x58, 0x7a, 0x6c, 0x2b,
+		0x4a, 0xa8, 0xc1, 0x2e, 0xf5, 0x01, 0xb2, 0xdb,
+		0xd0, 0x9c, 0xb1, 0xa5, 0x9c, 0x83, 0x42, 0x57,
+		0x91, 0xa5, 0x20, 0xbf, 0x86, 0xb3, 0xe9, 0x23,
+	}
+	require.Equal(t, expected, ds)
+
+	_, err = NewDataSlotFromInt(toInt(t,
+		"9916243864111864693853212588481963275789994876191154110553066821559749894481761"))
+	require.EqualError(t, err, ErrDataOverflow.Error())
 }
