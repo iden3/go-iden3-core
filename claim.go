@@ -205,12 +205,12 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 
 func (c *Claim) setSubject(s Subject) {
 	// clean first 3 bits
-	c.index[0][9] &= 0b11111000
-	c.index[0][9] |= byte(s)
+	c.index[0][flagsByteIdx] &= 0b11111000
+	c.index[0][flagsByteIdx] |= byte(s)
 }
 
 func (c *Claim) getSubject() Subject {
-	sbj := c.index[0][9]
+	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
 	return Subject(sbj)
