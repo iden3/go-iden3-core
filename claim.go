@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -47,6 +48,23 @@ var ErrDataOverflow = errors.New("data does not fits SNARK size")
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 var ErrNoID = errors.New("ID is not set")
 
+type ErrSlotOverflow struct {
+	Field SlotName
+}
+
+func (e ErrSlotOverflow) Error() string {
+	return fmt.Sprintf("Slot %v not in field (too large)", e.Field)
+}
+
+type SlotName string
+
+const (
+	SlotNameIndexA = SlotName("IndexA")
+	SlotNameIndexB = SlotName("IndexB")
+	SlotNameValueA = SlotName("ValueA")
+	SlotNameValueB = SlotName("ValueB")
+)
+
 const schemaHashLn = 16
 
 type SchemaHash [schemaHashLn]byte
@@ -62,6 +80,17 @@ type DataSlot [32]byte
 
 func (ds DataSlot) ToInt() *big.Int {
 	return new(big.Int).SetBytes(utils.SwapEndianness(ds[:]))
+}
+
+func (ds *DataSlot) SetInt(value *big.Int) error {
+	if !utils.CheckBigIntInField(value) {
+		return ErrDataOverflow
+	}
+
+	val := utils.SwapEndianness(value.Bytes())
+	copy((*ds)[:], val)
+	memset((*ds)[len(val):], 0)
+	return nil
 }
 
 func NewDataSlotFromInt(i *big.Int) (DataSlot, error) {
@@ -173,9 +202,33 @@ func WithIndexData(slotA, slotB DataSlot) Option {
 	}
 }
 
+func WithIndexDataBytes(slotA, slotB []byte) Option {
+	return func(c *Claim) error {
+		return c.SetIndexDataBytes(slotA, slotB)
+	}
+}
+
+func WithIndexDataInts(slotA, slotB *big.Int) Option {
+	return func(c *Claim) error {
+		return c.SetIndexDataInts(slotA, slotB)
+	}
+}
+
 func WithValueData(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
 		return c.SetValueData(slotA, slotB)
+	}
+}
+
+func WithValueDataBytes(slotA, slotB []byte) Option {
+	return func(c *Claim) error {
+		return c.SetValueDataBytes(slotA, slotB)
+	}
+}
+
+func WithValueDataInts(slotA, slotB *big.Int) Option {
+	return func(c *Claim) error {
+		return c.SetValueDataInts(slotA, slotB)
 	}
 }
 
@@ -341,6 +394,22 @@ func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
 	return nil
 }
 
+func (c *Claim) SetIndexDataBytes(slotA, slotB []byte) error {
+	err := setSlotBytes(&(c.index[2]), slotA, SlotNameIndexA)
+	if err != nil {
+		return err
+	}
+	return setSlotBytes(&(c.index[3]), slotB, SlotNameIndexB)
+}
+
+func (c *Claim) SetIndexDataInts(slotA, slotB *big.Int) error {
+	err := setSlotInt(&c.index[2], slotA, SlotNameIndexA)
+	if err != nil {
+		return err
+	}
+	return setSlotInt(&c.index[3], slotB, SlotNameIndexB)
+}
+
 func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
@@ -350,6 +419,42 @@ func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
 	copy(c.value[2][:], slotA[:])
 	copy(c.value[3][:], slotB[:])
 	return nil
+}
+
+func (c *Claim) SetValueDataBytes(slotA, slotB []byte) error {
+	err := setSlotBytes(&(c.value[2]), slotA, SlotNameValueA)
+	if err != nil {
+		return err
+	}
+	return setSlotBytes(&(c.value[3]), slotB, SlotNameValueB)
+}
+
+func (c *Claim) SetValueDataInts(slotA, slotB *big.Int) error {
+	err := setSlotInt(&c.value[2], slotA, SlotNameValueA)
+	if err != nil {
+		return err
+	}
+	return setSlotInt(&c.value[3], slotB, SlotNameValueB)
+}
+
+func setSlotBytes(slot *DataSlot, value []byte, slotName SlotName) error {
+	if len(value) > len(*slot) {
+		return ErrSlotOverflow{slotName}
+	}
+	copy((*slot)[:], value)
+	if !utils.CheckBigIntInField(slot.ToInt()) {
+		return ErrSlotOverflow{slotName}
+	}
+	memset((*slot)[len(value):], 0)
+	return nil
+}
+
+func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
+	err := slot.SetInt(value)
+	if err == ErrDataOverflow {
+		return ErrSlotOverflow{slotName}
+	}
+	return err
 }
 
 func (c *Claim) TreeEntry() merkletree.Entry {
