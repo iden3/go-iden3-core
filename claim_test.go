@@ -23,9 +23,9 @@ func TestNewClaim(t *testing.T) {
 	for i := 0; i < 32; i++ {
 		if i == 16 {
 			require.Equal(t, byte(0b10000), claim.index[0][i],
-				int253ToString(claim.index[0]))
+				claim.index[0].String())
 		} else {
-			require.Zero(t, claim.index[0][i], int253ToString(claim.index[0]))
+			require.Zero(t, claim.index[0][i], claim.index[0].String())
 		}
 	}
 
@@ -34,10 +34,10 @@ func TestNewClaim(t *testing.T) {
 	require.False(t, ok)
 }
 
-func int253ToString(i int253) string {
+func (ds DataSlot) String() string {
 	var b bytes.Buffer
-	for j := len(i) - 1; j >= 0; j-- {
-		b.WriteString(fmt.Sprintf("% 08b", i[j]))
+	for j := len(ds) - 1; j >= 0; j-- {
+		b.WriteString(fmt.Sprintf("% 08b", ds[j]))
 	}
 	return b.String()
 }

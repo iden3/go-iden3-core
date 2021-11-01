@@ -79,11 +79,9 @@ func NewDataSlotFromInt(i *big.Int) (DataSlot, error) {
 	return s, nil
 }
 
-type int253 [32]byte
-
 type Claim struct {
-	index [4]int253
-	value [4]int253
+	index [4]DataSlot
+	value [4]DataSlot
 }
 
 type Subject byte
