@@ -147,6 +147,8 @@ func CheckChecksum(id ID) bool {
 func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 	var idGenesisBytes [27]byte
 	rootBytes := hash.Bytes()
+	rootBytes = merkletree.SwapEndianness(rootBytes)
+	// we take last 27 bytes, because of swapped endianness
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
 	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id
@@ -163,4 +165,14 @@ func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash)
 		panic(err)
 	}
 	return merkletree.NewHashFromBigInt(idenState)
+}
+
+// CalculateGenesisID calculate genesis id based on provided claims tree root
+func CalculateGenesisID(clr *merkletree.Hash) (*ID, error) {
+	idenState, err := merkletree.HashElems(clr.BigInt(),
+		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	if err != nil {
+		return nil, err
+	}
+	return IdGenesisFromIdenState(idenState), nil
 }
