@@ -6,8 +6,8 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/iden3/go-iden3-core/merkletree"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	"github.com/iden3/go-merkletree-sql"
 )
 
 var (
@@ -147,6 +147,8 @@ func CheckChecksum(id ID) bool {
 func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 	var idGenesisBytes [27]byte
 	rootBytes := hash.Bytes()
+	rootBytes = merkletree.SwapEndianness(rootBytes)
+	// we take last 27 bytes, because of swapped endianness
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
 	id := NewID(TypeBJP0, idGenesisBytes)
 	return &id
@@ -154,15 +156,23 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 
 // IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
 func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
-	bi, err := merkletree.ElemBytesToPoseidonInput(merkletree.ElemBytes(*clr),
+	bi := merkletree.ElemBytesToBigInts([]merkletree.ElemBytes{
+		merkletree.ElemBytes(*clr),
 		merkletree.ElemBytes(*rer),
-		merkletree.ElemBytes(*ror))
-	if err != nil {
-		panic(err)
-	}
-	idenState, err := poseidon.PoseidonHash(bi)
+		merkletree.ElemBytes(*ror)})
+	idenState, err := poseidon.Hash(bi)
 	if err != nil {
 		panic(err)
 	}
 	return merkletree.NewHashFromBigInt(idenState)
+}
+
+// CalculateGenesisID calculate genesis id based on provided claims tree root
+func CalculateGenesisID(clr *merkletree.Hash) (*ID, error) {
+	idenState, err := merkletree.HashElems(clr.BigInt(),
+		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	if err != nil {
+		return nil, err
+	}
+	return IdGenesisFromIdenState(idenState), nil
 }
