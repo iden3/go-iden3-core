@@ -1,0 +1,27 @@
+name: test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        containers:
+          - 1.17.2-bullseye
+    runs-on: ubuntu-20.04
+    container: golang:${{matrix.containers}}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            /go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - run: go test -race -timeout=60s ./...
