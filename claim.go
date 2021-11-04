@@ -127,8 +127,9 @@ const (
 type IDPosition uint8
 
 const (
-	idPositionUndefined IDPosition = iota
-	IDPositionIndex
+	// IDPositionIndex means ID value is in index slots
+	IDPositionIndex IDPosition = iota + 1 // value 0 is position undefined
+	// IDPositionValue means ID value is in value slots
 	IDPositionValue
 )
 
