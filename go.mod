@@ -3,8 +3,8 @@ module github.com/iden3/go-iden3-core
 go 1.17
 
 require (
-	github.com/iden3/go-iden3-crypto v0.0.9
-	github.com/iden3/go-merkletree-sql v1.0.0-pre6
+	github.com/iden3/go-iden3-crypto v0.0.10
+	github.com/iden3/go-merkletree-sql v1.0.0-pre7
 	github.com/mr-tron/base58 v1.2.0
 	github.com/stretchr/testify v1.7.0
 )
