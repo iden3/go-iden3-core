@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,10 +20,10 @@ func (hash Hash) Hex() string {
 	return fmt.Sprintf("0x%s", hex.EncodeToString(hash[:]))
 }
 
-// hashBytes performs a Keccak256 hash over the bytes
-func hashBytes(b ...[]byte) (hash Hash) {
-	h := crypto.Keccak256(b...)
-	copy(hash[:], h)
+// hashBytes performs a sha256 hash over the bytes
+func hashBytes(b []byte) (hash Hash) {
+	h := sha256.Sum256(b)
+	copy(hash[:], h[:])
 	return hash
 }
 
@@ -37,7 +37,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis0[:], genesis032bytes[:])
 	id0 := NewID(typ0, genesis0)
 	// Check ID0
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf", id0.String())
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", id0.String())
 	// Generate ID1
 	var typ1 [2]byte
 	typ1Hex, _ := hex.DecodeString("0001")
@@ -47,7 +47,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis1[:], genesis132bytes[:])
 	id1 := NewID(typ1, genesis1)
 	// Check ID1
-	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2Xh6", id1.String())
+	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHbAf", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
 	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
@@ -57,21 +57,21 @@ func TestIDparsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
 		id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	assert.Equal(t, "1N7d2qVEJeqnYAWVi5Cq6PLj6GwxaW6FYcfmY2Xh6",
+	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHbAf",
 		id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
 		id0FromString.String())
 }
 

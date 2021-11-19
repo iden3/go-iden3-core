@@ -5,9 +5,9 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree-sql"
+	"github.com/mr-tron/base58"
 )
 
 var (
@@ -79,7 +79,10 @@ func (id1 *ID) Equals(id2 *ID) bool {
 
 // IDFromString returns the ID from a given string
 func IDFromString(s string) (ID, error) {
-	b := base58.Decode(s)
+	b, err := base58.Decode(s)
+	if err != nil {
+		return ID{}, err
+	}
 	return IDFromBytes(b)
 }
 
