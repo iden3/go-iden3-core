@@ -44,10 +44,20 @@ Value:
  v_3: [ 253 bits] 0
 */
 
+// ErrDataOverflow means that given *big.Int value does not fit in Field Q
+// e.g. greater than Q constant:
+// 21888242871839275222246405745257275088548364400416034343698204186575808495617
 var ErrDataOverflow = errors.New("data does not fits SNARK size")
+
+// ErrIncorrectIDPosition means that passed position is not one of predefined:
+// IDPositionIndex or IDPositionValue
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
+
+// ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
+// ErrSlotOverflow means some DataSlow overflows Q Field. And wraps the name
+// of overflowed slot.
 type ErrSlotOverflow struct {
 	Field SlotName
 }
@@ -141,6 +151,7 @@ const (
 
 type Option func(*Claim) error
 
+// WithFlagUpdatable sets claim's flag `updatable`
 func WithFlagUpdatable(val bool) Option {
 	return func(c *Claim) error {
 		c.SetFlagUpdatable(val)
@@ -148,6 +159,7 @@ func WithFlagUpdatable(val bool) Option {
 	}
 }
 
+// WithVersion sets claim's version
 func WithVersion(ver uint32) Option {
 	return func(c *Claim) error {
 		c.SetVersion(ver)
@@ -155,6 +167,7 @@ func WithVersion(ver uint32) Option {
 	}
 }
 
+// WithIndexID sets ID to claim's index
 func WithIndexID(id ID) Option {
 	return func(c *Claim) error {
 		c.SetIndexID(id)
@@ -162,6 +175,7 @@ func WithIndexID(id ID) Option {
 	}
 }
 
+// WithValueID sets ID to claim's value
 func WithValueID(id ID) Option {
 	return func(c *Claim) error {
 		c.SetValueID(id)
@@ -169,6 +183,7 @@ func WithValueID(id ID) Option {
 	}
 }
 
+// WithID sets ID to claim's index or value depending on `pos`.
 func WithID(id ID, pos IDPosition) Option {
 	return func(c *Claim) error {
 		switch pos {
@@ -183,6 +198,7 @@ func WithID(id ID, pos IDPosition) Option {
 	}
 }
 
+// WithRevocationNonce sets claim's revocation nonce.
 func WithRevocationNonce(nonce uint64) Option {
 	return func(c *Claim) error {
 		c.SetRevocationNonce(nonce)
@@ -190,6 +206,7 @@ func WithRevocationNonce(nonce uint64) Option {
 	}
 }
 
+// WithExpirationDate sets claim's expiration date to `dt`.
 func WithExpirationDate(dt time.Time) Option {
 	return func(c *Claim) error {
 		c.SetExpirationDate(dt)
@@ -197,42 +214,56 @@ func WithExpirationDate(dt time.Time) Option {
 	}
 }
 
+// WithIndexData sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithIndexData(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
 		return c.SetIndexData(slotA, slotB)
 	}
 }
 
+// WithIndexDataBytes sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithIndexDataBytes(slotA, slotB []byte) Option {
 	return func(c *Claim) error {
 		return c.SetIndexDataBytes(slotA, slotB)
 	}
 }
 
+// WithIndexDataInts sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithIndexDataInts(slotA, slotB *big.Int) Option {
 	return func(c *Claim) error {
 		return c.SetIndexDataInts(slotA, slotB)
 	}
 }
 
+// WithValueData sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithValueData(slotA, slotB DataSlot) Option {
 	return func(c *Claim) error {
 		return c.SetValueData(slotA, slotB)
 	}
 }
 
+// WithValueDataBytes sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithValueDataBytes(slotA, slotB []byte) Option {
 	return func(c *Claim) error {
 		return c.SetValueDataBytes(slotA, slotB)
 	}
 }
 
+// WithValueDataInts sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func WithValueDataInts(slotA, slotB *big.Int) Option {
 	return func(c *Claim) error {
 		return c.SetValueDataInts(slotA, slotB)
 	}
 }
 
+// NewClaim creates new Claim with specified SchemaHash and optional
+// values of other fields passed using Option(s).
 func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 	c := &Claim{}
 	c.SetSchemaHash(schemaHash)
@@ -245,10 +276,12 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 	return c, nil
 }
 
+// SetSchemaHash updates claim's schema hash.
 func (c *Claim) SetSchemaHash(schema SchemaHash) {
 	copy(c.index[0][:schemaHashLn], schema[:])
 }
 
+// GetSchemaHash return copy of claim's schema hash.
 func (c *Claim) GetSchemaHash() SchemaHash {
 	var schemaHash SchemaHash
 	copy(schemaHash[:], c.index[0][:schemaHashLn])
@@ -281,6 +314,7 @@ func (c *Claim) getFlagExpiration() bool {
 	return c.index[0][flagsByteIdx]&mask > 0
 }
 
+// SetFlagUpdatable sets claim's flag `updatable`
 func (c *Claim) SetFlagUpdatable(val bool) {
 	if val {
 		c.index[0][flagsByteIdx] |= byte(1) << flagUpdatableBitIdx
@@ -289,19 +323,23 @@ func (c *Claim) SetFlagUpdatable(val bool) {
 	}
 }
 
+// GetFlagUpdatable returns claim's flag `updatable`
 func (c *Claim) GetFlagUpdatable() bool {
 	mask := byte(1) << flagUpdatableBitIdx
 	return c.index[0][flagsByteIdx]&mask > 0
 }
 
+// SetVersion sets claim's version
 func (c *Claim) SetVersion(ver uint32) {
 	binary.LittleEndian.PutUint32(c.index[0][20:24], ver)
 }
 
+// GetVersion returns claim's version
 func (c *Claim) GetVersion() uint32 {
 	return binary.LittleEndian.Uint32(c.index[0][20:24])
 }
 
+// SetIndexID sets id to index. Removes id from value if any.
 func (c *Claim) SetIndexID(id ID) {
 	c.resetValueID()
 	c.setSubject(SubjectOtherIdenIndex)
@@ -319,6 +357,7 @@ func (c *Claim) getIndexID() ID {
 	return id
 }
 
+// SetValueID sets id to value. Removes id from index if any.
 func (c *Claim) SetValueID(id ID) {
 	c.resetIndexID()
 	c.setSubject(SubjectOtherIdenValue)
@@ -336,12 +375,15 @@ func (c *Claim) getValueID() ID {
 	return id
 }
 
+// ResetID deletes ID from index and from value.
 func (c *Claim) ResetID() {
 	c.resetIndexID()
 	c.resetValueID()
 	c.setSubject(SubjectSelf)
 }
 
+// GetID returns ID from claim's index of value.
+// Returns error ErrNoID if ID is not set.
 func (c *Claim) GetID() (ID, error) {
 	var id ID
 	switch c.getSubject() {
@@ -354,19 +396,23 @@ func (c *Claim) GetID() (ID, error) {
 	}
 }
 
+// SetRevocationNonce sets claim's revocation nonce
 func (c *Claim) SetRevocationNonce(nonce uint64) {
 	binary.LittleEndian.PutUint64(c.value[0][:8], nonce)
 }
 
+// GetRevocationNonce returns revocation nonce
 func (c *Claim) GetRevocationNonce() uint64 {
 	return binary.LittleEndian.Uint64(c.value[0][:8])
 }
 
+// SetExpirationDate sets expiration date to dt
 func (c *Claim) SetExpirationDate(dt time.Time) {
 	c.setFlagExpiration(true)
 	binary.LittleEndian.PutUint64(c.value[0][8:16], uint64(dt.Unix()))
 }
 
+// ResetExpirationDate removes expiration date from claim
 func (c *Claim) ResetExpirationDate() {
 	c.setFlagExpiration(false)
 	memset(c.value[0][8:16], 0)
@@ -379,11 +425,12 @@ func (c *Claim) GetExpirationDate() (time.Time, bool) {
 		expirationDate :=
 			time.Unix(int64(binary.LittleEndian.Uint64(c.value[0][8:16])), 0)
 		return expirationDate, true
-	} else {
-		return time.Time{}, false
 	}
+	return time.Time{}, false
 }
 
+// SetIndexData sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
@@ -395,6 +442,8 @@ func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
 	return nil
 }
 
+// SetIndexDataBytes sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetIndexDataBytes(slotA, slotB []byte) error {
 	err := setSlotBytes(&(c.index[2]), slotA, SlotNameIndexA)
 	if err != nil {
@@ -403,6 +452,8 @@ func (c *Claim) SetIndexDataBytes(slotA, slotB []byte) error {
 	return setSlotBytes(&(c.index[3]), slotB, SlotNameIndexB)
 }
 
+// SetIndexDataInts sets data to index slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetIndexDataInts(slotA, slotB *big.Int) error {
 	err := setSlotInt(&c.index[2], slotA, SlotNameIndexA)
 	if err != nil {
@@ -411,6 +462,8 @@ func (c *Claim) SetIndexDataInts(slotA, slotB *big.Int) error {
 	return setSlotInt(&c.index[3], slotB, SlotNameIndexB)
 }
 
+// SetValueData sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
@@ -422,6 +475,8 @@ func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
 	return nil
 }
 
+// SetValueDataBytes sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetValueDataBytes(slotA, slotB []byte) error {
 	err := setSlotBytes(&(c.value[2]), slotA, SlotNameValueA)
 	if err != nil {
@@ -430,6 +485,8 @@ func (c *Claim) SetValueDataBytes(slotA, slotB []byte) error {
 	return setSlotBytes(&(c.value[3]), slotB, SlotNameValueB)
 }
 
+// SetValueDataInts sets data to value slots A & B.
+// Returns ErrSlotOverflow if slotA or slotB value are too big.
 func (c *Claim) SetValueDataInts(slotA, slotB *big.Int) error {
 	err := setSlotInt(&c.value[2], slotA, SlotNameValueA)
 	if err != nil {
@@ -458,6 +515,8 @@ func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
 	return err
 }
 
+// TreeEntry creates new merkletree.Entry from claim. Following changes to
+// claim does not changes returned merkletree.Entry.
 func (c *Claim) TreeEntry() merkletree.Entry {
 	var e merkletree.Entry
 	for i := range c.index {
@@ -469,6 +528,7 @@ func (c *Claim) TreeEntry() merkletree.Entry {
 	return e
 }
 
+// Clone returns full deep copy of claim
 func (c *Claim) Clone() *Claim {
 	var newClaim Claim
 	for i := range c.index {
