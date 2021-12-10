@@ -85,13 +85,19 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	return dst, nil
 }
 
-// DataSlot length is 253 bits, highest 3 bits should be zeros
+// DataSlot length is 32 bytes. But not all 32-byte values are valid.
+// The value should be not greater than Q constant
+// 21888242871839275222246405745257275088548364400416034343698204186575808495617
 type DataSlot [32]byte
 
+// ToInt returns *big.Int representation of DataSlot.
 func (ds DataSlot) ToInt() *big.Int {
 	return new(big.Int).SetBytes(utils.SwapEndianness(ds[:]))
 }
 
+// SetInt sets data slot to serialized value of *big.Int. And checks that the
+// value is valid (fills in Field Q).
+// Returns ErrDataOverflow if the value is too large
 func (ds *DataSlot) SetInt(value *big.Int) error {
 	if !utils.CheckBigIntInField(value) {
 		return ErrDataOverflow
@@ -103,6 +109,8 @@ func (ds *DataSlot) SetInt(value *big.Int) error {
 	return nil
 }
 
+// NewDataSlotFromInt creates new DataSlot from *big.Int.
+// Returns error ErrDataOverflow if value is too large to fill the Field Q.
 func NewDataSlotFromInt(i *big.Int) (DataSlot, error) {
 	var s DataSlot
 	bs := i.Bytes()
@@ -149,6 +157,7 @@ const (
 	flagUpdatableBitIdx  = 4
 )
 
+// Option provides ability to set different Claim's fields on construction
 type Option func(*Claim) error
 
 // WithFlagUpdatable sets claim's flag `updatable`
