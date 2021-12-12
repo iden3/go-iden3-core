@@ -11,7 +11,6 @@ import (
 )
 
 var (
-
 	// TypeBJP0 specifies the BJ-P0
 	// - first 2 bytes: `00000000 00000000`
 	// - curve of k_op: babyjubjub
@@ -117,7 +116,8 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 }
 
 // CalculateChecksum returns the checksum for a given type and genesis_root,
-// where checksum: hash( [type | root_genesis ] )
+// where checksum:
+//   hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 	var toChecksum [29]byte
 	copy(toChecksum[:], typ[:])

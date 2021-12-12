@@ -46,7 +46,8 @@ Value:
 
 // ErrDataOverflow means that given *big.Int value does not fit in Field Q
 // e.g. greater than Q constant:
-// 21888242871839275222246405745257275088548364400416034343698204186575808495617
+//
+//     Q constant: 21888242871839275222246405745257275088548364400416034343698204186575808495617
 var ErrDataOverflow = errors.New("data does not fits SNARK size")
 
 // ErrIncorrectIDPosition means that passed position is not one of predefined:
@@ -77,8 +78,13 @@ const (
 
 const schemaHashLn = 16
 
+// SchemaHash is a 16-bytes hash of file's content, that describes claim
+// structure.
 type SchemaHash [schemaHashLn]byte
 
+// MarshalText returns HEX representation of SchemaHash.
+//
+// Returning error is always nil.
 func (sc SchemaHash) MarshalText() ([]byte, error) {
 	dst := make([]byte, hex.EncodedLen(len(sc)))
 	hex.Encode(dst, sc[:])
@@ -131,6 +137,11 @@ type Claim struct {
 	value [4]DataSlot
 }
 
+// Subject for the time being describes the location of ID (in index or value
+// slots or nowhere at all).
+//
+// Values SubjectInvalid, SubjectObjectIndex, SubjectObjectValue
+// presents for backward compatibility and for now means nothing.
 type Subject byte
 
 const (
@@ -271,8 +282,8 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 	}
 }
 
-// NewClaim creates new Claim with specified SchemaHash and optional
-// values of other fields passed using Option(s).
+// NewClaim creates new Claim with specified SchemaHash and any number of
+// options. Using options you can specify any field in claim.
 func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 	c := &Claim{}
 	c.SetSchemaHash(schemaHash)
