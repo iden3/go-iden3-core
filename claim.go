@@ -168,7 +168,7 @@ const (
 	flagUpdatableBitIdx  = 4
 )
 
-// Option provides ability to set different Claim's fields on construction
+// Option provides the ability to set different Claim's fields on construction
 type Option func(*Claim) error
 
 // WithFlagUpdatable sets claim's flag `updatable`
