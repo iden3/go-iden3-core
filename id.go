@@ -11,7 +11,6 @@ import (
 )
 
 var (
-
 	// TypeBJP0 specifies the BJ-P0
 	// - first 2 bytes: `00000000 00000000`
 	// - curve of k_op: babyjubjub
@@ -51,8 +50,8 @@ func (id *ID) BigInt() *big.Int {
 	return idElem.BigInt()
 }
 
-func (id1 *ID) Equal(id2 *ID) bool {
-	return bytes.Equal(id1[:], id2[:])
+func (id *ID) Equal(id2 *ID) bool {
+	return bytes.Equal(id[:], id2[:])
 }
 
 // func (id ID) MarshalJSON() ([]byte, error) {
@@ -73,8 +72,8 @@ func (id *ID) UnmarshalText(b []byte) error {
 	return err
 }
 
-func (id1 *ID) Equals(id2 *ID) bool {
-	return bytes.Equal(id1[:], id2[:])
+func (id *ID) Equals(id2 *ID) bool {
+	return bytes.Equal(id[:], id2[:])
 }
 
 // IDFromString returns the ID from a given string
@@ -96,9 +95,9 @@ func IDFromBytes(b []byte) (ID, error) {
 	if bytes.Equal(b, emptyID[:]) {
 		return ID{}, errors.New("IDFromBytes error: byte array empty")
 	}
-	var bId [31]byte
-	copy(bId[:], b[:])
-	id := ID(bId)
+	var bID [31]byte
+	copy(bID[:], b[:])
+	id := ID(bID)
 	if !CheckChecksum(id) {
 		return ID{}, errors.New("IDFromBytes error: checksum error")
 	}
@@ -116,8 +115,9 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 	return typ, genesis, checksum, nil
 }
 
-// CalculateChecksum, returns the checksum for a given type and genesis_root,
-// where checksum: hash( [type | root_genesis ] )
+// CalculateChecksum returns the checksum for a given type and genesis_root,
+// where checksum:
+//   hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 	var toChecksum [29]byte
 	copy(toChecksum[:], typ[:])
@@ -147,7 +147,7 @@ func CheckChecksum(id ID) bool {
 }
 
 // IdGenesisFromIdenState calculates the genesis Id from an Identity State.
-func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
+func IdGenesisFromIdenState(hash *merkletree.Hash) *ID { //nolint:revive
 	var idGenesisBytes [27]byte
 	rootBytes := hash.Bytes()
 	rootBytes = merkletree.SwapEndianness(rootBytes)
@@ -158,7 +158,9 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID {
 }
 
 // IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
-func IdenState(clr *merkletree.Hash, rer *merkletree.Hash, ror *merkletree.Hash) *merkletree.Hash {
+func IdenState(clr *merkletree.Hash,
+	rer *merkletree.Hash,
+	ror *merkletree.Hash) *merkletree.Hash {
 	bi := merkletree.ElemBytesToBigInts([]merkletree.ElemBytes{
 		merkletree.ElemBytes(*clr),
 		merkletree.ElemBytes(*rer),
