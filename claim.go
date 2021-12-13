@@ -535,8 +535,8 @@ func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
 	return err
 }
 
-// TreeEntry creates new merkletree.Entry from claim. Following changes to
-// claim does not changes returned merkletree.Entry.
+// TreeEntry creates new merkletree.Entry from the claim. Following changes to
+// claim does not change returned merkletree.Entry.
 func (c *Claim) TreeEntry() merkletree.Entry {
 	var e merkletree.Entry
 	for i := range c.index {
