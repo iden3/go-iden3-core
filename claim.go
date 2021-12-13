@@ -57,7 +57,7 @@ var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
-// ErrSlotOverflow means some DataSlow overflows Q Field. And wraps the name
+// ErrSlotOverflow means some DataSlot overflows Q Field. And wraps the name
 // of overflowed slot.
 type ErrSlotOverflow struct {
 	Field SlotName
