@@ -2,7 +2,9 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
+	"github.com/iden3/go-iden3-crypto/utils"
 	"math"
 	"math/big"
 	"math/rand"
@@ -71,7 +73,14 @@ func TestClaim_GetSchemaHash(t *testing.T) {
 	require.Equal(t, schemaHashLn, n)
 	claim, err := NewClaim(sc)
 	require.NoError(t, err)
-	require.True(t, bytes.Equal(sc[:], claim.index[0][:schemaHashLn]))
+	require.True(t, bytes.Equal(sc[:], utils.SwapEndianness(claim.index[0][:schemaHashLn])))
+
+	shFromClaim := claim.GetSchemaHash()
+	shFromClaimHexBytes, err := shFromClaim.MarshalText()
+	require.NoError(t, err)
+
+	require.Equal(t, hex.EncodeToString(sc[:]), string(shFromClaimHexBytes))
+
 }
 
 func TestClaim_GetFlagUpdatable(t *testing.T) {
