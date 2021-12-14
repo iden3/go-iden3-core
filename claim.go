@@ -298,13 +298,13 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 
 // SetSchemaHash updates claim's schema hash.
 func (c *Claim) SetSchemaHash(schema SchemaHash) {
-	copy(c.index[0][:schemaHashLn], schema[:])
+	copy(c.index[0][:schemaHashLn], utils.SwapEndianness(schema[:]))
 }
 
 // GetSchemaHash return copy of claim's schema hash.
 func (c *Claim) GetSchemaHash() SchemaHash {
 	var schemaHash SchemaHash
-	copy(schemaHash[:], c.index[0][:schemaHashLn])
+	copy(schemaHash[:], utils.SwapEndianness(c.index[0][:schemaHashLn]))
 	return schemaHash
 }
 
