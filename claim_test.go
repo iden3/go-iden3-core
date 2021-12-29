@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/iden3/go-iden3-crypto/utils"
 	"math"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/iden3/go-iden3-crypto/utils"
 
 	"github.com/stretchr/testify/require"
 )
