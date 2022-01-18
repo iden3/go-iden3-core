@@ -37,8 +37,7 @@ var (
 	// network can be empty as this identifier is newer published on chain
 	// did:iden3:eth:main:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE - eth network eth networkID, main - network
 
-	didRegex = regexp.MustCompile(`^\b(did):\b(iden3):\b(eth|poligon):\b(main|test|ropsten|rinkeby|kovan):(
-[1-9a-km-zA-HJ-NP-Z]{41,42})$`)
+	didRegex = regexp.MustCompile(`^\b(did):\b(iden3):(\b(eth|poligon):\b(main|test|ropsten|rinkeby|kovan):)?([1-9a-km-zA-HJ-NP-Z]{42}|[1-9a-km-zA-HJ-NP-Z]{41})$`)
 
 	// ErrDoesnotMatchRegexp is returned when did string parsed
 	ErrDoesnotMatchRegexp = errors.New("did does not match regex")
