@@ -55,8 +55,8 @@ func TestParseDID(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", did.ID.String())
-	assert.Equal(t, Network("test"), did.Network)
-	assert.Equal(t, NetworkID("eth"), did.NetworkID)
+	assert.Equal(t, NetworkID("test"), did.NetworkID)
+	assert.Equal(t, Blockchain("eth"), did.Blockchain)
 }
 
 func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {

@@ -13,22 +13,22 @@ const DIDMethod = "iden3"
 // DIDSchema DID Schema
 const DIDSchema = "did"
 
-// NetworkID id of the network "eth", "polygon", etc.
+// Blockchain id of the network "eth", "polygon", etc.
+type Blockchain string
+
+const (
+	ETHEREUM Blockchain = "eth"     // ETHEREUM ethereum network
+	POLYGON  Blockchain = "polygon" // POLYGON polygon network
+)
+
 type NetworkID string
 
 const (
-	ETHEREUM NetworkID = "eth"     // ETHEREUM ethereum network
-	POLYGON  NetworkID = "polygon" // POLYGON polygon network
-)
-
-type Network string
-
-const (
-	MAIN    Network = "main"    // main net
-	TEST    Network = "test"    // test net
-	ROPSTEN Network = "ropsten" // ropsten net
-	RINKEBY Network = "rinkeby" // rinkeby net
-	KOVAN   Network = "kovan"   // kovan net
+	MAIN    NetworkID = "main"    // main net
+	TEST    NetworkID = "test"    // test net
+	ROPSTEN NetworkID = "ropsten" // ropsten net
+	RINKEBY NetworkID = "rinkeby" // rinkeby net
+	KOVAN   NetworkID = "kovan"   // kovan net
 )
 
 var (
@@ -46,9 +46,9 @@ var (
 // DID Decentralized Identifiers (DIDs)
 // https://w3c.github.io/did-core/#did-syntax
 type DID struct {
-	ID        ID        // ID did specific id
-	NetworkID NetworkID // NetworkID network identifier eth / polygon,...
-	Network   Network   // Network specific network identifier eth {main, ropsten, rinkeby, kovan}
+	ID         ID         // ID did specific id
+	Blockchain Blockchain // Blockchain network identifier eth / polygon,...
+	NetworkID  NetworkID  // NetworkID specific network identifier eth {main, ropsten, rinkeby, kovan}
 }
 
 type DIDOption func(*DID) error
@@ -76,22 +76,22 @@ func New(didStr string, options ...DIDOption) (*DID, error) {
 
 }
 
-// WithNetwork sets NetworkID and Network (eth:main)
-func WithNetwork(networkID, network string) DIDOption {
+// WithNetwork sets Blockchain and NetworkID (eth:main)
+func WithNetwork(blockchain, network string) DIDOption {
 	return func(d *DID) error {
-		d.NetworkID = NetworkID(networkID)
-		d.Network = Network(network)
+		d.Blockchain = Blockchain(blockchain)
+		d.NetworkID = NetworkID(network)
 		return nil
 	}
 }
 
 // String did as a string
 func (did *DID) String() string {
-	if did.NetworkID == "" {
+	if did.Blockchain == "" {
 		return fmt.Sprintf("%s:%s:%s", DIDSchema, DIDMethod, did.ID.String())
 	}
 
-	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.NetworkID, did.Network, did.ID.String())
+	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.Blockchain, did.NetworkID, did.ID.String())
 }
 
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
@@ -113,8 +113,8 @@ func ParseDID(didStr string) (*DID, error) {
 		return emptyDID, err
 	}
 
-	did.Network = Network(arg[3])
-	did.NetworkID = NetworkID(arg[2])
+	did.NetworkID = NetworkID(arg[3])
+	did.Blockchain = Blockchain(arg[2])
 
 	return &did, nil
 }
