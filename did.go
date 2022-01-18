@@ -13,12 +13,12 @@ const DIDMethod = "iden3"
 // DIDSchema DID Schema
 const DIDSchema = "did"
 
-// NetworkID id of the network "eth", "poligon", etc.
+// NetworkID id of the network "eth", "polygon", etc.
 type NetworkID string
 
 const (
 	ETHEREUM NetworkID = "eth"     // ETHEREUM ethereum network
-	POLIGON  NetworkID = "poligon" // POLIGON poligon network
+	POLYGON  NetworkID = "polygon" // POLYGON polygon network
 )
 
 type Network string
@@ -37,7 +37,7 @@ var (
 	// network can be empty as this identifier is newer published on chain
 	// did:iden3:eth:main:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE - eth network eth networkID, main - network
 
-	didRegex = regexp.MustCompile(`^\b(did):\b(iden3):(\b(eth|poligon):\b(main|test|ropsten|rinkeby|kovan):)?([1-9a-km-zA-HJ-NP-Z]{42}|[1-9a-km-zA-HJ-NP-Z]{41})$`)
+	didRegex = regexp.MustCompile(`^\b(did):\b(iden3):(\b(eth|polygon):\b(main|test|ropsten|rinkeby|kovan):)?([1-9a-km-zA-HJ-NP-Z]{42}|[1-9a-km-zA-HJ-NP-Z]{41})$`)
 
 	// ErrDoesnotMatchRegexp is returned when did string parsed
 	ErrDoesnotMatchRegexp = errors.New("did does not match regex")
@@ -47,7 +47,7 @@ var (
 // https://w3c.github.io/did-core/#did-syntax
 type DID struct {
 	ID        ID        // ID did specific id
-	NetworkID NetworkID // NetworkID network identifier eth / poligon,...
+	NetworkID NetworkID // NetworkID network identifier eth / polygon,...
 	Network   Network   // Network specific network identifier eth {main, ropsten, rinkeby, kovan}
 }
 
