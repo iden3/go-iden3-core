@@ -38,7 +38,7 @@ func Test_DIDString(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			got, err := New(test.identifier, test.options)
+			got, err := NewDID(test.identifier, test.options)
 			assert.NoError(t, err)
 
 			assert.Equal(t, got.String(), test.did)

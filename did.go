@@ -53,14 +53,14 @@ type DID struct {
 
 type DIDOption func(*DID) error
 
-func New(didStr string, options ...DIDOption) (*DID, error) {
+func NewDID(didStr string, options ...DIDOption) (*DID, error) {
 
 	did := &DID{}
 	var err error
 
 	did.ID, err = IDFromString(didStr)
 	if err != nil {
-		return &DID{}, err
+		return nil, err
 	}
 
 	for _, o := range options {
@@ -77,10 +77,10 @@ func New(didStr string, options ...DIDOption) (*DID, error) {
 }
 
 // WithNetwork sets Blockchain and NetworkID (eth:main)
-func WithNetwork(blockchain, network string) DIDOption {
+func WithNetwork(blockchain Blockchain, network NetworkID) DIDOption {
 	return func(d *DID) error {
-		d.Blockchain = Blockchain(blockchain)
-		d.NetworkID = NetworkID(network)
+		d.Blockchain = blockchain
+		d.NetworkID = network
 		return nil
 	}
 }
@@ -97,12 +97,11 @@ func (did *DID) String() string {
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
 func ParseDID(didStr string) (*DID, error) {
 	did := DID{}
-	emptyDID := &DID{}
 	var err error
 
 	matched := didRegex.MatchString(didStr)
 	if !matched {
-		return emptyDID, ErrDoesNotMatchRegexp
+		return nil, ErrDoesNotMatchRegexp
 	}
 
 	arg := strings.Split(didStr, ":")
@@ -110,7 +109,7 @@ func ParseDID(didStr string) (*DID, error) {
 	// validate id
 	did.ID, err = IDFromString(arg[4])
 	if err != nil {
-		return emptyDID, err
+		return nil, err
 	}
 
 	did.NetworkID = NetworkID(arg[3])
