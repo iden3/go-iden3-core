@@ -39,8 +39,8 @@ var (
 
 	didRegex = regexp.MustCompile(`^\b(did):\b(iden3):(\b(eth|polygon):\b(main|test|ropsten|rinkeby|kovan):)?([1-9a-km-zA-HJ-NP-Z]{42}|[1-9a-km-zA-HJ-NP-Z]{41})$`)
 
-	// ErrDoesnotMatchRegexp is returned when did string parsed
-	ErrDoesnotMatchRegexp = errors.New("did does not match regex")
+	// ErrDoesNotMatchRegexp is returned when did string parsed
+	ErrDoesNotMatchRegexp = errors.New("did does not match regex")
 )
 
 // DID Decentralized Identifiers (DIDs)
@@ -102,7 +102,7 @@ func ParseDID(didStr string) (*DID, error) {
 
 	matched := didRegex.MatchString(didStr)
 	if !matched {
-		return emptyDID, ErrDoesnotMatchRegexp
+		return emptyDID, ErrDoesNotMatchRegexp
 	}
 
 	arg := strings.Split(didStr, ":")
