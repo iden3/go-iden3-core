@@ -11,11 +11,17 @@ import (
 )
 
 var (
-	// TypeBJP0 specifies the BJ-P0
+	// TypeDefault specifies the regular identity
 	// - first 2 bytes: `00000000 00000000`
-	// - curve of k_op: babyjubjub
-	// - hash function: `Poseidon` with 4+4 elements
-	TypeBJP0 = [2]byte{0x00, 0x00}
+	TypeDefault = [2]byte{0x00, 0x00}
+
+	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
+	// - first 2 bytes: `00000000 00000001`
+	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
+
+	// TypeRelayer specifies the identity linked to relayer's identity.
+	// State of this identity is published by another identity(relayer)
+	TypeRelayer = [2]byte{0b00000000, 0b00000010}
 )
 
 // ID is a byte array with
@@ -153,7 +159,7 @@ func IdGenesisFromIdenState(hash *merkletree.Hash) *ID { //nolint:revive
 	rootBytes = merkletree.SwapEndianness(rootBytes)
 	// we take last 27 bytes, because of swapped endianness
 	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
-	id := NewID(TypeBJP0, idGenesisBytes)
+	id := NewID(TypeDefault, idGenesisBytes)
 	return &id
 }
 

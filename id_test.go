@@ -99,7 +99,7 @@ func TestIDjsonParser(t *testing.T) {
 }
 
 func TestCheckChecksum(t *testing.T) {
-	typ := TypeBJP0
+	typ := TypeDefault
 	var genesis [27]byte
 	genesis32bytes := hashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
