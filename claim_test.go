@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,26 +45,25 @@ func (ds DataSlot) String() string {
 	return b.String()
 }
 
-func TestMerketreeEntryHash(t *testing.T) {
+func TestRawSlots(t *testing.T) {
 	var schemaHash SchemaHash
 	claim, err := NewClaim(schemaHash, WithFlagUpdatable(true))
 	require.NoError(t, err)
-	e := claim.TreeEntry()
-
-	hi, hv, err := e.HiHv()
+	index, value := claim.RawSlots()
+	indexHash, err := poseidon.Hash([]*big.Int{
+		index[0].ToInt(), index[1].ToInt(), index[2].ToInt(), index[3].ToInt()})
+	require.NoError(t, err)
+	valueHash, err := poseidon.Hash([]*big.Int{
+		value[0].ToInt(), value[1].ToInt(), value[2].ToInt(), value[3].ToInt()})
 	require.NoError(t, err)
 
-	hit, err := hi.MarshalText()
-	require.NoError(t, err)
 	require.Equal(t,
 		"19905260441950906049955646784794273651462264973332746773406911374272567544299",
-		string(hit))
+		indexHash.Text(10))
 
-	hvt, err := hv.MarshalText()
-	require.NoError(t, err)
 	require.Equal(t,
 		"2351654555892372227640888372176282444150254868378439619268573230312091195718",
-		string(hvt))
+		valueHash.Text(10))
 }
 
 func TestClaim_GetSchemaHash(t *testing.T) {
@@ -74,7 +73,8 @@ func TestClaim_GetSchemaHash(t *testing.T) {
 	require.Equal(t, schemaHashLn, n)
 	claim, err := NewClaim(sc)
 	require.NoError(t, err)
-	require.True(t, bytes.Equal(sc[:], utils.SwapEndianness(claim.index[0][:schemaHashLn])))
+	require.True(t,
+		bytes.Equal(sc[:], utils.SwapEndianness(claim.index[0][:schemaHashLn])))
 
 	shFromClaim := claim.GetSchemaHash()
 	shFromClaimHexBytes, err := shFromClaim.MarshalText()
@@ -159,10 +159,14 @@ func toInt(t testing.TB, s string) *big.Int {
 }
 
 func TestIntSize(t *testing.T) {
-	iX := toInt(t, "16243864111864693853212588481963275789994876191154110553066821559749894481761")
-	iY := toInt(t, "7078462697308959301666117070269719819629678436794910510259518359026273676830")
-	vX := toInt(t, "12448278679517811784508557734102986855579744384337338465055621486538311281772")
-	vY := toInt(t, "9260608685281348956030279125705000716237952776955782848598673606545494194823")
+	iX := toInt(t,
+		"16243864111864693853212588481963275789994876191154110553066821559749894481761")
+	iY := toInt(t,
+		"7078462697308959301666117070269719819629678436794910510259518359026273676830")
+	vX := toInt(t,
+		"12448278679517811784508557734102986855579744384337338465055621486538311281772")
+	vY := toInt(t,
+		"9260608685281348956030279125705000716237952776955782848598673606545494194823")
 
 	ixSlot, err := NewDataSlotFromInt(iX)
 	require.NoError(t, err)

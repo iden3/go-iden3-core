@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/iden3/go-iden3-crypto/utils"
-	"github.com/iden3/go-merkletree-sql"
 )
 
 /*
@@ -535,17 +534,9 @@ func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
 	return err
 }
 
-// TreeEntry creates new merkletree.Entry from the claim. Following changes to
-// claim does not change returned merkletree.Entry.
-func (c *Claim) TreeEntry() merkletree.Entry {
-	var e merkletree.Entry
-	for i := range c.index {
-		copy(e.Data[i][:], c.index[i][:])
-	}
-	for i := range c.value {
-		copy(e.Data[i+len(c.index)][:], c.value[i][:])
-	}
-	return e
+// RawSlots returns raw bytes of claim's index and value
+func (c *Claim) RawSlots() (index [4]DataSlot, value [4]DataSlot) {
+	return c.index, c.value
 }
 
 // Clone returns full deep copy of claim
@@ -568,4 +559,12 @@ func memset(arr []byte, v byte) {
 	for ptr := 1; ptr < len(arr); ptr *= 2 {
 		copy(arr[ptr:], arr[:ptr])
 	}
+}
+
+func SlotsToInts(slots []DataSlot) []*big.Int {
+	result := make([]*big.Int, len(slots))
+	for i := range slots {
+		result[i] = slots[i].ToInt()
+	}
+	return result
 }

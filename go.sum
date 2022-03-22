@@ -4,8 +4,6 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/dchest/blake512 v1.0.0/go.mod h1:FV1x7xPPLWukZlpDpWQ88rF/SFwZ5qbskrzhLMB92JI=
 github.com/iden3/go-iden3-crypto v0.0.11 h1:5cFQ/BIqH9gjwe9Z68Hmc5jOTGqmMYnewIaTGCeO+6A=
 github.com/iden3/go-iden3-crypto v0.0.11/go.mod h1:yUBWcXgAUDZxa1PvRl0zIT4Q4/rQO5PacE52Z06i8kw=
-github.com/iden3/go-merkletree-sql v1.0.0-pre8 h1:ywL4VaBnpMGRLQUbSGgXXOjSHIo33KEEiBvrK2AnRa8=
-github.com/iden3/go-merkletree-sql v1.0.0-pre8/go.mod h1:oYLAGBrr1/yNBZWhpE3JTxtbgDf6d56oRCbdjT1UX9A=
 github.com/mr-tron/base58 v1.2.0 h1:T/HDJBh4ZCPbU39/+c3rRvE0uKBQlU27+QI8LJ4t64o=
 github.com/mr-tron/base58 v1.2.0/go.mod h1:BinMc/sQntlIE1frQmRFPUoPA1Zkr8VRgBdjWI2mNwc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
