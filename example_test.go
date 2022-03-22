@@ -24,20 +24,20 @@ func ExampleNewClaim() {
 	fmt.Println(claim.GetVersion())
 
 	indexEntry, valueEntry := claim.RawSlots()
-	indexHash, err := poseidon.Hash(SlotsToInts(indexEntry[:]))
+	indexHash, err := poseidon.Hash(ElementBytesToInts(indexEntry[:]))
 	if err != nil {
 		panic(err)
 	}
-	valueHash, err := poseidon.Hash(SlotsToInts(valueEntry[:]))
+	valueHash, err := poseidon.Hash(ElementBytesToInts(valueEntry[:]))
 	if err != nil {
 		panic(err)
 	}
 
-	indexSlot, err := NewDataSlotFromInt(indexHash)
+	indexSlot, err := NewElementBytesFromInt(indexHash)
 	if err != nil {
 		panic(err)
 	}
-	valueSlot, err := NewDataSlotFromInt(valueHash)
+	valueSlot, err := NewElementBytesFromInt(valueHash)
 	if err != nil {
 		panic(err)
 	}

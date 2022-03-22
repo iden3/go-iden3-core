@@ -50,7 +50,7 @@ func (id *ID) Bytes() []byte {
 }
 
 func (id *ID) BigInt() *big.Int {
-	var s DataSlot
+	var s ElementBytes
 	copy(s[:], id[:])
 	return s.ToInt()
 }
@@ -152,7 +152,7 @@ func CheckChecksum(id ID) bool {
 }
 
 // IdGenesisFromIdenState calculates the genesis Id from an Identity State.
-func IdGenesisFromIdenState(state DataSlot) *ID { //nolint:revive
+func IdGenesisFromIdenState(state ElementBytes) *ID { //nolint:revive
 	var idGenesisBytes [27]byte
 	// we take last 27 bytes, because of swapped endianness
 	copy(idGenesisBytes[:], state[len(state)-27:])
@@ -162,23 +162,25 @@ func IdGenesisFromIdenState(state DataSlot) *ID { //nolint:revive
 
 // IdenState calculates the Identity State from the Claims Tree Root,
 // Revocation Tree Root and Roots Tree Root.
-func IdenState(clr DataSlot, rer DataSlot, ror DataSlot) (DataSlot, error) {
+func IdenState(clr ElementBytes, rer ElementBytes,
+	ror ElementBytes) (ElementBytes, error) {
+
 	idenState, err := poseidon.Hash([]*big.Int{
 		clr.ToInt(), rer.ToInt(), ror.ToInt()})
 	if err != nil {
-		return DataSlot{}, err
+		return ElementBytes{}, err
 	}
-	return NewDataSlotFromInt(idenState)
+	return NewElementBytesFromInt(idenState)
 }
 
 // CalculateGenesisID calculate genesis id based on provided claims tree root
-func CalculateGenesisID(clr DataSlot) (*ID, error) {
+func CalculateGenesisID(clr ElementBytes) (*ID, error) {
 	idenState, err := poseidon.Hash([]*big.Int{
 		clr.ToInt(), big.NewInt(0), big.NewInt(0)})
 	if err != nil {
 		return nil, err
 	}
-	idenStateData, err := NewDataSlotFromInt(idenState)
+	idenStateData, err := NewElementBytesFromInt(idenState)
 	if err != nil {
 		return nil, err
 	}
