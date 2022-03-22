@@ -194,3 +194,55 @@ func TestNewDataSlotFromInt(t *testing.T) {
 		"9916243864111864693853212588481963275789994876191154110553066821559749894481761"))
 	require.EqualError(t, err, ErrDataOverflow.Error())
 }
+
+func TestClaim_WithIndexDataInts(t *testing.T) {
+
+	expSlot := DataSlot{}
+	err := expSlot.SetInt(big.NewInt(0))
+	require.NoError(t, err)
+
+	value := new(big.Int).SetInt64(64)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithIndexDataInts(value, nil))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[3])
+
+	claim2, err := NewClaim(SchemaHash{},
+		WithIndexDataInts(nil, value))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim2.index[2])
+}
+
+func TestClaim_WithValueDataInts(t *testing.T) {
+
+	expSlot := DataSlot{}
+	err := expSlot.SetInt(big.NewInt(0))
+	require.NoError(t, err)
+
+	value := new(big.Int).SetInt64(64)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithValueDataInts(value, nil))
+	require.NoError(t, err)
+
+	require.Equal(t, expSlot, claim.value[3])
+
+	claim2, err := NewClaim(SchemaHash{},
+		WithValueDataInts(nil, value))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim2.value[2])
+}
+
+func TestClaim_WithIndexDataBytes(t *testing.T) {
+
+	iX := toInt(t, "124482786795178117845085577341029868555797443843373384650556214865383112817")
+	expSlot := DataSlot{}
+	err := expSlot.SetInt(big.NewInt(0))
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithIndexDataBytes(iX.Bytes(), nil))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[3])
+}
