@@ -486,6 +486,10 @@ func setSlotBytes(slot *ElemBytes, value []byte, slotName SlotName) error {
 }
 
 func setSlotInt(slot *ElemBytes, value *big.Int, slotName SlotName) error {
+	if value == nil {
+		value = big.NewInt(0)
+	}
+
 	err := slot.SetInt(value)
 	if err == ErrDataOverflow {
 		return ErrSlotOverflow{slotName}
