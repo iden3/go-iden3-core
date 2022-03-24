@@ -56,7 +56,7 @@ var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
-// ErrSlotOverflow means some ElementBytes overflows Q Field. And wraps the name
+// ErrSlotOverflow means some ElemBytes overflows Q Field. And wraps the name
 // of overflowed slot.
 type ErrSlotOverflow struct {
 	Field SlotName
@@ -90,50 +90,9 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	return dst, nil
 }
 
-// ElementBytes length is 32 bytes. But not all 32-byte values are valid.
-// The value should be not greater than Q constant
-// 21888242871839275222246405745257275088548364400416034343698204186575808495617
-type ElementBytes [32]byte
-
-// ToInt returns *big.Int representation of ElementBytes.
-func (ds ElementBytes) ToInt() *big.Int {
-	return new(big.Int).SetBytes(utils.SwapEndianness(ds[:]))
-}
-
-// SetInt sets element's data to serialized value of *big.Int in little-endian.
-// And checks that the value is valid (fits in Field Q).
-// Returns ErrDataOverflow if the value is too large
-func (ds *ElementBytes) SetInt(value *big.Int) error {
-	if !utils.CheckBigIntInField(value) {
-		return ErrDataOverflow
-	}
-
-	val := utils.SwapEndianness(value.Bytes())
-	copy((*ds)[:], val)
-	memset((*ds)[len(val):], 0)
-	return nil
-}
-
-// NewElementBytesFromInt creates new ElementBytes from *big.Int.
-// Returns error ErrDataOverflow if value is too large to fill the Field Q.
-func NewElementBytesFromInt(i *big.Int) (ElementBytes, error) {
-	var s ElementBytes
-	bs := i.Bytes()
-	// may be this check is redundant because of CheckBigIntInField, but just
-	// in case.
-	if len(bs) > len(s) {
-		return s, ErrDataOverflow
-	}
-	if !utils.CheckBigIntInField(i) {
-		return s, ErrDataOverflow
-	}
-	copy(s[:], utils.SwapEndianness(bs))
-	return s, nil
-}
-
 type Claim struct {
-	index [4]ElementBytes
-	value [4]ElementBytes
+	index [4]ElemBytes
+	value [4]ElemBytes
 }
 
 // Subject for the time being describes the location of ID (in index or value
@@ -235,7 +194,7 @@ func WithExpirationDate(dt time.Time) Option {
 
 // WithIndexData sets data to index slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func WithIndexData(slotA, slotB ElementBytes) Option {
+func WithIndexData(slotA, slotB ElemBytes) Option {
 	return func(c *Claim) error {
 		return c.SetIndexData(slotA, slotB)
 	}
@@ -259,7 +218,7 @@ func WithIndexDataInts(slotA, slotB *big.Int) Option {
 
 // WithValueData sets data to value slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func WithValueData(slotA, slotB ElementBytes) Option {
+func WithValueData(slotA, slotB ElemBytes) Option {
 	return func(c *Claim) error {
 		return c.SetValueData(slotA, slotB)
 	}
@@ -450,7 +409,7 @@ func (c *Claim) GetExpirationDate() (time.Time, bool) {
 
 // SetIndexData sets data to index slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func (c *Claim) SetIndexData(slotA, slotB ElementBytes) error {
+func (c *Claim) SetIndexData(slotA, slotB ElemBytes) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
@@ -483,7 +442,7 @@ func (c *Claim) SetIndexDataInts(slotA, slotB *big.Int) error {
 
 // SetValueData sets data to value slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func (c *Claim) SetValueData(slotA, slotB ElementBytes) error {
+func (c *Claim) SetValueData(slotA, slotB ElemBytes) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
@@ -514,7 +473,7 @@ func (c *Claim) SetValueDataInts(slotA, slotB *big.Int) error {
 	return setSlotInt(&c.value[3], slotB, SlotNameValueB)
 }
 
-func setSlotBytes(slot *ElementBytes, value []byte, slotName SlotName) error {
+func setSlotBytes(slot *ElemBytes, value []byte, slotName SlotName) error {
 	if len(value) > len(*slot) {
 		return ErrSlotOverflow{slotName}
 	}
@@ -526,7 +485,7 @@ func setSlotBytes(slot *ElementBytes, value []byte, slotName SlotName) error {
 	return nil
 }
 
-func setSlotInt(slot *ElementBytes, value *big.Int, slotName SlotName) error {
+func setSlotInt(slot *ElemBytes, value *big.Int, slotName SlotName) error {
 	err := slot.SetInt(value)
 	if err == ErrDataOverflow {
 		return ErrSlotOverflow{slotName}
@@ -535,7 +494,7 @@ func setSlotInt(slot *ElementBytes, value *big.Int, slotName SlotName) error {
 }
 
 // RawSlots returns raw bytes of claim's index and value
-func (c *Claim) RawSlots() (index [4]ElementBytes, value [4]ElementBytes) {
+func (c *Claim) RawSlots() (index [4]ElemBytes, value [4]ElemBytes) {
 	return c.index, c.value
 }
 
@@ -559,12 +518,4 @@ func memset(arr []byte, v byte) {
 	for ptr := 1; ptr < len(arr); ptr *= 2 {
 		copy(arr[ptr:], arr[:ptr])
 	}
-}
-
-func ElementBytesToInts(elements []ElementBytes) []*big.Int {
-	result := make([]*big.Int, len(elements))
-	for i := range elements {
-		result[i] = elements[i].ToInt()
-	}
-	return result
 }

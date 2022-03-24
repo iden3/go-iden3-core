@@ -37,10 +37,10 @@ func TestNewClaim(t *testing.T) {
 	require.False(t, ok)
 }
 
-func (ds ElementBytes) String() string {
+func (el ElemBytes) String() string {
 	var b bytes.Buffer
-	for j := len(ds) - 1; j >= 0; j-- {
-		b.WriteString(fmt.Sprintf("% 08b", ds[j]))
+	for j := len(el) - 1; j >= 0; j-- {
+		b.WriteString(fmt.Sprintf("% 08b", el[j]))
 	}
 	return b.String()
 }
@@ -186,7 +186,7 @@ func TestNewDataSlotFromInt(t *testing.T) {
 	ds, err := NewElementBytesFromInt(toInt(t,
 		"16243864111864693853212588481963275789994876191154110553066821559749894481761"))
 	require.NoError(t, err)
-	expected := ElementBytes{
+	expected := ElemBytes{
 		0x61, 0x27, 0xa0, 0xeb, 0x58, 0x7a, 0x6c, 0x2b,
 		0x4a, 0xa8, 0xc1, 0x2e, 0xf5, 0x01, 0xb2, 0xdb,
 		0xd0, 0x9c, 0xb1, 0xa5, 0x9c, 0x83, 0x42, 0x57,
