@@ -201,7 +201,7 @@ func TestNewDataSlotFromInt(t *testing.T) {
 
 func TestClaim_WithIndexDataInts(t *testing.T) {
 
-	expSlot := DataSlot{}
+	expSlot := ElemBytes{}
 	err := expSlot.SetInt(big.NewInt(0))
 	require.NoError(t, err)
 
@@ -220,7 +220,7 @@ func TestClaim_WithIndexDataInts(t *testing.T) {
 
 func TestClaim_WithValueDataInts(t *testing.T) {
 
-	expSlot := DataSlot{}
+	expSlot := ElemBytes{}
 	err := expSlot.SetInt(big.NewInt(0))
 	require.NoError(t, err)
 
@@ -240,8 +240,9 @@ func TestClaim_WithValueDataInts(t *testing.T) {
 
 func TestClaim_WithIndexDataBytes(t *testing.T) {
 
-	iX := toInt(t, "124482786795178117845085577341029868555797443843373384650556214865383112817")
-	expSlot := DataSlot{}
+	iX := toInt(t,
+		"124482786795178117845085577341029868555797443843373384650556214865383112817")
+	expSlot := ElemBytes{}
 	err := expSlot.SetInt(big.NewInt(0))
 	require.NoError(t, err)
 
