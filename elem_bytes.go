@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/utils"
@@ -30,9 +31,14 @@ func (el *ElemBytes) SetInt(value *big.Int) error {
 	return nil
 }
 
-// NewElementBytesFromInt creates new ElemBytes from *big.Int.
+// Hex returns HEX representation of ElemBytes
+func (el ElemBytes) Hex() string {
+	return hex.EncodeToString(el[:])
+}
+
+// NewElemBytesFromInt creates new ElemBytes from *big.Int.
 // Returns error ErrDataOverflow if value is too large to fill the Field Q.
-func NewElementBytesFromInt(i *big.Int) (ElemBytes, error) {
+func NewElemBytesFromInt(i *big.Int) (ElemBytes, error) {
 	var s ElemBytes
 	bs := i.Bytes()
 	// may be this check is redundant because of CheckBigIntInField, but just

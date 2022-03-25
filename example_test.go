@@ -33,11 +33,11 @@ func ExampleNewClaim() {
 		panic(err)
 	}
 
-	indexSlot, err := NewElementBytesFromInt(indexHash)
+	indexSlot, err := NewElemBytesFromInt(indexHash)
 	if err != nil {
 		panic(err)
 	}
-	valueSlot, err := NewElementBytesFromInt(valueHash)
+	valueSlot, err := NewElemBytesFromInt(valueHash)
 	if err != nil {
 		panic(err)
 	}

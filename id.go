@@ -170,7 +170,7 @@ func IdenState(clr ElemBytes, rer ElemBytes,
 	if err != nil {
 		return ElemBytes{}, err
 	}
-	return NewElementBytesFromInt(idenState)
+	return NewElemBytesFromInt(idenState)
 }
 
 // CalculateGenesisID calculate genesis id based on provided claims tree root
@@ -180,7 +180,7 @@ func CalculateGenesisID(clr ElemBytes) (*ID, error) {
 	if err != nil {
 		return nil, err
 	}
-	idenStateData, err := NewElementBytesFromInt(idenState)
+	idenStateData, err := NewElemBytesFromInt(idenState)
 	if err != nil {
 		return nil, err
 	}

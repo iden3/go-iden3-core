@@ -168,13 +168,13 @@ func TestIntSize(t *testing.T) {
 	vY := toInt(t,
 		"9260608685281348956030279125705000716237952776955782848598673606545494194823")
 
-	ixSlot, err := NewElementBytesFromInt(iX)
+	ixSlot, err := NewElemBytesFromInt(iX)
 	require.NoError(t, err)
-	iySlot, err := NewElementBytesFromInt(iY)
+	iySlot, err := NewElemBytesFromInt(iY)
 	require.NoError(t, err)
-	vxSlot, err := NewElementBytesFromInt(vX)
+	vxSlot, err := NewElemBytesFromInt(vX)
 	require.NoError(t, err)
-	vySlot, err := NewElementBytesFromInt(vY)
+	vySlot, err := NewElemBytesFromInt(vY)
 	require.NoError(t, err)
 	_, err = NewClaim(SchemaHash{},
 		WithIndexData(ixSlot, iySlot),
@@ -183,7 +183,7 @@ func TestIntSize(t *testing.T) {
 }
 
 func TestNewDataSlotFromInt(t *testing.T) {
-	ds, err := NewElementBytesFromInt(toInt(t,
+	ds, err := NewElemBytesFromInt(toInt(t,
 		"16243864111864693853212588481963275789994876191154110553066821559749894481761"))
 	require.NoError(t, err)
 	expected := ElemBytes{
@@ -194,7 +194,7 @@ func TestNewDataSlotFromInt(t *testing.T) {
 	}
 	require.Equal(t, expected, ds)
 
-	_, err = NewElementBytesFromInt(toInt(t,
+	_, err = NewElemBytesFromInt(toInt(t,
 		"9916243864111864693853212588481963275789994876191154110553066821559749894481761"))
 	require.EqualError(t, err, ErrDataOverflow.Error())
 }
