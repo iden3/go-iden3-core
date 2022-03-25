@@ -9,15 +9,11 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-20.04
-    container: golangci/golangci-lint:v1.43.0
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/setup-go@v2
         with:
-          path: |
-            ~/.cache/go-build
-            /go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - run: golangci-lint run
+          go-version: 1.18.0
+      - uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.45.0

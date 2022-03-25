@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"time"
+
+	"github.com/iden3/go-iden3-crypto/poseidon"
 )
 
 func ExampleNewClaim() {
@@ -21,13 +23,27 @@ func ExampleNewClaim() {
 
 	fmt.Println(claim.GetVersion())
 
-	entry := claim.TreeEntry()
-	indexHash, valueHash, err := entry.HiHv()
+	indexEntry, valueEntry := claim.RawSlots()
+	indexHash, err := poseidon.Hash(ElemBytesToInts(indexEntry[:]))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(hex.EncodeToString(indexHash[:]))
-	fmt.Println(hex.EncodeToString(valueHash[:]))
+	valueHash, err := poseidon.Hash(ElemBytesToInts(valueEntry[:]))
+	if err != nil {
+		panic(err)
+	}
+
+	indexSlot, err := NewElemBytesFromInt(indexHash)
+	if err != nil {
+		panic(err)
+	}
+	valueSlot, err := NewElemBytesFromInt(valueHash)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(hex.EncodeToString(indexSlot[:]))
+	fmt.Println(hex.EncodeToString(valueSlot[:]))
 	// Output:
 	// true
 	// 2021-01-10T20:30:00Z

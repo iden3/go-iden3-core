@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/iden3/go-iden3-crypto/utils"
-	"github.com/iden3/go-merkletree-sql"
 )
 
 /*
@@ -57,7 +56,7 @@ var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
-// ErrSlotOverflow means some DataSlot overflows Q Field. And wraps the name
+// ErrSlotOverflow means some ElemBytes overflows Q Field. And wraps the name
 // of overflowed slot.
 type ErrSlotOverflow struct {
 	Field SlotName
@@ -91,50 +90,9 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	return dst, nil
 }
 
-// DataSlot length is 32 bytes. But not all 32-byte values are valid.
-// The value should be not greater than Q constant
-// 21888242871839275222246405745257275088548364400416034343698204186575808495617
-type DataSlot [32]byte
-
-// ToInt returns *big.Int representation of DataSlot.
-func (ds DataSlot) ToInt() *big.Int {
-	return new(big.Int).SetBytes(utils.SwapEndianness(ds[:]))
-}
-
-// SetInt sets data slot to serialized value of *big.Int. And checks that the
-// value is valid (fills in Field Q).
-// Returns ErrDataOverflow if the value is too large
-func (ds *DataSlot) SetInt(value *big.Int) error {
-	if !utils.CheckBigIntInField(value) {
-		return ErrDataOverflow
-	}
-
-	val := utils.SwapEndianness(value.Bytes())
-	copy((*ds)[:], val)
-	memset((*ds)[len(val):], 0)
-	return nil
-}
-
-// NewDataSlotFromInt creates new DataSlot from *big.Int.
-// Returns error ErrDataOverflow if value is too large to fill the Field Q.
-func NewDataSlotFromInt(i *big.Int) (DataSlot, error) {
-	var s DataSlot
-	bs := i.Bytes()
-	// may be this check is redundant because of CheckBigIntInField, but just
-	// in case.
-	if len(bs) > len(s) {
-		return s, ErrDataOverflow
-	}
-	if !utils.CheckBigIntInField(i) {
-		return s, ErrDataOverflow
-	}
-	copy(s[:], utils.SwapEndianness(bs))
-	return s, nil
-}
-
 type Claim struct {
-	index [4]DataSlot
-	value [4]DataSlot
+	index [4]ElemBytes
+	value [4]ElemBytes
 }
 
 // Subject for the time being describes the location of ID (in index or value
@@ -236,7 +194,7 @@ func WithExpirationDate(dt time.Time) Option {
 
 // WithIndexData sets data to index slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func WithIndexData(slotA, slotB DataSlot) Option {
+func WithIndexData(slotA, slotB ElemBytes) Option {
 	return func(c *Claim) error {
 		return c.SetIndexData(slotA, slotB)
 	}
@@ -260,7 +218,7 @@ func WithIndexDataInts(slotA, slotB *big.Int) Option {
 
 // WithValueData sets data to value slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func WithValueData(slotA, slotB DataSlot) Option {
+func WithValueData(slotA, slotB ElemBytes) Option {
 	return func(c *Claim) error {
 		return c.SetValueData(slotA, slotB)
 	}
@@ -451,7 +409,7 @@ func (c *Claim) GetExpirationDate() (time.Time, bool) {
 
 // SetIndexData sets data to index slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func (c *Claim) SetIndexData(slotA, slotB DataSlot) error {
+func (c *Claim) SetIndexData(slotA, slotB ElemBytes) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
@@ -484,7 +442,7 @@ func (c *Claim) SetIndexDataInts(slotA, slotB *big.Int) error {
 
 // SetValueData sets data to value slots A & B.
 // Returns ErrSlotOverflow if slotA or slotB value are too big.
-func (c *Claim) SetValueData(slotA, slotB DataSlot) error {
+func (c *Claim) SetValueData(slotA, slotB ElemBytes) error {
 	slotsAsInts := []*big.Int{slotA.ToInt(), slotB.ToInt()}
 	if !utils.CheckBigIntArrayInField(slotsAsInts) {
 		return ErrDataOverflow
@@ -515,7 +473,7 @@ func (c *Claim) SetValueDataInts(slotA, slotB *big.Int) error {
 	return setSlotInt(&c.value[3], slotB, SlotNameValueB)
 }
 
-func setSlotBytes(slot *DataSlot, value []byte, slotName SlotName) error {
+func setSlotBytes(slot *ElemBytes, value []byte, slotName SlotName) error {
 	if len(value) > len(*slot) {
 		return ErrSlotOverflow{slotName}
 	}
@@ -527,8 +485,7 @@ func setSlotBytes(slot *DataSlot, value []byte, slotName SlotName) error {
 	return nil
 }
 
-func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
-
+func setSlotInt(slot *ElemBytes, value *big.Int, slotName SlotName) error {
 	if value == nil {
 		value = big.NewInt(0)
 	}
@@ -540,17 +497,9 @@ func setSlotInt(slot *DataSlot, value *big.Int, slotName SlotName) error {
 	return err
 }
 
-// TreeEntry creates new merkletree.Entry from the claim. Following changes to
-// claim does not change returned merkletree.Entry.
-func (c *Claim) TreeEntry() merkletree.Entry {
-	var e merkletree.Entry
-	for i := range c.index {
-		copy(e.Data[i][:], c.index[i][:])
-	}
-	for i := range c.value {
-		copy(e.Data[i+len(c.index)][:], c.value[i][:])
-	}
-	return e
+// RawSlots returns raw bytes of claim's index and value
+func (c *Claim) RawSlots() (index [4]ElemBytes, value [4]ElemBytes) {
+	return c.index, c.value
 }
 
 // Clone returns full deep copy of claim

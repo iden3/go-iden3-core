@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
-	"github.com/iden3/go-merkletree-sql"
 	"github.com/mr-tron/base58"
 )
 
@@ -51,9 +50,9 @@ func (id *ID) Bytes() []byte {
 }
 
 func (id *ID) BigInt() *big.Int {
-	var idElem merkletree.ElemBytes
-	copy(idElem[:], id[:])
-	return idElem.BigInt()
+	var s ElemBytes
+	copy(s[:], id[:])
+	return s.ToInt()
 }
 
 func (id *ID) Equal(id2 *ID) bool {
@@ -153,37 +152,37 @@ func CheckChecksum(id ID) bool {
 }
 
 // IdGenesisFromIdenState calculates the genesis Id from an Identity State.
-func IdGenesisFromIdenState(hash *merkletree.Hash) *ID { //nolint:revive
+func IdGenesisFromIdenState(state ElemBytes) *ID { //nolint:revive
 	var idGenesisBytes [27]byte
-	rootBytes := hash.Bytes()
-	rootBytes = merkletree.SwapEndianness(rootBytes)
 	// we take last 27 bytes, because of swapped endianness
-	copy(idGenesisBytes[:], rootBytes[len(rootBytes)-27:])
+	copy(idGenesisBytes[:], state[len(state)-27:])
 	id := NewID(TypeDefault, idGenesisBytes)
 	return &id
 }
 
-// IdenState calculates the Identity State from the Claims Tree Root, Revocation Tree Root and Roots Tree Root.
-func IdenState(clr *merkletree.Hash,
-	rer *merkletree.Hash,
-	ror *merkletree.Hash) *merkletree.Hash {
-	bi := merkletree.ElemBytesToBigInts([]merkletree.ElemBytes{
-		merkletree.ElemBytes(*clr),
-		merkletree.ElemBytes(*rer),
-		merkletree.ElemBytes(*ror)})
-	idenState, err := poseidon.Hash(bi)
+// IdenState calculates the Identity State from the Claims Tree Root,
+// Revocation Tree Root and Roots Tree Root.
+func IdenState(clr ElemBytes, rer ElemBytes,
+	ror ElemBytes) (ElemBytes, error) {
+
+	idenState, err := poseidon.Hash([]*big.Int{
+		clr.ToInt(), rer.ToInt(), ror.ToInt()})
 	if err != nil {
-		panic(err)
+		return ElemBytes{}, err
 	}
-	return merkletree.NewHashFromBigInt(idenState)
+	return NewElemBytesFromInt(idenState)
 }
 
 // CalculateGenesisID calculate genesis id based on provided claims tree root
-func CalculateGenesisID(clr *merkletree.Hash) (*ID, error) {
-	idenState, err := merkletree.HashElems(clr.BigInt(),
-		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+func CalculateGenesisID(clr ElemBytes) (*ID, error) {
+	idenState, err := poseidon.Hash([]*big.Int{
+		clr.ToInt(), big.NewInt(0), big.NewInt(0)})
 	if err != nil {
 		return nil, err
 	}
-	return IdGenesisFromIdenState(idenState), nil
+	idenStateData, err := NewElemBytesFromInt(idenState)
+	if err != nil {
+		return nil, err
+	}
+	return IdGenesisFromIdenState(idenStateData), nil
 }
