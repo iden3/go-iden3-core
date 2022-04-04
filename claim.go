@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 )
 
@@ -88,6 +89,18 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	dst := make([]byte, hex.EncodedLen(len(sc)))
 	hex.Encode(dst, sc[:])
 	return dst, nil
+}
+
+// NewSchemaHashFromHex returns SchemaHash with first 16 bytes of decoded hex sting
+func NewSchemaHashFromHex(s string) (SchemaHash, error) {
+	var schemaHash SchemaHash
+	schemaEncodedBytes, err := hex.DecodeString(s)
+	if err != nil {
+		return SchemaHash{}, err
+	}
+	copy(schemaHash[:], schemaEncodedBytes) // !!! Schema is only 16 bytes
+
+	return schemaHash, nil
 }
 
 type Claim struct {
