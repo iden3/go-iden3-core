@@ -168,17 +168,3 @@ func IdenState(clr ElemBytes, rer ElemBytes,
 	}
 	return NewElemBytesFromInt(idenState)
 }
-
-// CalculateGenesisID calculate genesis id based on provided claims tree root
-func CalculateGenesisID(clr ElemBytes) (*ID, error) {
-	idenState, err := poseidon.Hash([]*big.Int{
-		clr.ToInt(), big.NewInt(0), big.NewInt(0)})
-	if err != nil {
-		return nil, err
-	}
-	idenStateData, err := NewElemBytesFromInt(idenState)
-	if err != nil {
-		return nil, err
-	}
-	return IdGenesisFromIdenState(idenStateData), nil
-}
