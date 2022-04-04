@@ -158,13 +158,6 @@ func IdGenesisFromIdenState(state ElemBytes) *ID { //nolint:revive
 
 // IdenState calculates the Identity State from the Claims Tree Root,
 // Revocation Tree Root and Roots Tree Root.
-func IdenState(clr ElemBytes, rer ElemBytes,
-	ror ElemBytes) (ElemBytes, error) {
-
-	idenState, err := poseidon.Hash([]*big.Int{
-		clr.ToInt(), rer.ToInt(), ror.ToInt()})
-	if err != nil {
-		return ElemBytes{}, err
-	}
-	return NewElemBytesFromInt(idenState)
+func IdenState(clr, rer, ror *big.Int) (*big.Int, error) {
+	return poseidon.Hash([]*big.Int{clr, rer, ror})
 }
