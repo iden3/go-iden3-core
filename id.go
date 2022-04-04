@@ -147,13 +147,19 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-// IdGenesisFromIdenState calculates the genesis Id from an Identity State.
-func IdGenesisFromIdenState(state ElemBytes) *ID { //nolint:revive
+// IdGenesisFromIdenState calculates the genesis ID from an Identity State.
+func IdGenesisFromIdenState(typ [2]byte, state *big.Int) (*ID, error) { //nolint:revive
 	var idGenesisBytes [27]byte
+
+	idenStateData, err := NewElemBytesFromInt(state)
+	if err != nil {
+		return nil, err
+	}
+
 	// we take last 27 bytes, because of swapped endianness
-	copy(idGenesisBytes[:], state[len(state)-27:])
-	id := NewID(TypeDefault, idGenesisBytes)
-	return &id
+	copy(idGenesisBytes[:], idenStateData[len(idenStateData)-27:])
+	id := NewID(typ, idGenesisBytes)
+	return &id, nil
 }
 
 // IdenState calculates the Identity State from the Claims Tree Root,
