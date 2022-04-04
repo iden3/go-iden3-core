@@ -267,6 +267,38 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 	return c, nil
 }
 
+// HIndex calculates the hash of the Index of the Claim
+func (c *Claim) HIndex() (*big.Int, error) {
+	index, _ := c.RawSlots()
+	return poseidon.Hash(ElemBytesToInts(index[:]))
+}
+
+// HValue calculates the hash of the Value of the Claim
+func (c *Claim) HValue() (*big.Int, error) {
+	_, value := c.RawSlots()
+	return poseidon.Hash(ElemBytesToInts(value[:]))
+}
+
+// HiHv returns the HIndex and HValue of the Claim
+func (e *Claim) HiHv() (*big.Int, *big.Int, error) {
+	hi, err := e.HIndex()
+	if err != nil {
+		return nil, nil, err
+	}
+	hv, err := e.HValue()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return hi, hv, nil
+}
+
+// SlotsAsInts returns slots as []big.Int
+func (c *Claim) SlotsAsInts() []*big.Int {
+	index, value := c.RawSlots()
+	return append(ElemBytesToInts(index[:]), ElemBytesToInts(value[:])...)
+}
+
 // SetSchemaHash updates claim's schema hash.
 func (c *Claim) SetSchemaHash(schema SchemaHash) {
 	copy(c.index[0][:schemaHashLn], utils.SwapEndianness(schema[:]))
