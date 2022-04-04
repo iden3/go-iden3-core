@@ -17,10 +17,6 @@ var (
 	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
 	// - first 2 bytes: `00000000 00000001`
 	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
-
-	// TypeRelayer specifies the identity linked to relayer's identity.
-	// State of this identity is published by another identity(relayer)
-	TypeRelayer = [2]byte{0b00000000, 0b00000010}
 )
 
 // ID is a byte array with
