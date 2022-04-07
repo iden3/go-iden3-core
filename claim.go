@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -569,4 +570,54 @@ func memset(arr []byte, v byte) {
 	for ptr := 1; ptr < len(arr); ptr *= 2 {
 		copy(arr[ptr:], arr[:ptr])
 	}
+}
+
+func (c Claim) MarshalJSON() ([]byte, error) {
+	intVals := c.RawSlotsAsInts()
+	var obj = make([]string, len(intVals))
+	for i, v := range intVals {
+		obj[i] = v.Text(10)
+	}
+	return json.Marshal(obj)
+}
+
+func (c *Claim) UnmarshalJSON(in []byte) error {
+	var sVals []string
+	err := json.Unmarshal(in, &sVals)
+	if err != nil {
+		return err
+	}
+
+	if len(sVals) != len(c.index)+len(c.value) {
+		return errors.New("invalid number of claim's slots")
+	}
+
+	var (
+		intVal *big.Int
+		ok     bool
+	)
+
+	for i := 0; i < len(c.index); i++ {
+		intVal, ok = new(big.Int).SetString(sVals[i], 10)
+		if !ok {
+			return fmt.Errorf("can't parse int for index field #%v", i)
+		}
+		err = c.index[i].SetInt(intVal)
+		if err != nil {
+			return fmt.Errorf("can't set index field #%v: %w", i, err)
+		}
+	}
+
+	for i := 0; i < len(c.value); i++ {
+		intVal, ok = new(big.Int).SetString(sVals[i+len(c.index)], 10)
+		if !ok {
+			return fmt.Errorf("can't parse int for value field #%v", i)
+		}
+		err = c.value[i].SetInt(intVal)
+		if err != nil {
+			return fmt.Errorf("can't set value field #%v: %w", i, err)
+		}
+	}
+
+	return nil
 }
