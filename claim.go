@@ -91,14 +91,19 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	return dst, nil
 }
 
-// NewSchemaHashFromHex returns SchemaHash with first 16 bytes of decoded hex sting
+// NewSchemaHashFromHex creates new SchemaHash from hex string
 func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 	var schemaHash SchemaHash
 	schemaEncodedBytes, err := hex.DecodeString(s)
 	if err != nil {
 		return SchemaHash{}, err
 	}
-	copy(schemaHash[:], schemaEncodedBytes) // !!! Schema is only 16 bytes
+
+	if len(schemaEncodedBytes) != len(schemaHash) {
+		return SchemaHash{}, fmt.Errorf("invalid schema hash length: %d",
+			len(schemaEncodedBytes))
+	}
+	copy(schemaHash[:], schemaEncodedBytes)
 
 	return schemaHash, nil
 }
@@ -269,34 +274,26 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 
 // HIndex calculates the hash of the Index of the Claim
 func (c *Claim) HIndex() (*big.Int, error) {
-	index, _ := c.RawSlots()
-	return poseidon.Hash(ElemBytesToInts(index[:]))
+	return poseidon.Hash(ElemBytesToInts(c.index[:]))
 }
 
 // HValue calculates the hash of the Value of the Claim
 func (c *Claim) HValue() (*big.Int, error) {
-	_, value := c.RawSlots()
-	return poseidon.Hash(ElemBytesToInts(value[:]))
+	return poseidon.Hash(ElemBytesToInts(c.value[:]))
 }
 
 // HiHv returns the HIndex and HValue of the Claim
-func (e *Claim) HiHv() (*big.Int, *big.Int, error) {
-	hi, err := e.HIndex()
+func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
+	hi, err := c.HIndex()
 	if err != nil {
 		return nil, nil, err
 	}
-	hv, err := e.HValue()
+	hv, err := c.HValue()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return hi, hv, nil
-}
-
-// SlotsAsInts returns slots as []big.Int
-func (c *Claim) SlotsAsInts() []*big.Int {
-	index, value := c.RawSlots()
-	return append(ElemBytesToInts(index[:]), ElemBytesToInts(value[:])...)
 }
 
 // SetSchemaHash updates claim's schema hash.
@@ -545,6 +542,11 @@ func setSlotInt(slot *ElemBytes, value *big.Int, slotName SlotName) error {
 // RawSlots returns raw bytes of claim's index and value
 func (c *Claim) RawSlots() (index [4]ElemBytes, value [4]ElemBytes) {
 	return c.index, c.value
+}
+
+// RawSlotsAsInts returns slots as []*big.Int
+func (c *Claim) RawSlotsAsInts() []*big.Int {
+	return append(ElemBytesToInts(c.index[:]), ElemBytesToInts(c.value[:])...)
 }
 
 // Clone returns full deep copy of claim
