@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -333,4 +334,47 @@ func TestGenerateRandomSlots(t *testing.T) {
 			break
 		}
 	}
+}
+
+func TestClaimBinarySerialization(t *testing.T) {
+	binDataStr := strings.Join([]string{
+		"5fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621",
+		"65f606f6a63b7f3dfd2567c18979e4d60f26686d9bf2fb26c901ff354cde1607",
+		"35d6042c4160f38ee9e2a9f3fb4ffb0019b454d522b5ffa17604193fb8966710",
+		"ba53af19779cb2948b6570ffa0b773963c130ad797ddeafe4e3ad29b5125210f",
+		"f4b6f44090a32711f3208e4e4b89cb5165ce64002cbd9c2887aa113df2468928",
+		"8ced323cb76f0d3fac476c9fb03fc9228fbae88fd580663a0454b68312207f0a",
+		"5a27db029de37ae37a42318813487685929359ca8c5eb94e152dc1af42ea3d16",
+		"e50be1a6dc1d5768e8537988fddce562e9b948c918bba3e933e5c400cde5e60c",
+	}, "")
+	binData, err := hex.DecodeString(binDataStr)
+	require.NoError(t, err)
+
+	var want = Claim{
+		index: [4]ElemBytes{
+			slotFromHex("5fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621"),
+			slotFromHex("65f606f6a63b7f3dfd2567c18979e4d60f26686d9bf2fb26c901ff354cde1607"),
+			slotFromHex("35d6042c4160f38ee9e2a9f3fb4ffb0019b454d522b5ffa17604193fb8966710"),
+			slotFromHex("ba53af19779cb2948b6570ffa0b773963c130ad797ddeafe4e3ad29b5125210f"),
+		},
+		value: [4]ElemBytes{
+			slotFromHex("f4b6f44090a32711f3208e4e4b89cb5165ce64002cbd9c2887aa113df2468928"),
+			slotFromHex("8ced323cb76f0d3fac476c9fb03fc9228fbae88fd580663a0454b68312207f0a"),
+			slotFromHex("5a27db029de37ae37a42318813487685929359ca8c5eb94e152dc1af42ea3d16"),
+			slotFromHex("e50be1a6dc1d5768e8537988fddce562e9b948c918bba3e933e5c400cde5e60c"),
+		},
+	}
+
+	t.Run("unmarshal", func(t *testing.T) {
+		var result Claim
+		err := result.UnmarshalBinary(binData)
+		require.NoError(t, err)
+		require.Equal(t, want, result)
+	})
+
+	t.Run("marshal", func(t *testing.T) {
+		result, err := want.MarshalBinary()
+		require.NoError(t, err)
+		require.Equal(t, binData, result)
+	})
 }

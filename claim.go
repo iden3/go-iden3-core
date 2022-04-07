@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -616,6 +617,45 @@ func (c *Claim) UnmarshalJSON(in []byte) error {
 		err = c.value[i].SetInt(intVal)
 		if err != nil {
 			return fmt.Errorf("can't set value field #%v: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+func (c Claim) MarshalBinary() ([]byte, error) {
+	var buf = bytes.NewBuffer(nil)
+	buf.Grow(len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0]))
+	for i := range c.index {
+		buf.Write(c.index[i][:])
+	}
+	for i := range c.value {
+		buf.Write(c.value[i][:])
+	}
+	return buf.Bytes(), nil
+}
+
+func (c *Claim) UnmarshalBinary(data []byte) error {
+	wantLen := len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0])
+	if len(data) != wantLen {
+		return errors.New("unexpected length of input data")
+	}
+
+	offset := 0
+	for i := range c.index {
+		copy(c.index[i][:], data[offset:])
+		offset += len(c.index[i])
+		_, err := fieldBytesToInt(c.index[i][:])
+		if err != nil {
+			return fmt.Errorf("can't set index slot #%v: %w", i, err)
+		}
+	}
+	for i := range c.value {
+		copy(c.value[i][:], data[offset:])
+		offset += len(c.value[i])
+		_, err := fieldBytesToInt(c.value[i][:])
+		if err != nil {
+			return fmt.Errorf("can't set value slot #%v: %w", i, err)
 		}
 	}
 

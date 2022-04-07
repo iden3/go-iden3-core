@@ -60,6 +60,15 @@ func bytesToInt(in []byte) *big.Int {
 	return new(big.Int).SetBytes(utils.SwapEndianness(in))
 }
 
+func fieldBytesToInt(in []byte) (*big.Int, error) {
+	i := bytesToInt(in)
+	if !utils.CheckBigIntInField(i) {
+		return nil, ErrDataOverflow
+	}
+
+	return i, nil
+}
+
 func intToBytes(in *big.Int) []byte {
 	return utils.SwapEndianness(in.Bytes())
 }
