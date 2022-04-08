@@ -3,10 +3,12 @@ package core
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -250,4 +252,129 @@ func TestClaim_WithIndexDataBytes(t *testing.T) {
 		WithIndexDataBytes(iX.Bytes(), nil))
 	require.NoError(t, err)
 	require.Equal(t, expSlot, claim.index[3])
+}
+
+func TestClaimJSONSerialization(t *testing.T) {
+	in := `[
+"15163995036539824738096525342132337704181738148399168403057770094395141110111",
+"3206594817839378626027676511482956481343861686313501795018892230311002175077",
+"7420031054231607091230846181053275837604749850669737756447914128096832575029",
+"6843256246667081694694856844555135410358903741435158507252727716055448769466",
+"18335061644187980192028500482619331449203987338928612566250871337402164885236",
+"4747739418092571675618239353368909204965774632269590366651599441049750269324",
+"10060277146294090095035892104009266064127776406104429246320070556972379481946",
+"5835715034681704899254417398745238273415614452113785384300119694985241103333"
+]`
+	var want = Claim{
+		index: [4]ElemBytes{
+			slotFromHex("5fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621"),
+			slotFromHex("65f606f6a63b7f3dfd2567c18979e4d60f26686d9bf2fb26c901ff354cde1607"),
+			slotFromHex("35d6042c4160f38ee9e2a9f3fb4ffb0019b454d522b5ffa17604193fb8966710"),
+			slotFromHex("ba53af19779cb2948b6570ffa0b773963c130ad797ddeafe4e3ad29b5125210f"),
+		},
+		value: [4]ElemBytes{
+			slotFromHex("f4b6f44090a32711f3208e4e4b89cb5165ce64002cbd9c2887aa113df2468928"),
+			slotFromHex("8ced323cb76f0d3fac476c9fb03fc9228fbae88fd580663a0454b68312207f0a"),
+			slotFromHex("5a27db029de37ae37a42318813487685929359ca8c5eb94e152dc1af42ea3d16"),
+			slotFromHex("e50be1a6dc1d5768e8537988fddce562e9b948c918bba3e933e5c400cde5e60c"),
+		},
+	}
+
+	t.Run("unmarshal", func(t *testing.T) {
+		var result Claim
+		err := json.Unmarshal([]byte(in), &result)
+		require.NoError(t, err)
+		require.Equal(t, want, result)
+	})
+
+	t.Run("marshal", func(t *testing.T) {
+		result, err := json.Marshal(want)
+		require.NoError(t, err)
+		require.JSONEq(t, in, string(result))
+	})
+}
+
+func slotFromHex(in string) ElemBytes {
+	var eb ElemBytes
+	data, err := hex.DecodeString(in)
+	if err != nil {
+		panic(err)
+	}
+	if len(data) != 32 {
+		panic("data len not 32")
+	}
+	copy(eb[:], data)
+	return eb
+}
+
+func TestGenerateRandomSlots(t *testing.T) {
+	t.Skip("use this to generate random slots for other tests")
+
+	var dataRnd [32]byte
+	watchdog := 0
+	cnt := 0
+	for {
+		watchdog++
+		if watchdog > 1000 {
+			t.Fatal(watchdog)
+		}
+
+		n, err := rand.Read(dataRnd[:])
+		require.NoError(t, err)
+		require.Equal(t, 32, n)
+		intVal := bytesToInt(dataRnd[:])
+		if !utils.CheckBigIntInField(intVal) {
+			continue
+		}
+
+		t.Logf("%v: %v", hex.EncodeToString(dataRnd[:]), intVal.Text(10))
+
+		cnt++
+		if cnt >= 8 {
+			break
+		}
+	}
+}
+
+func TestClaimBinarySerialization(t *testing.T) {
+	binDataStr := strings.Join([]string{
+		"5fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621",
+		"65f606f6a63b7f3dfd2567c18979e4d60f26686d9bf2fb26c901ff354cde1607",
+		"35d6042c4160f38ee9e2a9f3fb4ffb0019b454d522b5ffa17604193fb8966710",
+		"ba53af19779cb2948b6570ffa0b773963c130ad797ddeafe4e3ad29b5125210f",
+		"f4b6f44090a32711f3208e4e4b89cb5165ce64002cbd9c2887aa113df2468928",
+		"8ced323cb76f0d3fac476c9fb03fc9228fbae88fd580663a0454b68312207f0a",
+		"5a27db029de37ae37a42318813487685929359ca8c5eb94e152dc1af42ea3d16",
+		"e50be1a6dc1d5768e8537988fddce562e9b948c918bba3e933e5c400cde5e60c",
+	}, "")
+	binData, err := hex.DecodeString(binDataStr)
+	require.NoError(t, err)
+
+	var want = Claim{
+		index: [4]ElemBytes{
+			slotFromHex("5fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c848621"),
+			slotFromHex("65f606f6a63b7f3dfd2567c18979e4d60f26686d9bf2fb26c901ff354cde1607"),
+			slotFromHex("35d6042c4160f38ee9e2a9f3fb4ffb0019b454d522b5ffa17604193fb8966710"),
+			slotFromHex("ba53af19779cb2948b6570ffa0b773963c130ad797ddeafe4e3ad29b5125210f"),
+		},
+		value: [4]ElemBytes{
+			slotFromHex("f4b6f44090a32711f3208e4e4b89cb5165ce64002cbd9c2887aa113df2468928"),
+			slotFromHex("8ced323cb76f0d3fac476c9fb03fc9228fbae88fd580663a0454b68312207f0a"),
+			slotFromHex("5a27db029de37ae37a42318813487685929359ca8c5eb94e152dc1af42ea3d16"),
+			slotFromHex("e50be1a6dc1d5768e8537988fddce562e9b948c918bba3e933e5c400cde5e60c"),
+		},
+	}
+
+	t.Run("unmarshal", func(t *testing.T) {
+		var result Claim
+		err := result.UnmarshalBinary(binData)
+		require.NoError(t, err)
+		require.Equal(t, want, result)
+	})
+
+	t.Run("marshal", func(t *testing.T) {
+		result, err := want.MarshalBinary()
+		require.NoError(t, err)
+		require.Equal(t, binData, result)
+	})
 }

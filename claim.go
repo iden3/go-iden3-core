@@ -1,8 +1,10 @@
 package core
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -91,14 +93,19 @@ func (sc SchemaHash) MarshalText() ([]byte, error) {
 	return dst, nil
 }
 
-// NewSchemaHashFromHex returns SchemaHash with first 16 bytes of decoded hex sting
+// NewSchemaHashFromHex creates new SchemaHash from hex string
 func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 	var schemaHash SchemaHash
 	schemaEncodedBytes, err := hex.DecodeString(s)
 	if err != nil {
 		return SchemaHash{}, err
 	}
-	copy(schemaHash[:], schemaEncodedBytes) // !!! Schema is only 16 bytes
+
+	if len(schemaEncodedBytes) != len(schemaHash) {
+		return SchemaHash{}, fmt.Errorf("invalid schema hash length: %d",
+			len(schemaEncodedBytes))
+	}
+	copy(schemaHash[:], schemaEncodedBytes)
 
 	return schemaHash, nil
 }
@@ -269,34 +276,26 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 
 // HIndex calculates the hash of the Index of the Claim
 func (c *Claim) HIndex() (*big.Int, error) {
-	index, _ := c.RawSlots()
-	return poseidon.Hash(ElemBytesToInts(index[:]))
+	return poseidon.Hash(ElemBytesToInts(c.index[:]))
 }
 
 // HValue calculates the hash of the Value of the Claim
 func (c *Claim) HValue() (*big.Int, error) {
-	_, value := c.RawSlots()
-	return poseidon.Hash(ElemBytesToInts(value[:]))
+	return poseidon.Hash(ElemBytesToInts(c.value[:]))
 }
 
 // HiHv returns the HIndex and HValue of the Claim
-func (e *Claim) HiHv() (*big.Int, *big.Int, error) {
-	hi, err := e.HIndex()
+func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
+	hi, err := c.HIndex()
 	if err != nil {
 		return nil, nil, err
 	}
-	hv, err := e.HValue()
+	hv, err := c.HValue()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return hi, hv, nil
-}
-
-// SlotsAsInts returns slots as []big.Int
-func (c *Claim) SlotsAsInts() []*big.Int {
-	index, value := c.RawSlots()
-	return append(ElemBytesToInts(index[:]), ElemBytesToInts(value[:])...)
 }
 
 // SetSchemaHash updates claim's schema hash.
@@ -547,6 +546,11 @@ func (c *Claim) RawSlots() (index [4]ElemBytes, value [4]ElemBytes) {
 	return c.index, c.value
 }
 
+// RawSlotsAsInts returns slots as []*big.Int
+func (c *Claim) RawSlotsAsInts() []*big.Int {
+	return append(ElemBytesToInts(c.index[:]), ElemBytesToInts(c.value[:])...)
+}
+
 // Clone returns full deep copy of claim
 func (c *Claim) Clone() *Claim {
 	var newClaim Claim
@@ -567,4 +571,93 @@ func memset(arr []byte, v byte) {
 	for ptr := 1; ptr < len(arr); ptr *= 2 {
 		copy(arr[ptr:], arr[:ptr])
 	}
+}
+
+func (c Claim) MarshalJSON() ([]byte, error) {
+	intVals := c.RawSlotsAsInts()
+	var obj = make([]string, len(intVals))
+	for i, v := range intVals {
+		obj[i] = v.Text(10)
+	}
+	return json.Marshal(obj)
+}
+
+func (c *Claim) UnmarshalJSON(in []byte) error {
+	var sVals []string
+	err := json.Unmarshal(in, &sVals)
+	if err != nil {
+		return err
+	}
+
+	if len(sVals) != len(c.index)+len(c.value) {
+		return errors.New("invalid number of claim's slots")
+	}
+
+	var (
+		intVal *big.Int
+		ok     bool
+	)
+
+	for i := 0; i < len(c.index); i++ {
+		intVal, ok = new(big.Int).SetString(sVals[i], 10)
+		if !ok {
+			return fmt.Errorf("can't parse int for index field #%v", i)
+		}
+		err = c.index[i].SetInt(intVal)
+		if err != nil {
+			return fmt.Errorf("can't set index field #%v: %w", i, err)
+		}
+	}
+
+	for i := 0; i < len(c.value); i++ {
+		intVal, ok = new(big.Int).SetString(sVals[i+len(c.index)], 10)
+		if !ok {
+			return fmt.Errorf("can't parse int for value field #%v", i)
+		}
+		err = c.value[i].SetInt(intVal)
+		if err != nil {
+			return fmt.Errorf("can't set value field #%v: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
+func (c Claim) MarshalBinary() ([]byte, error) {
+	var buf = bytes.NewBuffer(nil)
+	buf.Grow(len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0]))
+	for i := range c.index {
+		buf.Write(c.index[i][:])
+	}
+	for i := range c.value {
+		buf.Write(c.value[i][:])
+	}
+	return buf.Bytes(), nil
+}
+
+func (c *Claim) UnmarshalBinary(data []byte) error {
+	wantLen := len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0])
+	if len(data) != wantLen {
+		return errors.New("unexpected length of input data")
+	}
+
+	offset := 0
+	for i := range c.index {
+		copy(c.index[i][:], data[offset:])
+		offset += len(c.index[i])
+		_, err := fieldBytesToInt(c.index[i][:])
+		if err != nil {
+			return fmt.Errorf("can't set index slot #%v: %w", i, err)
+		}
+	}
+	for i := range c.value {
+		copy(c.value[i][:], data[offset:])
+		offset += len(c.value[i])
+		_, err := fieldBytesToInt(c.value[i][:])
+		if err != nil {
+			return fmt.Errorf("can't set value slot #%v: %w", i, err)
+		}
+	}
+
+	return nil
 }

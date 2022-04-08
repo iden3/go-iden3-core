@@ -14,18 +14,17 @@ type ElemBytes [32]byte
 
 // ToInt returns *big.Int representation of ElemBytes.
 func (el ElemBytes) ToInt() *big.Int {
-	return new(big.Int).SetBytes(utils.SwapEndianness(el[:]))
+	return bytesToInt(el[:])
 }
 
 // SetInt sets element's data to serialized value of *big.Int in little-endian.
 // And checks that the value is valid (fits in Field Q).
 // Returns ErrDataOverflow if the value is too large
 func (el *ElemBytes) SetInt(value *big.Int) error {
-	if !utils.CheckBigIntInField(value) {
-		return ErrDataOverflow
+	val, err := fieldIntToBytes(value)
+	if err != nil {
+		return err
 	}
-
-	val := utils.SwapEndianness(value.Bytes())
 	copy((*el)[:], val)
 	memset((*el)[len(val):], 0)
 	return nil
@@ -39,17 +38,12 @@ func (el ElemBytes) Hex() string {
 // NewElemBytesFromInt creates new ElemBytes from *big.Int.
 // Returns error ErrDataOverflow if value is too large to fill the Field Q.
 func NewElemBytesFromInt(i *big.Int) (ElemBytes, error) {
+	val, err := fieldIntToBytes(i)
+	if err != nil {
+		return ElemBytes{}, err
+	}
 	var s ElemBytes
-	bs := i.Bytes()
-	// may be this check is redundant because of CheckBigIntInField, but just
-	// in case.
-	if len(bs) > len(s) {
-		return s, ErrDataOverflow
-	}
-	if !utils.CheckBigIntInField(i) {
-		return s, ErrDataOverflow
-	}
-	copy(s[:], utils.SwapEndianness(bs))
+	copy(s[:], val)
 	return s, nil
 }
 
@@ -60,4 +54,29 @@ func ElemBytesToInts(elements []ElemBytes) []*big.Int {
 		result[i] = elements[i].ToInt()
 	}
 	return result
+}
+
+func bytesToInt(in []byte) *big.Int {
+	return new(big.Int).SetBytes(utils.SwapEndianness(in))
+}
+
+func fieldBytesToInt(in []byte) (*big.Int, error) {
+	i := bytesToInt(in)
+	if !utils.CheckBigIntInField(i) {
+		return nil, ErrDataOverflow
+	}
+
+	return i, nil
+}
+
+func intToBytes(in *big.Int) []byte {
+	return utils.SwapEndianness(in.Bytes())
+}
+
+func fieldIntToBytes(in *big.Int) ([]byte, error) {
+	if !utils.CheckBigIntInField(in) {
+		return nil, ErrDataOverflow
+	}
+
+	return intToBytes(in), nil
 }
