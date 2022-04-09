@@ -17,10 +17,6 @@ var (
 	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
 	// - first 2 bytes: `00000000 00000001`
 	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
-
-	// TypeRelayer specifies the identity linked to relayer's identity.
-	// State of this identity is published by another identity(relayer)
-	TypeRelayer = [2]byte{0b00000000, 0b00000010}
 )
 
 // ID is a byte array with
@@ -151,38 +147,23 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-// IdGenesisFromIdenState calculates the genesis Id from an Identity State.
-func IdGenesisFromIdenState(state ElemBytes) *ID { //nolint:revive
+// IdGenesisFromIdenState calculates the genesis ID from an Identity State.
+func IdGenesisFromIdenState(typ [2]byte, state *big.Int) (*ID, error) { //nolint:revive
 	var idGenesisBytes [27]byte
+
+	idenStateData, err := NewElemBytesFromInt(state)
+	if err != nil {
+		return nil, err
+	}
+
 	// we take last 27 bytes, because of swapped endianness
-	copy(idGenesisBytes[:], state[len(state)-27:])
-	id := NewID(TypeDefault, idGenesisBytes)
-	return &id
+	copy(idGenesisBytes[:], idenStateData[len(idenStateData)-27:])
+	id := NewID(typ, idGenesisBytes)
+	return &id, nil
 }
 
 // IdenState calculates the Identity State from the Claims Tree Root,
 // Revocation Tree Root and Roots Tree Root.
-func IdenState(clr ElemBytes, rer ElemBytes,
-	ror ElemBytes) (ElemBytes, error) {
-
-	idenState, err := poseidon.Hash([]*big.Int{
-		clr.ToInt(), rer.ToInt(), ror.ToInt()})
-	if err != nil {
-		return ElemBytes{}, err
-	}
-	return NewElemBytesFromInt(idenState)
-}
-
-// CalculateGenesisID calculate genesis id based on provided claims tree root
-func CalculateGenesisID(clr ElemBytes) (*ID, error) {
-	idenState, err := poseidon.Hash([]*big.Int{
-		clr.ToInt(), big.NewInt(0), big.NewInt(0)})
-	if err != nil {
-		return nil, err
-	}
-	idenStateData, err := NewElemBytesFromInt(idenState)
-	if err != nil {
-		return nil, err
-	}
-	return IdGenesisFromIdenState(idenStateData), nil
+func IdenState(clr, rer, ror *big.Int) (*big.Int, error) {
+	return poseidon.Hash([]*big.Int{clr, rer, ror})
 }
