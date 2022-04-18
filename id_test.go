@@ -137,3 +137,15 @@ func TestCheckChecksum(t *testing.T) {
 	_, err := IDFromBytes(empty[:])
 	assert.Equal(t, errors.New("IDFromBytes error: byte array empty"), err)
 }
+
+func TestIDFromInt(t *testing.T) {
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+	assert.Nil(t, err)
+
+	intID := id.BigInt()
+
+	got, err := IDFromInt(intID)
+	assert.Nil(t, err)
+
+	assert.Equal(t, id, got)
+}

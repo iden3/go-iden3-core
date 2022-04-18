@@ -105,6 +105,12 @@ func IDFromBytes(b []byte) (ID, error) {
 	return id, nil
 }
 
+// IDFromInt returns the ID from a given big.Int
+func IDFromInt(i *big.Int) (ID, error) {
+	b := intToBytes(i)
+	return IDFromBytes(b)
+}
+
 // DecomposeID returns type, genesis and checksum from an ID
 func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 	var typ [2]byte
