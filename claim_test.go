@@ -14,6 +14,7 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -377,4 +378,28 @@ func TestClaimBinarySerialization(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, binData, result)
 	})
+}
+
+func TestNewSchemaHashFromInt(t *testing.T) {
+
+	var schemaHash SchemaHash
+	schemaEncodedBytes, _ := hex.DecodeString("ca938857241db9451ea329256b9c06e5")
+	copy(schemaHash[:], schemaEncodedBytes)
+
+	exp := new(big.Int).SetBytes(schemaHash[:])
+	got := schemaHash.BigInt()
+
+	assert.Equal(t, exp, got)
+}
+
+func TestSchemaHashShortHex(t *testing.T) {
+
+	newInt := big.NewInt(1)
+	toString := hex.EncodeToString(newInt.Bytes())
+
+	fromHex, err := NewSchemaHashFromHex(toString)
+	assert.NoError(t, err)
+
+	fromInt := NewSchemaHashFromInt(newInt)
+	assert.Equal(t, fromHex, fromInt)
 }

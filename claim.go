@@ -110,6 +110,19 @@ func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 	return schemaHash, nil
 }
 
+// NewSchemaHashFromInt creates new SchemaHash from big.Int
+func NewSchemaHashFromInt(i *big.Int) SchemaHash {
+	var schemaHash SchemaHash
+	i.FillBytes(schemaHash[:])
+
+	return schemaHash
+}
+
+// BigInt returns a bigInt presentation of SchemaHash
+func (sc SchemaHash) BigInt() *big.Int {
+	return new(big.Int).SetBytes(sc[:])
+}
+
 type Claim struct {
 	index [4]ElemBytes
 	value [4]ElemBytes
