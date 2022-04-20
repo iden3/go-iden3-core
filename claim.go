@@ -101,11 +101,11 @@ func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 		return SchemaHash{}, err
 	}
 
-	if len(schemaEncodedBytes) != len(schemaHash) {
+	if len(schemaEncodedBytes) > len(schemaHash) {
 		return SchemaHash{}, fmt.Errorf("invalid schema hash length: %d",
 			len(schemaEncodedBytes))
 	}
-	copy(schemaHash[:], schemaEncodedBytes)
+	copy(schemaHash[len(schemaHash)-len(schemaEncodedBytes):], schemaEncodedBytes)
 
 	return schemaHash, nil
 }
