@@ -77,7 +77,7 @@ func TestClaim_GetSchemaHash(t *testing.T) {
 	claim, err := NewClaim(sc)
 	require.NoError(t, err)
 	require.True(t,
-		bytes.Equal(sc[:], utils.SwapEndianness(claim.index[0][:schemaHashLn])))
+		bytes.Equal(sc[:], claim.index[0][:schemaHashLn]))
 
 	shFromClaim := claim.GetSchemaHash()
 	shFromClaimHexBytes, err := shFromClaim.MarshalText()
@@ -380,26 +380,28 @@ func TestClaimBinarySerialization(t *testing.T) {
 	})
 }
 
-func TestNewSchemaHashFromInt(t *testing.T) {
+func TestNewSchemaHashFromHex(t *testing.T) {
 
-	var schemaHash SchemaHash
-	schemaEncodedBytes, _ := hex.DecodeString("ca938857241db9451ea329256b9c06e5")
-	copy(schemaHash[:], schemaEncodedBytes)
+	hash := "ca938857241db9451ea329256b9c06e5"
+	got, err := NewSchemaHashFromHex(hash)
+	require.NoError(t, err)
 
-	exp := new(big.Int).SetBytes(schemaHash[:])
-	got := schemaHash.BigInt()
+	exp, err := hex.DecodeString(hash)
+	require.NoError(t, err)
 
-	assert.Equal(t, exp, got)
+	assert.Equal(t, exp[:], got[:])
+
 }
 
-func TestSchemaHashShortHex(t *testing.T) {
+func TestSchemaHash_BigInt(t *testing.T) {
+	schema, err := NewSchemaHashFromHex("ca938857241db9451ea329256b9c06e5")
+	require.NoError(t, err)
 
-	newInt := big.NewInt(1)
-	toString := hex.EncodeToString(newInt.Bytes())
+	exp, b := new(big.Int).SetString("304427537360709784173770334266246861770", 10)
+	require.True(t, b)
 
-	fromHex, err := NewSchemaHashFromHex(toString)
-	assert.NoError(t, err)
+	got := schema.BigInt()
 
-	fromInt := NewSchemaHashFromInt(newInt)
-	assert.Equal(t, fromHex, fromInt)
+	assert.Equal(t, exp, got)
+
 }
