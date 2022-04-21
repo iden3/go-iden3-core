@@ -55,13 +55,7 @@ func (id *ID) Equal(id2 *ID) bool {
 	return bytes.Equal(id[:], id2[:])
 }
 
-// func (id ID) MarshalJSON() ([]byte, error) {
-//         fmt.Println(id.String())
-//         return json.Marshal(id.String())
-// }
-
 func (id ID) MarshalText() ([]byte, error) {
-	// return json.Marshal(id.String())
 	return []byte(id.String()), nil
 }
 
