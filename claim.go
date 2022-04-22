@@ -315,7 +315,6 @@ func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
 // SetSchemaHash updates claim's schema hash.
 func (c *Claim) SetSchemaHash(schema SchemaHash) {
 	copy(c.index[0][:schemaHashLn], schema[:])
-	//copy(c.index[0][:schemaHashLn], utils.SwapEndianness(schema[:]))
 }
 
 // GetSchemaHash return copy of claim's schema hash.
