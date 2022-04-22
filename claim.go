@@ -110,6 +110,20 @@ func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 	return schemaHash, nil
 }
 
+// NewSchemaHashFromInt creates new SchemaHash from big.Int
+func NewSchemaHashFromInt(i *big.Int) SchemaHash {
+	var schemaHash SchemaHash
+	b := intToBytes(i)
+	copy(schemaHash[len(schemaHash)-len(b):], b)
+
+	return schemaHash
+}
+
+// BigInt returns a bigInt presentation of SchemaHash
+func (sc SchemaHash) BigInt() *big.Int {
+	return bytesToInt(sc[:])
+}
+
 type Claim struct {
 	index [4]ElemBytes
 	value [4]ElemBytes
@@ -300,13 +314,13 @@ func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
 
 // SetSchemaHash updates claim's schema hash.
 func (c *Claim) SetSchemaHash(schema SchemaHash) {
-	copy(c.index[0][:schemaHashLn], utils.SwapEndianness(schema[:]))
+	copy(c.index[0][:schemaHashLn], schema[:])
 }
 
 // GetSchemaHash return copy of claim's schema hash.
 func (c *Claim) GetSchemaHash() SchemaHash {
 	var schemaHash SchemaHash
-	copy(schemaHash[:], utils.SwapEndianness(c.index[0][:schemaHashLn]))
+	copy(schemaHash[:], c.index[0][:schemaHashLn])
 	return schemaHash
 }
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,7 +77,7 @@ func TestClaim_GetSchemaHash(t *testing.T) {
 	claim, err := NewClaim(sc)
 	require.NoError(t, err)
 	require.True(t,
-		bytes.Equal(sc[:], utils.SwapEndianness(claim.index[0][:schemaHashLn])))
+		bytes.Equal(sc[:], claim.index[0][:schemaHashLn]))
 
 	shFromClaim := claim.GetSchemaHash()
 	shFromClaimHexBytes, err := shFromClaim.MarshalText()
@@ -377,4 +378,30 @@ func TestClaimBinarySerialization(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, binData, result)
 	})
+}
+
+func TestNewSchemaHashFromHex(t *testing.T) {
+
+	hash := "ca938857241db9451ea329256b9c06e5"
+	got, err := NewSchemaHashFromHex(hash)
+	require.NoError(t, err)
+
+	exp, err := hex.DecodeString(hash)
+	require.NoError(t, err)
+
+	assert.Equal(t, exp[:], got[:])
+
+}
+
+func TestSchemaHash_BigInt(t *testing.T) {
+	schema, err := NewSchemaHashFromHex("ca938857241db9451ea329256b9c06e5")
+	require.NoError(t, err)
+
+	exp, b := new(big.Int).SetString("304427537360709784173770334266246861770", 10)
+	require.True(t, b)
+
+	got := schema.BigInt()
+
+	assert.Equal(t, exp, got)
+
 }
