@@ -330,7 +330,7 @@ func (c *Claim) setSubject(s Subject) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) getSubject() Subject {
+func (c *Claim) GetSubject() Subject {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
@@ -422,7 +422,7 @@ func (c *Claim) ResetID() {
 // Returns error ErrNoID if ID is not set.
 func (c *Claim) GetID() (ID, error) {
 	var id ID
-	switch c.getSubject() {
+	switch c.GetSubject() {
 	case SubjectOtherIdenIndex:
 		return c.getIndexID(), nil
 	case SubjectOtherIdenValue:
