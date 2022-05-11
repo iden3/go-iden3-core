@@ -137,7 +137,7 @@ type subjectFlag byte
 
 const (
 	subjectFlagSelf           subjectFlag = iota // 000
-	subjectFlagInvalid                           // 001
+	_subjectFlagInvalid                          // nolint // 001
 	subjectFlagOtherIdenIndex                    // 010
 	subjectFlagOtherIdenValue                    // 011
 )
