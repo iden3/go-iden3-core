@@ -129,6 +129,16 @@ type Claim struct {
 	value [4]ElemBytes
 }
 
+// SubjectPosition string implementation for Subject.
+type SubjectPosition string
+
+const (
+	// SubjectPositionIndex for flag SubjectOtherIdenIndex.
+	SubjectPositionIndex = "index"
+	// SubjectPositionValue for flag SubjectOtherIdenValue.
+	SubjectPositionValue = "value"
+)
+
 // Subject for the time being describes the location of ID (in index or value
 // slots or nowhere at all).
 //
@@ -198,6 +208,7 @@ func WithValueID(id ID) Option {
 // WithID sets ID to claim's index or value depending on `pos`.
 func WithID(id ID, pos IDPosition) Option {
 	return func(c *Claim) error {
+		// TODO (illia-korotia): refactor to Subject type.
 		switch pos {
 		case IDPositionIndex:
 			c.SetIndexID(id)
@@ -324,13 +335,25 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 	return schemaHash
 }
 
+// GetSubjectPosition return a position where the subject is stored.
+func (c *Claim) GetSubjectPosition() (SubjectPosition, error) {
+	switch c.getSubject() {
+	case SubjectOtherIdenIndex:
+		return SubjectPositionIndex, nil
+	case SubjectOtherIdenValue:
+		return SubjectPositionValue, nil
+	default:
+		return "", errors.New("claim without ")
+	}
+}
+
 func (c *Claim) setSubject(s Subject) {
 	// clean first 3 bits
 	c.index[0][flagsByteIdx] &= 0b11111000
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) GetSubject() Subject {
+func (c *Claim) getSubject() Subject {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
@@ -422,7 +445,7 @@ func (c *Claim) ResetID() {
 // Returns error ErrNoID if ID is not set.
 func (c *Claim) GetID() (ID, error) {
 	var id ID
-	switch c.GetSubject() {
+	switch c.getSubject() {
 	case SubjectOtherIdenIndex:
 		return c.getIndexID(), nil
 	case SubjectOtherIdenValue:
