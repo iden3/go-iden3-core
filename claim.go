@@ -132,14 +132,14 @@ type Claim struct {
 // subjectFlag for the time being describes the location of ID (in index or value
 // slots or nowhere at all).
 //
-// Values subjectInvalidFlag presents for backward compatibility and for now means nothing.
+// Values subjectFlagInvalid presents for backward compatibility and for now means nothing.
 type subjectFlag byte
 
 const (
-	subjectSelfFlag           subjectFlag = iota // 000
-	subjectInvalidFlag                           // 001
-	subjectOtherIdenIndexFlag                    // 010
-	subjectOtherIdenValueFlag                    // 011
+	subjectFlagSelf           subjectFlag = iota // 000
+	subjectFlagInvalid                           // 001
+	subjectFlagOtherIdenIndex                    // 010
+	subjectFlagOtherIdenValue                    // 011
 )
 
 type IDPosition uint8
@@ -326,9 +326,9 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 // GetIDPosition returns the position at which the ID is stored.
 func (c *Claim) GetIDPosition() IDPosition {
 	switch c.getSubject() {
-	case subjectOtherIdenIndexFlag:
+	case subjectFlagOtherIdenIndex:
 		return IDPositionIndex
-	case subjectOtherIdenValueFlag:
+	case subjectFlagOtherIdenValue:
 		return IDPositionValue
 	default:
 		return IDPositionNone
@@ -389,7 +389,7 @@ func (c *Claim) GetVersion() uint32 {
 // SetIndexID sets id to index. Removes id from value if any.
 func (c *Claim) SetIndexID(id ID) {
 	c.resetValueID()
-	c.setSubject(subjectOtherIdenIndexFlag)
+	c.setSubject(subjectFlagOtherIdenIndex)
 	copy(c.index[1][:], id[:])
 }
 
@@ -407,7 +407,7 @@ func (c *Claim) getIndexID() ID {
 // SetValueID sets id to value. Removes id from index if any.
 func (c *Claim) SetValueID(id ID) {
 	c.resetIndexID()
-	c.setSubject(subjectOtherIdenValueFlag)
+	c.setSubject(subjectFlagOtherIdenValue)
 	copy(c.value[1][:], id[:])
 }
 
@@ -426,7 +426,7 @@ func (c *Claim) getValueID() ID {
 func (c *Claim) ResetID() {
 	c.resetIndexID()
 	c.resetValueID()
-	c.setSubject(subjectSelfFlag)
+	c.setSubject(subjectFlagSelf)
 }
 
 // GetID returns ID from claim's index of value.
@@ -434,9 +434,9 @@ func (c *Claim) ResetID() {
 func (c *Claim) GetID() (ID, error) {
 	var id ID
 	switch c.getSubject() {
-	case subjectOtherIdenIndexFlag:
+	case subjectFlagOtherIdenIndex:
 		return c.getIndexID(), nil
-	case subjectOtherIdenValueFlag:
+	case subjectFlagOtherIdenValue:
 		return c.getValueID(), nil
 	default:
 		return id, ErrNoID
