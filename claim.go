@@ -129,38 +129,27 @@ type Claim struct {
 	value [4]ElemBytes
 }
 
-// SubjectPosition string implementation for Subject.
-type SubjectPosition string
-
-const (
-	// SubjectPositionIndex for flag SubjectOtherIdenIndex.
-	SubjectPositionIndex = "index"
-	// SubjectPositionValue for flag SubjectOtherIdenValue.
-	SubjectPositionValue = "value"
-)
-
-// Subject for the time being describes the location of ID (in index or value
+// subjectFlag for the time being describes the location of ID (in index or value
 // slots or nowhere at all).
 //
-// Values SubjectInvalid, SubjectObjectIndex, SubjectObjectValue
-// presents for backward compatibility and for now means nothing.
-type Subject byte
+// Values subjectInvalidFlag presents for backward compatibility and for now means nothing.
+type subjectFlag byte
 
 const (
-	SubjectSelf           Subject = iota // 000
-	SubjectInvalid                       // 001
-	SubjectOtherIdenIndex                // 010
-	SubjectOtherIdenValue                // 011
-	SubjectObjectIndex                   // 100
-	SubjectObjectValue                   // 101
+	subjectSelfFlag           subjectFlag = iota // 000
+	subjectInvalidFlag                           // 001
+	subjectOtherIdenIndexFlag                    // 010
+	subjectOtherIdenValueFlag                    // 011
 )
 
 type IDPosition uint8
 
 const (
-	// IDPositionIndex means ID value is in index slots
-	IDPositionIndex IDPosition = iota + 1 // value 0 is position undefined
-	// IDPositionValue means ID value is in value slots
+	// IDPositionNone means ID value not located in claim.
+	IDPositionNone IDPosition = iota
+	// IDPositionIndex means ID value is in index slots.
+	IDPositionIndex
+	// IDPositionValue means ID value is in value slots.
 	IDPositionValue
 )
 
@@ -208,7 +197,6 @@ func WithValueID(id ID) Option {
 // WithID sets ID to claim's index or value depending on `pos`.
 func WithID(id ID, pos IDPosition) Option {
 	return func(c *Claim) error {
-		// TODO (illia-korotia): refactor to Subject type.
 		switch pos {
 		case IDPositionIndex:
 			c.SetIndexID(id)
@@ -335,29 +323,29 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 	return schemaHash
 }
 
-// GetSubjectPosition return a position where the subject is stored.
-func (c *Claim) GetSubjectPosition() (SubjectPosition, error) {
+// GetIDPosition returns the position at which the ID is stored.
+func (c *Claim) GetIDPosition() IDPosition {
 	switch c.getSubject() {
-	case SubjectOtherIdenIndex:
-		return SubjectPositionIndex, nil
-	case SubjectOtherIdenValue:
-		return SubjectPositionValue, nil
+	case subjectOtherIdenIndexFlag:
+		return IDPositionIndex
+	case subjectOtherIdenValueFlag:
+		return IDPositionValue
 	default:
-		return "", errors.New("claim without ")
+		return IDPositionNone
 	}
 }
 
-func (c *Claim) setSubject(s Subject) {
+func (c *Claim) setSubject(s subjectFlag) {
 	// clean first 3 bits
 	c.index[0][flagsByteIdx] &= 0b11111000
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) getSubject() Subject {
+func (c *Claim) getSubject() subjectFlag {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
-	return Subject(sbj)
+	return subjectFlag(sbj)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -401,7 +389,7 @@ func (c *Claim) GetVersion() uint32 {
 // SetIndexID sets id to index. Removes id from value if any.
 func (c *Claim) SetIndexID(id ID) {
 	c.resetValueID()
-	c.setSubject(SubjectOtherIdenIndex)
+	c.setSubject(subjectOtherIdenIndexFlag)
 	copy(c.index[1][:], id[:])
 }
 
@@ -419,7 +407,7 @@ func (c *Claim) getIndexID() ID {
 // SetValueID sets id to value. Removes id from index if any.
 func (c *Claim) SetValueID(id ID) {
 	c.resetIndexID()
-	c.setSubject(SubjectOtherIdenValue)
+	c.setSubject(subjectOtherIdenValueFlag)
 	copy(c.value[1][:], id[:])
 }
 
@@ -438,7 +426,7 @@ func (c *Claim) getValueID() ID {
 func (c *Claim) ResetID() {
 	c.resetIndexID()
 	c.resetValueID()
-	c.setSubject(SubjectSelf)
+	c.setSubject(subjectSelfFlag)
 }
 
 // GetID returns ID from claim's index of value.
@@ -446,9 +434,9 @@ func (c *Claim) ResetID() {
 func (c *Claim) GetID() (ID, error) {
 	var id ID
 	switch c.getSubject() {
-	case SubjectOtherIdenIndex:
+	case subjectOtherIdenIndexFlag:
 		return c.getIndexID(), nil
-	case SubjectOtherIdenValue:
+	case subjectOtherIdenValueFlag:
 		return c.getValueID(), nil
 	default:
 		return id, ErrNoID
