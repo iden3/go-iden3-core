@@ -129,28 +129,27 @@ type Claim struct {
 	value [4]ElemBytes
 }
 
-// Subject for the time being describes the location of ID (in index or value
+// subjectFlag for the time being describes the location of ID (in index or value
 // slots or nowhere at all).
 //
-// Values SubjectInvalid, SubjectObjectIndex, SubjectObjectValue
-// presents for backward compatibility and for now means nothing.
-type Subject byte
+// Values subjectFlagInvalid presents for backward compatibility and for now means nothing.
+type subjectFlag byte
 
 const (
-	SubjectSelf           Subject = iota // 000
-	SubjectInvalid                       // 001
-	SubjectOtherIdenIndex                // 010
-	SubjectOtherIdenValue                // 011
-	SubjectObjectIndex                   // 100
-	SubjectObjectValue                   // 101
+	subjectFlagSelf           subjectFlag = iota // 000
+	_subjectFlagInvalid                          // nolint // 001
+	subjectFlagOtherIdenIndex                    // 010
+	subjectFlagOtherIdenValue                    // 011
 )
 
 type IDPosition uint8
 
 const (
-	// IDPositionIndex means ID value is in index slots
-	IDPositionIndex IDPosition = iota + 1 // value 0 is position undefined
-	// IDPositionValue means ID value is in value slots
+	// IDPositionNone means ID value not located in claim.
+	IDPositionNone IDPosition = iota
+	// IDPositionIndex means ID value is in index slots.
+	IDPositionIndex
+	// IDPositionValue means ID value is in value slots.
 	IDPositionValue
 )
 
@@ -324,17 +323,29 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 	return schemaHash
 }
 
-func (c *Claim) setSubject(s Subject) {
+// GetIDPosition returns the position at which the ID is stored.
+func (c *Claim) GetIDPosition() IDPosition {
+	switch c.getSubject() {
+	case subjectFlagOtherIdenIndex:
+		return IDPositionIndex
+	case subjectFlagOtherIdenValue:
+		return IDPositionValue
+	default:
+		return IDPositionNone
+	}
+}
+
+func (c *Claim) setSubject(s subjectFlag) {
 	// clean first 3 bits
 	c.index[0][flagsByteIdx] &= 0b11111000
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) getSubject() Subject {
+func (c *Claim) getSubject() subjectFlag {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
-	return Subject(sbj)
+	return subjectFlag(sbj)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -378,7 +389,7 @@ func (c *Claim) GetVersion() uint32 {
 // SetIndexID sets id to index. Removes id from value if any.
 func (c *Claim) SetIndexID(id ID) {
 	c.resetValueID()
-	c.setSubject(SubjectOtherIdenIndex)
+	c.setSubject(subjectFlagOtherIdenIndex)
 	copy(c.index[1][:], id[:])
 }
 
@@ -396,7 +407,7 @@ func (c *Claim) getIndexID() ID {
 // SetValueID sets id to value. Removes id from index if any.
 func (c *Claim) SetValueID(id ID) {
 	c.resetIndexID()
-	c.setSubject(SubjectOtherIdenValue)
+	c.setSubject(subjectFlagOtherIdenValue)
 	copy(c.value[1][:], id[:])
 }
 
@@ -415,7 +426,7 @@ func (c *Claim) getValueID() ID {
 func (c *Claim) ResetID() {
 	c.resetIndexID()
 	c.resetValueID()
-	c.setSubject(SubjectSelf)
+	c.setSubject(subjectFlagSelf)
 }
 
 // GetID returns ID from claim's index of value.
@@ -423,9 +434,9 @@ func (c *Claim) ResetID() {
 func (c *Claim) GetID() (ID, error) {
 	var id ID
 	switch c.getSubject() {
-	case SubjectOtherIdenIndex:
+	case subjectFlagOtherIdenIndex:
 		return c.getIndexID(), nil
-	case SubjectOtherIdenValue:
+	case subjectFlagOtherIdenValue:
 		return c.getValueID(), nil
 	default:
 		return id, ErrNoID
