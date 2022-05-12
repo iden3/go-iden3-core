@@ -405,3 +405,90 @@ func TestSchemaHash_BigInt(t *testing.T) {
 	assert.Equal(t, exp, got)
 
 }
+
+func TestGetIDPosition(t *testing.T) {
+	tests := []struct {
+		name             string
+		claim            func(t *testing.T) *Claim
+		expectedPosition IDPosition
+	}{
+		{
+			name: "self claim",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+				return c
+			},
+			expectedPosition: IDPositionNone,
+		},
+		{
+			name: "subject stored in index",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				var genesis [27]byte
+				genesis32bytes := hashBytes([]byte("genesistest"))
+				copy(genesis[:], genesis32bytes[:])
+
+				c.SetIndexID(NewID(TypeDefault, genesis))
+				return c
+			},
+			expectedPosition: IDPositionIndex,
+		},
+		{
+			name: "subject stored in value",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				var genesis [27]byte
+				genesis32bytes := hashBytes([]byte("genesistest"))
+				copy(genesis[:], genesis32bytes[:])
+
+				c.SetValueID(NewID(TypeDefault, genesis))
+				return c
+			},
+			expectedPosition: IDPositionValue,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.claim(t)
+			position, err := c.GetIDPosition()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPosition, position)
+		})
+	}
+}
+
+func TestGetIDPosition_ErrorCase(t *testing.T) {
+	tests := []struct {
+		name             string
+		claim            func(t *testing.T) *Claim
+		expectedPosition IDPosition
+		expectedError error
+	}{
+		{
+			name: "invalid position",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+				c.setSubject(_subjectFlagInvalid)
+				return c
+			},
+			expectedPosition: IDPositionNone,
+			expectedError: ErrInvalidSubjectPosition,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.claim(t)
+			position, err := c.GetIDPosition()
+			require.ErrorIs(t, err, tt.expectedError)
+			require.Equal(t, tt.expectedPosition, position)
+		})
+	}
+}
