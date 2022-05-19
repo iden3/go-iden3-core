@@ -59,6 +59,9 @@ var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
+// ErrInvalidSubjectPosition returns when subject position flags sets in invalid value.
+var ErrInvalidSubjectPosition = errors.New("invalid subject position")
+
 // ErrSlotOverflow means some ElemBytes overflows Q Field. And wraps the name
 // of overflowed slot.
 type ErrSlotOverflow struct {
@@ -68,6 +71,7 @@ type ErrSlotOverflow struct {
 func (e ErrSlotOverflow) Error() string {
 	return fmt.Sprintf("Slot %v not in field (too large)", e.Field)
 }
+
 
 type SlotName string
 
@@ -324,14 +328,16 @@ func (c *Claim) GetSchemaHash() SchemaHash {
 }
 
 // GetIDPosition returns the position at which the ID is stored.
-func (c *Claim) GetIDPosition() IDPosition {
+func (c *Claim) GetIDPosition() (IDPosition, error) {
 	switch c.getSubject() {
+	case subjectFlagSelf:
+		return IDPositionNone, nil
 	case subjectFlagOtherIdenIndex:
-		return IDPositionIndex
+		return IDPositionIndex, nil
 	case subjectFlagOtherIdenValue:
-		return IDPositionValue
+		return IDPositionValue, nil
 	default:
-		return IDPositionNone
+		return 0, ErrInvalidSubjectPosition
 	}
 }
 
