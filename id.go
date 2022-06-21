@@ -19,11 +19,13 @@ var (
 	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
 )
 
+const idLength = 31
+
 // ID is a byte array with
 // [  type  | root_genesis | checksum ]
 // [2 bytes |   27 bytes   | 2 bytes  ]
 // where the root_genesis are the first 28 bytes from the hash root_genesis
-type ID [31]byte
+type ID [idLength]byte
 
 // NewID creates a new ID from a type and genesis
 func NewID(typ [2]byte, genesis [27]byte) ID {
@@ -102,6 +104,12 @@ func IDFromBytes(b []byte) (ID, error) {
 // IDFromInt returns the ID from a given big.Int
 func IDFromInt(i *big.Int) (ID, error) {
 	b := intToBytes(i)
+	if len(b) > idLength {
+		return ID{}, errors.New("IDFromInt error: big.Int too large")
+	}
+	for len(b) < idLength {
+		b = append(b, make([]byte, idLength-len(b))...)
+	}
 	return IDFromBytes(b)
 }
 
@@ -148,7 +156,9 @@ func CheckChecksum(id ID) bool {
 }
 
 // IdGenesisFromIdenState calculates the genesis ID from an Identity State.
-func IdGenesisFromIdenState(typ [2]byte, state *big.Int) (*ID, error) { //nolint:revive
+func IdGenesisFromIdenState(typ [2]byte, //nolint:revive
+	state *big.Int) (*ID, error) {
+
 	var idGenesisBytes [27]byte
 
 	idenStateData, err := NewElemBytesFromInt(state)
