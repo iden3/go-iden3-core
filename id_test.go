@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type Hash [32]byte
@@ -148,4 +149,18 @@ func TestIDFromInt(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, id, got)
+}
+
+func TestIDFromIntStr(t *testing.T) {
+	idStr := "11BBCPZ6Zq9HX1JhHrHT3QKUFD9kFDEyJFoAVMpuZR"
+
+	idFromStr, err := IDFromString(idStr)
+	require.NoError(t, err)
+
+	intFromIDFromStr := idFromStr.BigInt()
+
+	id, err := IDFromInt(intFromIDFromStr)
+	require.NoError(t, err)
+
+	require.Equal(t, idStr, id.String())
 }
