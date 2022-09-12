@@ -17,6 +17,15 @@ var (
 	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
 	// - first 2 bytes: `00000000 00000001`
 	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
+
+	// TypeDID specifies the identity with iden3 method in specific networks
+	// - first 1 bytes: `0b00000000 polygon main`
+	// 					`0b00000001 polygon mumbai`
+	// 					`0b00000010 ethereum main`
+	// 					`0b00000011 ethereum ropsten`
+	// 					`0b00000012 ethereum kovan`
+	// 					`0b00000013 ethereum rinkeby`
+	TypeDID = [2]byte{0b11110000, 0b11000001}
 )
 
 const idLength = 31

@@ -60,7 +60,7 @@ func TestParseDID(t *testing.T) {
 }
 
 func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {
-	didStr := "dididen3:eth:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE"
+	didStr := "did:iden3:ethereum:ropsten:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE"
 
 	_, err := ParseDID(didStr)
 	assert.ErrorIs(t, err, ErrDoesNotMatchRegexp)

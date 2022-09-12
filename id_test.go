@@ -164,3 +164,42 @@ func TestIDFromIntStr(t *testing.T) {
 
 	require.Equal(t, idStr, id.String())
 }
+
+func TestIDinDIDFormat(t *testing.T) {
+
+	typ := [2]byte{DIDIden3BlockchainType[POLYGON], DIDNetworkType[MUMBAI]}
+	var genesis [27]byte
+	genesis32bytes := hashBytes([]byte("genesistest"))
+	copy(genesis[:], genesis32bytes[:])
+
+	id := NewID(typ, genesis)
+
+	var checksum [2]byte
+	copy(checksum[:], id[len(id)-2:])
+	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
+
+	fmt.Println(id.String())
+	did := DID{
+		ID:         id,
+		Blockchain: POLYGON,
+		NetworkID:  MUMBAI,
+	}
+	fmt.Println(did.String())
+}
+func TestIDFromDIDString(t *testing.T) {
+
+	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:4RzkkAj2G1ugUEdSo676p5ot7dgQqZ8riTfv4Ev1YX2")
+	require.NoError(t, err)
+	typ := [2]byte{DIDIden3BlockchainType[didFromStr.Blockchain], DIDNetworkType[didFromStr.NetworkID]}
+	var genesis [27]byte
+	genesis32bytes := hashBytes([]byte("genesistest"))
+	copy(genesis[:], genesis32bytes[:])
+
+	id := NewID(typ, genesis)
+
+	var checksum [2]byte
+	copy(checksum[:], id[len(id)-2:])
+	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
+	assert.Equal(t, didFromStr.ID.String(), id.String())
+
+}
