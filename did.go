@@ -46,7 +46,7 @@ var DIDTypeIDEN3Flag byte = 0b11100000 // 3 bytes for did method
 
 // DIDIden3BlockchainType is mapping between blockchain network and its binary representation
 var DIDIden3BlockchainType = map[Blockchain]byte{
-	ETHEREUM: DIDTypeIDEN3Flag | 0b00000000,
+	ETHEREUM: DIDTypeIDEN3Flag,
 	POLYGON:  DIDTypeIDEN3Flag | 0b00000001,
 }
 
@@ -120,7 +120,8 @@ func (did *DID) String() string {
 		return fmt.Sprintf("%s:%s:%s", DIDSchema, DIDMethod, did.ID.String())
 	}
 
-	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.Blockchain, did.NetworkID, did.ID.String())
+	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.Blockchain,
+		did.NetworkID, did.ID.String())
 }
 
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
