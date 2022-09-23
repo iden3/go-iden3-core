@@ -17,32 +17,32 @@ const DIDSchema = "did"
 type Blockchain string
 
 const (
-	// ETHEREUM is ethereum blockchain network
-	ETHEREUM Blockchain = "eth"
-	// POLYGON is polygon blockchain network
-	POLYGON Blockchain = "polygon"
-	// UNKNOWN_CHAIN is used when it's not possible to retrieve blockchain type from identifier
-	UNKNOWN_CHAIN Blockchain = "unknown"
+	// Ethereum is ethereum blockchain network
+	Ethereum Blockchain = "eth"
+	// Polygon is polygon blockchain network
+	Polygon Blockchain = "polygon"
+	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
+	UnknownChain Blockchain = "unknown"
 )
 
 // NetworkID is method specific network identifier
 type NetworkID string
 
 const (
-	// MAIN is ethereum main network
-	MAIN NetworkID = "main"
-	// MUMBAI is polygon mumbai test network
-	MUMBAI NetworkID = "mumbai"
-	// ROPSTEN is ethereum ropsten test network
-	ROPSTEN NetworkID = "ropsten"
-	// RINKEBY is ethereum rinkeby test network
-	RINKEBY NetworkID = "rinkeby"
-	// KOVAN is ethereum kovan test network
-	KOVAN NetworkID = "kovan"
-	// GOERLI is ethereum goerli test network
-	GOERLI NetworkID = "goerli" // goerli
-	// UNKNOWN_NETWORK is used when it's not possible to retrieve network from identifier
-	UNKNOWN_NETWORK NetworkID = "unknown"
+	// Main is ethereum main network
+	Main NetworkID = "main"
+	// Mumbai is polygon mumbai test network
+	Mumbai NetworkID = "mumbai"
+	// Ropsten is ethereum ropsten test network
+	Ropsten NetworkID = "ropsten"
+	// Rinkeby is ethereum rinkeby test network
+	Rinkeby NetworkID = "rinkeby"
+	// Kovan is ethereum kovan test network
+	Kovan NetworkID = "kovan"
+	// Goerli is ethereum goerli test network
+	Goerli NetworkID = "goerli" // goerli
+	// UnknownNetwork is used when it's not possible to retrieve network from identifier
+	UnknownNetwork NetworkID = "unknown"
 )
 
 // DIDTypeIDEN3Flag is binary represantation of IDEN3 method flag.
@@ -50,29 +50,29 @@ var DIDTypeIDEN3Flag byte = 0b11100000 // 3 bytes for did method
 
 // DIDIden3BlockchainType is mapping between blockchain network and its binary representation
 var DIDIden3BlockchainType = map[Blockchain]byte{
-	ETHEREUM: DIDTypeIDEN3Flag | 0b00000000, // nolint - reason: explicit declaration of 0 byte value
-	POLYGON:  DIDTypeIDEN3Flag | 0b00000001,
+	Ethereum: DIDTypeIDEN3Flag | 0b00000000, // nolint - reason: explicit declaration of 0 byte value
+	Polygon:  DIDTypeIDEN3Flag | 0b00000001,
 }
 
 // DIDNetworkType is mapping between network id and its binary representation
 var DIDNetworkType = map[NetworkID]byte{
-	MAIN:    0b00000000, // nolint - reason: explicit declaration of 0 byte value
-	MUMBAI:  0b00000001,
-	ROPSTEN: 0b00000010,
-	RINKEBY: 0b00000011,
-	KOVAN:   0b00000100,
-	GOERLI:  0b00000101,
+	Main:    0b00000000, // nolint - reason: explicit declaration of 0 byte value
+	Mumbai:  0b00000001,
+	Ropsten: 0b00000010,
+	Rinkeby: 0b00000011,
+	Kovan:   0b00000100,
+	Goerli:  0b00000101,
 }
 
 // BuildDIDType builds bytes type from chain and network
 func BuildDIDType(blockchain Blockchain, network NetworkID) ([2]byte, error) {
 	fb, ok := DIDIden3BlockchainType[blockchain]
 	if !ok {
-		return [2]byte{}, errors.New(fmt.Sprintf("blockchain %s is not defined in core lib", blockchain))
+		return [2]byte{}, fmt.Errorf("blockchain %s is not defined in core lib", blockchain)
 	}
 	sb, ok := DIDNetworkType[network]
 	if !ok {
-		return [2]byte{}, errors.New(fmt.Sprintf("network %s is not defined in core lib", network))
+		return [2]byte{}, fmt.Errorf("network %s is not defined in core lib", network)
 	}
 	return [2]byte{fb, sb}, nil
 }
@@ -84,7 +84,7 @@ func FindNetworkIDByValue(_v byte) (NetworkID, error) {
 			return k, nil
 		}
 	}
-	return UNKNOWN_NETWORK, errors.New(fmt.Sprintf("network %x is not defined in core lib", _v))
+	return UnknownNetwork, fmt.Errorf("network %x is not defined in core lib", _v)
 
 }
 
@@ -95,7 +95,7 @@ func FindBlockchainByValue(_v byte) (Blockchain, error) {
 			return k, nil
 		}
 	}
-	return UNKNOWN_CHAIN, errors.New(fmt.Sprintf("blockchain %x is not defined in core lib", _v))
+	return UnknownChain, fmt.Errorf("blockchain %x is not defined in core lib", _v)
 
 }
 

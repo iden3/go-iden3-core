@@ -77,7 +77,7 @@ func TestIDparsers(t *testing.T) {
 }
 
 func TestIDAsDID(t *testing.T) {
-	typ := [2]byte{DIDIden3BlockchainType[POLYGON], DIDNetworkType[MUMBAI]}
+	typ := [2]byte{DIDIden3BlockchainType[Polygon], DIDNetworkType[Mumbai]}
 	var genesis1 [27]byte
 	genesisbytes := hashBytes([]byte("genesistes1t2"))
 	copy(genesis1[:], genesisbytes[:])
@@ -177,7 +177,7 @@ func TestIDFromIntStr(t *testing.T) {
 
 func TestIDinDIDFormat(t *testing.T) {
 
-	typ := [2]byte{DIDIden3BlockchainType[POLYGON], DIDNetworkType[MUMBAI]}
+	typ := [2]byte{DIDIden3BlockchainType[Polygon], DIDNetworkType[Mumbai]}
 	var genesis [27]byte
 	genesis32bytes := hashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
@@ -191,8 +191,8 @@ func TestIDinDIDFormat(t *testing.T) {
 	fmt.Println(id.String())
 	did := DID{
 		ID:         id,
-		Blockchain: POLYGON,
-		NetworkID:  MUMBAI,
+		Blockchain: Polygon,
+		NetworkID:  Mumbai,
 	}
 	fmt.Println(did.String())
 }
