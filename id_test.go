@@ -76,6 +76,16 @@ func TestIDparsers(t *testing.T) {
 		id0FromString.String())
 }
 
+func TestIDAsDID(t *testing.T) {
+	typ := [2]byte{DIDIden3BlockchainType[POLYGON], DIDNetworkType[MUMBAI]}
+	var genesis1 [27]byte
+	genesisbytes := hashBytes([]byte("genesistes1t2"))
+	copy(genesis1[:], genesisbytes[:])
+
+	id := NewID(typ, genesis1)
+	fmt.Println(id.String())
+}
+
 func TestIDjsonParser(t *testing.T) {
 	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
 	assert.Nil(t, err)

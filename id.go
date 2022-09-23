@@ -25,7 +25,6 @@ var (
 	// 					`0b00000011 ethereum ropsten`
 	// 					`0b00000012 ethereum kovan`
 	// 					`0b00000013 ethereum rinkeby`
-	TypeDID = [2]byte{0b11110000, 0b11000001}
 )
 
 const idLength = 31

@@ -21,6 +21,8 @@ const (
 	ETHEREUM Blockchain = "eth"
 	// POLYGON is polygon blockchain network
 	POLYGON Blockchain = "polygon"
+	// UNKNOWN_CHAIN is used when it's not possible to retrieve blockchain type from identifier
+	UNKNOWN_CHAIN Blockchain = "unknown"
 )
 
 // NetworkID is method specific network identifier
@@ -39,6 +41,8 @@ const (
 	KOVAN NetworkID = "kovan"
 	// GOERLI is ethereum goerli test network
 	GOERLI NetworkID = "goerli" // goerli
+	// UNKNOWN_NETWORK is used when it's not possible to retrieve network from identifier
+	UNKNOWN_NETWORK NetworkID = "unknown"
 )
 
 // DIDTypeIDEN3Flag is binary represantation of IDEN3 method flag.
@@ -46,18 +50,53 @@ var DIDTypeIDEN3Flag byte = 0b11100000 // 3 bytes for did method
 
 // DIDIden3BlockchainType is mapping between blockchain network and its binary representation
 var DIDIden3BlockchainType = map[Blockchain]byte{
-	ETHEREUM: DIDTypeIDEN3Flag | 0b00000000,
+	ETHEREUM: DIDTypeIDEN3Flag | 0b00000000, // nolint - reason: explicit declaration of 0 byte value
 	POLYGON:  DIDTypeIDEN3Flag | 0b00000001,
 }
 
 // DIDNetworkType is mapping between network id and its binary representation
 var DIDNetworkType = map[NetworkID]byte{
-	MAIN:    0b00000000,
+	MAIN:    0b00000000, // nolint - reason: explicit declaration of 0 byte value
 	MUMBAI:  0b00000001,
 	ROPSTEN: 0b00000010,
 	RINKEBY: 0b00000011,
 	KOVAN:   0b00000100,
 	GOERLI:  0b00000101,
+}
+
+// BuildDIDType builds bytes type from chain and network
+func BuildDIDType(blockchain Blockchain, network NetworkID) ([2]byte, error) {
+	fb, ok := DIDIden3BlockchainType[blockchain]
+	if !ok {
+		return [2]byte{}, errors.New(fmt.Sprintf("blockchain %s is not defined in core lib", blockchain))
+	}
+	sb, ok := DIDNetworkType[network]
+	if !ok {
+		return [2]byte{}, errors.New(fmt.Sprintf("network %s is not defined in core lib", network))
+	}
+	return [2]byte{fb, sb}, nil
+}
+
+// FindNetworkIDByValue finds network by byte value
+func FindNetworkIDByValue(_v byte) (NetworkID, error) {
+	for k, v := range DIDNetworkType {
+		if v == _v {
+			return k, nil
+		}
+	}
+	return UNKNOWN_NETWORK, errors.New(fmt.Sprintf("network %x is not defined in core lib", _v))
+
+}
+
+//FindBlockchainByValue finds blockchain type by byte value
+func FindBlockchainByValue(_v byte) (Blockchain, error) {
+	for k, v := range DIDIden3BlockchainType {
+		if v == _v {
+			return k, nil
+		}
+	}
+	return UNKNOWN_CHAIN, errors.New(fmt.Sprintf("blockchain %x is not defined in core lib", _v))
+
 }
 
 var (
@@ -144,5 +183,22 @@ func ParseDID(didStr string) (*DID, error) {
 	did.NetworkID = NetworkID(arg[3])
 	did.Blockchain = Blockchain(arg[2])
 
+	return &did, nil
+}
+
+// ParseDIDFromID returns did from ID
+func ParseDIDFromID(id ID) (*DID, error) {
+	var err error
+	did := DID{}
+	did.ID = id
+	idBytes := id.Bytes()
+	did.Blockchain, err = FindBlockchainByValue(idBytes[0])
+	if err != nil {
+		return nil, err
+	}
+	did.NetworkID, err = FindNetworkIDByValue(idBytes[1])
+	if err != nil {
+		return nil, err
+	}
 	return &did, nil
 }
