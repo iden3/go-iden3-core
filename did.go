@@ -159,7 +159,8 @@ func (did *DID) String() string {
 		return fmt.Sprintf("%s:%s:%s", DIDSchema, DIDMethod, did.ID.String())
 	}
 
-	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.Blockchain, did.NetworkID, did.ID.String())
+	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethod, did.Blockchain,
+		did.NetworkID, did.ID.String())
 }
 
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
