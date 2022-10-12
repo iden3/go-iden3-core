@@ -106,14 +106,23 @@ func ParseDID(didStr string) (*DID, error) {
 
 	arg := strings.Split(didStr, ":")
 
-	// validate id
-	did.ID, err = IDFromString(arg[4])
-	if err != nil {
-		return nil, err
-	}
+	switch len(arg) {
+	case 5:
+		// validate id
+		did.ID, err = IDFromString(arg[4])
+		if err != nil {
+			return nil, err
+		}
 
-	did.NetworkID = NetworkID(arg[3])
-	did.Blockchain = Blockchain(arg[2])
+		did.NetworkID = NetworkID(arg[3])
+		did.Blockchain = Blockchain(arg[2])
+	case 3:
+		// validate readonly id
+		did.ID, err = IDFromString(arg[2])
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &did, nil
 }
