@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"math/big"
 
@@ -126,7 +127,8 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 
 // CalculateChecksum returns the checksum for a given type and genesis_root,
 // where checksum:
-//   hash( [type | root_genesis ] )
+//
+//	hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 	var toChecksum [29]byte
 	copy(toChecksum[:], typ[:])
@@ -137,8 +139,7 @@ func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 		s += uint16(b)
 	}
 	var checksum [2]byte
-	checksum[0] = byte(s >> 8)
-	checksum[1] = byte(s & 0xff)
+	binary.LittleEndian.PutUint16(checksum[:], s)
 	return checksum
 }
 
