@@ -62,8 +62,8 @@ func firstNBytes(i *big.Int, n uint) []byte {
 		return b[:n]
 	}
 	b2 := make([]byte, n)
-	copy(b2[int(n)-len(b):], b)
-	return b
+	copy(b2, b)
+	return b2
 }
 
 // String returns a base58 from the ID

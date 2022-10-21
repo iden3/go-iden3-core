@@ -180,3 +180,18 @@ func TestProfileID(t *testing.T) {
 		"25425363284463910957419549722021124450832239517990785975889689633068548096",
 		id2.BigInt().String())
 }
+
+func TestFirstNBytes(t *testing.T) {
+	t.Run("bytes more then required", func(t *testing.T) {
+		i := big.NewInt(422733233635437384)
+		res := firstNBytes(i, 3)
+		want := []byte{72, 171, 151}
+		require.Equal(t, want, res)
+	})
+	t.Run("bytes less then required", func(t *testing.T) {
+		i := big.NewInt(422384)
+		res := firstNBytes(i, 5)
+		want := []byte{240, 113, 6, 0, 0}
+		require.Equal(t, want, res)
+	})
+}
