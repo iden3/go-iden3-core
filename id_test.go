@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -163,4 +164,19 @@ func TestIDFromIntStr(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, idStr, id.String())
+}
+
+func TestProfileID(t *testing.T) {
+	idInt, ok := new(big.Int).SetString(
+		"23630567111950550539435915649280822148510307443797111728722609533581131776",
+		10)
+	require.True(t, ok)
+	id, err := IDFromInt(idInt)
+	require.NoError(t, err)
+	nonce := big.NewInt(10)
+	id2, err := ProfileID(id, nonce)
+	require.NoError(t, err)
+	require.Equal(t,
+		"25425363284463910957419549722021124450832239517990785975889689633068548096",
+		id2.BigInt().String())
 }

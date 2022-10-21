@@ -38,6 +38,34 @@ func NewID(typ [2]byte, genesis [27]byte) ID {
 	return ID(b)
 }
 
+func ProfileID(id ID, nonce *big.Int) (ID, error) {
+	hash, err := poseidon.Hash([]*big.Int{id.BigInt(), nonce})
+	if err != nil {
+		return ID{}, err
+	}
+
+	typ, _, _, err := DecomposeID(id)
+	if err != nil {
+		return ID{}, err
+	}
+
+	var genesis [27]byte
+	copy(genesis[:], firstNBytes(hash, 27))
+	return NewID(typ, genesis), nil
+}
+
+// firstNBytes encodes big int in little endian representation and return
+// lowers n bytes
+func firstNBytes(i *big.Int, n uint) []byte {
+	b := intToBytes(i)
+	if len(b) > int(n) {
+		return b[:n]
+	}
+	b2 := make([]byte, n)
+	copy(b2[int(n)-len(b):], b)
+	return b
+}
+
 // String returns a base58 from the ID
 func (id *ID) String() string {
 	return base58.Encode(id[:])
