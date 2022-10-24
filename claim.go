@@ -72,7 +72,6 @@ func (e ErrSlotOverflow) Error() string {
 	return fmt.Sprintf("Slot %v not in field (too large)", e.Field)
 }
 
-
 type SlotName string
 
 const (
@@ -91,41 +90,41 @@ type SchemaHash [schemaHashLn]byte
 // MarshalText returns HEX representation of SchemaHash.
 //
 // Returning error is always nil.
-func (sc SchemaHash) MarshalText() ([]byte, error) {
-	dst := make([]byte, hex.EncodedLen(len(sc)))
-	hex.Encode(dst, sc[:])
+func (sh SchemaHash) MarshalText() ([]byte, error) {
+	dst := make([]byte, hex.EncodedLen(len(sh)))
+	hex.Encode(dst, sh[:])
 	return dst, nil
 }
 
 // NewSchemaHashFromHex creates new SchemaHash from hex string
 func NewSchemaHashFromHex(s string) (SchemaHash, error) {
-	var schemaHash SchemaHash
+	var sh SchemaHash
 	schemaEncodedBytes, err := hex.DecodeString(s)
 	if err != nil {
 		return SchemaHash{}, err
 	}
 
-	if len(schemaEncodedBytes) != len(schemaHash) {
+	if len(schemaEncodedBytes) != len(sh) {
 		return SchemaHash{}, fmt.Errorf("invalid schema hash length: %d",
 			len(schemaEncodedBytes))
 	}
-	copy(schemaHash[:], schemaEncodedBytes)
+	copy(sh[:], schemaEncodedBytes)
 
-	return schemaHash, nil
+	return sh, nil
 }
 
 // NewSchemaHashFromInt creates new SchemaHash from big.Int
 func NewSchemaHashFromInt(i *big.Int) SchemaHash {
-	var schemaHash SchemaHash
+	var sh SchemaHash
 	b := intToBytes(i)
-	copy(schemaHash[len(schemaHash)-len(b):], b)
+	copy(sh[len(sh)-len(b):], b)
 
-	return schemaHash
+	return sh
 }
 
 // BigInt returns a bigInt presentation of SchemaHash
-func (sc SchemaHash) BigInt() *big.Int {
-	return bytesToInt(sc[:])
+func (sh SchemaHash) BigInt() *big.Int {
+	return bytesToInt(sh[:])
 }
 
 type Claim struct {
@@ -279,9 +278,9 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 
 // NewClaim creates new Claim with specified SchemaHash and any number of
 // options. Using options you can specify any field in claim.
-func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
+func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 	c := &Claim{}
-	c.SetSchemaHash(schemaHash)
+	c.SetSchemaHash(sh)
 	for _, o := range options {
 		err := o(c)
 		if err != nil {
@@ -316,15 +315,15 @@ func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
 }
 
 // SetSchemaHash updates claim's schema hash.
-func (c *Claim) SetSchemaHash(schema SchemaHash) {
-	copy(c.index[0][:schemaHashLn], schema[:])
+func (c *Claim) SetSchemaHash(sh SchemaHash) {
+	copy(c.index[0][:schemaHashLn], sh[:])
 }
 
 // GetSchemaHash return copy of claim's schema hash.
 func (c *Claim) GetSchemaHash() SchemaHash {
-	var schemaHash SchemaHash
-	copy(schemaHash[:], c.index[0][:schemaHashLn])
-	return schemaHash
+	var sh SchemaHash
+	copy(sh[:], c.index[0][:schemaHashLn])
+	return sh
 }
 
 // GetIDPosition returns the position at which the ID is stored.
