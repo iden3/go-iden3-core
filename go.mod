@@ -1,6 +1,6 @@
 module github.com/iden3/go-iden3-core
 
-go 1.18
+go 1.17
 
 require (
 	github.com/iden3/go-iden3-crypto v0.0.13
