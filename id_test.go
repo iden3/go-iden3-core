@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis0[:], genesis032bytes[:])
 	id0 := NewID(typ0, genesis0)
 	// Check ID0
-	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", id0.String())
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E", id0.String())
 	// Generate ID1
 	var typ1 [2]byte
 	typ1Hex, _ := hex.DecodeString("0001")
@@ -48,7 +49,7 @@ func TestIDparsers(t *testing.T) {
 	copy(genesis1[:], genesis132bytes[:])
 	id1 := NewID(typ1, genesis1)
 	// Check ID1
-	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHbAf", id1.String())
+	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHtq4", id1.String())
 
 	emptyChecksum := []byte{0x00, 0x00}
 	assert.True(t, !bytes.Equal(emptyChecksum, id0[29:]))
@@ -58,30 +59,30 @@ func TestIDparsers(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromBytes.Bytes())
 	assert.Equal(t, id0.String(), id0FromBytes.String())
-	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
 		id0FromBytes.String())
 
 	id1FromBytes, err := IDFromBytes(id1.Bytes())
 	assert.Nil(t, err)
 	assert.Equal(t, id1.Bytes(), id1FromBytes.Bytes())
 	assert.Equal(t, id1.String(), id1FromBytes.String())
-	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHbAf",
+	assert.Equal(t, "1GYjyJKqdDyzo927FqJkAdLWB64kV2NVAjaQFHtq4",
 		id1FromBytes.String())
 
 	id0FromString, err := IDFromString(id0.String())
 	assert.Nil(t, err)
 	assert.Equal(t, id0.Bytes(), id0FromString.Bytes())
 	assert.Equal(t, id0.String(), id0FromString.String())
-	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
+	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
 		id0FromString.String())
 }
 
 func TestIDjsonParser(t *testing.T) {
-	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZogFv")
 	assert.Nil(t, err)
 	idj, err := json.Marshal(&id)
 	assert.Nil(t, err)
-	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf",
+	assert.Equal(t, "11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZogFv",
 		strings.Replace(string(idj), "\"", "", 2))
 	var idp ID
 	err = json.Unmarshal(idj, &idp)
@@ -140,7 +141,7 @@ func TestCheckChecksum(t *testing.T) {
 }
 
 func TestIDFromInt(t *testing.T) {
-	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZoPxf")
+	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZogFv")
 	assert.Nil(t, err)
 
 	intID := id.BigInt()
@@ -152,7 +153,7 @@ func TestIDFromInt(t *testing.T) {
 }
 
 func TestIDFromIntStr(t *testing.T) {
-	idStr := "11BBCPZ6Zq9HX1JhHrHT3QKUFD9kFDEyJFoAVMpuZR"
+	idStr := "11BBCPZ6Zq9HX1JhHrHT3QKUFD9kFDEyJFoAVMptVs"
 
 	idFromStr, err := IDFromString(idStr)
 	require.NoError(t, err)
@@ -163,4 +164,34 @@ func TestIDFromIntStr(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, idStr, id.String())
+}
+
+func TestProfileID(t *testing.T) {
+	idInt, ok := new(big.Int).SetString(
+		"23630567111950550539435915649280822148510307443797111728722609533581131776",
+		10)
+	require.True(t, ok)
+	id, err := IDFromInt(idInt)
+	require.NoError(t, err)
+	nonce := big.NewInt(10)
+	id2, err := ProfileID(id, nonce)
+	require.NoError(t, err)
+	require.Equal(t,
+		"25425363284463910957419549722021124450832239517990785975889689633068548096",
+		id2.BigInt().String())
+}
+
+func TestFirstNBytes(t *testing.T) {
+	t.Run("bytes more then required", func(t *testing.T) {
+		i := big.NewInt(422733233635437384)
+		res := firstNBytes(i, 3)
+		want := []byte{72, 171, 151}
+		require.Equal(t, want, res)
+	})
+	t.Run("bytes less then required", func(t *testing.T) {
+		i := big.NewInt(422384)
+		res := firstNBytes(i, 5)
+		want := []byte{240, 113, 6, 0, 0}
+		require.Equal(t, want, res)
+	})
 }
