@@ -229,7 +229,7 @@ func TestIDinDIDFormat(t *testing.T) {
 }
 func TestIDFromDIDString(t *testing.T) {
 
-	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:4RzkkAj2G1ugUEdSo676p5ot7dgQqZ8riTfv4Ev1YX2")
+	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:4RzkkAj2G1ugUEdSo676p5ot7dgQqZ8riTfv4Ev1okj")
 	require.NoError(t, err)
 	typ := [2]byte{DIDIden3BlockchainType[didFromStr.Blockchain], DIDNetworkType[didFromStr.NetworkID]}
 	var genesis [27]byte
