@@ -47,23 +47,23 @@ func Test_DIDString(t *testing.T) {
 func TestParseDID(t *testing.T) {
 
 	// did
-	didStr := "did:iden3:eth:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E"
+	didStr := "did:iden3:eth:test:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk"
 
 	did, err := ParseDID(didStr)
 	require.NoError(t, err)
 
-	require.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
+	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk",
 		did.ID.String())
 	require.Equal(t, NetworkID("test"), did.NetworkID)
 	require.Equal(t, Blockchain("eth"), did.Blockchain)
 
-        // readonly did
-        didStr = "did:iden3:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE"
+	// readonly did
+	didStr = "did:iden3:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk"
 
-        did, err = ParseDID(didStr)
-        require.NoError(t, err)
+	did, err = ParseDID(didStr)
+	require.NoError(t, err)
 
-        require.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", did.ID.String())
+	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk", did.ID.String())
 }
 
 func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {
