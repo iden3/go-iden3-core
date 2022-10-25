@@ -13,11 +13,12 @@ jobs:
         containers:
           - 1.17.8-bullseye
           - 1.18.0-bullseye
+          - 1.19.2-bullseye
     runs-on: ubuntu-20.04
     container: golang:${{matrix.containers}}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build

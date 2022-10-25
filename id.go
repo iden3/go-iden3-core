@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"math/big"
 
@@ -43,6 +44,34 @@ func NewID(typ [2]byte, genesis [27]byte) ID {
 	copy(b[2:], genesis[:])
 	copy(b[29:], checksum[:])
 	return ID(b)
+}
+
+func ProfileID(id ID, nonce *big.Int) (ID, error) {
+	hash, err := poseidon.Hash([]*big.Int{id.BigInt(), nonce})
+	if err != nil {
+		return ID{}, err
+	}
+
+	typ, _, _, err := DecomposeID(id)
+	if err != nil {
+		return ID{}, err
+	}
+
+	var genesis [27]byte
+	copy(genesis[:], firstNBytes(hash, 27))
+	return NewID(typ, genesis), nil
+}
+
+// firstNBytes encodes big int in little endian representation and return
+// lowers n bytes
+func firstNBytes(i *big.Int, n uint) []byte {
+	b := intToBytes(i)
+	if len(b) > int(n) {
+		return b[:n]
+	}
+	b2 := make([]byte, n)
+	copy(b2, b)
+	return b2
 }
 
 // String returns a base58 from the ID
@@ -134,7 +163,8 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 
 // CalculateChecksum returns the checksum for a given type and genesis_root,
 // where checksum:
-//   hash( [type | root_genesis ] )
+//
+//	hash( [type | root_genesis ] )
 func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 	var toChecksum [29]byte
 	copy(toChecksum[:], typ[:])
@@ -145,8 +175,7 @@ func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
 		s += uint16(b)
 	}
 	var checksum [2]byte
-	checksum[0] = byte(s >> 8)
-	checksum[1] = byte(s & 0xff)
+	binary.LittleEndian.PutUint16(checksum[:], s)
 	return checksum
 }
 
