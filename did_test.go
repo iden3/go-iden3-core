@@ -54,20 +54,19 @@ func TestParseDID(t *testing.T) {
 
 	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk",
 		did.ID.String())
-	require.Equal(t, NetworkID("test"), did.NetworkID)
-	require.Equal(t, Blockchain("eth"), did.Blockchain)
+	require.Equal(t, NetworkID("mumbai"), did.NetworkID)
+	require.Equal(t, Blockchain("polygon"), did.Blockchain)
 
 	// readonly did
-	didStr = "did:iden3:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk"
+	didStr = "did:iden3:1MWtoAdZESeiphxp3bXupZcfS9DhMTdWNSjRwVYc2"
 
 	did, err = ParseDID(didStr)
 	require.NoError(t, err)
 
-	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk", did.ID.String())
-
-	require.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", did.ID.String())
-	require.Equal(t, NetworkID("mumbai"), did.NetworkID)
-	require.Equal(t, Blockchain("polygon"), did.Blockchain)
+	require.Equal(t, "1MWtoAdZESeiphxp3bXupZcfS9DhMTdWNSjRwVYc2", did.ID.String())
+	require.Equal(t, NetworkID(""), did.NetworkID)
+	require.Equal(t, Blockchain(""), did.Blockchain)
+	require.Equal(t, TypeReadOnly, did.ID.Type())
 }
 
 func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {
