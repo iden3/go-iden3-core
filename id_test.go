@@ -78,7 +78,8 @@ func TestIDparsers(t *testing.T) {
 }
 
 func TestIDAsDID(t *testing.T) {
-	typ := [2]byte{DIDIden3BlockchainType[Polygon], DIDNetworkType[Mumbai]}
+	typ, err := BuildDIDType(DIDMethodIden3, Polygon, Mumbai)
+	require.NoError(t, err)
 	var genesis1 [27]byte
 	genesisbytes := hashBytes([]byte("genesistes1t2"))
 	copy(genesis1[:], genesisbytes[:])
@@ -208,7 +209,7 @@ func TestFirstNBytes(t *testing.T) {
 
 func TestIDinDIDFormat(t *testing.T) {
 
-	typ := [2]byte{DIDIden3BlockchainType[Polygon], DIDNetworkType[Mumbai]}
+	typ, _ := BuildDIDType(DIDMethodIden3, Ethereum, Main)
 	var genesis [27]byte
 	genesis32bytes := hashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
@@ -229,9 +230,11 @@ func TestIDinDIDFormat(t *testing.T) {
 }
 func TestIDFromDIDString(t *testing.T) {
 
-	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:4RzkkAj2G1ugUEdSo676p5ot7dgQqZ8riTfv4Ev1okj")
+	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
-	typ := [2]byte{DIDIden3BlockchainType[didFromStr.Blockchain], DIDNetworkType[didFromStr.NetworkID]}
+	typ, err := BuildDIDType(didFromStr.Method, didFromStr.Blockchain, didFromStr.NetworkID)
+	require.NoError(t, err)
+
 	var genesis [27]byte
 	genesis32bytes := hashBytes([]byte("genesistest"))
 	copy(genesis[:], genesis32bytes[:])
