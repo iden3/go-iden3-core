@@ -110,6 +110,12 @@ func (id *ID) Equals(id2 *ID) bool {
 	return bytes.Equal(id[:], id2[:])
 }
 
+func (id *ID) Type() [2]byte {
+	var typ [2]byte
+	copy(typ[:], id[:2])
+	return typ
+}
+
 // IDFromString returns the ID from a given string
 func IDFromString(s string) (ID, error) {
 	b, err := base58.Decode(s)

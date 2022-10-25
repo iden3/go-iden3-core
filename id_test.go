@@ -244,3 +244,10 @@ func TestIDFromDIDString(t *testing.T) {
 	assert.Equal(t, didFromStr.ID.String(), id.String())
 
 }
+
+func TestID_Type(t *testing.T) {
+	id, err := IDFromString("1MWtoAdZESeiphxp3bXupZcfS9DhMTdWNSjRwVYc2")
+	assert.Nil(t, err)
+
+	assert.Equal(t, id.Type(), TypeReadOnly)
+}
