@@ -29,7 +29,11 @@ Index:
             101: B.v Object Value
           [1] Expiration: bool
           [1] Updatable: bool
-          [27] 0
+          [3] Merkalized:
+            000: none
+            001: C.i Root Index (root located in i_2)
+            010: C.v Root Value (root located in v_2)
+          [24] 0
       [ 32 bits ] version (optional?)
       [ 61 bits ] 0 - reserved for future use
  i_1: [ 248 bits] identity (case b) (optional)
@@ -55,6 +59,10 @@ var ErrDataOverflow = errors.New("data does not fits SNARK size")
 // ErrIncorrectIDPosition means that passed position is not one of predefined:
 // IDPositionIndex or IDPositionValue
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
+
+// ErrIncorrectMerklizePosition means that passed position is not one of predefined:
+// MerkilizePositionIndex or MerkilizePositionValue
+var ErrIncorrectMerklizePosition = errors.New("incorrect Merklize position")
 
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
@@ -154,6 +162,31 @@ const (
 	IDPositionIndex
 	// IDPositionValue means ID value is in value slots.
 	IDPositionValue
+)
+
+// merkilizeFlag for the time being describes the location of root (in index or value
+// slots or nowhere at all).
+//
+// Values merkilizeFlagIndex indicates that root is located in index[2] slots.
+// Values merkilizeFlagValue indicates that root is located in value[2] slots.
+type merkilizeFlag byte
+
+const (
+	merkilizeFlagNone     merkilizeFlag = 0b00000000 // 000 00000
+	merkilizeFlagIndex    merkilizeFlag = 0b00100000 // nolint // 001 00000
+	merkilizeFlagValue    merkilizeFlag = 0b01000000 // 010 00000
+	_merkilizeFlagInvalid merkilizeFlag = 0b10000000 // 010 00000
+)
+
+type MerklizePosition uint8
+
+const (
+	// MerklizePositionNone means root data value not located in claim.
+	MerklizePositionNone MerklizePosition = iota
+	// MerklizePositionIndex means root data value is in index slots.
+	MerklizePositionIndex
+	// MerklizePositionValue means root data value is in value slots.
+	MerklizePositionValue
 )
 
 const (
@@ -346,11 +379,24 @@ func (c *Claim) setSubject(s subjectFlag) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
+func (c *Claim) SetFlagMerklize(s merkilizeFlag) {
+	// clean last 3 bits
+	c.index[0][flagsByteIdx] &= 0b11111000
+	c.index[0][flagsByteIdx] |= byte(s)
+}
+
 func (c *Claim) getSubject() subjectFlag {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
 	return subjectFlag(sbj)
+}
+
+func (c *Claim) getMerklize() merkilizeFlag {
+	mt := c.index[0][flagsByteIdx]
+	// clean all except first 3 bits // TODO????
+	mt &= 0b11100000
+	return merkilizeFlag(mt)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -690,4 +736,18 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 	}
 
 	return nil
+}
+
+// GetMerklizePosition returns the position at which the Merklize flag is stored.
+func (c *Claim) GetMerklizePosition() (MerklizePosition, error) {
+	switch c.getMerklize() {
+	case merkilizeFlagNone:
+		return MerklizePositionNone, nil
+	case merkilizeFlagIndex:
+		return MerklizePositionIndex, nil
+	case merkilizeFlagValue:
+		return MerklizePositionValue, nil
+	default:
+		return 0, ErrIncorrectMerklizePosition
+	}
 }
