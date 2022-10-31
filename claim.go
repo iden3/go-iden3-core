@@ -379,10 +379,19 @@ func (c *Claim) setSubject(s subjectFlag) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) SetFlagMerklize(s merkilizeFlag) {
+func (c *Claim) SetFlagMerklize(s MerklizePosition) {
+	var f merkilizeFlag
+	switch s {
+	case MerklizePositionIndex:
+		f = merkilizeFlagIndex
+	case MerklizePositionValue:
+		f = merkilizeFlagValue
+	default:
+		f = merkilizeFlagNone
+	}
 	// clean last 3 bits
 	c.index[0][flagsByteIdx] &= 0b11111000
-	c.index[0][flagsByteIdx] |= byte(s)
+	c.index[0][flagsByteIdx] |= byte(f)
 }
 
 func (c *Claim) getSubject() subjectFlag {
