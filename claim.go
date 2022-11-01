@@ -245,6 +245,14 @@ func WithID(id ID, pos IDPosition) Option {
 	}
 }
 
+// WithFlagMerklized sets claim's flag `merklized`
+func WithFlagMerklized(p MerklizePosition) Option {
+	return func(c *Claim) error {
+		c.SetFlagMerklize(p)
+		return nil
+	}
+}
+
 // WithRevocationNonce sets claim's revocation nonce.
 func WithRevocationNonce(nonce uint64) Option {
 	return func(c *Claim) error {
@@ -390,7 +398,7 @@ func (c *Claim) SetFlagMerklize(s MerklizePosition) {
 		f = merkilizeFlagNone
 	}
 	// clean last 3 bits
-	c.index[0][flagsByteIdx] &= 0b11111000
+	c.index[0][flagsByteIdx] &= 0b00011111
 	c.index[0][flagsByteIdx] |= byte(f)
 }
 
@@ -403,7 +411,7 @@ func (c *Claim) getSubject() subjectFlag {
 
 func (c *Claim) getMerklize() merkilizeFlag {
 	mt := c.index[0][flagsByteIdx]
-	// clean all except first 3 bits // TODO????
+	// clean all except last 3 bits
 	mt &= 0b11100000
 	return merkilizeFlag(mt)
 }
