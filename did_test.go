@@ -14,24 +14,19 @@ func Test_DIDString(t *testing.T) {
 		options     DIDOption
 	}{
 		{"Test readonly did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
-			"did:iden3:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
+			"tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
+			"did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
 			nil,
 		},
 		{"Test eth did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
-			"did:iden3:eth:main:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
+			"zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
+			"did:iden3:eth:main:zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
 			WithNetwork("eth", "main"),
 		},
 		{"Test polygon did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
-			"did:iden3:polygon:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E",
-			WithNetwork("polygon", "test"),
-		},
-		{"Test identifier 41 char",
-			"11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk",
-			"did:iden3:polygon:test:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk",
-			WithNetwork("polygon", "test"),
+			"wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
+			"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
+			WithNetwork("polygon", "mumbai"),
 		},
 	}
 
@@ -47,28 +42,27 @@ func Test_DIDString(t *testing.T) {
 func TestParseDID(t *testing.T) {
 
 	// did
-	didStr := "did:iden3:eth:test:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk"
+	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
 
 	did, err := ParseDID(didStr)
 	require.NoError(t, err)
 
-	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk",
+	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
 		did.ID.String())
-	require.Equal(t, NetworkID("test"), did.NetworkID)
-	require.Equal(t, Blockchain("eth"), did.Blockchain)
+	require.Equal(t, Mumbai, did.NetworkID)
+	require.Equal(t, Polygon, did.Blockchain)
 
 	// readonly did
-	didStr = "did:iden3:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk"
+	didStr = "did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
 
 	did, err = ParseDID(didStr)
 	require.NoError(t, err)
 
-	require.Equal(t, "11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerXWk", did.ID.String())
+	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", did.ID.String())
+	require.Equal(t, NetworkID(""), did.NetworkID)
+	require.Equal(t, Blockchain(""), did.Blockchain)
+
+	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
 }
-
-func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {
-	didStr := "dididen3:eth:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4m2E"
-
-	_, err := ParseDID(didStr)
-	require.ErrorIs(t, err, ErrDoesNotMatchRegexp)
+func TestParseDIDFromID(t *testing.T) {
 }

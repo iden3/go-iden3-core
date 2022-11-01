@@ -77,6 +77,17 @@ func TestIDparsers(t *testing.T) {
 		id0FromString.String())
 }
 
+func TestIDAsDID(t *testing.T) {
+	typ, err := BuildDIDType(DIDMethodIden3, Polygon, Mumbai)
+	require.NoError(t, err)
+	var genesis1 [27]byte
+	genesisbytes := hashBytes([]byte("genesistes1t2"))
+	copy(genesis1[:], genesisbytes[:])
+
+	id := NewID(typ, genesis1)
+	fmt.Println(id.String())
+}
+
 func TestIDjsonParser(t *testing.T) {
 	id, err := IDFromString("11AVZrKNJVqDJoyKrdyaAgEynyBEjksV5z2NjZogFv")
 	assert.Nil(t, err)
@@ -194,4 +205,52 @@ func TestFirstNBytes(t *testing.T) {
 		want := []byte{240, 113, 6, 0, 0}
 		require.Equal(t, want, res)
 	})
+}
+
+func TestIDinDIDFormat(t *testing.T) {
+
+	typ, _ := BuildDIDType(DIDMethodIden3, Ethereum, Main)
+	var genesis [27]byte
+	genesis32bytes := hashBytes([]byte("genesistest"))
+	copy(genesis[:], genesis32bytes[:])
+
+	id := NewID(typ, genesis)
+
+	var checksum [2]byte
+	copy(checksum[:], id[len(id)-2:])
+	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
+
+	fmt.Println(id.String())
+	did := DID{
+		ID:         id,
+		Blockchain: Polygon,
+		NetworkID:  Mumbai,
+	}
+	fmt.Println(did.String())
+}
+func TestIDFromDIDString(t *testing.T) {
+
+	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
+	require.NoError(t, err)
+	typ, err := BuildDIDType(didFromStr.Method, didFromStr.Blockchain, didFromStr.NetworkID)
+	require.NoError(t, err)
+
+	var genesis [27]byte
+	genesis32bytes := hashBytes([]byte("genesistest"))
+	copy(genesis[:], genesis32bytes[:])
+
+	id := NewID(typ, genesis)
+
+	var checksum [2]byte
+	copy(checksum[:], id[len(id)-2:])
+	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
+	assert.Equal(t, didFromStr.ID.String(), id.String())
+
+}
+
+func TestID_Type(t *testing.T) {
+	id, err := IDFromString("1MWtoAdZESeiphxp3bXupZcfS9DhMTdWNSjRwVYc2")
+	assert.Nil(t, err)
+
+	assert.Equal(t, id.Type(), TypeReadOnly)
 }
