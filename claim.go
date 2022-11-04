@@ -164,18 +164,18 @@ const (
 	IDPositionValue
 )
 
-// merkilizeFlag for the time being describes the location of root (in index or value
+// merklizeFlag for the time being describes the location of root (in index or value
 // slots or nowhere at all).
 //
-// Values merkilizeFlagIndex indicates that root is located in index[2] slots.
-// Values merkilizeFlagValue indicates that root is located in value[2] slots.
-type merkilizeFlag byte
+// Values merklizeFlagIndex indicates that root is located in index[2] slots.
+// Values merklizeFlagValue indicates that root is located in value[2] slots.
+type merklizeFlag byte
 
 const (
-	merkilizeFlagNone     merkilizeFlag = 0b00000000 // 000 00000
-	merkilizeFlagIndex    merkilizeFlag = 0b00100000 // nolint // 001 00000
-	merkilizeFlagValue    merkilizeFlag = 0b01000000 // 010 00000
-	_merkilizeFlagInvalid merkilizeFlag = 0b10000000 // 010 00000
+	merklizeFlagNone     merklizeFlag = 0b00000000 // 000 00000
+	merklizeFlagIndex    merklizeFlag = 0b00100000 // nolint // 001 00000
+	merklizeFlagValue    merklizeFlag = 0b01000000 // 010 00000
+	_merklizeFlagInvalid merklizeFlag = 0b10000000 // 010 00000
 )
 
 type MerklizePosition uint8
@@ -245,8 +245,8 @@ func WithID(id ID, pos IDPosition) Option {
 	}
 }
 
-// WithFlagMerklized sets claim's flag `merklized`
-func WithFlagMerklized(p MerklizePosition) Option {
+// WithFlagMerklize sets claim's flag `merklize`
+func WithFlagMerklize(p MerklizePosition) Option {
 	return func(c *Claim) error {
 		c.SetFlagMerklize(p)
 		return nil
@@ -388,14 +388,14 @@ func (c *Claim) setSubject(s subjectFlag) {
 }
 
 func (c *Claim) SetFlagMerklize(s MerklizePosition) {
-	var f merkilizeFlag
+	var f merklizeFlag
 	switch s {
 	case MerklizePositionIndex:
-		f = merkilizeFlagIndex
+		f = merklizeFlagIndex
 	case MerklizePositionValue:
-		f = merkilizeFlagValue
+		f = merklizeFlagValue
 	default:
-		f = merkilizeFlagNone
+		f = merklizeFlagNone
 	}
 	// clean last 3 bits
 	c.index[0][flagsByteIdx] &= 0b00011111
@@ -409,11 +409,11 @@ func (c *Claim) getSubject() subjectFlag {
 	return subjectFlag(sbj)
 }
 
-func (c *Claim) getMerklize() merkilizeFlag {
+func (c *Claim) getMerklize() merklizeFlag {
 	mt := c.index[0][flagsByteIdx]
 	// clean all except last 3 bits
 	mt &= 0b11100000
-	return merkilizeFlag(mt)
+	return merklizeFlag(mt)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -758,11 +758,11 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 // GetMerklizePosition returns the position at which the Merklize flag is stored.
 func (c *Claim) GetMerklizePosition() (MerklizePosition, error) {
 	switch c.getMerklize() {
-	case merkilizeFlagNone:
+	case merklizeFlagNone:
 		return MerklizePositionNone, nil
-	case merkilizeFlagIndex:
+	case merklizeFlagIndex:
 		return MerklizePositionIndex, nil
-	case merkilizeFlagValue:
+	case merklizeFlagValue:
 		return MerklizePositionValue, nil
 	default:
 		return 0, ErrIncorrectMerklizePosition

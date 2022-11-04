@@ -557,7 +557,7 @@ func TestGetMerklizePosition_ErrorCase(t *testing.T) {
 	c, err := NewClaim(SchemaHash{})
 	require.NoError(t, err)
 	c.index[0][flagsByteIdx] &= 0b11111000
-	c.index[0][flagsByteIdx] |= byte(_merkilizeFlagInvalid)
+	c.index[0][flagsByteIdx] |= byte(_merklizeFlagInvalid)
 
 	position, err := c.GetMerklizePosition()
 	require.ErrorIs(t, err, ErrIncorrectMerklizePosition)
@@ -566,8 +566,8 @@ func TestGetMerklizePosition_ErrorCase(t *testing.T) {
 
 func TestWithFlagMerklized(t *testing.T) {
 	claim, err := NewClaim(SchemaHash{},
-		WithFlagMerklized(MerklizePositionIndex))
+		WithFlagMerklize(MerklizePositionIndex))
 	require.NoError(t, err)
 
-	require.Equal(t, byte(merkilizeFlagIndex), claim.index[0][flagsByteIdx]&0b11100000)
+	require.Equal(t, byte(merklizeFlagIndex), claim.index[0][flagsByteIdx]&0b11100000)
 }
