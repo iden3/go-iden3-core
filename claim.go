@@ -53,7 +53,7 @@ Value:
 // ErrDataOverflow means that given *big.Int value does not fit in Field Q
 // e.g. greater than Q constant:
 //
-//     Q constant: 21888242871839275222246405745257275088548364400416034343698204186575808495617
+//	Q constant: 21888242871839275222246405745257275088548364400416034343698204186575808495617
 var ErrDataOverflow = errors.New("data does not fits SNARK size")
 
 // ErrIncorrectIDPosition means that passed position is not one of predefined:
@@ -173,7 +173,7 @@ type merklizeFlag byte
 
 const (
 	merklizeFlagNone     merklizeFlag = 0b00000000 // 000 00000
-	merklizeFlagIndex    merklizeFlag = 0b00100000 // nolint // 001 00000
+	merklizeFlagIndex    merklizeFlag = 0b00100000 // 001 00000
 	merklizeFlagValue    merklizeFlag = 0b01000000 // 010 00000
 	_merklizeFlagInvalid merklizeFlag = 0b10000000 // 010 00000
 )
