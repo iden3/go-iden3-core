@@ -29,7 +29,7 @@ Index:
             101: B.v Object Value
           [1] Expiration: bool
           [1] Updatable: bool
-          [3] Merkalized:
+          [3] Merklized:
             000: none
             001: C.i Root Index (root located in i_2)
             010: C.v Root Value (root located in v_2)
@@ -61,7 +61,7 @@ var ErrDataOverflow = errors.New("data does not fits SNARK size")
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 
 // ErrIncorrectMerklizePosition means that passed position is not one of predefined:
-// MerkilizePositionIndex or MerkilizePositionValue
+// MerklizePositionIndex or MerklizePositionValue
 var ErrIncorrectMerklizePosition = errors.New("incorrect Merklize position")
 
 // ErrNoID returns when ID not found in the Claim.
