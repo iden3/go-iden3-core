@@ -468,7 +468,7 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 		name             string
 		claim            func(t *testing.T) *Claim
 		expectedPosition IDPosition
-		expectedError error
+		expectedError    error
 	}{
 		{
 			name: "invalid position",
@@ -479,7 +479,7 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 				return c
 			},
 			expectedPosition: IDPositionNone,
-			expectedError: ErrInvalidSubjectPosition,
+			expectedError:    ErrInvalidSubjectPosition,
 		},
 	}
 
@@ -491,4 +491,83 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 			require.Equal(t, tt.expectedPosition, position)
 		})
 	}
+}
+
+func TestGetMerklizePosition(t *testing.T) {
+	tests := []struct {
+		name             string
+		claim            func(t *testing.T) *Claim
+		expectedPosition MerklizePosition
+	}{
+		{
+			name: "not merklized",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+				return c
+			},
+			expectedPosition: MerklizePositionNone,
+		},
+		{
+			name: "mt root stored in index",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.SetFlagMerklize(MerklizePositionIndex)
+				return c
+			},
+			expectedPosition: MerklizePositionIndex,
+		},
+		{
+			name: "mt root stored in value",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.SetFlagMerklize(MerklizePositionValue)
+				return c
+			},
+			expectedPosition: MerklizePositionValue,
+		},
+		{
+			name: "mt root random bits",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.SetFlagMerklize(MerklizePositionValue)
+				return c
+			},
+			expectedPosition: MerklizePositionValue,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.claim(t)
+			position, err := c.GetMerklizePosition()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPosition, position)
+		})
+	}
+}
+
+func TestGetMerklizePosition_ErrorCase(t *testing.T) {
+	c, err := NewClaim(SchemaHash{})
+	require.NoError(t, err)
+	c.index[0][flagsByteIdx] &= 0b11111000
+	c.index[0][flagsByteIdx] |= byte(_merklizeFlagInvalid)
+
+	position, err := c.GetMerklizePosition()
+	require.ErrorIs(t, err, ErrIncorrectMerklizePosition)
+	require.Equal(t, 0, int(position))
+}
+
+func TestWithFlagMerklized(t *testing.T) {
+	claim, err := NewClaim(SchemaHash{},
+		WithFlagMerklize(MerklizePositionIndex))
+	require.NoError(t, err)
+
+	require.Equal(t, byte(merklizeFlagIndex), claim.index[0][flagsByteIdx]&0b11100000)
 }
