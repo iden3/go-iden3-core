@@ -29,7 +29,7 @@ Index:
             101: B.v Object Value
           [1] Expiration: bool
           [1] Updatable: bool
-          [3] Merklized:
+          [3] Merklized: data is merklized root is stored in the:
             000: none
             001: C.i Root Index (root located in i_2)
             010: C.v Root Value (root located in v_2)
@@ -60,9 +60,9 @@ var ErrDataOverflow = errors.New("data does not fits SNARK size")
 // IDPositionIndex or IDPositionValue
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 
-// ErrIncorrectMerklizePosition means that passed position is not one of predefined:
-// MerklizePositionIndex or MerklizePositionValue
-var ErrIncorrectMerklizePosition = errors.New("incorrect Merklize position")
+// ErrIncorrectMerklizedPosition means that passed position is not one of predefined:
+// MerklizedPositionIndex or MerklizedPositionValue
+var ErrIncorrectMerklizedPosition = errors.New("incorrect Merklized position")
 
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
@@ -164,29 +164,29 @@ const (
 	IDPositionValue
 )
 
-// merklizeFlag for the time being describes the location of root (in index or value
+// merklizedFlag for the time being describes the location of root (in index or value
 // slots or nowhere at all).
 //
-// Values merklizeFlagIndex indicates that root is located in index[2] slots.
-// Values merklizeFlagValue indicates that root is located in value[2] slots.
-type merklizeFlag byte
+// Values merklizedFlagIndex indicates that root is located in index[2] slots.
+// Values merklizedFlagValue indicates that root is located in value[2] slots.
+type merklizedFlag byte
 
 const (
-	merklizeFlagNone     merklizeFlag = 0b00000000 // 000 00000
-	merklizeFlagIndex    merklizeFlag = 0b00100000 // 001 00000
-	merklizeFlagValue    merklizeFlag = 0b01000000 // 010 00000
-	_merklizeFlagInvalid merklizeFlag = 0b10000000 // 010 00000
+	merklizedFlagNone     merklizedFlag = 0b00000000 // 000 00000
+	merklizedFlagIndex    merklizedFlag = 0b00100000 // 001 00000
+	merklizedFlagValue    merklizedFlag = 0b01000000 // 010 00000
+	_merklizedFlagInvalid merklizedFlag = 0b10000000 // 010 00000
 )
 
-type MerklizePosition uint8
+type MerklizedPosition uint8
 
 const (
-	// MerklizePositionNone means root data value not located in claim.
-	MerklizePositionNone MerklizePosition = iota
-	// MerklizePositionIndex means root data value is in index slots.
-	MerklizePositionIndex
-	// MerklizePositionValue means root data value is in value slots.
-	MerklizePositionValue
+	// MerklizedPositionNone means root data value not located in claim.
+	MerklizedPositionNone MerklizedPosition = iota
+	// MerklizedPositionIndex means root data value is in index slots.
+	MerklizedPositionIndex
+	// MerklizedPositionValue means root data value is in value slots.
+	MerklizedPositionValue
 )
 
 const (
@@ -245,10 +245,10 @@ func WithID(id ID, pos IDPosition) Option {
 	}
 }
 
-// WithFlagMerklize sets claim's flag `merklize`
-func WithFlagMerklize(p MerklizePosition) Option {
+// WithFlagMerklized sets claim's flag `merklize`
+func WithFlagMerklized(p MerklizedPosition) Option {
 	return func(c *Claim) error {
-		c.SetFlagMerklize(p)
+		c.SetFlagMerklized(p)
 		return nil
 	}
 }
@@ -387,15 +387,15 @@ func (c *Claim) setSubject(s subjectFlag) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) SetFlagMerklize(s MerklizePosition) {
-	var f merklizeFlag
+func (c *Claim) SetFlagMerklized(s MerklizedPosition) {
+	var f merklizedFlag
 	switch s {
-	case MerklizePositionIndex:
-		f = merklizeFlagIndex
-	case MerklizePositionValue:
-		f = merklizeFlagValue
+	case MerklizedPositionIndex:
+		f = merklizedFlagIndex
+	case MerklizedPositionValue:
+		f = merklizedFlagValue
 	default:
-		f = merklizeFlagNone
+		f = merklizedFlagNone
 	}
 	// clean last 3 bits
 	c.index[0][flagsByteIdx] &= 0b00011111
@@ -409,11 +409,11 @@ func (c *Claim) getSubject() subjectFlag {
 	return subjectFlag(sbj)
 }
 
-func (c *Claim) getMerklize() merklizeFlag {
+func (c *Claim) getMerklize() merklizedFlag {
 	mt := c.index[0][flagsByteIdx]
 	// clean all except last 3 bits
 	mt &= 0b11100000
-	return merklizeFlag(mt)
+	return merklizedFlag(mt)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -755,16 +755,16 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// GetMerklizePosition returns the position at which the Merklize flag is stored.
-func (c *Claim) GetMerklizePosition() (MerklizePosition, error) {
+// GetMerklizedPosition returns the position at which the Merklize flag is stored.
+func (c *Claim) GetMerklizedPosition() (MerklizedPosition, error) {
 	switch c.getMerklize() {
-	case merklizeFlagNone:
-		return MerklizePositionNone, nil
-	case merklizeFlagIndex:
-		return MerklizePositionIndex, nil
-	case merklizeFlagValue:
-		return MerklizePositionValue, nil
+	case merklizedFlagNone:
+		return MerklizedPositionNone, nil
+	case merklizedFlagIndex:
+		return MerklizedPositionIndex, nil
+	case merklizedFlagValue:
+		return MerklizedPositionValue, nil
 	default:
-		return 0, ErrIncorrectMerklizePosition
+		return 0, ErrIncorrectMerklizedPosition
 	}
 }
