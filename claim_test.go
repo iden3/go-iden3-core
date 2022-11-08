@@ -571,3 +571,27 @@ func TestWithFlagMerklized(t *testing.T) {
 
 	require.Equal(t, byte(merklizedFlagIndex), claim.index[0][flagsByteIdx]&0b11100000)
 }
+
+func TestWithIndexMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithIndexMerklizedRoot(expVal))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[2])
+}
+
+func TestWithValueMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithValueMerklizedRoot(expVal))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.value[2])
+}

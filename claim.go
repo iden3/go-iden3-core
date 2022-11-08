@@ -317,6 +317,22 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 	}
 }
 
+// WithIndexMerklizedRoot sets root to index i_3
+// Returns ErrSlotOverflow if root value are too big.
+func WithIndexMerklizedRoot(r *big.Int) Option {
+	return func(c *Claim) error {
+		return setSlotInt(&c.index[2], r, SlotNameIndexA)
+	}
+}
+
+// WithIndexMerklizedRoot sets root to value v_3
+// Returns ErrSlotOverflow if root value are too big.
+func WithValueMerklizedRoot(r *big.Int) Option {
+	return func(c *Claim) error {
+		return setSlotInt(&c.value[2], r, SlotNameValueA)
+	}
+}
+
 // NewClaim creates new Claim with specified SchemaHash and any number of
 // options. Using options you can specify any field in claim.
 func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
