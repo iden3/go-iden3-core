@@ -321,6 +321,7 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 // Returns ErrSlotOverflow if root value are too big.
 func WithIndexMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
+		c.SetFlagMerklized(MerklizedPositionIndex)
 		return setSlotInt(&c.index[2], r, SlotNameIndexA)
 	}
 }
@@ -329,6 +330,7 @@ func WithIndexMerklizedRoot(r *big.Int) Option {
 // Returns ErrSlotOverflow if root value are too big.
 func WithValueMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
+		c.SetFlagMerklized(MerklizedPositionValue)
 		return setSlotInt(&c.value[2], r, SlotNameValueA)
 	}
 }
@@ -345,6 +347,22 @@ func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 		}
 	}
 	return c, nil
+}
+
+func WithMerklizedRoot(r *big.Int, pos MerklizedPosition) Option {
+	return func(c *Claim) error {
+		switch pos {
+		case MerklizedPositionIndex:
+			c.SetFlagMerklized(MerklizedPositionIndex)
+			return setSlotInt(&c.index[2], r, SlotNameIndexA)
+		case MerklizedPositionValue:
+			c.SetFlagMerklized(MerklizedPositionValue)
+			return setSlotInt(&c.value[2], r, SlotNameValueA)
+		default:
+			return ErrIncorrectMerklizedPosition
+		}
+		return nil
+	}
 }
 
 // HIndex calculates the hash of the Index of the Claim
