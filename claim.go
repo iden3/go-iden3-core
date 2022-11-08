@@ -248,7 +248,7 @@ func WithID(id ID, pos IDPosition) Option {
 // WithFlagMerklized sets claim's flag `merklize`
 func WithFlagMerklized(p MerklizedPosition) Option {
 	return func(c *Claim) error {
-		c.SetFlagMerklized(p)
+		c.setFlagMerklized(p)
 		return nil
 	}
 }
@@ -317,20 +317,20 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 	}
 }
 
-// WithIndexMerklizedRoot sets root to index i_3
+// WithIndexMerklizedRoot sets root to index i_2
 // Returns ErrSlotOverflow if root value are too big.
 func WithIndexMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
-		c.SetFlagMerklized(MerklizedPositionIndex)
+		c.setFlagMerklized(MerklizedPositionIndex)
 		return setSlotInt(&c.index[2], r, SlotNameIndexA)
 	}
 }
 
-// WithIndexMerklizedRoot sets root to value v_3
+// WithValueMerklizedRoot sets root to value v_2
 // Returns ErrSlotOverflow if root value are too big.
 func WithValueMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
-		c.SetFlagMerklized(MerklizedPositionValue)
+		c.setFlagMerklized(MerklizedPositionValue)
 		return setSlotInt(&c.value[2], r, SlotNameValueA)
 	}
 }
@@ -349,19 +349,20 @@ func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 	return c, nil
 }
 
+// WithMerklizedRoot sets root to value v_2 or index i_2
+// Returns ErrSlotOverflow if root value are too big.
 func WithMerklizedRoot(r *big.Int, pos MerklizedPosition) Option {
 	return func(c *Claim) error {
 		switch pos {
 		case MerklizedPositionIndex:
-			c.SetFlagMerklized(MerklizedPositionIndex)
+			c.setFlagMerklized(MerklizedPositionIndex)
 			return setSlotInt(&c.index[2], r, SlotNameIndexA)
 		case MerklizedPositionValue:
-			c.SetFlagMerklized(MerklizedPositionValue)
+			c.setFlagMerklized(MerklizedPositionValue)
 			return setSlotInt(&c.value[2], r, SlotNameValueA)
 		default:
 			return ErrIncorrectMerklizedPosition
 		}
-		return nil
 	}
 }
 
@@ -421,7 +422,8 @@ func (c *Claim) setSubject(s subjectFlag) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
-func (c *Claim) SetFlagMerklized(s MerklizedPosition) {
+// setFlagMerklized sets the merklized flag in the claim
+func (c *Claim) setFlagMerklized(s MerklizedPosition) {
 	var f merklizedFlag
 	switch s {
 	case MerklizedPositionIndex:

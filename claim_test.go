@@ -514,7 +514,7 @@ func TestGetMerklizePosition(t *testing.T) {
 				c, err := NewClaim(SchemaHash{})
 				require.NoError(t, err)
 
-				c.SetFlagMerklized(MerklizedPositionIndex)
+				c.setFlagMerklized(MerklizedPositionIndex)
 				return c
 			},
 			expectedPosition: MerklizedPositionIndex,
@@ -525,7 +525,7 @@ func TestGetMerklizePosition(t *testing.T) {
 				c, err := NewClaim(SchemaHash{})
 				require.NoError(t, err)
 
-				c.SetFlagMerklized(MerklizedPositionValue)
+				c.setFlagMerklized(MerklizedPositionValue)
 				return c
 			},
 			expectedPosition: MerklizedPositionValue,
@@ -536,7 +536,7 @@ func TestGetMerklizePosition(t *testing.T) {
 				c, err := NewClaim(SchemaHash{})
 				require.NoError(t, err)
 
-				c.SetFlagMerklized(MerklizedPositionValue)
+				c.setFlagMerklized(MerklizedPositionValue)
 				return c
 			},
 			expectedPosition: MerklizedPositionValue,
