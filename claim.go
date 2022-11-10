@@ -67,6 +67,9 @@ var ErrIncorrectMerklizedPosition = errors.New("incorrect Merklized position")
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
 
+// ErrNoMerklizedRoot returns when Merklized Root is not found in the Claim.
+var ErrNoMerklizedRoot = errors.New("Merklized root is not set")
+
 // ErrInvalidSubjectPosition returns when subject position flags sets in invalid value.
 var ErrInvalidSubjectPosition = errors.New("invalid subject position")
 
@@ -445,7 +448,7 @@ func (c *Claim) getSubject() subjectFlag {
 	return subjectFlag(sbj)
 }
 
-func (c *Claim) getMerklize() merklizedFlag {
+func (c *Claim) getMerklized() merklizedFlag {
 	mt := c.index[0][flagsByteIdx]
 	// clean all except last 3 bits
 	mt &= 0b11100000
@@ -488,6 +491,29 @@ func (c *Claim) SetVersion(ver uint32) {
 // GetVersion returns claim's version
 func (c *Claim) GetVersion() uint32 {
 	return binary.LittleEndian.Uint32(c.index[0][20:24])
+}
+
+// SetIndexMerklizedRoot sets merklized root to index. Removes root from value[2] if any.
+func (c *Claim) SetIndexMerklizedRoot(r *big.Int) error {
+	c.resetValueMerklizedRoot()
+	c.setFlagMerklized(MerklizedRootPositionIndex)
+	return setSlotInt(&c.index[2], r, SlotNameIndexA)
+}
+func (c *Claim) resetIndexMerklizedRoot() {
+	var zeroBytes ElemBytes
+	copy(c.index[2][:], zeroBytes[:])
+}
+
+// SetValueMerklizedRoot sets merklized root to value. Removes root from index[2] if any.
+func (c *Claim) SetValueMerklizedRoot(r *big.Int) error {
+	c.resetIndexMerklizedRoot()
+	c.setFlagMerklized(MerklizedRootPositionValue)
+	return setSlotInt(&c.value[2], r, SlotNameValueA)
+}
+
+func (c *Claim) resetValueMerklizedRoot() {
+	var zeroBytes ElemBytes
+	copy(c.value[2][:], zeroBytes[:])
 }
 
 // SetIndexID sets id to index. Removes id from value if any.
@@ -544,6 +570,19 @@ func (c *Claim) GetID() (ID, error) {
 		return c.getValueID(), nil
 	default:
 		return id, ErrNoID
+	}
+}
+
+// GetMerklizedRoot returns merklized root from claim's index of value.
+// Returns error ErrNoMerklizedRoot if MerklizedRoot is not set.
+func (c *Claim) GetMerklizedRoot() (*big.Int, error) {
+	switch c.getMerklized() {
+	case merklizedFlagIndex:
+		return c.index[2].ToInt(), nil
+	case merklizedFlagValue:
+		return c.value[2].ToInt(), nil
+	default:
+		return nil, ErrNoMerklizedRoot
 	}
 }
 
@@ -793,7 +832,7 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 
 // GetMerklizedPosition returns the position at which the Merklize flag is stored.
 func (c *Claim) GetMerklizedPosition() (MerklizedRootPosition, error) {
-	switch c.getMerklize() {
+	switch c.getMerklized() {
 	case merklizedFlagNone:
 		return MerklizedRootPositionNone, nil
 	case merklizedFlagIndex:
