@@ -61,7 +61,7 @@ var ErrDataOverflow = errors.New("data does not fits SNARK size")
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 
 // ErrIncorrectMerklizedPosition means that passed position is not one of predefined:
-// MerklizedPositionIndex or MerklizedPositionValue
+// MerklizedRootPositionIndex or MerklizedRootPositionValue
 var ErrIncorrectMerklizedPosition = errors.New("incorrect Merklized position")
 
 // ErrNoID returns when ID not found in the Claim.
@@ -178,15 +178,15 @@ const (
 	_merklizedFlagInvalid merklizedFlag = 0b10000000 // 010 00000
 )
 
-type MerklizedPosition uint8
+type MerklizedRootPosition uint8
 
 const (
-	// MerklizedPositionNone means root data value not located in claim.
-	MerklizedPositionNone MerklizedPosition = iota
-	// MerklizedPositionIndex means root data value is in index slots.
-	MerklizedPositionIndex
-	// MerklizedPositionValue means root data value is in value slots.
-	MerklizedPositionValue
+	// MerklizedRootPositionNone means root data value not located in claim.
+	MerklizedRootPositionNone MerklizedRootPosition = iota
+	// MerklizedRootPositionIndex means root data value is in index slots.
+	MerklizedRootPositionIndex
+	// MerklizedRootPositionValue means root data value is in value slots.
+	MerklizedRootPositionValue
 )
 
 const (
@@ -246,7 +246,7 @@ func WithID(id ID, pos IDPosition) Option {
 }
 
 // WithFlagMerklized sets claim's flag `merklize`
-func WithFlagMerklized(p MerklizedPosition) Option {
+func WithFlagMerklized(p MerklizedRootPosition) Option {
 	return func(c *Claim) error {
 		c.setFlagMerklized(p)
 		return nil
@@ -321,7 +321,7 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 // Returns ErrSlotOverflow if root value are too big.
 func WithIndexMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
-		c.setFlagMerklized(MerklizedPositionIndex)
+		c.setFlagMerklized(MerklizedRootPositionIndex)
 		return setSlotInt(&c.index[2], r, SlotNameIndexA)
 	}
 }
@@ -330,7 +330,7 @@ func WithIndexMerklizedRoot(r *big.Int) Option {
 // Returns ErrSlotOverflow if root value are too big.
 func WithValueMerklizedRoot(r *big.Int) Option {
 	return func(c *Claim) error {
-		c.setFlagMerklized(MerklizedPositionValue)
+		c.setFlagMerklized(MerklizedRootPositionValue)
 		return setSlotInt(&c.value[2], r, SlotNameValueA)
 	}
 }
@@ -351,14 +351,14 @@ func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 
 // WithMerklizedRoot sets root to value v_2 or index i_2
 // Returns ErrSlotOverflow if root value are too big.
-func WithMerklizedRoot(r *big.Int, pos MerklizedPosition) Option {
+func WithMerklizedRoot(r *big.Int, pos MerklizedRootPosition) Option {
 	return func(c *Claim) error {
 		switch pos {
-		case MerklizedPositionIndex:
-			c.setFlagMerklized(MerklizedPositionIndex)
+		case MerklizedRootPositionIndex:
+			c.setFlagMerklized(MerklizedRootPositionIndex)
 			return setSlotInt(&c.index[2], r, SlotNameIndexA)
-		case MerklizedPositionValue:
-			c.setFlagMerklized(MerklizedPositionValue)
+		case MerklizedRootPositionValue:
+			c.setFlagMerklized(MerklizedRootPositionValue)
 			return setSlotInt(&c.value[2], r, SlotNameValueA)
 		default:
 			return ErrIncorrectMerklizedPosition
@@ -423,12 +423,12 @@ func (c *Claim) setSubject(s subjectFlag) {
 }
 
 // setFlagMerklized sets the merklized flag in the claim
-func (c *Claim) setFlagMerklized(s MerklizedPosition) {
+func (c *Claim) setFlagMerklized(s MerklizedRootPosition) {
 	var f merklizedFlag
 	switch s {
-	case MerklizedPositionIndex:
+	case MerklizedRootPositionIndex:
 		f = merklizedFlagIndex
-	case MerklizedPositionValue:
+	case MerklizedRootPositionValue:
 		f = merklizedFlagValue
 	default:
 		f = merklizedFlagNone
@@ -792,14 +792,14 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 }
 
 // GetMerklizedPosition returns the position at which the Merklize flag is stored.
-func (c *Claim) GetMerklizedPosition() (MerklizedPosition, error) {
+func (c *Claim) GetMerklizedPosition() (MerklizedRootPosition, error) {
 	switch c.getMerklize() {
 	case merklizedFlagNone:
-		return MerklizedPositionNone, nil
+		return MerklizedRootPositionNone, nil
 	case merklizedFlagIndex:
-		return MerklizedPositionIndex, nil
+		return MerklizedRootPositionIndex, nil
 	case merklizedFlagValue:
-		return MerklizedPositionValue, nil
+		return MerklizedRootPositionValue, nil
 	default:
 		return 0, ErrIncorrectMerklizedPosition
 	}
