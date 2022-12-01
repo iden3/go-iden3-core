@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,5 +65,21 @@ func TestParseDID(t *testing.T) {
 
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
 }
+
 func TestParseDIDFromID(t *testing.T) {
+}
+
+func TestDIDGenesisFromState(t *testing.T) {
+
+	typ0, err := BuildDIDType(DIDMethodIden3, NoChain, NoNetwork)
+	require.NoError(t, err)
+
+	genesisState := big.NewInt(1)
+	did, err := DIDGenesisFromIdenState(typ0, genesisState)
+	require.NoError(t, err)
+
+	require.Equal(t, DIDMethodIden3, did.Method)
+	require.Equal(t, NoChain, did.Blockchain)
+	require.Equal(t, NoNetwork, did.NetworkID)
+	require.Equal(t, "did:iden3:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM", did.String())
 }

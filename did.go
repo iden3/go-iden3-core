@@ -162,6 +162,15 @@ func NewDID(didStr string, options ...DIDOption) (*DID, error) {
 
 }
 
+// DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
+func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
+	id, err := IdGenesisFromIdenState(typ, state)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDIDFromID(*id)
+}
+
 // WithNetwork sets Blockchain and NetworkID (eth:main)
 func WithNetwork(blockchain Blockchain, network NetworkID) DIDOption {
 	return func(d *DID) error {
