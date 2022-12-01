@@ -226,7 +226,7 @@ func ParseDID(didStr string) (*DID, error) {
 
 	// check did network defined in core lib for did method
 	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{Blockchain: did.Blockchain, NetworkID: did.NetworkID}]
-	if !ok { /**/
+	if !ok {
 		return nil, fmt.Errorf(`blockchain network "%s %s" is not defined for %s did method`, did.Blockchain, did.NetworkID, did.Method)
 	}
 
