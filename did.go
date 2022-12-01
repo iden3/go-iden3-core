@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -11,8 +12,12 @@ const DIDSchema = "did"
 // DIDMethod represents did methods
 type DIDMethod string
 
-// DIDMethodIden3 DID method-name
-const DIDMethodIden3 = "iden3"
+const (
+	// DIDMethodIden3 DID method-name
+	DIDMethodIden3 DIDMethod = "iden3"
+	// DIDMethodPolygonID DID method-name
+	DIDMethodPolygonID DIDMethod = "polygonID"
+)
 
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
@@ -212,7 +217,7 @@ func ParseDID(didStr string) (*DID, error) {
 
 	// check did network defined in core lib for did method
 	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{Blockchain: did.Blockchain, NetworkID: did.NetworkID}]
-	if !ok {
+	if !ok { /**/
 		return nil, fmt.Errorf(`blockchain network "%s %s" is not defined for %s did method`, did.Blockchain, did.NetworkID, did.Method)
 	}
 
