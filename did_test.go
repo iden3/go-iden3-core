@@ -3,11 +3,10 @@ package core
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_DIDString(t *testing.T) {
-
 	tests := []struct {
 		description string
 		identifier  string
@@ -15,53 +14,55 @@ func Test_DIDString(t *testing.T) {
 		options     DIDOption
 	}{
 		{"Test readonly did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
-			"did:iden3:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
+			"tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
+			"did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
 			nil,
 		},
 		{"Test eth did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
-			"did:iden3:eth:main:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
+			"zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
+			"did:iden3:eth:main:zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
 			WithNetwork("eth", "main"),
 		},
 		{"Test polygon did",
-			"114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
-			"did:iden3:polygon:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE",
-			WithNetwork("polygon", "test"),
-		},
-		{"Test identifier 41 char",
-			"11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerTVj",
-			"did:iden3:polygon:test:11FjRaFUGZA5yBXREaH6P11yezYsxwJLMsEUerTVj",
-			WithNetwork("polygon", "test"),
+			"wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
+			"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
+			WithNetwork("polygon", "mumbai"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			got, err := NewDID(test.identifier, test.options)
-			assert.NoError(t, err)
-
-			assert.Equal(t, got.String(), test.did)
+			require.NoError(t, err)
+			require.Equal(t, got.String(), test.did)
 		})
 	}
-
 }
 
 func TestParseDID(t *testing.T) {
 
-	didStr := "did:iden3:eth:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE"
+	// did
+	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
 
 	did, err := ParseDID(didStr)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Equal(t, "114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE", did.ID.String())
-	assert.Equal(t, NetworkID("test"), did.NetworkID)
-	assert.Equal(t, Blockchain("eth"), did.Blockchain)
+	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
+		did.ID.String())
+	require.Equal(t, Mumbai, did.NetworkID)
+	require.Equal(t, Polygon, did.Blockchain)
+
+	// readonly did
+	didStr = "did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
+
+	did, err = ParseDID(didStr)
+	require.NoError(t, err)
+
+	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", did.ID.String())
+	require.Equal(t, NetworkID(""), did.NetworkID)
+	require.Equal(t, Blockchain(""), did.Blockchain)
+
+	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
 }
-
-func TestDID_ParseDID_DoesntMatchRegexp(t *testing.T) {
-	didStr := "dididen3:eth:test:114vgnnCupQMX4wqUBjg5kUya3zMXfPmKc9HNH4TSE"
-
-	_, err := ParseDID(didStr)
-	assert.ErrorIs(t, err, ErrDoesNotMatchRegexp)
+func TestParseDIDFromID(t *testing.T) {
 }

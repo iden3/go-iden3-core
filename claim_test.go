@@ -468,7 +468,7 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 		name             string
 		claim            func(t *testing.T) *Claim
 		expectedPosition IDPosition
-		expectedError error
+		expectedError    error
 	}{
 		{
 			name: "invalid position",
@@ -479,7 +479,7 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 				return c
 			},
 			expectedPosition: IDPositionNone,
-			expectedError: ErrInvalidSubjectPosition,
+			expectedError:    ErrInvalidSubjectPosition,
 		},
 	}
 
@@ -491,4 +491,187 @@ func TestGetIDPosition_ErrorCase(t *testing.T) {
 			require.Equal(t, tt.expectedPosition, position)
 		})
 	}
+}
+
+func TestGetMerklizePosition(t *testing.T) {
+	tests := []struct {
+		name             string
+		claim            func(t *testing.T) *Claim
+		expectedPosition MerklizedRootPosition
+	}{
+		{
+			name: "not merklized",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+				return c
+			},
+			expectedPosition: MerklizedRootPositionNone,
+		},
+		{
+			name: "mt root stored in index",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.setFlagMerklized(MerklizedRootPositionIndex)
+				return c
+			},
+			expectedPosition: MerklizedRootPositionIndex,
+		},
+		{
+			name: "mt root stored in value",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.setFlagMerklized(MerklizedRootPositionValue)
+				return c
+			},
+			expectedPosition: MerklizedRootPositionValue,
+		},
+		{
+			name: "mt root random bits",
+			claim: func(t *testing.T) *Claim {
+				c, err := NewClaim(SchemaHash{})
+				require.NoError(t, err)
+
+				c.setFlagMerklized(MerklizedRootPositionValue)
+				return c
+			},
+			expectedPosition: MerklizedRootPositionValue,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := tt.claim(t)
+			position, err := c.GetMerklizedPosition()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPosition, position)
+		})
+	}
+}
+
+func TestGetMerklizePosition_ErrorCase(t *testing.T) {
+	c, err := NewClaim(SchemaHash{})
+	require.NoError(t, err)
+	c.index[0][flagsByteIdx] &= 0b11111000
+	c.index[0][flagsByteIdx] |= byte(_merklizedFlagInvalid)
+
+	position, err := c.GetMerklizedPosition()
+	require.ErrorIs(t, err, ErrIncorrectMerklizedPosition)
+	require.Equal(t, 0, int(position))
+}
+
+func TestWithFlagMerklized(t *testing.T) {
+	claim, err := NewClaim(SchemaHash{},
+		WithFlagMerklized(MerklizedRootPositionIndex))
+	require.NoError(t, err)
+
+	require.Equal(t, byte(merklizedFlagIndex), claim.index[0][flagsByteIdx]&0b11100000)
+}
+
+func TestWithIndexMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithIndexMerklizedRoot(expVal))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[2])
+
+	position, err := claim.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionIndex, position)
+}
+
+func TestWithValueMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithValueMerklizedRoot(expVal))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.value[2])
+
+	position, err := claim.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionValue, position)
+}
+
+func TestWithMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{},
+		WithMerklizedRoot(expVal, MerklizedRootPositionIndex))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[2])
+
+	position, err := claim.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionIndex, position)
+
+	claim2, err := NewClaim(SchemaHash{},
+		WithMerklizedRoot(expVal, MerklizedRootPositionValue))
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim2.value[2])
+
+	position2, err := claim2.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionValue, position2)
+}
+
+func TestClaim_SetMerklizedRoot(t *testing.T) {
+	expVal := big.NewInt(9999)
+	expSlot := ElemBytes{}
+	err := expSlot.SetInt(expVal)
+	require.NoError(t, err)
+
+	claim, err := NewClaim(SchemaHash{})
+	require.NoError(t, err)
+
+	err = claim.SetIndexMerklizedRoot(expVal)
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim.index[2])
+
+	position, err := claim.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionIndex, position)
+
+	r, err := claim.GetMerklizedRoot()
+	require.NoError(t, err)
+	require.Equal(t, expVal, r)
+
+	claim2, err := NewClaim(SchemaHash{})
+	require.NoError(t, err)
+
+	err = claim2.SetValueMerklizedRoot(expVal)
+	require.NoError(t, err)
+	require.Equal(t, expSlot, claim2.value[2])
+
+	position2, err := claim2.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionValue, position2)
+
+	r2, err := claim2.GetMerklizedRoot()
+	require.NoError(t, err)
+	require.Equal(t, expVal, r2)
+
+	claim3, err := NewClaim(SchemaHash{})
+	require.NoError(t, err)
+
+	position3, err := claim3.GetMerklizedPosition()
+	require.NoError(t, err)
+	require.Equal(t, MerklizedRootPositionNone, position3)
+
+	_, err = claim3.GetMerklizedRoot()
+	require.Error(t, ErrNoMerklizedRoot, err)
 }

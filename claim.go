@@ -29,7 +29,11 @@ Index:
             101: B.v Object Value
           [1] Expiration: bool
           [1] Updatable: bool
-          [27] 0
+          [3] Merklized: data is merklized root is stored in the:
+            000: none
+            001: C.i Root Index (root located in i_2)
+            010: C.v Root Value (root located in v_2)
+          [24] 0
       [ 32 bits ] version (optional?)
       [ 61 bits ] 0 - reserved for future use
  i_1: [ 248 bits] identity (case b) (optional)
@@ -49,15 +53,22 @@ Value:
 // ErrDataOverflow means that given *big.Int value does not fit in Field Q
 // e.g. greater than Q constant:
 //
-//     Q constant: 21888242871839275222246405745257275088548364400416034343698204186575808495617
+//	Q constant: 21888242871839275222246405745257275088548364400416034343698204186575808495617
 var ErrDataOverflow = errors.New("data does not fits SNARK size")
 
 // ErrIncorrectIDPosition means that passed position is not one of predefined:
 // IDPositionIndex or IDPositionValue
 var ErrIncorrectIDPosition = errors.New("incorrect ID position")
 
+// ErrIncorrectMerklizedPosition means that passed position is not one of predefined:
+// MerklizedRootPositionIndex or MerklizedRootPositionValue
+var ErrIncorrectMerklizedPosition = errors.New("incorrect Merklized position")
+
 // ErrNoID returns when ID not found in the Claim.
 var ErrNoID = errors.New("ID is not set")
+
+// ErrNoMerklizedRoot returns when Merklized Root is not found in the Claim.
+var ErrNoMerklizedRoot = errors.New("Merklized root is not set")
 
 // ErrInvalidSubjectPosition returns when subject position flags sets in invalid value.
 var ErrInvalidSubjectPosition = errors.New("invalid subject position")
@@ -71,7 +82,6 @@ type ErrSlotOverflow struct {
 func (e ErrSlotOverflow) Error() string {
 	return fmt.Sprintf("Slot %v not in field (too large)", e.Field)
 }
-
 
 type SlotName string
 
@@ -91,41 +101,41 @@ type SchemaHash [schemaHashLn]byte
 // MarshalText returns HEX representation of SchemaHash.
 //
 // Returning error is always nil.
-func (sc SchemaHash) MarshalText() ([]byte, error) {
-	dst := make([]byte, hex.EncodedLen(len(sc)))
-	hex.Encode(dst, sc[:])
+func (sh SchemaHash) MarshalText() ([]byte, error) {
+	dst := make([]byte, hex.EncodedLen(len(sh)))
+	hex.Encode(dst, sh[:])
 	return dst, nil
 }
 
 // NewSchemaHashFromHex creates new SchemaHash from hex string
 func NewSchemaHashFromHex(s string) (SchemaHash, error) {
-	var schemaHash SchemaHash
+	var sh SchemaHash
 	schemaEncodedBytes, err := hex.DecodeString(s)
 	if err != nil {
 		return SchemaHash{}, err
 	}
 
-	if len(schemaEncodedBytes) != len(schemaHash) {
+	if len(schemaEncodedBytes) != len(sh) {
 		return SchemaHash{}, fmt.Errorf("invalid schema hash length: %d",
 			len(schemaEncodedBytes))
 	}
-	copy(schemaHash[:], schemaEncodedBytes)
+	copy(sh[:], schemaEncodedBytes)
 
-	return schemaHash, nil
+	return sh, nil
 }
 
 // NewSchemaHashFromInt creates new SchemaHash from big.Int
 func NewSchemaHashFromInt(i *big.Int) SchemaHash {
-	var schemaHash SchemaHash
+	var sh SchemaHash
 	b := intToBytes(i)
-	copy(schemaHash[len(schemaHash)-len(b):], b)
+	copy(sh[len(sh)-len(b):], b)
 
-	return schemaHash
+	return sh
 }
 
 // BigInt returns a bigInt presentation of SchemaHash
-func (sc SchemaHash) BigInt() *big.Int {
-	return bytesToInt(sc[:])
+func (sh SchemaHash) BigInt() *big.Int {
+	return bytesToInt(sh[:])
 }
 
 type Claim struct {
@@ -155,6 +165,31 @@ const (
 	IDPositionIndex
 	// IDPositionValue means ID value is in value slots.
 	IDPositionValue
+)
+
+// merklizedFlag for the time being describes the location of root (in index or value
+// slots or nowhere at all).
+//
+// Values merklizedFlagIndex indicates that root is located in index[2] slots.
+// Values merklizedFlagValue indicates that root is located in value[2] slots.
+type merklizedFlag byte
+
+const (
+	merklizedFlagNone     merklizedFlag = 0b00000000 // 000 00000
+	merklizedFlagIndex    merklizedFlag = 0b00100000 // 001 00000
+	merklizedFlagValue    merklizedFlag = 0b01000000 // 010 00000
+	_merklizedFlagInvalid merklizedFlag = 0b10000000 // 010 00000
+)
+
+type MerklizedRootPosition uint8
+
+const (
+	// MerklizedRootPositionNone means root data value not located in claim.
+	MerklizedRootPositionNone MerklizedRootPosition = iota
+	// MerklizedRootPositionIndex means root data value is in index slots.
+	MerklizedRootPositionIndex
+	// MerklizedRootPositionValue means root data value is in value slots.
+	MerklizedRootPositionValue
 )
 
 const (
@@ -209,6 +244,14 @@ func WithID(id ID, pos IDPosition) Option {
 		default:
 			return ErrIncorrectIDPosition
 		}
+		return nil
+	}
+}
+
+// WithFlagMerklized sets claim's flag `merklize`
+func WithFlagMerklized(p MerklizedRootPosition) Option {
+	return func(c *Claim) error {
+		c.setFlagMerklized(p)
 		return nil
 	}
 }
@@ -277,11 +320,29 @@ func WithValueDataInts(slotA, slotB *big.Int) Option {
 	}
 }
 
+// WithIndexMerklizedRoot sets root to index i_2
+// Returns ErrSlotOverflow if root value are too big.
+func WithIndexMerklizedRoot(r *big.Int) Option {
+	return func(c *Claim) error {
+		c.setFlagMerklized(MerklizedRootPositionIndex)
+		return setSlotInt(&c.index[2], r, SlotNameIndexA)
+	}
+}
+
+// WithValueMerklizedRoot sets root to value v_2
+// Returns ErrSlotOverflow if root value are too big.
+func WithValueMerklizedRoot(r *big.Int) Option {
+	return func(c *Claim) error {
+		c.setFlagMerklized(MerklizedRootPositionValue)
+		return setSlotInt(&c.value[2], r, SlotNameValueA)
+	}
+}
+
 // NewClaim creates new Claim with specified SchemaHash and any number of
 // options. Using options you can specify any field in claim.
-func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
+func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 	c := &Claim{}
-	c.SetSchemaHash(schemaHash)
+	c.SetSchemaHash(sh)
 	for _, o := range options {
 		err := o(c)
 		if err != nil {
@@ -289,6 +350,23 @@ func NewClaim(schemaHash SchemaHash, options ...Option) (*Claim, error) {
 		}
 	}
 	return c, nil
+}
+
+// WithMerklizedRoot sets root to value v_2 or index i_2
+// Returns ErrSlotOverflow if root value are too big.
+func WithMerklizedRoot(r *big.Int, pos MerklizedRootPosition) Option {
+	return func(c *Claim) error {
+		switch pos {
+		case MerklizedRootPositionIndex:
+			c.setFlagMerklized(MerklizedRootPositionIndex)
+			return setSlotInt(&c.index[2], r, SlotNameIndexA)
+		case MerklizedRootPositionValue:
+			c.setFlagMerklized(MerklizedRootPositionValue)
+			return setSlotInt(&c.value[2], r, SlotNameValueA)
+		default:
+			return ErrIncorrectMerklizedPosition
+		}
+	}
 }
 
 // HIndex calculates the hash of the Index of the Claim
@@ -316,15 +394,15 @@ func (c *Claim) HiHv() (*big.Int, *big.Int, error) {
 }
 
 // SetSchemaHash updates claim's schema hash.
-func (c *Claim) SetSchemaHash(schema SchemaHash) {
-	copy(c.index[0][:schemaHashLn], schema[:])
+func (c *Claim) SetSchemaHash(sh SchemaHash) {
+	copy(c.index[0][:schemaHashLn], sh[:])
 }
 
 // GetSchemaHash return copy of claim's schema hash.
 func (c *Claim) GetSchemaHash() SchemaHash {
-	var schemaHash SchemaHash
-	copy(schemaHash[:], c.index[0][:schemaHashLn])
-	return schemaHash
+	var sh SchemaHash
+	copy(sh[:], c.index[0][:schemaHashLn])
+	return sh
 }
 
 // GetIDPosition returns the position at which the ID is stored.
@@ -347,11 +425,34 @@ func (c *Claim) setSubject(s subjectFlag) {
 	c.index[0][flagsByteIdx] |= byte(s)
 }
 
+// setFlagMerklized sets the merklized flag in the claim
+func (c *Claim) setFlagMerklized(s MerklizedRootPosition) {
+	var f merklizedFlag
+	switch s {
+	case MerklizedRootPositionIndex:
+		f = merklizedFlagIndex
+	case MerklizedRootPositionValue:
+		f = merklizedFlagValue
+	default:
+		f = merklizedFlagNone
+	}
+	// clean last 3 bits
+	c.index[0][flagsByteIdx] &= 0b00011111
+	c.index[0][flagsByteIdx] |= byte(f)
+}
+
 func (c *Claim) getSubject() subjectFlag {
 	sbj := c.index[0][flagsByteIdx]
 	// clean all except first 3 bits
 	sbj &= 0b00000111
 	return subjectFlag(sbj)
+}
+
+func (c *Claim) getMerklized() merklizedFlag {
+	mt := c.index[0][flagsByteIdx]
+	// clean all except last 3 bits
+	mt &= 0b11100000
+	return merklizedFlag(mt)
 }
 
 func (c *Claim) setFlagExpiration(val bool) {
@@ -390,6 +491,29 @@ func (c *Claim) SetVersion(ver uint32) {
 // GetVersion returns claim's version
 func (c *Claim) GetVersion() uint32 {
 	return binary.LittleEndian.Uint32(c.index[0][20:24])
+}
+
+// SetIndexMerklizedRoot sets merklized root to index. Removes root from value[2] if any.
+func (c *Claim) SetIndexMerklizedRoot(r *big.Int) error {
+	c.resetValueMerklizedRoot()
+	c.setFlagMerklized(MerklizedRootPositionIndex)
+	return setSlotInt(&c.index[2], r, SlotNameIndexA)
+}
+func (c *Claim) resetIndexMerklizedRoot() {
+	var zeroBytes ElemBytes
+	copy(c.index[2][:], zeroBytes[:])
+}
+
+// SetValueMerklizedRoot sets merklized root to value. Removes root from index[2] if any.
+func (c *Claim) SetValueMerklizedRoot(r *big.Int) error {
+	c.resetIndexMerklizedRoot()
+	c.setFlagMerklized(MerklizedRootPositionValue)
+	return setSlotInt(&c.value[2], r, SlotNameValueA)
+}
+
+func (c *Claim) resetValueMerklizedRoot() {
+	var zeroBytes ElemBytes
+	copy(c.value[2][:], zeroBytes[:])
 }
 
 // SetIndexID sets id to index. Removes id from value if any.
@@ -446,6 +570,19 @@ func (c *Claim) GetID() (ID, error) {
 		return c.getValueID(), nil
 	default:
 		return id, ErrNoID
+	}
+}
+
+// GetMerklizedRoot returns merklized root from claim's index of value.
+// Returns error ErrNoMerklizedRoot if MerklizedRoot is not set.
+func (c *Claim) GetMerklizedRoot() (*big.Int, error) {
+	switch c.getMerklized() {
+	case merklizedFlagIndex:
+		return c.index[2].ToInt(), nil
+	case merklizedFlagValue:
+		return c.value[2].ToInt(), nil
+	default:
+		return nil, ErrNoMerklizedRoot
 	}
 }
 
@@ -654,6 +791,15 @@ func (c *Claim) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
+// Hex returns hex representation of binary claim
+func (c Claim) Hex() (string, error) {
+	b, err := c.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), err
+}
+
 func (c Claim) MarshalBinary() ([]byte, error) {
 	var buf = bytes.NewBuffer(nil)
 	buf.Grow(len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0]))
@@ -691,4 +837,27 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 	}
 
 	return nil
+}
+
+func (c *Claim) FromHex(hexStr string) error {
+
+	data, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return err
+	}
+	return c.UnmarshalBinary(data)
+}
+
+// GetMerklizedPosition returns the position at which the Merklize flag is stored.
+func (c *Claim) GetMerklizedPosition() (MerklizedRootPosition, error) {
+	switch c.getMerklized() {
+	case merklizedFlagNone:
+		return MerklizedRootPositionNone, nil
+	case merklizedFlagIndex:
+		return MerklizedRootPositionIndex, nil
+	case merklizedFlagValue:
+		return MerklizedRootPositionValue, nil
+	default:
+		return 0, ErrIncorrectMerklizedPosition
+	}
 }
