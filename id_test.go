@@ -192,6 +192,20 @@ func TestProfileID(t *testing.T) {
 		id2.BigInt().String())
 }
 
+func TestProfileID_emptyNonce(t *testing.T) {
+	id, err := IDFromString("11BBCPZ6Zq9HX1JhHrHT3QKUFD9kFDEyJFoAVMptVs")
+	require.NoError(t, err)
+
+	profile, err := ProfileID(id, nil)
+	require.NoError(t, err)
+	require.Equal(t, id, profile)
+
+	nonce := big.NewInt(0)
+	profile2, err := ProfileID(id, nonce)
+	require.NoError(t, err)
+	require.Equal(t, id, profile2)
+}
+
 func TestFirstNBytes(t *testing.T) {
 	t.Run("bytes more then required", func(t *testing.T) {
 		i := big.NewInt(422733233635437384)

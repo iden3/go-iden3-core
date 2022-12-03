@@ -256,6 +256,14 @@ func WithFlagMerklized(p MerklizedRootPosition) Option {
 	}
 }
 
+// WithFlagMerklized sets claim's flag `merklize`
+func WithFlagMerklized(p MerklizedRootPosition) Option {
+	return func(c *Claim) error {
+		c.setFlagMerklized(p)
+		return nil
+	}
+}
+
 // WithRevocationNonce sets claim's revocation nonce.
 func WithRevocationNonce(nonce uint64) Option {
 	return func(c *Claim) error {
@@ -791,6 +799,15 @@ func (c *Claim) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
+// Hex returns hex representation of binary claim
+func (c Claim) Hex() (string, error) {
+	b, err := c.MarshalBinary()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), err
+}
+
 func (c Claim) MarshalBinary() ([]byte, error) {
 	var buf = bytes.NewBuffer(nil)
 	buf.Grow(len(c.index)*len(c.index[0]) + len(c.value)*len(c.value[0]))
@@ -828,6 +845,15 @@ func (c *Claim) UnmarshalBinary(data []byte) error {
 	}
 
 	return nil
+}
+
+func (c *Claim) FromHex(hexStr string) error {
+
+	data, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return err
+	}
+	return c.UnmarshalBinary(data)
 }
 
 // GetMerklizedPosition returns the position at which the Merklize flag is stored.

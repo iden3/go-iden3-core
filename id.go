@@ -46,7 +46,13 @@ func NewID(typ [2]byte, genesis [27]byte) ID {
 	return ID(b)
 }
 
+// ProfileID calculates the Profile ID from the Identity and profile nonce. If nonce is empty or zero ID is returned
 func ProfileID(id ID, nonce *big.Int) (ID, error) {
+
+	if nonce == nil || big.NewInt(0).Cmp(nonce) == 0 {
+		return id, nil
+	}
+
 	hash, err := poseidon.Hash([]*big.Int{id.BigInt(), nonce})
 	if err != nil {
 		return ID{}, err

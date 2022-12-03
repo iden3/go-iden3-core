@@ -66,9 +66,6 @@ func TestParseDID(t *testing.T) {
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
 }
 
-func TestParseDIDFromID(t *testing.T) {
-}
-
 func TestDIDGenesisFromState(t *testing.T) {
 
 	typ0, err := BuildDIDType(DIDMethodIden3, NoChain, NoNetwork)
