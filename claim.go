@@ -256,14 +256,6 @@ func WithFlagMerklized(p MerklizedRootPosition) Option {
 	}
 }
 
-// WithFlagMerklized sets claim's flag `merklize`
-func WithFlagMerklized(p MerklizedRootPosition) Option {
-	return func(c *Claim) error {
-		c.setFlagMerklized(p)
-		return nil
-	}
-}
-
 // WithRevocationNonce sets claim's revocation nonce.
 func WithRevocationNonce(nonce uint64) Option {
 	return func(c *Claim) error {
