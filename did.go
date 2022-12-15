@@ -53,7 +53,8 @@ const (
 
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
-	DIDMethodIden3: 0b00000001,
+	DIDMethodIden3:     0b00000001,
+	DIDMethodPolygonID: 0b00000010,
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -72,6 +73,12 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 
 		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
+	},
+	DIDMethodPolygonID: {
+		{Blockchain: NoChain, NetworkID: NoNetwork}: 0b00000000,
+
+		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
+		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 	},
 }
 
