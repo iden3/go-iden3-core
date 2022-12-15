@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -11,8 +12,12 @@ const DIDSchema = "did"
 // DIDMethod represents did methods
 type DIDMethod string
 
-// DIDMethodIden3 DID method-name
-const DIDMethodIden3 = "iden3"
+const (
+	// DIDMethodIden3 DID method-name
+	DIDMethodIden3 DIDMethod = "iden3"
+	// DIDMethodPolygonID DID method-name
+	DIDMethodPolygonID DIDMethod = "polygonid"
+)
 
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
@@ -48,7 +53,8 @@ const (
 
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
-	DIDMethodIden3: 0b00000001,
+	DIDMethodIden3:     0b00000001,
+	DIDMethodPolygonID: 0b00000010,
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -68,6 +74,12 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
 	},
+	DIDMethodPolygonID: {
+		{Blockchain: NoChain, NetworkID: NoNetwork}: 0b00000000,
+
+		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
+		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
+	},
 }
 
 // BuildDIDType builds bytes type from chain and network
@@ -80,7 +92,7 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([
 
 	sb, ok := DIDMethodNetwork[method][DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}]
 	if !ok {
-		return [2]byte{}, fmt.Errorf("blockchain network %s %s is not defined in core lib", blockchain, network)
+		return [2]byte{}, fmt.Errorf("blockchain `%s` with network `%s` is not defined in core lib", blockchain, network)
 	}
 	return [2]byte{fb, sb}, nil
 }
@@ -132,47 +144,22 @@ type DID struct {
 	NetworkID  NetworkID  // NetworkID specific network identifier eth {main, ropsten, rinkeby, kovan}
 }
 
-type DIDOption func(*DID) error
-
-func NewDID(didStr string, options ...DIDOption) (*DID, error) {
-
-	did := &DID{}
-	var err error
-
-	did.ID, err = IDFromString(didStr)
+// DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
+func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
+	id, err := IdGenesisFromIdenState(typ, state)
 	if err != nil {
 		return nil, err
 	}
-
-	for _, o := range options {
-		if o == nil {
-			continue
-		}
-		err := o(did)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return did, nil
-
-}
-
-// WithNetwork sets Blockchain and NetworkID (eth:main)
-func WithNetwork(blockchain Blockchain, network NetworkID) DIDOption {
-	return func(d *DID) error {
-		d.Blockchain = blockchain
-		d.NetworkID = network
-		return nil
-	}
+	return ParseDIDFromID(*id)
 }
 
 // String did as a string
 func (did *DID) String() string {
 	if did.Blockchain == "" {
-		return fmt.Sprintf("%s:%s:%s", DIDSchema, DIDMethodIden3, did.ID.String())
+		return fmt.Sprintf("%s:%s:%s", DIDSchema, did.Method, did.ID.String())
 	}
 
-	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethodIden3, did.Blockchain,
+	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, did.Method, did.Blockchain,
 		did.NetworkID, did.ID.String())
 }
 
@@ -182,6 +169,10 @@ func ParseDID(didStr string) (*DID, error) {
 	var err error
 
 	arg := strings.Split(didStr, ":")
+
+	if len(arg) == 0 {
+		return nil, fmt.Errorf("did string is not valid")
+	}
 
 	did.Method = DIDMethod(arg[1])
 

@@ -1,43 +1,11 @@
 package core
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
-
-func Test_DIDString(t *testing.T) {
-	tests := []struct {
-		description string
-		identifier  string
-		did         string
-		options     DIDOption
-	}{
-		{"Test readonly did",
-			"tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
-			"did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
-			nil,
-		},
-		{"Test eth did",
-			"zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
-			"did:iden3:eth:main:zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
-			WithNetwork("eth", "main"),
-		},
-		{"Test polygon did",
-			"wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
-			"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
-			WithNetwork("polygon", "mumbai"),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.description, func(t *testing.T) {
-			got, err := NewDID(test.identifier, test.options)
-			require.NoError(t, err)
-			require.Equal(t, got.String(), test.did)
-		})
-	}
-}
 
 func TestParseDID(t *testing.T) {
 
@@ -64,5 +32,59 @@ func TestParseDID(t *testing.T) {
 
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
 }
-func TestParseDIDFromID(t *testing.T) {
+
+func TestDIDGenesisFromState(t *testing.T) {
+
+	typ0, err := BuildDIDType(DIDMethodIden3, NoChain, NoNetwork)
+	require.NoError(t, err)
+
+	genesisState := big.NewInt(1)
+	did, err := DIDGenesisFromIdenState(typ0, genesisState)
+	require.NoError(t, err)
+
+	require.Equal(t, DIDMethodIden3, did.Method)
+	require.Equal(t, NoChain, did.Blockchain)
+	require.Equal(t, NoNetwork, did.NetworkID)
+	require.Equal(t, "did:iden3:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM", did.String())
+}
+
+func TestDID_PolygonID_Types(t *testing.T) {
+
+	// Polygon no chain, no network
+	did := helperBuildDIDFromType(t, DIDMethodPolygonID, NoChain, NoNetwork)
+
+	require.Equal(t, DIDMethodPolygonID, did.Method)
+	require.Equal(t, NoChain, did.Blockchain)
+	require.Equal(t, NoNetwork, did.NetworkID)
+	require.Equal(t, "did:polygonid:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh", did.String())
+
+	// Polygon | Polygon chain, Main
+	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
+
+	require.Equal(t, DIDMethodPolygonID, did2.Method)
+	require.Equal(t, Polygon, did2.Blockchain)
+	require.Equal(t, Main, did2.NetworkID)
+	require.Equal(t, "did:polygonid:polygon:main:2pzr1wiBm3Qhtq137NNPPDFvdk5xwRsjDFnMxpnYHm", did2.String())
+
+	// Polygon | Polygon chain, Mumbai
+	did3 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Mumbai)
+
+	require.Equal(t, DIDMethodPolygonID, did3.Method)
+	require.Equal(t, Polygon, did3.Blockchain)
+	require.Equal(t, Mumbai, did3.NetworkID)
+	require.Equal(t, "did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b", did3.String())
+
+}
+
+func helperBuildDIDFromType(t testing.TB, method DIDMethod, blockchain Blockchain, network NetworkID) *DID {
+	t.Helper()
+
+	typ, err := BuildDIDType(method, blockchain, network)
+	require.NoError(t, err)
+
+	genesisState := big.NewInt(1)
+	did, err := DIDGenesisFromIdenState(typ, genesisState)
+	require.NoError(t, err)
+
+	return did
 }
