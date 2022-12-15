@@ -144,31 +144,6 @@ type DID struct {
 	NetworkID  NetworkID  // NetworkID specific network identifier eth {main, ropsten, rinkeby, kovan}
 }
 
-type DIDOption func(*DID) error
-
-func NewDID(didStr string, options ...DIDOption) (*DID, error) {
-
-	did := &DID{}
-	var err error
-
-	did.ID, err = IDFromString(didStr)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, o := range options {
-		if o == nil {
-			continue
-		}
-		err := o(did)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return did, nil
-
-}
-
 // DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
 func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
@@ -176,15 +151,6 @@ func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 		return nil, err
 	}
 	return ParseDIDFromID(*id)
-}
-
-// WithNetwork sets Blockchain and NetworkID (eth:main)
-func WithNetwork(blockchain Blockchain, network NetworkID) DIDOption {
-	return func(d *DID) error {
-		d.Blockchain = blockchain
-		d.NetworkID = network
-		return nil
-	}
 }
 
 // String did as a string
