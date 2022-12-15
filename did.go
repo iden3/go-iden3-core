@@ -92,7 +92,7 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([
 
 	sb, ok := DIDMethodNetwork[method][DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}]
 	if !ok {
-		return [2]byte{}, fmt.Errorf("blockchain network %s %s is not defined in core lib", blockchain, network)
+		return [2]byte{}, fmt.Errorf("blockchain `%s` with network `%s` is not defined in core lib", blockchain, network)
 	}
 	return [2]byte{fb, sb}, nil
 }
