@@ -7,39 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_DIDString(t *testing.T) {
-	tests := []struct {
-		description string
-		identifier  string
-		did         string
-		options     DIDOption
-	}{
-		{"Test readonly did",
-			"tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
-			"did:iden3:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
-			nil,
-		},
-		{"Test eth did",
-			"zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
-			"did:iden3:eth:main:zyaYCrj27j7gJfrBboMW49HFRSkQznyy12ABSVzTy",
-			WithNetwork("eth", "main"),
-		},
-		{"Test polygon did",
-			"wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
-			"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ",
-			WithNetwork("polygon", "mumbai"),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.description, func(t *testing.T) {
-			got, err := NewDID(test.identifier, test.options)
-			require.NoError(t, err)
-			require.Equal(t, got.String(), test.did)
-		})
-	}
-}
-
 func TestParseDID(t *testing.T) {
 
 	// did
