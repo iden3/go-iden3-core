@@ -183,10 +183,10 @@ func WithNetwork(blockchain Blockchain, network NetworkID) DIDOption {
 // String did as a string
 func (did *DID) String() string {
 	if did.Blockchain == "" {
-		return fmt.Sprintf("%s:%s:%s", DIDSchema, DIDMethodIden3, did.ID.String())
+		return fmt.Sprintf("%s:%s:%s", DIDSchema, did.Method, did.ID.String())
 	}
 
-	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, DIDMethodIden3, did.Blockchain,
+	return fmt.Sprintf("%s:%s:%s:%s:%s", DIDSchema, did.Method, did.Blockchain,
 		did.NetworkID, did.ID.String())
 }
 
