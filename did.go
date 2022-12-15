@@ -197,6 +197,10 @@ func ParseDID(didStr string) (*DID, error) {
 
 	arg := strings.Split(didStr, ":")
 
+	if len(arg) == 0 {
+		return nil, fmt.Errorf("did string is not valid")
+	}
+
 	did.Method = DIDMethod(arg[1])
 
 	switch len(arg) {
