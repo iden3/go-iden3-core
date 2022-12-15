@@ -56,7 +56,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	require.Equal(t, DIDMethodPolygonID, did.Method)
 	require.Equal(t, NoChain, did.Blockchain)
 	require.Equal(t, NoNetwork, did.NetworkID)
-	require.Equal(t, "did:polygonID:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh", did.String())
+	require.Equal(t, "did:polygonid:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh", did.String())
 
 	// Polygon | Polygon chain, Main
 	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
@@ -64,7 +64,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	require.Equal(t, DIDMethodPolygonID, did2.Method)
 	require.Equal(t, Polygon, did2.Blockchain)
 	require.Equal(t, Main, did2.NetworkID)
-	require.Equal(t, "did:polygonID:polygon:main:2pzr1wiBm3Qhtq137NNPPDFvdk5xwRsjDFnMxpnYHm", did2.String())
+	require.Equal(t, "did:polygonid:polygon:main:2pzr1wiBm3Qhtq137NNPPDFvdk5xwRsjDFnMxpnYHm", did2.String())
 
 	// Polygon | Polygon chain, Mumbai
 	did3 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Mumbai)
@@ -72,7 +72,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	require.Equal(t, DIDMethodPolygonID, did3.Method)
 	require.Equal(t, Polygon, did3.Blockchain)
 	require.Equal(t, Mumbai, did3.NetworkID)
-	require.Equal(t, "did:polygonID:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b", did3.String())
+	require.Equal(t, "did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b", did3.String())
 
 }
 

@@ -16,7 +16,7 @@ const (
 	// DIDMethodIden3 DID method-name
 	DIDMethodIden3 DIDMethod = "iden3"
 	// DIDMethodPolygonID DID method-name
-	DIDMethodPolygonID DIDMethod = "polygonID"
+	DIDMethodPolygonID DIDMethod = "polygonid"
 )
 
 // Blockchain id of the network "eth", "polygon", etc.
