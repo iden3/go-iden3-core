@@ -170,7 +170,7 @@ func ParseDID(didStr string) (*DID, error) {
 
 	arg := strings.Split(didStr, ":")
 
-	if len(arg) == 0 {
+	if len(arg) <= 1 {
 		return nil, fmt.Errorf("did string is not valid")
 	}
 
