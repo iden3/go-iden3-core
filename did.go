@@ -12,6 +12,8 @@ var (
 	ErrInvalidDID = errors.New("invalid did format")
 	// ErrDIDMethodNotSupported unsupported did method.
 	ErrDIDMethodNotSupported = errors.New("did method is not supported")
+	// ErrNetworkNotSupportedForDID unsupported network for did.
+	ErrNetworkNotSupportedForDID = errors.New("network in not supported for did")
 )
 
 // DIDSchema DID Schema
@@ -118,7 +120,7 @@ func FindNetworkIDForDIDMethodByValue(method DIDMethod, _v byte) (NetworkID, err
 		}
 	}
 	return UnknownNetwork, fmt.Errorf("%w: bytes %x for did method %s is not defined in core lib as a valid network identifer",
-		ErrDIDMethodNotSupported, _v, method)
+		ErrNetworkNotSupportedForDID, _v, method)
 }
 
 // FindBlockchainForDIDMethodByValue finds blockchain type by byte value
@@ -134,7 +136,7 @@ func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, e
 		}
 	}
 	return UnknownChain, fmt.Errorf("%w: bytes %x for did method %s is not defined in core lib as a valid blockchain network",
-		ErrDIDMethodNotSupported, _v, method)
+		ErrNetworkNotSupportedForDID, _v, method)
 }
 
 // FindDIDMethodByValue finds did method by its byte value
@@ -219,7 +221,7 @@ func ParseDID(didStr string) (*DID, error) {
 	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{Blockchain: did.Blockchain, NetworkID: did.NetworkID}]
 	if !ok {
 		return nil, fmt.Errorf(`%w: blockchain network "%s %s" is not defined for %s did method`,
-			ErrDIDMethodNotSupported, did.Blockchain, did.NetworkID, did.Method)
+			ErrNetworkNotSupportedForDID, did.Blockchain, did.NetworkID, did.Method)
 	}
 
 	// check id contains did network and method
