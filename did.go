@@ -97,12 +97,12 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([
 
 	fb, ok := DIDMethodByte[method]
 	if !ok {
-		return [2]byte{}, fmt.Errorf("method %s is not defined in core lib", method)
+		return [2]byte{}, ErrDIDMethodNotSupported
 	}
 
 	sb, ok := DIDMethodNetwork[method][DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}]
 	if !ok {
-		return [2]byte{}, fmt.Errorf("blockchain `%s` with network `%s` is not defined in core lib", blockchain, network)
+		return [2]byte{}, ErrNetworkNotSupportedForDID
 	}
 	return [2]byte{fb, sb}, nil
 }
@@ -111,32 +111,28 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([
 func FindNetworkIDForDIDMethodByValue(method DIDMethod, _v byte) (NetworkID, error) {
 	_, ok := DIDMethodNetwork[method]
 	if !ok {
-		return UnknownNetwork, fmt.Errorf("%w: did method %x is not defined in core lib",
-			ErrDIDMethodNotSupported, method)
+		return UnknownNetwork, ErrDIDMethodNotSupported
 	}
 	for k, v := range DIDMethodNetwork[method] {
 		if v == _v {
 			return k.NetworkID, nil
 		}
 	}
-	return UnknownNetwork, fmt.Errorf("%w: bytes %x for did method %s is not defined in core lib as a valid network identifer",
-		ErrNetworkNotSupportedForDID, _v, method)
+	return UnknownNetwork, ErrNetworkNotSupportedForDID
 }
 
 // FindBlockchainForDIDMethodByValue finds blockchain type by byte value
 func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, error) {
 	_, ok := DIDMethodNetwork[method]
 	if !ok {
-		return UnknownChain, fmt.Errorf("%w: did method %x is not defined in core lib",
-			ErrDIDMethodNotSupported, method)
+		return UnknownChain, ErrDIDMethodNotSupported
 	}
 	for k, v := range DIDMethodNetwork[method] {
 		if v == _v {
 			return k.Blockchain, nil
 		}
 	}
-	return UnknownChain, fmt.Errorf("%w: bytes %x for did method %s is not defined in core lib as a valid blockchain network",
-		ErrNetworkNotSupportedForDID, _v, method)
+	return UnknownChain, ErrNetworkNotSupportedForDID
 }
 
 // FindDIDMethodByValue finds did method by its byte value
@@ -146,8 +142,7 @@ func FindDIDMethodByValue(_v byte) (DIDMethod, error) {
 			return k, nil
 		}
 	}
-	return "", fmt.Errorf("%w: bytes %x are not defined in core lib as valid did method",
-		ErrDIDMethodNotSupported, _v)
+	return "", ErrDIDMethodNotSupported
 }
 
 // DID Decentralized Identifiers (DIDs)
@@ -180,13 +175,15 @@ func (did *DID) String() string {
 
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
 func ParseDID(didStr string) (*DID, error) {
-	did := DID{}
-	var err error
+	var (
+		did DID
+		err error
+	)
 
 	arg := strings.Split(didStr, ":")
 
 	if len(arg) <= 1 {
-		return nil, fmt.Errorf("%w: did string is not valid", ErrInvalidDID)
+		return nil, ErrInvalidDID
 	}
 
 	did.Method = DIDMethod(arg[1])
@@ -213,15 +210,13 @@ func ParseDID(didStr string) (*DID, error) {
 	// check did method defined in core lib
 	_, ok := DIDMethodByte[did.Method]
 	if !ok {
-		return nil, fmt.Errorf(`%w: did method %s is not defined in core lib`,
-			ErrDIDMethodNotSupported, did.Method)
+		return nil, ErrDIDMethodNotSupported
 	}
 
 	// check did network defined in core lib for did method
 	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{Blockchain: did.Blockchain, NetworkID: did.NetworkID}]
 	if !ok {
-		return nil, fmt.Errorf(`%w: blockchain network "%s %s" is not defined for %s did method`,
-			ErrNetworkNotSupportedForDID, did.Blockchain, did.NetworkID, did.Method)
+		return nil, ErrNetworkNotSupportedForDID
 	}
 
 	// check id contains did network and method

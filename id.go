@@ -226,3 +226,26 @@ func IdGenesisFromIdenState(typ [2]byte, //nolint:revive
 func IdenState(clr, rer, ror *big.Int) (*big.Int, error) {
 	return poseidon.Hash([]*big.Int{clr, rer, ror})
 }
+
+// CheckGenesisStateID check if the state is genesis for the id.
+func CheckGenesisStateID(id, state *big.Int) (bool, error) {
+	userID, err := IDFromInt(id)
+	if err != nil {
+		return false, err
+	}
+	userDID, err := ParseDIDFromID(userID)
+	if err != nil {
+		return false, err
+	}
+
+	didType, err := BuildDIDType(userDID.Method, userDID.Blockchain, userDID.NetworkID)
+	if err != nil {
+		return false, err
+	}
+	identifier, err := IdGenesisFromIdenState(didType, state)
+	if err != nil {
+		return false, err
+	}
+
+	return id.Cmp(identifier.BigInt()) == 0, nil
+}
