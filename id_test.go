@@ -268,3 +268,21 @@ func TestID_Type(t *testing.T) {
 
 	assert.Equal(t, id.Type(), TypeReadOnly)
 }
+
+func TestCheckGenesisStateID(t *testing.T) {
+	userDID, err := ParseDID("did:iden3:polygon:mumbai:x6suHR8HkEYczV9yVeAKKiXCZAd25P8WS6QvNhszk")
+	require.NoError(t, err)
+	genesisID, ok := big.NewInt(0).SetString("7521024223205616003431860562270429547098131848980857190502964780628723574810", 10)
+	require.True(t, ok)
+
+	isGenesis, err := CheckGenesisStateID(userDID.ID.BigInt(), genesisID)
+	require.NoError(t, err)
+	require.True(t, isGenesis)
+
+	notGenesisState, ok := big.NewInt(0).SetString("6017654403209798611575982337826892532952335378376369712724079246845524041042", 10)
+	require.True(t, ok)
+
+	isGenesis, err = CheckGenesisStateID(userDID.ID.BigInt(), notGenesisState)
+	require.NoError(t, err)
+	require.False(t, isGenesis)
+}
