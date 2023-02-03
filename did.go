@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -154,6 +155,95 @@ type DID struct {
 	NetworkID  NetworkID  // NetworkID specific network identifier eth {main, ropsten, rinkeby, kovan}
 }
 
+func (did *DID) SetString(didStr string) error {
+	arg := strings.Split(didStr, ":")
+	if len(arg) <= 1 {
+		return ErrInvalidDID
+	}
+
+	did.Method = DIDMethod(arg[1])
+
+	switch len(arg) {
+	case 5:
+		var err error
+		// validate id
+		did.ID, err = IDFromString(arg[4])
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidDID, err)
+		}
+
+		did.Blockchain = Blockchain(arg[2])
+		did.NetworkID = NetworkID(arg[3])
+
+	case 3:
+		var err error
+		// validate readonly id
+		did.ID, err = IDFromString(arg[2])
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrInvalidDID, err)
+		}
+	}
+
+	// check did method defined in core lib
+	_, ok := DIDMethodByte[did.Method]
+	if !ok {
+		return ErrDIDMethodNotSupported
+	}
+
+	// check did network defined in core lib for did method
+	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{
+		Blockchain: did.Blockchain,
+		NetworkID:  did.NetworkID}]
+	if !ok {
+		return ErrNetworkNotSupportedForDID
+	}
+
+	// check id contains did network and method
+	return did.validate()
+}
+
+// Return nil on success or error if fields are inconsistent.
+func (did *DID) validate() error {
+	d, err := ParseDIDFromID(did.ID)
+	if err != nil {
+		return err
+	}
+
+	if d.Method != did.Method {
+		return fmt.Errorf(
+			"%w: did method of core identity %s differs from given did method %s",
+			ErrInvalidDID, d.Method, did.Method)
+	}
+
+	if d.NetworkID != did.NetworkID {
+		return fmt.Errorf(
+			"%w: network method of core identity %s differs from given did network specific id %s",
+			ErrInvalidDID, d.NetworkID, did.NetworkID)
+	}
+
+	if d.Blockchain != did.Blockchain {
+		return fmt.Errorf(
+			"%w: blockchain network of core identity %s differs from given did blockhain network %s",
+			ErrInvalidDID, d.Blockchain, did.Blockchain)
+	}
+
+	return nil
+}
+
+func (did *DID) UnmarshalJSON(bytes []byte) error {
+	var didStr string
+	err := json.Unmarshal(bytes, &didStr)
+	if err != nil {
+		return err
+	}
+
+	return did.SetString(didStr)
+}
+
+func (did *DID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(did.String())
+}
+
 // DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
 func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
@@ -179,65 +269,8 @@ func ParseDID(didStr string) (*DID, error) {
 		did DID
 		err error
 	)
-
-	arg := strings.Split(didStr, ":")
-
-	if len(arg) <= 1 {
-		return nil, ErrInvalidDID
-	}
-
-	did.Method = DIDMethod(arg[1])
-
-	switch len(arg) {
-	case 5:
-		// validate id
-		did.ID, err = IDFromString(arg[4])
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidDID, err)
-		}
-
-		did.Blockchain = Blockchain(arg[2])
-		did.NetworkID = NetworkID(arg[3])
-
-	case 3:
-		// validate readonly id
-		did.ID, err = IDFromString(arg[2])
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidDID, err)
-		}
-	}
-
-	// check did method defined in core lib
-	_, ok := DIDMethodByte[did.Method]
-	if !ok {
-		return nil, ErrDIDMethodNotSupported
-	}
-
-	// check did network defined in core lib for did method
-	_, ok = DIDMethodNetwork[did.Method][DIDNetworkFlag{Blockchain: did.Blockchain, NetworkID: did.NetworkID}]
-	if !ok {
-		return nil, ErrNetworkNotSupportedForDID
-	}
-
-	// check id contains did network and method
-
-	d, err := ParseDIDFromID(did.ID)
-	if err != nil {
-		return nil, err
-	}
-	if d.Method != did.Method {
-		return nil, fmt.Errorf("%w: did method of core identity %s differs from given did method %s",
-			ErrInvalidDID, d.Method, did.Method)
-	}
-	if d.NetworkID != did.NetworkID {
-		return nil, fmt.Errorf("%w: network method of core identity %s differs from given did network specific id %s",
-			ErrInvalidDID, d.NetworkID, did.NetworkID)
-	}
-	if d.Blockchain != did.Blockchain {
-		return nil, fmt.Errorf("%w: blockchain network of core identity %s differs from given did blockhain network %s",
-			ErrInvalidDID, d.Blockchain, did.Blockchain)
-	}
-	return &did, nil
+	err = did.SetString(didStr)
+	return &did, err
 }
 
 // ParseDIDFromID returns did from ID

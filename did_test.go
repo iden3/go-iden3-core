@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"math/big"
 	"testing"
 
@@ -26,11 +27,55 @@ func TestParseDID(t *testing.T) {
 	did, err = ParseDID(didStr)
 	require.NoError(t, err)
 
-	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", did.ID.String())
+	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa",
+		did.ID.String())
 	require.Equal(t, NetworkID(""), did.NetworkID)
 	require.Equal(t, Blockchain(""), did.Blockchain)
 
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, did.ID.Type())
+}
+
+func TestDID_MarshalJSON(t *testing.T) {
+	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
+	require.NoError(t, err)
+	did := DID{
+		ID:         id,
+		Method:     DIDMethodIden3,
+		Blockchain: Polygon,
+		NetworkID:  Mumbai,
+	}
+
+	b, err := did.MarshalJSON()
+	require.NoError(t, err)
+	require.Equal(t,
+		`"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"`,
+		string(b))
+}
+
+func TestDID_UnmarshalJSON(t *testing.T) {
+	inBytes := `{"obj": "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
+	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
+	require.NoError(t, err)
+	var obj struct {
+		Obj *DID `json:"obj"`
+	}
+	err = json.Unmarshal([]byte(inBytes), &obj)
+	require.NoError(t, err)
+	require.NotNil(t, obj.Obj)
+	require.Equal(t, id, obj.Obj.ID)
+	require.Equal(t, DIDMethodIden3, obj.Obj.Method)
+	require.Equal(t, Polygon, obj.Obj.Blockchain)
+	require.Equal(t, Mumbai, obj.Obj.NetworkID)
+}
+
+func TestDID_UnmarshalJSON_Error(t *testing.T) {
+	inBytes := `{"obj": "did:iden3:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
+	var obj struct {
+		Obj *DID `json:"obj"`
+	}
+	err := json.Unmarshal([]byte(inBytes), &obj)
+	require.EqualError(t, err,
+		"invalid did format: network method of core identity mumbai differs from given did network specific id goerli")
 }
 
 func TestDIDGenesisFromState(t *testing.T) {
