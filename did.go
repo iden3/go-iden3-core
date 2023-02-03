@@ -265,11 +265,8 @@ func (did *DID) String() string {
 
 // ParseDID method parse string and extract DID if string is valid Iden3 identifier
 func ParseDID(didStr string) (*DID, error) {
-	var (
-		did DID
-		err error
-	)
-	err = did.SetString(didStr)
+	var did DID
+	err := did.SetString(didStr)
 	return &did, err
 }
 
