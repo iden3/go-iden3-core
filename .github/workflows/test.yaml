@@ -11,9 +11,10 @@ jobs:
     strategy:
       matrix:
         containers:
-          - 1.17.8-bullseye
-          - 1.18.0-bullseye
-          - 1.19.2-bullseye
+          - 1.17.13-bullseye
+          - 1.18.10-bullseye
+          - 1.19.5-bullseye
+          - 1.20.0-bullseye
     runs-on: ubuntu-20.04
     container: golang:${{matrix.containers}}
     steps:
