@@ -78,7 +78,7 @@ func TestIDparsers(t *testing.T) {
 }
 
 func TestIDAsDID(t *testing.T) {
-	typ, err := BuildDIDType(DIDMethodIden3, Polygon, Mumbai)
+	typ, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
 	require.NoError(t, err)
 	var genesis1 [27]byte
 	genesisbytes := hashBytes([]byte("genesistes1t2"))
@@ -86,6 +86,7 @@ func TestIDAsDID(t *testing.T) {
 
 	id := NewID(typ, genesis1)
 	fmt.Println(id.String())
+	fmt.Printf("%x\n", id.Bytes())
 }
 
 func TestIDjsonParser(t *testing.T) {
@@ -266,7 +267,7 @@ func TestID_Type(t *testing.T) {
 	id, err := IDFromString("1MWtoAdZESeiphxp3bXupZcfS9DhMTdWNSjRwVYc2")
 	assert.Nil(t, err)
 
-	assert.Equal(t, id.Type(), TypeReadOnly)
+	assert.Equal(t, id.Type(), [2]byte{0x00, 0x01})
 }
 
 func TestCheckGenesisStateID(t *testing.T) {

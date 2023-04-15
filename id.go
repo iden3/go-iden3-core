@@ -15,10 +15,6 @@ var (
 	// - first 2 bytes: `00000000 00000000`
 	TypeDefault = [2]byte{0x00, 0x00}
 
-	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
-	// - first 2 bytes: `00000000 00000001`
-	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
-
 	// TypeDID specifies the identity with iden3 method in specific networks
 	// - first byte: did method e.g. 00000001 - iden3 did method
 	// - second byte - blockchain network
@@ -26,7 +22,13 @@ var (
 	// - 4-7 bits of 2nd byte: network id e.g. 0010 - mumbai
 	//  example of 2nd byte: 00010010 - polygon mumbai, 00000000 - readonly identities.
 	// valid iden3 method {0b00000001,0b00010010}, readonly {0b00000001, 0b00000000}
+
+	// TypeUnknown specifies that ID represents did of unsupported method
+	TypeUnknown = [2]byte{0xff, 0xff}
 )
+
+// MethodOnChainFlag is a flag showing that identity is on-chain
+const MethodOnChainFlag = 0b10000000
 
 const idLength = 31
 
@@ -39,11 +41,11 @@ type ID [idLength]byte
 // NewID creates a new ID from a type and genesis
 func NewID(typ [2]byte, genesis [27]byte) ID {
 	checksum := CalculateChecksum(typ, genesis)
-	var b [31]byte
+	var b ID
 	copy(b[:2], typ[:])
 	copy(b[2:], genesis[:])
 	copy(b[29:], checksum[:])
-	return ID(b)
+	return b
 }
 
 // ProfileID calculates the Profile ID from the Identity and profile nonce. If nonce is empty or zero ID is returned
@@ -122,6 +124,30 @@ func (id *ID) Type() [2]byte {
 	return typ
 }
 
+func (id *ID) MethodByte() byte {
+	// remove on-chain flag
+	return id[0] & ^byte(MethodOnChainFlag)
+}
+
+func (id *ID) BlockchainNetworkByte() byte {
+	return id[1]
+}
+
+func (id *ID) IsOnChain() bool {
+	return !id.IsUnknown() && (id[0]&MethodOnChainFlag == MethodOnChainFlag)
+}
+
+func (id *ID) EthAddress() ([20]byte, error) {
+	if !id.IsOnChain() {
+		return [20]byte{}, errors.New("can't get EthAddress of not on-chain identity")
+	}
+	return EthAddressFromID(*id), nil
+}
+
+func (id *ID) IsUnknown() bool {
+	return bytes.Equal(id[0:2], TypeUnknown[:])
+}
+
 // IDFromString returns the ID from a given string
 func IDFromString(s string) (ID, error) {
 	b, err := base58.Decode(s)
@@ -163,10 +189,7 @@ func IDFromInt(i *big.Int) (ID, error) {
 }
 
 // DecomposeID returns type, genesis and checksum from an ID
-func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
-	var typ [2]byte
-	var genesis [27]byte
-	var checksum [2]byte
+func DecomposeID(id ID) (typ [2]byte, genesis [27]byte, checksum [2]byte, err error) {
 	copy(typ[:], id[:2])
 	copy(genesis[:], id[2:len(id)-2])
 	copy(checksum[:], id[len(id)-2:])
@@ -239,4 +262,15 @@ func CheckGenesisStateID(id, state *big.Int) (bool, error) {
 	}
 
 	return id.Cmp(identifier.BigInt()) == 0, nil
+}
+
+func EthAddressFromID(id ID) (address [20]byte) {
+	copy(address[:], id[2:22])
+	return
+}
+
+func GenesisFromEthAddress(address [20]byte) *big.Int {
+	var genesis [32]byte
+	copy(genesis[5:], address[:])
+	return bytesToInt(genesis[:])
 }
