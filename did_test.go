@@ -188,14 +188,18 @@ func helperBuildDIDFromType(t testing.TB, method DIDMethod, blockchain Blockchai
 	return did
 }
 
-func helperBuildDIDFromTypeOnchain(t testing.TB, method DIDMethod, blockchain Blockchain, network NetworkID) *DID {
+func helperBuildDIDFromTypeOnchain(t testing.TB,
+	method DIDMethod,
+	blockchain Blockchain,
+	network NetworkID) *DID {
 	t.Helper()
 
 	typ, err := BuildDIDTypeOnChain(method, blockchain, network)
 	require.NoError(t, err)
 
 	var addressBytes [20]byte
-	_, err = hex.Decode(addressBytes[:], []byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
+	_, err = hex.Decode(addressBytes[:],
+		[]byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
 	require.NoError(t, err)
 	fmt.Printf("eth address: 0x%x\n", addressBytes)
 

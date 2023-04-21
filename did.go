@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+
+	"github.com/build-trust/did"
 )
 
 var (
@@ -381,4 +383,193 @@ func ParseDIDFromID(id ID) (*DID, error) {
 	}
 
 	return &did, nil
+}
+
+type DID2 did.DID
+
+func NewDID2(method DIDMethod, blockchain Blockchain, networkID NetworkID,
+	id ID) DID2 {
+	return DID2{
+		Method: string(method),
+		ID:     fmt.Sprintf("%s:%s:%s", blockchain, networkID, id.String()),
+		IDStrings: []string{
+			string(blockchain), string(networkID), id.String()},
+	}
+}
+
+func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
+	var didStr string
+	err := json.Unmarshal(bytes, &didStr)
+	if err != nil {
+		return err
+	}
+
+	return did2.SetString(didStr)
+}
+
+func (did2 DID2) MarshalJSON() ([]byte, error) {
+	return json.Marshal(did2.String())
+}
+
+// DID2GenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
+func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID2, error) {
+	id, err := IdGenesisFromIdenState(typ, state)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDID2FromID(*id)
+}
+
+func (did2 *DID2) SetString(didStr string) error {
+	parsedDID, err := did.Parse(didStr)
+	if err != nil {
+		return err
+	}
+	*did2 = DID2(*parsedDID)
+	return did2.validate()
+}
+
+// Return nil on success or error if fields are inconsistent.
+func (did2 *DID2) validate() error {
+	blockchain, networkID, id, err := did2.decompose()
+	if err != nil {
+		return err
+	}
+
+	if !CheckChecksum(id) {
+		return fmt.Errorf("%w: %s", ErrInvalidDID, "invalid checksum")
+	}
+
+	d, err := ParseDIDFromID(id)
+	if err != nil {
+		return err
+	}
+
+	if string(d.Method) != did2.Method {
+		return fmt.Errorf(
+			"%w: did method of core identity %s differs from given did method %s",
+			ErrInvalidDID, d.Method, did2.Method)
+	}
+
+	if d.NetworkID != networkID {
+		return fmt.Errorf(
+			"%w: network method of core identity %s differs from given did network specific id %s",
+			ErrInvalidDID, d.NetworkID, networkID)
+	}
+
+	if d.Blockchain != blockchain {
+		return fmt.Errorf(
+			"%w: blockchain network of core identity %s differs from given did blockhain network %s",
+			ErrInvalidDID, d.Blockchain, blockchain)
+	}
+
+	if !bytes.Equal(d.ID[:], id[:]) {
+		return fmt.Errorf(
+			"%w: ID of core identity %s differs from given did ID %s",
+			ErrInvalidDID, d.ID.String(), id.String())
+	}
+
+	return nil
+}
+
+func (did2 DID2) String() string {
+	return ((*did.DID)(&did2)).String()
+}
+
+func (did2 DID2) decompose() (Blockchain, NetworkID, ID, error) {
+	var blockchain Blockchain
+	var networkID NetworkID
+	var idStr string
+	var id ID
+	switch len(did2.IDStrings) {
+	case 3:
+		blockchain = Blockchain(did2.IDStrings[0])
+		networkID = NetworkID(did2.IDStrings[1])
+		idStr = did2.IDStrings[2]
+	case 2:
+		blockchain = Blockchain(did2.IDStrings[0])
+		switch blockchain {
+		case ReadOnly:
+			networkID = NoNetwork
+		case Polygon:
+			networkID = Main
+		case Ethereum:
+			networkID = Main
+		default:
+			return UnknownChain, UnknownNetwork, id,
+				ErrNetworkNotSupportedForDID
+		}
+		idStr = did2.IDStrings[1]
+	case 1:
+		blockchain = Polygon
+		networkID = Main
+		idStr = did2.IDStrings[0]
+	}
+	var err error
+	id, err = IDFromString(idStr)
+	if err != nil {
+		return UnknownChain, UnknownNetwork, id,
+			fmt.Errorf("%w: %v", ErrInvalidDID, err)
+	}
+	return blockchain, networkID, id, nil
+}
+
+func (did2 DID2) CoreID() (ID, error) {
+	_, _, id, err := did2.decompose()
+	return id, err
+}
+
+func (did2 DID2) NetworkID() (NetworkID, error) {
+	_, nID, _, err := did2.decompose()
+	return nID, err
+}
+
+func (did2 DID2) Blockchain() (Blockchain, error) {
+	bc, _, _, err := did2.decompose()
+	return bc, err
+}
+
+// ParseDID2FromID returns DID2 from ID
+func ParseDID2FromID(id ID) (*DID2, error) {
+	method := id.MethodByte()
+	net := id.BlockchainNetworkByte()
+
+	didMethod, err := FindDIDMethodByValue(method)
+	if err != nil {
+		return nil, err
+	}
+
+	didBlockchain, err := FindBlockchainForDIDMethodByValue(didMethod, net)
+	if err != nil {
+		return nil, err
+	}
+
+	didNetworkID, err := FindNetworkIDForDIDMethodByValue(didMethod, net)
+	if err != nil {
+		return nil, err
+	}
+
+	didParts := []string{DIDSchema, string(didMethod), string(didBlockchain)}
+	if string(didNetworkID) != "" {
+		didParts = append(didParts, string(didNetworkID))
+	}
+
+	didParts = append(didParts, id.String())
+
+	didString := strings.Join(didParts, ":")
+
+	var did2 DID2
+	err = did2.SetString(didString)
+	if err != nil {
+		return nil, err
+	}
+
+	return &did2, nil
+}
+
+// ParseDID2 method parse string and extract DID2 if string is valid Iden3 identifier
+func ParseDID2(didStr string) (*DID2, error) {
+	var did2 DID2
+	err := did2.SetString(didStr)
+	return &did2, err
 }
