@@ -21,14 +21,10 @@ func TestParseDID2(t *testing.T) {
 	did := (*DID2)(did3)
 	require.NoError(t, err)
 
-	id, err := CoreIDFromDID(*did)
+	blockchain, networkID, id, err := Decompose(*did)
 	require.NoError(t, err)
 	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ", id.String())
-	blockchain, err := did.Blockchain()
-	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain)
-	networkID, err := did.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, Mumbai, networkID)
 
 	// readonly did
@@ -38,15 +34,11 @@ func TestParseDID2(t *testing.T) {
 	require.NoError(t, err)
 	did = (*DID2)(did3)
 
-	id, err = CoreIDFromDID(*did)
+	blockchain, networkID, id, err = Decompose(*did)
 	require.NoError(t, err)
 
 	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", id.String())
-	blockchain, err = did.Blockchain()
-	require.NoError(t, err)
 	require.Equal(t, ReadOnly, blockchain)
-	networkID, err = did.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, id.Type())
@@ -74,15 +66,11 @@ func TestDID2_UnmarshalJSON(t *testing.T) {
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
 	require.NotNil(t, obj.Obj)
-	id2, err := CoreIDFromDID(*obj.Obj)
+	require.Equal(t, string(DIDMethodIden3), obj.Obj.Method)
+	blockchain, networkID, id2, err := Decompose(*obj.Obj)
 	require.NoError(t, err)
 	require.Equal(t, id, id2)
-	require.Equal(t, string(DIDMethodIden3), obj.Obj.Method)
-	blockchain, err := obj.Obj.Blockchain()
-	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain)
-	networkID, err := obj.Obj.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, Mumbai, networkID)
 }
 
@@ -109,11 +97,9 @@ func TestDID2GenesisFromState(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, string(DIDMethodIden3), did.Method)
-	blockchain, err := did.Blockchain()
+	blockchain, networkID, _, err := Decompose(*did)
 	require.NoError(t, err)
 	require.Equal(t, ReadOnly, blockchain)
-	networkID, err := did.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 	require.Equal(t,
 		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
@@ -126,11 +112,9 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 	did := helperBuildDID2FromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
 
 	require.Equal(t, string(DIDMethodPolygonID), did.Method)
-	blockchain, err := did.Blockchain()
+	blockchain, networkID, _, err := Decompose(*did)
 	require.NoError(t, err)
 	require.Equal(t, ReadOnly, blockchain)
-	networkID, err := did.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 	require.Equal(t,
 		"did:polygonid:readonly:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
@@ -140,11 +124,9 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 	did2 := helperBuildDID2FromType(t, DIDMethodPolygonID, Polygon, Main)
 
 	require.Equal(t, string(DIDMethodPolygonID), did2.Method)
-	blockchain2, err := did2.Blockchain()
+	blockchain2, networkID2, _, err := Decompose(*did2)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain2)
-	networkID2, err := did2.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, Main, networkID2)
 	require.Equal(t,
 		"did:polygonid:polygon:main:2pzr1wiBm3Qhtq137NNPPDFvdk5xwRsjDFnMxpnYHm",
@@ -154,11 +136,9 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 	did3 := helperBuildDID2FromType(t, DIDMethodPolygonID, Polygon, Mumbai)
 
 	require.Equal(t, string(DIDMethodPolygonID), did3.Method)
-	blockchain3, err := did3.Blockchain()
+	blockchain3, networkID3, _, err := Decompose(*did3)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain3)
-	networkID3, err := did3.NetworkID()
-	require.NoError(t, err)
 	require.Equal(t, Mumbai, networkID3)
 	require.Equal(t,
 		"did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b",
@@ -182,12 +162,7 @@ func TestDID2_PolygonID_ParseDID2FromID_OnChain(t *testing.T) {
 	wantIDs := []string{"polygon", "mumbai",
 		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
 	require.Equal(t, wantIDs, did1.IDStrings)
-	id, err := CoreIDFromDID(*did1)
-	require.NoError(t, err)
-	bc, err := did1.Blockchain()
-	require.NoError(t, err)
-	require.Equal(t, Polygon, bc)
-	nID, err := did1.NetworkID()
+	bc, nID, id, err := Decompose(*did1)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, bc)
 	require.Equal(t, Mumbai, nID)

@@ -503,16 +503,6 @@ func decodeIDFromDID(did2 DID2) (ID, error) {
 	return id, nil
 }
 
-func (did2 DID2) NetworkID() (NetworkID, error) {
-	_, nID, _, err := Decompose(did2)
-	return nID, err
-}
-
-func (did2 DID2) Blockchain() (Blockchain, error) {
-	bc, _, _, err := Decompose(did2)
-	return bc, err
-}
-
 // ParseDID2FromID returns DID2 from ID
 func ParseDID2FromID(id ID) (*DID2, error) {
 	method := id.MethodByte()
