@@ -485,6 +485,9 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 	}
 
 	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
+	if err != nil {
+		return nil, err
+	}
 
 	didParts := []string{DIDSchema, string(method), string(blockchain)}
 	if string(networkID) != "" {
