@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseDID2(t *testing.T) {
+func TestParseDID(t *testing.T) {
 
 	// did
 	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
@@ -39,10 +39,10 @@ func TestParseDID2(t *testing.T) {
 	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, id.Type())
 }
 
-func TestDID2_MarshalJSON(t *testing.T) {
+func TestDID_MarshalJSON(t *testing.T) {
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
-	did, err := ParseDID2FromID(id)
+	did, err := ParseDIDFromID(id)
 	require.NoError(t, err)
 
 	b, err := did.MarshalJSON()
@@ -52,7 +52,7 @@ func TestDID2_MarshalJSON(t *testing.T) {
 		string(b))
 }
 
-func TestDID2_UnmarshalJSON(t *testing.T) {
+func TestDID_UnmarshalJSON(t *testing.T) {
 	inBytes := `{"obj": "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
@@ -70,7 +70,7 @@ func TestDID2_UnmarshalJSON(t *testing.T) {
 	require.Equal(t, Mumbai, networkID)
 }
 
-func TestDID2_UnmarshalJSON_Error(t *testing.T) {
+func TestDID_UnmarshalJSON_Error(t *testing.T) {
 	inBytes := `{"obj": "did:iden3:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
 	var obj struct {
 		Obj *DID `json:"obj"`
@@ -83,13 +83,13 @@ func TestDID2_UnmarshalJSON_Error(t *testing.T) {
 		"found polygon in ID but eth in DID")
 }
 
-func TestDID2GenesisFromState(t *testing.T) {
+func TestDIDGenesisFromState(t *testing.T) {
 
 	typ0, err := BuildDIDType(DIDMethodIden3, ReadOnly, NoNetwork)
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
-	did, err := DID2GenesisFromIdenState(typ0, genesisState)
+	did, err := DIDGenesisFromIdenState(typ0, genesisState)
 	require.NoError(t, err)
 
 	require.Equal(t, string(DIDMethodIden3), did.Method)
@@ -102,10 +102,10 @@ func TestDID2GenesisFromState(t *testing.T) {
 		did.String())
 }
 
-func TestDID2_PolygonID_Types(t *testing.T) {
+func TestDID_PolygonID_Types(t *testing.T) {
 
 	// Polygon no chain, no network
-	did := helperBuildDID2FromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
+	did := helperBuildDIDFromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
 
 	require.Equal(t, string(DIDMethodPolygonID), did.Method)
 	blockchain, networkID, _, err := Decompose(*did)
@@ -117,7 +117,7 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 		did.String())
 
 	// Polygon | Polygon chain, Main
-	did2 := helperBuildDID2FromType(t, DIDMethodPolygonID, Polygon, Main)
+	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
 
 	require.Equal(t, string(DIDMethodPolygonID), did2.Method)
 	blockchain2, networkID2, _, err := Decompose(*did2)
@@ -129,7 +129,7 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 		did2.String())
 
 	// Polygon | Polygon chain, Mumbai
-	did3 := helperBuildDID2FromType(t, DIDMethodPolygonID, Polygon, Mumbai)
+	did3 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Mumbai)
 
 	require.Equal(t, string(DIDMethodPolygonID), did3.Method)
 	blockchain3, networkID3, _, err := Decompose(*did3)
@@ -142,11 +142,11 @@ func TestDID2_PolygonID_Types(t *testing.T) {
 
 }
 
-func TestDID2_PolygonID_ParseDID2FromID_OnChain(t *testing.T) {
+func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 	id1, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
 	require.NoError(t, err)
 
-	did1, err := ParseDID2FromID(id1)
+	did1, err := ParseDIDFromID(id1)
 	require.NoError(t, err)
 
 	var addressBytesExp [20]byte
@@ -187,11 +187,9 @@ func TestDecompose(t *testing.T) {
 	require.Equal(t, Polygon, bch)
 	require.Equal(t, Mumbai, nt)
 	require.Equal(t, wantID, id)
-
-	// TODO test other DID cases without network, blockchain and ID
 }
 
-func helperBuildDID2FromType(t testing.TB, method DIDMethod,
+func helperBuildDIDFromType(t testing.TB, method DIDMethod,
 	blockchain Blockchain, network NetworkID) *DID {
 	t.Helper()
 
@@ -199,7 +197,7 @@ func helperBuildDID2FromType(t testing.TB, method DIDMethod,
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
-	did, err := DID2GenesisFromIdenState(typ, genesisState)
+	did, err := DIDGenesisFromIdenState(typ, genesisState)
 	require.NoError(t, err)
 
 	return did

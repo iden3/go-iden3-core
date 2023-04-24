@@ -189,13 +189,13 @@ func (did DID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(did.String())
 }
 
-// DID2GenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
-func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
+// DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
+func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDID2FromID(*id)
+	return ParseDIDFromID(*id)
 }
 
 func Decompose(did DID) (Blockchain, NetworkID, ID, error) {
@@ -259,8 +259,8 @@ func decodeIDFromDID(did DID) (ID, error) {
 	return id, nil
 }
 
-// ParseDID2FromID returns DID from ID
-func ParseDID2FromID(id ID) (*DID, error) {
+// ParseDIDFromID returns DID from ID
+func ParseDIDFromID(id ID) (*DID, error) {
 
 	if !CheckChecksum(id) {
 		return nil, fmt.Errorf("%w: invalid checksum", ErrInvalidDID)
@@ -280,11 +280,11 @@ func ParseDID2FromID(id ID) (*DID, error) {
 
 	didString := strings.Join(didParts, ":")
 
-	did2, err := Parse(didString)
+	did, err := Parse(didString)
 	if err != nil {
 		return nil, err
 	}
-	return did2, nil
+	return did, nil
 }
 
 func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
