@@ -17,7 +17,7 @@ func TestParseDID2(t *testing.T) {
 	did, err := ParseDID2(didStr)
 	require.NoError(t, err)
 
-	id, err := did.CoreID()
+	id, err := CoreIDFromDID(*did)
 	require.NoError(t, err)
 	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ", id.String())
 	blockchain, err := did.Blockchain()
@@ -33,7 +33,7 @@ func TestParseDID2(t *testing.T) {
 	did, err = ParseDID2(didStr)
 	require.NoError(t, err)
 
-	id, err = did.CoreID()
+	id, err = CoreIDFromDID(*did)
 	require.NoError(t, err)
 
 	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", id.String())
@@ -69,7 +69,7 @@ func TestDID2_UnmarshalJSON(t *testing.T) {
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
 	require.NotNil(t, obj.Obj)
-	id2, err := obj.Obj.CoreID()
+	id2, err := CoreIDFromDID(*obj.Obj)
 	require.NoError(t, err)
 	require.Equal(t, id, id2)
 	require.Equal(t, string(DIDMethodIden3), obj.Obj.Method)
@@ -174,7 +174,7 @@ func TestDID2_PolygonID_ParseDID2FromID_OnChain(t *testing.T) {
 	wantIDs := []string{"polygon", "mumbai",
 		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
 	require.Equal(t, wantIDs, did1.IDStrings)
-	id, err := did1.CoreID()
+	id, err := CoreIDFromDID(*did1)
 	require.NoError(t, err)
 	bc, err := did1.Blockchain()
 	require.NoError(t, err)

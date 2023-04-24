@@ -477,20 +477,9 @@ func (did2 DID2) String() string {
 }
 
 func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
-	var id ID
-
-	if len(did2.IDStrings) > 3 {
-		return UnknownChain, UnknownNetwork, id,
-			fmt.Errorf("%w: %s", ErrInvalidDID, "too many fields")
-
-	}
-
-	idStr := did2.IDStrings[len(did2.IDStrings)-1]
-	var err error
-	id, err = IDFromString(idStr)
+	id, err := CoreIDFromDID(did2)
 	if err != nil {
-		return UnknownChain, UnknownNetwork, id,
-			fmt.Errorf("%w: %v", ErrInvalidDID, err)
+		return UnknownChain, UnknownNetwork, id, err
 	}
 
 	method := id.MethodByte()
@@ -532,9 +521,24 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 	return blockchain, didNetworkID, id, nil
 }
 
-func (did2 DID2) CoreID() (ID, error) {
-	_, _, id, err := Decompose(did2)
-	return id, err
+func CoreIDFromDID(did2 DID2) (ID, error) {
+	var id ID
+
+	if len(did2.IDStrings) > 3 {
+		return id, fmt.Errorf("%w: %s", ErrInvalidDID, "too many fields")
+	}
+
+	if len(did2.IDStrings) < 1 {
+		return id, fmt.Errorf("%w: no ID field in DID", ErrInvalidDID)
+	}
+
+	var err error
+	id, err = IDFromString(did2.IDStrings[len(did2.IDStrings)-1])
+	if err != nil {
+		return id, fmt.Errorf("%w: %v", ErrInvalidDID, err)
+	}
+
+	return id, nil
 }
 
 func (did2 DID2) NetworkID() (NetworkID, error) {
