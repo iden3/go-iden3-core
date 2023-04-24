@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-
-	"github.com/build-trust/did"
 )
 
 var (
@@ -172,7 +170,7 @@ func FindDIDMethodByValue(_v byte) (DIDMethod, error) {
 	return "", ErrDIDMethodNotSupported
 }
 
-type DID2 did.DID
+type DID2 DID
 
 func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
 	var didStr string
@@ -181,7 +179,7 @@ func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	did3, err := did.Parse(didStr)
+	did3, err := Parse(didStr)
 	if err != nil {
 		return err
 	}
@@ -203,7 +201,7 @@ func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID2, error) {
 }
 
 func (did2 DID2) String() string {
-	return ((*did.DID)(&did2)).String()
+	return ((*DID)(&did2)).String()
 }
 
 func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
@@ -288,7 +286,7 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 
 	didString := strings.Join(didParts, ":")
 
-	did2, err := did.Parse(didString)
+	did2, err := Parse(didString)
 	if err != nil {
 		return nil, err
 	}

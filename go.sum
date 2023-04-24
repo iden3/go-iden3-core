@@ -1,5 +1,3 @@
-github.com/build-trust/did v0.1.3 h1:FexuxTCwKHNBicj8X9CaDuPg+uYBrg5J1TZwSHQnFoM=
-github.com/build-trust/did v0.1.3/go.mod h1:rGMmaVyPuUNuXPnpXEH9tOYpOL7t+2eh5DvtYGINBiU=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -8,8 +6,6 @@ github.com/iden3/go-iden3-crypto v0.0.14/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBe
 github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7c=
 github.com/mr-tron/base58 v1.2.0 h1:T/HDJBh4ZCPbU39/+c3rRvE0uKBQlU27+QI8LJ4t64o=
 github.com/mr-tron/base58 v1.2.0/go.mod h1:BinMc/sQntlIE1frQmRFPUoPA1Zkr8VRgBdjWI2mNwc=
-github.com/ockam-network/did v0.1.3 h1:qJGdccOV4bLfsS/eFM+Aj+CdCRJKNMxbmJevQclw44k=
-github.com/ockam-network/did v0.1.3/go.mod h1:ZsbTIuVGt8OrQEbqWrSztUISN4joeMabdsinbLubbzw=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
