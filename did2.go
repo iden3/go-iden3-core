@@ -170,9 +170,7 @@ func FindDIDMethodByValue(_v byte) (DIDMethod, error) {
 	return "", ErrDIDMethodNotSupported
 }
 
-type DID2 DID
-
-func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
+func (did *DID) UnmarshalJSON(bytes []byte) error {
 	var didStr string
 	err := json.Unmarshal(bytes, &didStr)
 	if err != nil {
@@ -183,16 +181,16 @@ func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
-	*did2 = DID2(*did3)
+	*did = *did3
 	return nil
 }
 
-func (did2 DID2) MarshalJSON() ([]byte, error) {
-	return json.Marshal(did2.String())
+func (did DID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(did.String())
 }
 
 // DID2GenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
-func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID2, error) {
+func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
 	if err != nil {
 		return nil, err
@@ -200,12 +198,8 @@ func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID2, error) {
 	return ParseDID2FromID(*id)
 }
 
-func (did2 DID2) String() string {
-	return ((*DID)(&did2)).String()
-}
-
-func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
-	id, err := decodeIDFromDID(did2)
+func Decompose(did DID) (Blockchain, NetworkID, ID, error) {
+	id, err := decodeIDFromDID(did)
 	if err != nil {
 		return UnknownChain, UnknownNetwork, id, err
 	}
@@ -215,45 +209,45 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 		return UnknownChain, UnknownNetwork, id, err
 	}
 
-	if string(method) != did2.Method {
+	if string(method) != did.Method {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: method mismatch: found %v in ID but %v in DID",
-				ErrInvalidDID, method, did2.Method)
+				ErrInvalidDID, method, did.Method)
 	}
 
-	if len(did2.IDStrings) > 1 && string(blockchain) != did2.IDStrings[0] {
+	if len(did.IDStrings) > 1 && string(blockchain) != did.IDStrings[0] {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: blockchain mismatch: found %v in ID but %v in DID",
-				ErrInvalidDID, blockchain, did2.IDStrings[0])
+				ErrInvalidDID, blockchain, did.IDStrings[0])
 	}
 
-	if len(did2.IDStrings) > 2 && string(networkID) != did2.IDStrings[1] {
+	if len(did.IDStrings) > 2 && string(networkID) != did.IDStrings[1] {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: network ID mismatch: found %v in ID but %v in DID",
-				ErrInvalidDID, networkID, did2.IDStrings[1])
+				ErrInvalidDID, networkID, did.IDStrings[1])
 	}
 
 	return blockchain, networkID, id, nil
 }
 
-func IDFromDID(did2 DID2) (ID, error) {
-	_, _, id, err := Decompose(did2)
+func IDFromDID(did DID) (ID, error) {
+	_, _, id, err := Decompose(did)
 	return id, err
 }
 
-func decodeIDFromDID(did2 DID2) (ID, error) {
+func decodeIDFromDID(did DID) (ID, error) {
 	var id ID
 
-	if len(did2.IDStrings) > 3 {
+	if len(did.IDStrings) > 3 {
 		return id, fmt.Errorf("%w: too many fields", ErrInvalidDID)
 	}
 
-	if len(did2.IDStrings) < 1 {
+	if len(did.IDStrings) < 1 {
 		return id, fmt.Errorf("%w: no ID field in DID", ErrInvalidDID)
 	}
 
 	var err error
-	id, err = IDFromString(did2.IDStrings[len(did2.IDStrings)-1])
+	id, err = IDFromString(did.IDStrings[len(did.IDStrings)-1])
 	if err != nil {
 		return id, fmt.Errorf("%w: %v", ErrInvalidDID, err)
 	}
@@ -265,8 +259,8 @@ func decodeIDFromDID(did2 DID2) (ID, error) {
 	return id, nil
 }
 
-// ParseDID2FromID returns DID2 from ID
-func ParseDID2FromID(id ID) (*DID2, error) {
+// ParseDID2FromID returns DID from ID
+func ParseDID2FromID(id ID) (*DID, error) {
 
 	if !CheckChecksum(id) {
 		return nil, fmt.Errorf("%w: invalid checksum", ErrInvalidDID)
@@ -290,7 +284,7 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*DID2)(did2), nil
+	return did2, nil
 }
 
 func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {

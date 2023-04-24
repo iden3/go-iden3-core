@@ -17,10 +17,7 @@ func TestParseDID2(t *testing.T) {
 	did3, err := Parse(didStr)
 	require.NoError(t, err)
 
-	did := (*DID2)(did3)
-	require.NoError(t, err)
-
-	blockchain, networkID, id, err := Decompose(*did)
+	blockchain, networkID, id, err := Decompose(*did3)
 	require.NoError(t, err)
 	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ", id.String())
 	require.Equal(t, Polygon, blockchain)
@@ -31,9 +28,8 @@ func TestParseDID2(t *testing.T) {
 
 	did3, err = Parse(didStr)
 	require.NoError(t, err)
-	did = (*DID2)(did3)
 
-	blockchain, networkID, id, err = Decompose(*did)
+	blockchain, networkID, id, err = Decompose(*did3)
 	require.NoError(t, err)
 
 	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", id.String())
@@ -61,7 +57,7 @@ func TestDID2_UnmarshalJSON(t *testing.T) {
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
 	var obj struct {
-		Obj *DID2 `json:"obj"`
+		Obj *DID `json:"obj"`
 	}
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
@@ -77,7 +73,7 @@ func TestDID2_UnmarshalJSON(t *testing.T) {
 func TestDID2_UnmarshalJSON_Error(t *testing.T) {
 	inBytes := `{"obj": "did:iden3:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
 	var obj struct {
-		Obj *DID2 `json:"obj"`
+		Obj *DID `json:"obj"`
 	}
 	err := json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
@@ -182,12 +178,11 @@ func TestDecompose(t *testing.T) {
 
 	did3, err := Parse(s)
 	require.NoError(t, err)
-	d2 := (*DID2)(did3)
 
 	wantID, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
 	require.NoError(t, err)
 
-	bch, nt, id, err := Decompose(*d2)
+	bch, nt, id, err := Decompose(*did3)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, bch)
 	require.Equal(t, Mumbai, nt)
@@ -197,7 +192,7 @@ func TestDecompose(t *testing.T) {
 }
 
 func helperBuildDID2FromType(t testing.TB, method DIDMethod,
-	blockchain Blockchain, network NetworkID) *DID2 {
+	blockchain Blockchain, network NetworkID) *DID {
 	t.Helper()
 
 	typ, err := BuildDIDType(method, blockchain, network)
