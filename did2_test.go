@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	did2 "github.com/build-trust/did"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,10 @@ func TestParseDID2(t *testing.T) {
 	// did
 	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
 
-	did, err := ParseDID2(didStr)
+	did3, err := did2.Parse(didStr)
+	require.NoError(t, err)
+
+	did := (*DID2)(did3)
 	require.NoError(t, err)
 
 	id, err := CoreIDFromDID(*did)
@@ -30,8 +34,9 @@ func TestParseDID2(t *testing.T) {
 	// readonly did
 	didStr = "did:iden3:readonly:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
 
-	did, err = ParseDID2(didStr)
+	did3, err = did2.Parse(didStr)
 	require.NoError(t, err)
+	did = (*DID2)(did3)
 
 	id, err = CoreIDFromDID(*did)
 	require.NoError(t, err)

@@ -426,11 +426,11 @@ func (did2 *DID2) SetString(didStr string) error {
 		return err
 	}
 	*did2 = DID2(*parsedDID)
-	return did2.validate()
+	return did2.Validate()
 }
 
 // Return nil on success or error if fields are inconsistent.
-func (did2 *DID2) validate() error {
+func (did2 *DID2) Validate() error {
 	blockchain, networkID, id, err := Decompose(*did2)
 	if err != nil {
 		return err
@@ -525,7 +525,7 @@ func CoreIDFromDID(did2 DID2) (ID, error) {
 	var id ID
 
 	if len(did2.IDStrings) > 3 {
-		return id, fmt.Errorf("%w: %s", ErrInvalidDID, "too many fields")
+		return id, fmt.Errorf("%w: too many fields", ErrInvalidDID)
 	}
 
 	if len(did2.IDStrings) < 1 {
@@ -536,6 +536,10 @@ func CoreIDFromDID(did2 DID2) (ID, error) {
 	id, err = IDFromString(did2.IDStrings[len(did2.IDStrings)-1])
 	if err != nil {
 		return id, fmt.Errorf("%w: %v", ErrInvalidDID, err)
+	}
+
+	if !CheckChecksum(id) {
+		return id, fmt.Errorf("%w: invalid checksum", ErrInvalidDID)
 	}
 
 	return id, nil
@@ -587,11 +591,4 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 	}
 
 	return &did2, nil
-}
-
-// ParseDID2 method parse string and extract DID2 if string is valid Iden3 identifier
-func ParseDID2(didStr string) (*DID2, error) {
-	var did2 DID2
-	err := did2.SetString(didStr)
-	return &did2, err
 }
