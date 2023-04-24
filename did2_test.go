@@ -83,7 +83,7 @@ func TestDID2_UnmarshalJSON_Error(t *testing.T) {
 	err := json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
 
-	_, err = CoreIDFromDID(*obj.Obj)
+	_, err = IDFromDID(*obj.Obj)
 	require.EqualError(t, err, "invalid did format: blockchain mismatch: "+
 		"found polygon in ID but eth in DID")
 }

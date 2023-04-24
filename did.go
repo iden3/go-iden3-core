@@ -451,7 +451,7 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 	return blockchain, networkID, id, nil
 }
 
-func CoreIDFromDID(did2 DID2) (ID, error) {
+func IDFromDID(did2 DID2) (ID, error) {
 	_, _, id, err := Decompose(did2)
 	return id, err
 }
