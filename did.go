@@ -387,16 +387,6 @@ func ParseDIDFromID(id ID) (*DID, error) {
 
 type DID2 did.DID
 
-func NewDID2(method DIDMethod, blockchain Blockchain, networkID NetworkID,
-	id ID) DID2 {
-	return DID2{
-		Method: string(method),
-		ID:     fmt.Sprintf("%s:%s:%s", blockchain, networkID, id.String()),
-		IDStrings: []string{
-			string(blockchain), string(networkID), id.String()},
-	}
-}
-
 func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
 	var didStr string
 	err := json.Unmarshal(bytes, &didStr)

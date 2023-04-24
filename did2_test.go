@@ -47,7 +47,8 @@ func TestParseDID2(t *testing.T) {
 func TestDID2_MarshalJSON(t *testing.T) {
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
-	did := NewDID2(DIDMethodIden3, Polygon, Mumbai, id)
+	did, err := ParseDID2FromID(id)
+	require.NoError(t, err)
 
 	b, err := did.MarshalJSON()
 	require.NoError(t, err)
