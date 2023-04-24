@@ -435,23 +435,12 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 		return UnknownChain, UnknownNetwork, id, err
 	}
 
-	method := id.MethodByte()
-	net := id.BlockchainNetworkByte()
+	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
 
-	didMethod, err := FindDIDMethodByValue(method)
-	if err != nil {
-		return UnknownChain, UnknownNetwork, id, err
-	}
-
-	if string(didMethod) != did2.Method {
+	if string(method) != did2.Method {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: method mismatch: found %v in ID but %v in DID",
-				ErrInvalidDID, didMethod, did2.Method)
-	}
-
-	blockchain, err := FindBlockchainForDIDMethodByValue(didMethod, net)
-	if err != nil {
-		return UnknownChain, UnknownNetwork, id, err
+				ErrInvalidDID, method, did2.Method)
 	}
 
 	if len(did2.IDStrings) > 1 && string(blockchain) != did2.IDStrings[0] {
@@ -460,18 +449,13 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 				ErrInvalidDID, blockchain, did2.IDStrings[0])
 	}
 
-	didNetworkID, err := FindNetworkIDForDIDMethodByValue(didMethod, net)
-	if err != nil {
-		return UnknownChain, UnknownNetwork, id, err
-	}
-
-	if len(did2.IDStrings) > 2 && string(didNetworkID) != did2.IDStrings[1] {
+	if len(did2.IDStrings) > 2 && string(networkID) != did2.IDStrings[1] {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: network ID mismatch: found %v in ID but %v in DID",
-				ErrInvalidDID, didNetworkID, did2.IDStrings[1])
+				ErrInvalidDID, networkID, did2.IDStrings[1])
 	}
 
-	return blockchain, didNetworkID, id, nil
+	return blockchain, networkID, id, nil
 }
 
 func CoreIDFromDID(did2 DID2) (ID, error) {
@@ -505,27 +489,16 @@ func decodeIDFromDID(did2 DID2) (ID, error) {
 
 // ParseDID2FromID returns DID2 from ID
 func ParseDID2FromID(id ID) (*DID2, error) {
-	method := id.MethodByte()
-	net := id.BlockchainNetworkByte()
 
-	didMethod, err := FindDIDMethodByValue(method)
-	if err != nil {
-		return nil, err
+	if !CheckChecksum(id) {
+		return nil, fmt.Errorf("%w: invalid checksum", ErrInvalidDID)
 	}
 
-	didBlockchain, err := FindBlockchainForDIDMethodByValue(didMethod, net)
-	if err != nil {
-		return nil, err
-	}
+	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
 
-	didNetworkID, err := FindNetworkIDForDIDMethodByValue(didMethod, net)
-	if err != nil {
-		return nil, err
-	}
-
-	didParts := []string{DIDSchema, string(didMethod), string(didBlockchain)}
-	if string(didNetworkID) != "" {
-		didParts = append(didParts, string(didNetworkID))
+	didParts := []string{DIDSchema, string(method), string(blockchain)}
+	if string(networkID) != "" {
+		didParts = append(didParts, string(networkID))
 	}
 
 	didParts = append(didParts, id.String())
@@ -537,4 +510,26 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 		return nil, err
 	}
 	return (*DID2)(did2), nil
+}
+
+func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
+	methodByte := id.MethodByte()
+	networkByte := id.BlockchainNetworkByte()
+
+	method, err := FindDIDMethodByValue(methodByte)
+	if err != nil {
+		return "", UnknownChain, UnknownNetwork, err
+	}
+
+	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
+	if err != nil {
+		return "", UnknownChain, UnknownNetwork, err
+	}
+
+	networkID, err := FindNetworkIDForDIDMethodByValue(method, networkByte)
+	if err != nil {
+		return "", UnknownChain, UnknownNetwork, err
+	}
+
+	return method, blockchain, networkID, nil
 }
