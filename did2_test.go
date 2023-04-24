@@ -87,8 +87,8 @@ func TestDID2_UnmarshalJSON_Error(t *testing.T) {
 		Obj *DID2 `json:"obj"`
 	}
 	err := json.Unmarshal([]byte(inBytes), &obj)
-	require.EqualError(t, err,
-		"invalid did format: network method of core identity mumbai differs from given did network specific id goerli")
+	require.EqualError(t, err, "invalid did format: blockchain mismatch: "+
+		"found polygon in ID but eth in DID")
 }
 
 func TestDID2GenesisFromState(t *testing.T) {
@@ -204,7 +204,7 @@ func TestDecompose(t *testing.T) {
 	wantID, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
 	require.NoError(t, err)
 
-	bch, nt, id, err := d2.decompose()
+	bch, nt, id, err := Decompose(d2)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, bch)
 	require.Equal(t, Mumbai, nt)

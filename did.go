@@ -431,7 +431,7 @@ func (did2 *DID2) SetString(didStr string) error {
 
 // Return nil on success or error if fields are inconsistent.
 func (did2 *DID2) validate() error {
-	blockchain, networkID, id, err := did2.decompose()
+	blockchain, networkID, id, err := Decompose(*did2)
 	if err != nil {
 		return err
 	}
@@ -476,56 +476,74 @@ func (did2 DID2) String() string {
 	return ((*did.DID)(&did2)).String()
 }
 
-func (did2 DID2) decompose() (Blockchain, NetworkID, ID, error) {
-	var blockchain Blockchain
-	var networkID NetworkID
-	var idStr string
+func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 	var id ID
-	switch len(did2.IDStrings) {
-	case 3:
-		blockchain = Blockchain(did2.IDStrings[0])
-		networkID = NetworkID(did2.IDStrings[1])
-		idStr = did2.IDStrings[2]
-	case 2:
-		blockchain = Blockchain(did2.IDStrings[0])
-		switch blockchain {
-		case ReadOnly:
-			networkID = NoNetwork
-		case Polygon:
-			networkID = Main
-		case Ethereum:
-			networkID = Main
-		default:
-			return UnknownChain, UnknownNetwork, id,
-				ErrNetworkNotSupportedForDID
-		}
-		idStr = did2.IDStrings[1]
-	case 1:
-		blockchain = Polygon
-		networkID = Main
-		idStr = did2.IDStrings[0]
+
+	if len(did2.IDStrings) > 3 {
+		return UnknownChain, UnknownNetwork, id,
+			fmt.Errorf("%w: %s", ErrInvalidDID, "too many fields")
+
 	}
+
+	idStr := did2.IDStrings[len(did2.IDStrings)-1]
 	var err error
 	id, err = IDFromString(idStr)
 	if err != nil {
 		return UnknownChain, UnknownNetwork, id,
 			fmt.Errorf("%w: %v", ErrInvalidDID, err)
 	}
-	return blockchain, networkID, id, nil
+
+	method := id.MethodByte()
+	net := id.BlockchainNetworkByte()
+
+	didMethod, err := FindDIDMethodByValue(method)
+	if err != nil {
+		return UnknownChain, UnknownNetwork, id, err
+	}
+
+	if string(didMethod) != did2.Method {
+		return UnknownChain, UnknownNetwork, id,
+			fmt.Errorf("%w: method mismatch: found %v in ID but %v in DID",
+				ErrInvalidDID, didMethod, did2.Method)
+	}
+
+	blockchain, err := FindBlockchainForDIDMethodByValue(didMethod, net)
+	if err != nil {
+		return UnknownChain, UnknownNetwork, id, err
+	}
+
+	if len(did2.IDStrings) > 1 && string(blockchain) != did2.IDStrings[0] {
+		return UnknownChain, UnknownNetwork, id,
+			fmt.Errorf("%w: blockchain mismatch: found %v in ID but %v in DID",
+				ErrInvalidDID, blockchain, did2.IDStrings[0])
+	}
+
+	didNetworkID, err := FindNetworkIDForDIDMethodByValue(didMethod, net)
+	if err != nil {
+		return UnknownChain, UnknownNetwork, id, err
+	}
+
+	if len(did2.IDStrings) > 2 && string(didNetworkID) != did2.IDStrings[1] {
+		return UnknownChain, UnknownNetwork, id,
+			fmt.Errorf("%w: network ID mismatch: found %v in ID but %v in DID",
+				ErrInvalidDID, didNetworkID, did2.IDStrings[1])
+	}
+
+	return blockchain, didNetworkID, id, nil
 }
 
 func (did2 DID2) CoreID() (ID, error) {
-	_, _, id, err := did2.decompose()
+	_, _, id, err := Decompose(did2)
 	return id, err
 }
 
 func (did2 DID2) NetworkID() (NetworkID, error) {
-	_, nID, _, err := did2.decompose()
+	_, nID, _, err := Decompose(did2)
 	return nID, err
 }
 
 func (did2 DID2) Blockchain() (Blockchain, error) {
-	bc, _, _, err := did2.decompose()
+	bc, _, _, err := Decompose(did2)
 	return bc, err
 }
 
