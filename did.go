@@ -426,6 +426,9 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 	}
 
 	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
+	if err != nil {
+		return UnknownChain, UnknownNetwork, id, err
+	}
 
 	if string(method) != did2.Method {
 		return UnknownChain, UnknownNetwork, id,
