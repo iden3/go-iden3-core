@@ -14,7 +14,6 @@ import (
 
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -389,8 +388,7 @@ func TestNewSchemaHashFromHex(t *testing.T) {
 	exp, err := hex.DecodeString(hash)
 	require.NoError(t, err)
 
-	assert.Equal(t, exp[:], got[:])
-
+	require.Equal(t, exp[:], got[:])
 }
 
 func TestSchemaHash_BigInt(t *testing.T) {
@@ -402,8 +400,7 @@ func TestSchemaHash_BigInt(t *testing.T) {
 
 	got := schema.BigInt()
 
-	assert.Equal(t, exp, got)
-
+	require.Equal(t, exp, got)
 }
 
 func TestGetIDPosition(t *testing.T) {
