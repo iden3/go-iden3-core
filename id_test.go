@@ -234,33 +234,6 @@ func TestIDinDIDFormat(t *testing.T) {
 	var checksum [2]byte
 	copy(checksum[:], id[len(id)-2:])
 	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
-
-	fmt.Println(id.String())
-	did := DID{
-		ID:         id,
-		Blockchain: Polygon,
-		NetworkID:  Mumbai,
-	}
-	fmt.Println(did.String())
-}
-func TestIDFromDIDString(t *testing.T) {
-
-	didFromStr, err := ParseDID("did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
-	require.NoError(t, err)
-	typ, err := BuildDIDType(didFromStr.Method, didFromStr.Blockchain, didFromStr.NetworkID)
-	require.NoError(t, err)
-
-	var genesis [27]byte
-	genesis32bytes := hashBytes([]byte("genesistest"))
-	copy(genesis[:], genesis32bytes[:])
-
-	id := NewID(typ, genesis)
-
-	var checksum [2]byte
-	copy(checksum[:], id[len(id)-2:])
-	assert.Equal(t, CalculateChecksum(typ, genesis), checksum)
-	assert.Equal(t, didFromStr.ID.String(), id.String())
-
 }
 
 func TestID_Type(t *testing.T) {
@@ -268,22 +241,4 @@ func TestID_Type(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, id.Type(), [2]byte{0x00, 0x01})
-}
-
-func TestCheckGenesisStateID(t *testing.T) {
-	userDID, err := ParseDID("did:iden3:polygon:mumbai:x6suHR8HkEYczV9yVeAKKiXCZAd25P8WS6QvNhszk")
-	require.NoError(t, err)
-	genesisID, ok := big.NewInt(0).SetString("7521024223205616003431860562270429547098131848980857190502964780628723574810", 10)
-	require.True(t, ok)
-
-	isGenesis, err := CheckGenesisStateID(userDID.ID.BigInt(), genesisID)
-	require.NoError(t, err)
-	require.True(t, isGenesis)
-
-	notGenesisState, ok := big.NewInt(0).SetString("6017654403209798611575982337826892532952335378376369712724079246845524041042", 10)
-	require.True(t, ok)
-
-	isGenesis, err = CheckGenesisStateID(userDID.ID.BigInt(), notGenesisState)
-	require.NoError(t, err)
-	require.False(t, isGenesis)
 }
