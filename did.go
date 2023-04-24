@@ -404,7 +404,12 @@ func (did2 *DID2) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	return did2.SetString(didStr)
+	did3, err := did.Parse(didStr)
+	if err != nil {
+		return err
+	}
+	*did2 = DID2(*did3)
+	return nil
 }
 
 func (did2 DID2) MarshalJSON() ([]byte, error) {
@@ -420,64 +425,12 @@ func DID2GenesisFromIdenState(typ [2]byte, state *big.Int) (*DID2, error) {
 	return ParseDID2FromID(*id)
 }
 
-func (did2 *DID2) SetString(didStr string) error {
-	parsedDID, err := did.Parse(didStr)
-	if err != nil {
-		return err
-	}
-	*did2 = DID2(*parsedDID)
-	return did2.Validate()
-}
-
-// Return nil on success or error if fields are inconsistent.
-func (did2 *DID2) Validate() error {
-	blockchain, networkID, id, err := Decompose(*did2)
-	if err != nil {
-		return err
-	}
-
-	if !CheckChecksum(id) {
-		return fmt.Errorf("%w: %s", ErrInvalidDID, "invalid checksum")
-	}
-
-	d, err := ParseDIDFromID(id)
-	if err != nil {
-		return err
-	}
-
-	if string(d.Method) != did2.Method {
-		return fmt.Errorf(
-			"%w: did method of core identity %s differs from given did method %s",
-			ErrInvalidDID, d.Method, did2.Method)
-	}
-
-	if d.NetworkID != networkID {
-		return fmt.Errorf(
-			"%w: network method of core identity %s differs from given did network specific id %s",
-			ErrInvalidDID, d.NetworkID, networkID)
-	}
-
-	if d.Blockchain != blockchain {
-		return fmt.Errorf(
-			"%w: blockchain network of core identity %s differs from given did blockhain network %s",
-			ErrInvalidDID, d.Blockchain, blockchain)
-	}
-
-	if !bytes.Equal(d.ID[:], id[:]) {
-		return fmt.Errorf(
-			"%w: ID of core identity %s differs from given did ID %s",
-			ErrInvalidDID, d.ID.String(), id.String())
-	}
-
-	return nil
-}
-
 func (did2 DID2) String() string {
 	return ((*did.DID)(&did2)).String()
 }
 
 func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
-	id, err := CoreIDFromDID(did2)
+	id, err := decodeIDFromDID(did2)
 	if err != nil {
 		return UnknownChain, UnknownNetwork, id, err
 	}
@@ -522,6 +475,11 @@ func Decompose(did2 DID2) (Blockchain, NetworkID, ID, error) {
 }
 
 func CoreIDFromDID(did2 DID2) (ID, error) {
+	_, _, id, err := Decompose(did2)
+	return id, err
+}
+
+func decodeIDFromDID(did2 DID2) (ID, error) {
 	var id ID
 
 	if len(did2.IDStrings) > 3 {
@@ -584,11 +542,9 @@ func ParseDID2FromID(id ID) (*DID2, error) {
 
 	didString := strings.Join(didParts, ":")
 
-	var did2 DID2
-	err = did2.SetString(didString)
+	did2, err := did.Parse(didString)
 	if err != nil {
 		return nil, err
 	}
-
-	return &did2, nil
+	return (*DID2)(did2), nil
 }
