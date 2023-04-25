@@ -18,6 +18,19 @@ Tutorials are available in the [tutorials](https://docs.iden3.io/getting-started
 ## Testing
 `go test ./...`
 
+## Contributing
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as below, without any additional terms or conditions.
+
 ## License
-go-iden3-core is part of the iden3 project copyright 2018 0kims association
-and published with [AGPL-3.0 license](LICENSE)
+
+go-iden3-core is part of the iden3 project copyright 2018 0kims Association
+
+This project is licensed under either of
+
+- [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) ([`LICENSE-APACHE`](LICENSE-APACHE))
+- [MIT license](https://opensource.org/licenses/MIT) ([`LICENSE-MIT`](LICENSE-MIT))
+
+at your option.
