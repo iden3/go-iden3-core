@@ -158,7 +158,7 @@ func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, e
 			return k.Blockchain, nil
 		}
 	}
-	return UnknownChain, ErrNetworkNotSupportedForDID
+	return UnknownChain, ErrBlockchainNotSupportedForDID
 }
 
 // FindDIDMethodByValue finds did method by its byte value
@@ -208,9 +208,9 @@ func IDFromDID(did DID) ID {
 }
 
 func newIDFromDID(did DID) ID {
-	checkSum := sha256.Sum256([]byte(did.String()))
+	hash := sha256.Sum256([]byte(did.String()))
 	var genesis [27]byte
-	copy(genesis[:], checkSum[len(checkSum)-27:])
+	copy(genesis[:], hash[len(hash)-27:])
 	return NewID(TypeUnknown, genesis)
 }
 
@@ -311,7 +311,7 @@ func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
 
 func MethodFromID(id ID) (DIDMethod, error) {
 	if id.IsUnknown() {
-		return "", ErrUnsupportedID
+		return "", fmt.Errorf("%w: unknown type", ErrUnsupportedID)
 	}
 	methodByte := id.MethodByte()
 	return FindDIDMethodByValue(methodByte)
@@ -319,7 +319,7 @@ func MethodFromID(id ID) (DIDMethod, error) {
 
 func BlockchainFromID(id ID) (Blockchain, error) {
 	if id.IsUnknown() {
-		return UnknownChain, ErrUnsupportedID
+		return UnknownChain, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
 	}
 
 	method, err := MethodFromID(id)
@@ -339,7 +339,7 @@ func BlockchainFromID(id ID) (Blockchain, error) {
 
 func NetworkIDFromID(id ID) (NetworkID, error) {
 	if id.IsUnknown() {
-		return UnknownNetwork, ErrUnsupportedID
+		return UnknownNetwork, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
 	}
 
 	method, err := MethodFromID(id)
