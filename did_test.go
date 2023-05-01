@@ -73,7 +73,7 @@ func TestDID_UnmarshalJSON(t *testing.T) {
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
 	require.NotNil(t, obj.Obj)
-	require.Equal(t, string(DIDMethodIden3), obj.Obj.Method)
+	require.Equal(t, DIDMethodIden3.String(), obj.Obj.Method)
 
 	id2 := IDFromDID(*obj.Obj)
 	method, err := MethodFromID(id2)
@@ -111,7 +111,7 @@ func TestDIDGenesisFromState(t *testing.T) {
 	did, err := DIDGenesisFromIdenState(typ0, genesisState)
 	require.NoError(t, err)
 
-	require.Equal(t, string(DIDMethodIden3), did.Method)
+	require.Equal(t, DIDMethodIden3.String(), did.Method)
 
 	id := IDFromDID(*did)
 	method, err := MethodFromID(id)
@@ -134,7 +134,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	// Polygon no chain, no network
 	did := helperBuildDIDFromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
 
-	require.Equal(t, string(DIDMethodPolygonID), did.Method)
+	require.Equal(t, DIDMethodPolygonID.String(), did.Method)
 	id := IDFromDID(*did)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	// Polygon | Polygon chain, Main
 	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
 
-	require.Equal(t, string(DIDMethodPolygonID), did2.Method)
+	require.Equal(t, DIDMethodPolygonID.String(), did2.Method)
 	id2 := IDFromDID(*did2)
 	method2, err := MethodFromID(id2)
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	// Polygon | Polygon chain, Mumbai
 	did3 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Mumbai)
 
-	require.Equal(t, string(DIDMethodPolygonID), did3.Method)
+	require.Equal(t, DIDMethodPolygonID.String(), did3.Method)
 	id3 := IDFromDID(*did3)
 	method3, err := MethodFromID(id3)
 	require.NoError(t, err)
@@ -199,7 +199,7 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 		[]byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
 	require.NoError(t, err)
 
-	require.Equal(t, string(DIDMethodPolygonID), did1.Method)
+	require.Equal(t, DIDMethodPolygonID.String(), did1.Method)
 	wantIDs := []string{"polygon", "mumbai",
 		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
 	require.Equal(t, wantIDs, did1.IDStrings)

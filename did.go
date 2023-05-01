@@ -12,6 +12,8 @@ import (
 var (
 	// ErrUnsupportedID ID with unsupported type.
 	ErrUnsupportedID = errors.New("unsupported ID")
+	// ErrIncorrectDID return if DID method is known, but format of DID is incorrect.
+	ErrIncorrectDID = errors.New("incorrect DID")
 	// ErrDIDMethodNotSupported unsupported did method.
 	ErrDIDMethodNotSupported = errors.New("not supported did method")
 	// ErrBlockchainNotSupportedForDID unsupported network for did.
@@ -24,14 +26,39 @@ var (
 const DIDSchema = "did"
 
 // DIDMethod represents did methods
-type DIDMethod string
+type DIDMethod uint8
 
 const (
-	// DIDMethodIden3 DID method-name
-	DIDMethodIden3 DIDMethod = "iden3"
-	// DIDMethodPolygonID DID method-name
-	DIDMethodPolygonID DIDMethod = "polygonid"
+	// DIDMethodIden3
+	DIDMethodIden3 DIDMethod = iota
+	// DIDMethodPolygonID
+	DIDMethodPolygonID DIDMethod = iota
+	// DIDMethodPolygonIDOnChain
+	DIDMethodPolygonIDOnChain DIDMethod = iota
+	// DIDMethodOther any other method not listed before
+	DIDMethodOther DIDMethod = iota
 )
+
+var knownMethods = map[DIDMethod]struct{}{
+	DIDMethodIden3:            {},
+	DIDMethodPolygonID:        {},
+	DIDMethodPolygonIDOnChain: {},
+}
+
+func (m DIDMethod) String() string {
+	switch m {
+	case DIDMethodIden3:
+		return "iden3"
+	case DIDMethodPolygonID:
+		return "polygonid"
+	case DIDMethodPolygonIDOnChain:
+		return "polygonid"
+	case DIDMethodOther:
+		return ""
+	default:
+		return fmt.Sprintf("unknown<%v>", uint8(m))
+	}
+}
 
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
@@ -69,8 +96,10 @@ const (
 
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
-	DIDMethodIden3:     0b00000001,
-	DIDMethodPolygonID: 0b00000010,
+	DIDMethodIden3:            0b00000001,
+	DIDMethodPolygonID:        0b00000010,
+	DIDMethodPolygonIDOnChain: 0b00000011,
+	DIDMethodOther:            0b11111111,
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -99,6 +128,11 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
 	},
+	DIDMethodPolygonIDOnChain: {
+		{Blockchain: Polygon, NetworkID: Main}:   0b10010000 | 0b00000001,
+		{Blockchain: Polygon, NetworkID: Mumbai}: 0b10010000 | 0b00000010,
+	},
+	DIDMethodOther: {},
 }
 
 // BuildDIDType builds bytes type from chain and network
@@ -168,7 +202,7 @@ func FindDIDMethodByValue(_v byte) (DIDMethod, error) {
 			return k, nil
 		}
 	}
-	return "", ErrDIDMethodNotSupported
+	return DIDMethodOther, ErrDIDMethodNotSupported
 }
 
 func (did *DID) UnmarshalJSON(bytes []byte) error {
@@ -215,24 +249,32 @@ func newIDFromDID(did DID) ID {
 }
 
 func idFromDID(did DID) (ID, error) {
-	var id ID
-	_, ok := DIDMethodNetwork[DIDMethod(did.Method)]
-	if !ok {
-		return id, ErrUnsupportedID
+	found := false
+	for method := range knownMethods {
+		if method.String() == did.Method {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return ID{}, ErrUnsupportedID
 	}
 
+	var id ID
+
 	if len(did.IDStrings) > 3 || len(did.IDStrings) < 1 {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: unexpected number of ID strings",
+			ErrIncorrectDID)
 	}
 
 	var err error
 	id, err = IDFromString(did.IDStrings[len(did.IDStrings)-1])
 	if err != nil {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: can't parse ID string", ErrIncorrectDID)
 	}
 
 	if !CheckChecksum(id) {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: incorrect ID checksum", ErrIncorrectDID)
 	}
 
 	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
@@ -240,7 +282,7 @@ func idFromDID(did DID) (ID, error) {
 		return id, ErrUnsupportedID
 	}
 
-	if string(method) != did.Method {
+	if method.String() != did.Method {
 		return id, ErrUnsupportedID
 	}
 
@@ -271,7 +313,7 @@ func ParseDIDFromID(id ID) (*DID, error) {
 		return nil, err
 	}
 
-	didParts := []string{DIDSchema, string(method), string(blockchain)}
+	didParts := []string{DIDSchema, method.String(), string(blockchain)}
 	if string(networkID) != "" {
 		didParts = append(didParts, string(networkID))
 	}
@@ -293,17 +335,17 @@ func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
 
 	method, err := FindDIDMethodByValue(methodByte)
 	if err != nil {
-		return "", UnknownChain, UnknownNetwork, err
+		return DIDMethodOther, UnknownChain, UnknownNetwork, err
 	}
 
 	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
 	if err != nil {
-		return "", UnknownChain, UnknownNetwork, err
+		return DIDMethodOther, UnknownChain, UnknownNetwork, err
 	}
 
 	networkID, err := FindNetworkIDForDIDMethodByValue(method, networkByte)
 	if err != nil {
-		return "", UnknownChain, UnknownNetwork, err
+		return DIDMethodOther, UnknownChain, UnknownNetwork, err
 	}
 
 	return method, blockchain, networkID, nil
@@ -311,7 +353,7 @@ func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
 
 func MethodFromID(id ID) (DIDMethod, error) {
 	if id.IsUnknown() {
-		return "", fmt.Errorf("%w: unknown type", ErrUnsupportedID)
+		return DIDMethodOther, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
 	}
 	methodByte := id.MethodByte()
 	return FindDIDMethodByValue(methodByte)
