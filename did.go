@@ -26,22 +26,26 @@ var (
 const DIDSchema = "did"
 
 // DIDMethod represents did methods
-type DIDMethod uint8
+type DIDMethod byte
 
 const (
 	// DIDMethodIden3
-	DIDMethodIden3 DIDMethod = iota
+	DIDMethodIden3 DIDMethod = 0b00000001
 	// DIDMethodPolygonID
-	DIDMethodPolygonID DIDMethod = iota
+	DIDMethodPolygonID DIDMethod = 0b00000010
 	// DIDMethodPolygonIDOnChain
-	DIDMethodPolygonIDOnChain DIDMethod = iota
+	DIDMethodPolygonIDOnChain DIDMethod = 0b10000010
 	// DIDMethodOther any other method not listed before
-	DIDMethodOther DIDMethod = iota
+	DIDMethodOther DIDMethod = 0b11111111
 )
 
 var knownMethods = map[DIDMethod]struct{}{
 	DIDMethodIden3:            {},
 	DIDMethodPolygonID:        {},
+	DIDMethodPolygonIDOnChain: {},
+}
+
+var onChainMethods = map[DIDMethod]struct{}{
 	DIDMethodPolygonIDOnChain: {},
 }
 
@@ -58,6 +62,10 @@ func (m DIDMethod) String() string {
 	default:
 		return fmt.Sprintf("unknown<%v>", uint8(m))
 	}
+}
+
+func (m DIDMethod) Byte() byte {
+	return byte(m)
 }
 
 // Blockchain id of the network "eth", "polygon", etc.
@@ -94,14 +102,6 @@ const (
 	NoNetwork NetworkID = ""
 )
 
-// DIDMethodByte did method flag representation
-var DIDMethodByte = map[DIDMethod]byte{
-	DIDMethodIden3:            0b00000001,
-	DIDMethodPolygonID:        0b00000010,
-	DIDMethodPolygonIDOnChain: 0b00000011,
-	DIDMethodOther:            0b11111111,
-}
-
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
 type DIDNetworkFlag struct {
 	Blockchain Blockchain
@@ -129,17 +129,17 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
 	},
 	DIDMethodPolygonIDOnChain: {
-		{Blockchain: Polygon, NetworkID: Main}:   0b10010000 | 0b00000001,
-		{Blockchain: Polygon, NetworkID: Mumbai}: 0b10010000 | 0b00000010,
+		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
+		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 	},
 	DIDMethodOther: {},
 }
 
 // BuildDIDType builds bytes type from chain and network
-func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([2]byte, error) {
+func BuildDIDType(method DIDMethod, blockchain Blockchain,
+	network NetworkID) ([2]byte, error) {
 
-	fb, ok := DIDMethodByte[method]
-	if !ok {
+	if _, ok := knownMethods[method]; !ok {
 		return [2]byte{}, ErrDIDMethodNotSupported
 	}
 
@@ -147,24 +147,13 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain, network NetworkID) ([
 		blockchain = ReadOnly
 	}
 
-	sb, ok := DIDMethodNetwork[method][DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}]
+	netFlag := DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}
+	sb, ok := DIDMethodNetwork[method][netFlag]
 	if !ok {
 		return [2]byte{}, ErrNetworkNotSupportedForDID
 	}
-	return [2]byte{fb, sb}, nil
-}
 
-// BuildDIDTypeOnChain builds bytes type from chain and network
-func BuildDIDTypeOnChain(method DIDMethod, blockchain Blockchain, network NetworkID) ([2]byte, error) {
-	typ, err := BuildDIDType(method, blockchain, network)
-	if err != nil {
-		return [2]byte{}, err
-	}
-
-	// set on-chain flag (first bit of first byte) to 1
-	typ[0] |= MethodOnChainFlag
-
-	return typ, nil
+	return [2]byte{method.Byte(), sb}, nil
 }
 
 // FindNetworkIDForDIDMethodByValue finds network by byte value
@@ -193,16 +182,6 @@ func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, e
 		}
 	}
 	return UnknownChain, ErrBlockchainNotSupportedForDID
-}
-
-// FindDIDMethodByValue finds did method by its byte value
-func FindDIDMethodByValue(_v byte) (DIDMethod, error) {
-	for k, v := range DIDMethodByte {
-		if v == _v {
-			return k, nil
-		}
-	}
-	return DIDMethodOther, ErrDIDMethodNotSupported
 }
 
 func (did *DID) UnmarshalJSON(bytes []byte) error {
@@ -330,13 +309,8 @@ func ParseDIDFromID(id ID) (*DID, error) {
 }
 
 func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
-	methodByte := id.MethodByte()
+	method := id.Method()
 	networkByte := id.BlockchainNetworkByte()
-
-	method, err := FindDIDMethodByValue(methodByte)
-	if err != nil {
-		return DIDMethodOther, UnknownChain, UnknownNetwork, err
-	}
 
 	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
 	if err != nil {
@@ -355,8 +329,12 @@ func MethodFromID(id ID) (DIDMethod, error) {
 	if id.IsUnknown() {
 		return DIDMethodOther, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
 	}
-	methodByte := id.MethodByte()
-	return FindDIDMethodByValue(methodByte)
+	method := id.Method()
+	if _, ok := knownMethods[method]; !ok && method != DIDMethodOther {
+		return DIDMethodOther, fmt.Errorf("%w: unknown method",
+			ErrUnsupportedID)
+	}
+	return method, nil
 }
 
 func BlockchainFromID(id ID) (Blockchain, error) {
@@ -397,4 +375,14 @@ func NetworkIDFromID(id ID) (NetworkID, error) {
 	}
 
 	return networkID, nil
+}
+
+func EthAddressFromID(id ID) ([20]byte, error) {
+	if _, ok := onChainMethods[id.Method()]; !ok {
+		return [20]byte{}, errors.New(
+			"can't get Ethereum address of not on-chain identity")
+	}
+	var address [20]byte
+	copy(address[:], id[2:22])
+	return address, nil
 }

@@ -27,9 +27,6 @@ var (
 	TypeUnknown = [2]byte{0xff, 0xff}
 )
 
-// MethodOnChainFlag is a flag showing that identity is on-chain
-const MethodOnChainFlag = 0b10000000
-
 const idLength = 31
 
 // ID is a byte array with
@@ -124,24 +121,12 @@ func (id *ID) Type() [2]byte {
 	return typ
 }
 
-func (id *ID) MethodByte() byte {
-	// remove on-chain flag
-	return id[0] & ^byte(MethodOnChainFlag)
+func (id *ID) Method() DIDMethod {
+	return DIDMethod(id[0])
 }
 
 func (id *ID) BlockchainNetworkByte() byte {
 	return id[1]
-}
-
-func (id *ID) IsOnChain() bool {
-	return !id.IsUnknown() && (id[0]&MethodOnChainFlag == MethodOnChainFlag)
-}
-
-func (id *ID) EthAddress() ([20]byte, error) {
-	if !id.IsOnChain() {
-		return [20]byte{}, errors.New("can't get EthAddress of not on-chain identity")
-	}
-	return EthAddressFromID(*id), nil
 }
 
 func (id *ID) IsUnknown() bool {
@@ -262,11 +247,6 @@ func CheckGenesisStateID(id, state *big.Int) (bool, error) {
 	}
 
 	return id.Cmp(identifier.BigInt()) == 0, nil
-}
-
-func EthAddressFromID(id ID) (address [20]byte) {
-	copy(address[:], id[2:22])
-	return
 }
 
 func GenesisFromEthAddress(address [20]byte) *big.Int {

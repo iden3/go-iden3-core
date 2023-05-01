@@ -47,7 +47,7 @@ func TestParseDID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 
-	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, id.Type())
+	require.Equal(t, [2]byte{DIDMethodIden3.Byte(), 0b0}, id.Type())
 }
 
 func TestDID_MarshalJSON(t *testing.T) {
@@ -199,25 +199,24 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 		[]byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
 	require.NoError(t, err)
 
-	require.Equal(t, DIDMethodPolygonID.String(), did1.Method)
+	require.Equal(t, DIDMethodPolygonIDOnChain.String(), did1.Method)
 	wantIDs := []string{"polygon", "mumbai",
 		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
 	require.Equal(t, wantIDs, did1.IDStrings)
 	id := IDFromDID(*did1)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonID, method)
+	require.Equal(t, DIDMethodPolygonIDOnChain, method)
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain)
 	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, Mumbai, networkID)
-	require.Equal(t, true, id.IsOnChain())
 
-	addressBytes, err := id.EthAddress()
+	ethAddr, err := EthAddressFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, addressBytesExp, addressBytes)
+	require.Equal(t, addressBytesExp, ethAddr)
 
 	require.Equal(t,
 		"did:polygonid:polygon:mumbai:2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6",
@@ -238,7 +237,7 @@ func TestDecompose(t *testing.T) {
 
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonID, method)
+	require.Equal(t, DIDMethodPolygonIDOnChain, method)
 
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
