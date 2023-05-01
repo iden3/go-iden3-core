@@ -17,7 +17,8 @@ func TestParseDID(t *testing.T) {
 	did3, err := Parse(didStr)
 	require.NoError(t, err)
 
-	id := IDFromDID(*did3)
+	id, err := IDFromDID(*did3)
+	require.NoError(t, err)
 	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ", id.String())
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
@@ -35,7 +36,8 @@ func TestParseDID(t *testing.T) {
 	did3, err = Parse(didStr)
 	require.NoError(t, err)
 
-	id = IDFromDID(*did3)
+	id, err = IDFromDID(*did3)
+	require.NoError(t, err)
 	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", id.String())
 	method, err = MethodFromID(id)
 	require.NoError(t, err)
@@ -75,7 +77,8 @@ func TestDID_UnmarshalJSON(t *testing.T) {
 	require.NotNil(t, obj.Obj)
 	require.Equal(t, DIDMethodIden3.String(), obj.Obj.Method)
 
-	id2 := IDFromDID(*obj.Obj)
+	id2, err := IDFromDID(*obj.Obj)
+	require.NoError(t, err)
 	method, err := MethodFromID(id2)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodIden3, method)
@@ -113,7 +116,8 @@ func TestDIDGenesisFromState(t *testing.T) {
 
 	require.Equal(t, DIDMethodIden3.String(), did.Method)
 
-	id := IDFromDID(*did)
+	id, err := IDFromDID(*did)
+	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodIden3, method)
@@ -135,7 +139,8 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	did := helperBuildDIDFromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
 
 	require.Equal(t, DIDMethodPolygonID.String(), did.Method)
-	id := IDFromDID(*did)
+	id, err := IDFromDID(*did)
+	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodPolygonID, method)
@@ -153,7 +158,8 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
 
 	require.Equal(t, DIDMethodPolygonID.String(), did2.Method)
-	id2 := IDFromDID(*did2)
+	id2, err := IDFromDID(*did2)
+	require.NoError(t, err)
 	method2, err := MethodFromID(id2)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodPolygonID, method2)
@@ -171,7 +177,8 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	did3 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Mumbai)
 
 	require.Equal(t, DIDMethodPolygonID.String(), did3.Method)
-	id3 := IDFromDID(*did3)
+	id3, err := IDFromDID(*did3)
+	require.NoError(t, err)
 	method3, err := MethodFromID(id3)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodPolygonID, method3)
@@ -203,7 +210,8 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 	wantIDs := []string{"polygon", "mumbai",
 		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
 	require.Equal(t, wantIDs, did1.IDStrings)
-	id := IDFromDID(*did1)
+	id, err := IDFromDID(*did1)
+	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, DIDMethodPolygonIDOnChain, method)
@@ -232,7 +240,8 @@ func TestDecompose(t *testing.T) {
 	wantID, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
 	require.NoError(t, err)
 
-	id := IDFromDID(*did3)
+	id, err := IDFromDID(*did3)
+	require.NoError(t, err)
 	require.Equal(t, wantID, id)
 
 	method, err := MethodFromID(id)
@@ -271,6 +280,7 @@ func TestNewIDFromDID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wantID, id[:])
 
-	id2 := IDFromDID(*did)
+	id2, err := IDFromDID(*did)
+	require.NoError(t, err)
 	require.Equal(t, id, id2)
 }

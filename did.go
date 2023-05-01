@@ -14,6 +14,8 @@ var (
 	ErrUnsupportedID = errors.New("unsupported ID")
 	// ErrIncorrectDID return if DID method is known, but format of DID is incorrect.
 	ErrIncorrectDID = errors.New("incorrect DID")
+	// ErrMethodUnknown return if DID method is unknown.
+	ErrMethodUnknown = errors.New("unknown DID method")
 	// ErrDIDMethodNotSupported unsupported did method.
 	ErrDIDMethodNotSupported = errors.New("not supported did method")
 	// ErrBlockchainNotSupportedForDID unsupported network for did.
@@ -212,12 +214,12 @@ func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	return ParseDIDFromID(*id)
 }
 
-func IDFromDID(did DID) ID {
+func IDFromDID(did DID) (ID, error) {
 	id, err := idFromDID(did)
-	if err != nil {
-		return newIDFromDID(did)
+	if errors.Is(err, ErrMethodUnknown) {
+		return newIDFromDID(did), nil
 	}
-	return id
+	return id, err
 }
 
 func newIDFromDID(did DID) ID {
@@ -236,7 +238,7 @@ func idFromDID(did DID) (ID, error) {
 		}
 	}
 	if !found {
-		return ID{}, ErrUnsupportedID
+		return ID{}, ErrMethodUnknown
 	}
 
 	var id ID
@@ -258,19 +260,22 @@ func idFromDID(did DID) (ID, error) {
 
 	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
 	if err != nil {
-		return id, ErrUnsupportedID
+		return id, err
 	}
 
 	if method.String() != did.Method {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: methods in ID and DID are different",
+			ErrIncorrectDID)
 	}
 
 	if len(did.IDStrings) > 1 && string(blockchain) != did.IDStrings[0] {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: blockchains in ID and DID are different",
+			ErrIncorrectDID)
 	}
 
 	if len(did.IDStrings) > 2 && string(networkID) != did.IDStrings[1] {
-		return id, ErrUnsupportedID
+		return id, fmt.Errorf("%w: networkIDs in ID and DID are different",
+			ErrIncorrectDID)
 	}
 
 	return id, nil
