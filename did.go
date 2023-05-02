@@ -134,7 +134,9 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
 		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 	},
-	DIDMethodOther: {},
+	DIDMethodOther: {
+		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,
+	},
 }
 
 // BuildDIDType builds bytes type from chain and network
@@ -217,16 +219,21 @@ func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 func IDFromDID(did DID) (ID, error) {
 	id, err := idFromDID(did)
 	if errors.Is(err, ErrMethodUnknown) {
-		return newIDFromDID(did), nil
+		return newIDFromUnsupportedDID(did), nil
 	}
 	return id, err
 }
 
-func newIDFromDID(did DID) ID {
+func newIDFromUnsupportedDID(did DID) ID {
 	hash := sha256.Sum256([]byte(did.String()))
 	var genesis [27]byte
 	copy(genesis[:], hash[len(hash)-27:])
-	return NewID(TypeUnknown, genesis)
+	flg := DIDNetworkFlag{Blockchain: UnknownChain, NetworkID: UnknownNetwork}
+	var tp = [2]byte{
+		DIDMethodOther.Byte(),
+		DIDMethodNetwork[DIDMethodOther][flg],
+	}
+	return NewID(tp, genesis)
 }
 
 func idFromDID(did DID) (ID, error) {
@@ -284,10 +291,6 @@ func idFromDID(did DID) (ID, error) {
 // ParseDIDFromID returns DID from ID
 func ParseDIDFromID(id ID) (*DID, error) {
 
-	if id.IsUnknown() {
-		return nil, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
-	}
-
 	if !CheckChecksum(id) {
 		return nil, fmt.Errorf("%w: invalid checksum", ErrUnsupportedID)
 	}
@@ -295,6 +298,11 @@ func ParseDIDFromID(id ID) (*DID, error) {
 	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
 	if err != nil {
 		return nil, err
+	}
+
+	if isUnsupportedDID(method, blockchain, networkID) {
+		return nil, fmt.Errorf("%w: unsupported DID",
+			ErrMethodUnknown)
 	}
 
 	didParts := []string{DIDSchema, method.String(), string(blockchain)}
@@ -314,8 +322,8 @@ func ParseDIDFromID(id ID) (*DID, error) {
 }
 
 func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
-	method := id.Method()
-	networkByte := id.BlockchainNetworkByte()
+	method := DIDMethod(id[0])
+	networkByte := id[1]
 
 	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
 	if err != nil {
@@ -331,63 +339,65 @@ func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
 }
 
 func MethodFromID(id ID) (DIDMethod, error) {
-	if id.IsUnknown() {
-		return DIDMethodOther, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
+	method, blockchain, netID, err := decodeDIDPartsFromID(id)
+	if err != nil {
+		return DIDMethodOther, err
 	}
-	method := id.Method()
-	if _, ok := knownMethods[method]; !ok && method != DIDMethodOther {
-		return DIDMethodOther, fmt.Errorf("%w: unknown method",
-			ErrUnsupportedID)
+
+	if isUnsupportedDID(method, blockchain, netID) {
+		return DIDMethodOther, fmt.Errorf("%w: unsupported DID",
+			ErrMethodUnknown)
 	}
+
 	return method, nil
 }
 
 func BlockchainFromID(id ID) (Blockchain, error) {
-	if id.IsUnknown() {
-		return UnknownChain, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
-	}
-
-	method, err := MethodFromID(id)
+	method, blockchain, netID, err := decodeDIDPartsFromID(id)
 	if err != nil {
 		return UnknownChain, err
 	}
 
-	networkByte := id.BlockchainNetworkByte()
-
-	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
-	if err != nil {
-		return UnknownChain, err
+	if isUnsupportedDID(method, blockchain, netID) {
+		return UnknownChain, fmt.Errorf("%w: unsupported DID",
+			ErrMethodUnknown)
 	}
 
 	return blockchain, nil
 }
 
 func NetworkIDFromID(id ID) (NetworkID, error) {
-	if id.IsUnknown() {
-		return UnknownNetwork, fmt.Errorf("%w: unknown type", ErrUnsupportedID)
-	}
-
-	method, err := MethodFromID(id)
+	method, blockchain, netID, err := decodeDIDPartsFromID(id)
 	if err != nil {
 		return UnknownNetwork, err
 	}
 
-	networkByte := id.BlockchainNetworkByte()
-
-	networkID, err := FindNetworkIDForDIDMethodByValue(method, networkByte)
-	if err != nil {
-		return UnknownNetwork, err
+	if isUnsupportedDID(method, blockchain, netID) {
+		return UnknownNetwork, fmt.Errorf("%w: unsupported DID",
+			ErrMethodUnknown)
 	}
 
-	return networkID, nil
+	return netID, nil
 }
 
 func EthAddressFromID(id ID) ([20]byte, error) {
-	if _, ok := onChainMethods[id.Method()]; !ok {
+	method, err := MethodFromID(id)
+	if err != nil {
+		return [20]byte{}, err
+	}
+
+	if _, ok := onChainMethods[method]; !ok {
 		return [20]byte{}, errors.New(
 			"can't get Ethereum address of not on-chain identity")
 	}
 	var address [20]byte
 	copy(address[:], id[2:22])
 	return address, nil
+}
+
+func isUnsupportedDID(method DIDMethod, blockchain Blockchain,
+	networkID NetworkID) bool {
+
+	return method == DIDMethodOther && blockchain == UnknownChain &&
+		networkID == UnknownNetwork
 }

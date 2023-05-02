@@ -22,9 +22,6 @@ var (
 	// - 4-7 bits of 2nd byte: network id e.g. 0010 - mumbai
 	//  example of 2nd byte: 00010010 - polygon mumbai, 00000000 - readonly identities.
 	// valid iden3 method {0b00000001,0b00010010}, readonly {0b00000001, 0b00000000}
-
-	// TypeUnknown specifies that ID represents did of unsupported method
-	TypeUnknown = [2]byte{0xff, 0xff}
 )
 
 const idLength = 31
@@ -119,18 +116,6 @@ func (id *ID) Type() [2]byte {
 	var typ [2]byte
 	copy(typ[:], id[:2])
 	return typ
-}
-
-func (id *ID) Method() DIDMethod {
-	return DIDMethod(id[0])
-}
-
-func (id *ID) BlockchainNetworkByte() byte {
-	return id[1]
-}
-
-func (id *ID) IsUnknown() bool {
-	return bytes.Equal(id[0:2], TypeUnknown[:])
 }
 
 // IDFromString returns the ID from a given string

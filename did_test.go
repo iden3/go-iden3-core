@@ -274,7 +274,8 @@ func helperBuildDIDFromType(t testing.TB, method DIDMethod,
 func TestNewIDFromDID(t *testing.T) {
 	did, err := Parse("did:something:x")
 	require.NoError(t, err)
-	id := newIDFromDID(*did)
+	id := newIDFromUnsupportedDID(*did)
+	require.Equal(t, []byte{0xff, 0xff}, id[:2])
 	wantID, err := hex.DecodeString(
 		"ffff84b1e6d0d9ecbe951348ea578dbacc022cdbbff4b11218671dca871c11")
 	require.NoError(t, err)
