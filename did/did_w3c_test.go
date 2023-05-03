@@ -1,5 +1,5 @@
 // Got from https://github.com/build-trust/did
-package core
+package did
 
 import (
 	"fmt"

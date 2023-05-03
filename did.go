@@ -2,11 +2,12 @@ package core
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"strings"
+
+	didw3c "github.com/iden3/go-iden3-core/v2/did"
 )
 
 var (
@@ -188,27 +189,8 @@ func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, e
 	return UnknownChain, ErrBlockchainNotSupportedForDID
 }
 
-func (did *DID) UnmarshalJSON(bytes []byte) error {
-	var didStr string
-	err := json.Unmarshal(bytes, &didStr)
-	if err != nil {
-		return err
-	}
-
-	did3, err := Parse(didStr)
-	if err != nil {
-		return err
-	}
-	*did = *did3
-	return nil
-}
-
-func (did DID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(did.String())
-}
-
 // DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
-func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
+func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*didw3c.DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
 	if err != nil {
 		return nil, err
@@ -216,11 +198,11 @@ func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	return ParseDIDFromID(*id)
 }
 
-func DIDFromGenesis(typ [2]byte, genesis [genesisLn]byte) (*DID, error) {
+func DIDFromGenesis(typ [2]byte, genesis [genesisLn]byte) (*didw3c.DID, error) {
 	return ParseDIDFromID(NewID(typ, genesis))
 }
 
-func IDFromDID(did DID) (ID, error) {
+func IDFromDID(did didw3c.DID) (ID, error) {
 	id, err := idFromDID(did)
 	if errors.Is(err, ErrMethodUnknown) {
 		return newIDFromUnsupportedDID(did), nil
@@ -228,7 +210,7 @@ func IDFromDID(did DID) (ID, error) {
 	return id, err
 }
 
-func newIDFromUnsupportedDID(did DID) ID {
+func newIDFromUnsupportedDID(did didw3c.DID) ID {
 	hash := sha256.Sum256([]byte(did.String()))
 	var genesis [genesisLn]byte
 	copy(genesis[:], hash[len(hash)-genesisLn:])
@@ -240,7 +222,7 @@ func newIDFromUnsupportedDID(did DID) ID {
 	return NewID(tp, genesis)
 }
 
-func idFromDID(did DID) (ID, error) {
+func idFromDID(did didw3c.DID) (ID, error) {
 	found := false
 	for method := range knownMethods {
 		if method.String() == did.Method {
@@ -293,7 +275,7 @@ func idFromDID(did DID) (ID, error) {
 }
 
 // ParseDIDFromID returns DID from ID
-func ParseDIDFromID(id ID) (*DID, error) {
+func ParseDIDFromID(id ID) (*didw3c.DID, error) {
 
 	if !CheckChecksum(id) {
 		return nil, fmt.Errorf("%w: invalid checksum", ErrUnsupportedID)
@@ -318,7 +300,7 @@ func ParseDIDFromID(id ID) (*DID, error) {
 
 	didString := strings.Join(didParts, ":")
 
-	did, err := Parse(didString)
+	did, err := didw3c.Parse(didString)
 	if err != nil {
 		return nil, err
 	}

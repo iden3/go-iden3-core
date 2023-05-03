@@ -1,7 +1,7 @@
 // Package core is a set of tools to work with Decentralized Identifiers (DIDs) as described
 // in the DID spec https://w3c.github.io/did-core/
 // Got from https://github.com/build-trust/did
-package core
+package did
 
 import (
 	"fmt"

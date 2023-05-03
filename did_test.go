@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/iden3/go-iden3-core/v2/did"
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,7 +15,7 @@ func TestParseDID(t *testing.T) {
 	// did
 	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
 
-	did3, err := Parse(didStr)
+	did3, err := did.Parse(didStr)
 	require.NoError(t, err)
 
 	id, err := IDFromDID(*did3)
@@ -33,7 +34,7 @@ func TestParseDID(t *testing.T) {
 	// readonly did
 	didStr = "did:iden3:readonly:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
 
-	did3, err = Parse(didStr)
+	did3, err = did.Parse(didStr)
 	require.NoError(t, err)
 
 	id, err = IDFromDID(*did3)
@@ -55,10 +56,10 @@ func TestParseDID(t *testing.T) {
 func TestDID_MarshalJSON(t *testing.T) {
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
-	did, err := ParseDIDFromID(id)
+	did2, err := ParseDIDFromID(id)
 	require.NoError(t, err)
 
-	b, err := did.MarshalJSON()
+	b, err := did2.MarshalJSON()
 	require.NoError(t, err)
 	require.Equal(t,
 		`"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"`,
@@ -70,7 +71,7 @@ func TestDID_UnmarshalJSON(t *testing.T) {
 	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
 	require.NoError(t, err)
 	var obj struct {
-		Obj *DID `json:"obj"`
+		Obj *did.DID `json:"obj"`
 	}
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
@@ -95,7 +96,7 @@ func TestDID_UnmarshalJSON(t *testing.T) {
 func TestDID_UnmarshalJSON_Error(t *testing.T) {
 	inBytes := `{"obj": "did:iden3:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
 	var obj struct {
-		Obj *DID `json:"obj"`
+		Obj *did.DID `json:"obj"`
 	}
 	err := json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
@@ -111,12 +112,12 @@ func TestDIDGenesisFromState(t *testing.T) {
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
-	did, err := DIDGenesisFromIdenState(typ0, genesisState)
+	did2, err := DIDGenesisFromIdenState(typ0, genesisState)
 	require.NoError(t, err)
 
-	require.Equal(t, DIDMethodIden3.String(), did.Method)
+	require.Equal(t, DIDMethodIden3.String(), did2.Method)
 
-	id, err := IDFromDID(*did)
+	id, err := IDFromDID(*did2)
 	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
@@ -130,16 +131,16 @@ func TestDIDGenesisFromState(t *testing.T) {
 
 	require.Equal(t,
 		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
-		did.String())
+		did2.String())
 }
 
 func TestDID_PolygonID_Types(t *testing.T) {
 
 	// Polygon no chain, no network
-	did := helperBuildDIDFromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
+	did1 := helperBuildDIDFromType(t, DIDMethodPolygonID, ReadOnly, NoNetwork)
 
-	require.Equal(t, DIDMethodPolygonID.String(), did.Method)
-	id, err := IDFromDID(*did)
+	require.Equal(t, DIDMethodPolygonID.String(), did1.Method)
+	id, err := IDFromDID(*did1)
 	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
@@ -152,7 +153,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	require.Equal(t, NoNetwork, networkID)
 	require.Equal(t,
 		"did:polygonid:readonly:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
-		did.String())
+		did1.String())
 
 	// Polygon | Polygon chain, Main
 	did2 := helperBuildDIDFromType(t, DIDMethodPolygonID, Polygon, Main)
@@ -195,7 +196,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 }
 
 func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
-	id1, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
+	id1, err := IDFromString("2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86")
 	require.NoError(t, err)
 
 	did1, err := ParseDIDFromID(id1)
@@ -208,7 +209,7 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 
 	require.Equal(t, DIDMethodPolygonIDOnChain.String(), did1.Method)
 	wantIDs := []string{"polygon", "mumbai",
-		"2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"}
+		"2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86"}
 	require.Equal(t, wantIDs, did1.IDStrings)
 	id, err := IDFromDID(*did1)
 	require.NoError(t, err)
@@ -227,14 +228,14 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 	require.Equal(t, addressBytesExp, ethAddr)
 
 	require.Equal(t,
-		"did:polygonid:polygon:mumbai:2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6",
+		"did:polygonid:polygon:mumbai:2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86",
 		did1.String())
 }
 
 func TestDecompose(t *testing.T) {
 	s := "did:polygonid:polygon:mumbai:2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"
 
-	did3, err := Parse(s)
+	did3, err := did.Parse(s)
 	require.NoError(t, err)
 
 	wantID, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
@@ -258,30 +259,30 @@ func TestDecompose(t *testing.T) {
 }
 
 func helperBuildDIDFromType(t testing.TB, method DIDMethod,
-	blockchain Blockchain, network NetworkID) *DID {
+	blockchain Blockchain, network NetworkID) *did.DID {
 	t.Helper()
 
 	typ, err := BuildDIDType(method, blockchain, network)
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
-	did, err := DIDGenesisFromIdenState(typ, genesisState)
+	did1, err := DIDGenesisFromIdenState(typ, genesisState)
 	require.NoError(t, err)
 
-	return did
+	return did1
 }
 
 func TestNewIDFromDID(t *testing.T) {
-	did, err := Parse("did:something:x")
+	did1, err := did.Parse("did:something:x")
 	require.NoError(t, err)
-	id := newIDFromUnsupportedDID(*did)
+	id := newIDFromUnsupportedDID(*did1)
 	require.Equal(t, []byte{0xff, 0xff}, id[:2])
 	wantID, err := hex.DecodeString(
 		"ffff84b1e6d0d9ecbe951348ea578dbacc022cdbbff4b11218671dca871c11")
 	require.NoError(t, err)
 	require.Equal(t, wantID, id[:])
 
-	id2, err := IDFromDID(*did)
+	id2, err := IDFromDID(*did1)
 	require.NoError(t, err)
 	require.Equal(t, id, id2)
 }
