@@ -285,3 +285,37 @@ func TestNewIDFromDID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, id, id2)
 }
+
+func TestGenesisFromEthAddress(t *testing.T) {
+
+	ethAddrHex := "accb91a7d1d9ad0d33b83f2546ed30285c836c6e"
+	wantGenesisHex := "00000000000000accb91a7d1d9ad0d33b83f2546ed30285c836c6e"
+	require.Len(t, ethAddrHex, 20*2)
+	require.Len(t, wantGenesisHex, 27*2)
+
+	ethAddrBytes, err := hex.DecodeString(ethAddrHex)
+	require.NoError(t, err)
+	var ethAddr [20]byte
+	copy(ethAddr[:], ethAddrBytes)
+
+	genesis := GenesisFromEthAddress(ethAddr)
+	wantGenesis, err := hex.DecodeString(wantGenesisHex)
+	require.NoError(t, err)
+	require.Equal(t, wantGenesis, genesis[:])
+
+	tp2, err := BuildDIDType(DIDMethodPolygonIDOnChain, Polygon, Mumbai)
+	require.NoError(t, err)
+
+	id := NewID(tp2, genesis)
+	ethAddr2, err := EthAddressFromID(id)
+	require.NoError(t, err)
+	require.Equal(t, ethAddr, ethAddr2)
+	t.Log(hex.EncodeToString(ethAddr2[:]))
+
+	var wantID ID
+	copy(wantID[:], tp2[:])
+	copy(wantID[len(tp2):], genesis[:])
+	ch := CalculateChecksum(tp2, genesis)
+	copy(wantID[len(tp2)+len(genesis):], ch[:])
+	require.Equal(t, wantID, id)
+}

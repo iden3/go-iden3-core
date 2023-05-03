@@ -216,6 +216,10 @@ func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*DID, error) {
 	return ParseDIDFromID(*id)
 }
 
+func DIDFromGenesis(typ [2]byte, genesis [genesisLn]byte) (*DID, error) {
+	return ParseDIDFromID(NewID(typ, genesis))
+}
+
 func IDFromDID(did DID) (ID, error) {
 	id, err := idFromDID(did)
 	if errors.Is(err, ErrMethodUnknown) {
@@ -226,8 +230,8 @@ func IDFromDID(did DID) (ID, error) {
 
 func newIDFromUnsupportedDID(did DID) ID {
 	hash := sha256.Sum256([]byte(did.String()))
-	var genesis [27]byte
-	copy(genesis[:], hash[len(hash)-27:])
+	var genesis [genesisLn]byte
+	copy(genesis[:], hash[len(hash)-genesisLn:])
 	flg := DIDNetworkFlag{Blockchain: UnknownChain, NetworkID: UnknownNetwork}
 	var tp = [2]byte{
 		DIDMethodOther.Byte(),
@@ -391,8 +395,14 @@ func EthAddressFromID(id ID) ([20]byte, error) {
 			"can't get Ethereum address of not on-chain identity")
 	}
 	var address [20]byte
-	copy(address[:], id[2:22])
+	copy(address[:], id[2+7:])
 	return address, nil
+}
+
+func GenesisFromEthAddress(addr [20]byte) [genesisLn]byte {
+	var genesis [genesisLn]byte
+	copy(genesis[7:], addr[:])
+	return genesis
 }
 
 func isUnsupportedDID(method DIDMethod, blockchain Blockchain,
