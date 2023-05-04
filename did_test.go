@@ -319,4 +319,11 @@ func TestGenesisFromEthAddress(t *testing.T) {
 	ch := CalculateChecksum(tp2, genesis)
 	copy(wantID[len(tp2)+len(genesis):], ch[:])
 	require.Equal(t, wantID, id)
+
+	// make genesis not look like an address
+	genesis[0] = 1
+	id = NewID(tp2, genesis)
+	_, err = EthAddressFromID(id)
+	require.EqualError(t, err,
+		"can't get Ethereum address: high bytes of genesis are not zero")
 }

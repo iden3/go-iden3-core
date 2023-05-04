@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -45,10 +46,6 @@ const (
 var knownMethods = map[DIDMethod]struct{}{
 	DIDMethodIden3:            {},
 	DIDMethodPolygonID:        {},
-	DIDMethodPolygonIDOnChain: {},
-}
-
-var onChainMethods = map[DIDMethod]struct{}{
 	DIDMethodPolygonIDOnChain: {},
 }
 
@@ -367,15 +364,12 @@ func NetworkIDFromID(id ID) (NetworkID, error) {
 }
 
 func EthAddressFromID(id ID) ([20]byte, error) {
-	method, err := MethodFromID(id)
-	if err != nil {
-		return [20]byte{}, err
+	var z [7]byte
+	if !bytes.Equal(z[:], id[2:2+len(z)]) {
+		return [20]byte{}, errors.New(
+			"can't get Ethereum address: high bytes of genesis are not zero")
 	}
 
-	if _, ok := onChainMethods[method]; !ok {
-		return [20]byte{}, errors.New(
-			"can't get Ethereum address of not on-chain identity")
-	}
 	var address [20]byte
 	copy(address[:], id[2+7:])
 	return address, nil
