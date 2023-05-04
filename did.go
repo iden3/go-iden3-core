@@ -44,9 +44,8 @@ const (
 )
 
 var knownMethods = map[DIDMethod]struct{}{
-	DIDMethodIden3:            {},
-	DIDMethodPolygonID:        {},
-	DIDMethodPolygonIDOnChain: {},
+	DIDMethodIden3:     {},
+	DIDMethodPolygonID: {},
 }
 
 func (m DIDMethod) String() string {
@@ -54,8 +53,6 @@ func (m DIDMethod) String() string {
 	case DIDMethodIden3:
 		return "iden3"
 	case DIDMethodPolygonID:
-		return "polygonid"
-	case DIDMethodPolygonIDOnChain:
 		return "polygonid"
 	case DIDMethodOther:
 		return ""
@@ -127,10 +124,6 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 
 		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
-	},
-	DIDMethodPolygonIDOnChain: {
-		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
-		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 	},
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,

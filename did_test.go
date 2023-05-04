@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -196,7 +197,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 }
 
 func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
-	id1, err := IDFromString("2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86")
+	id1, err := IDFromString("2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x")
 	require.NoError(t, err)
 
 	did1, err := ParseDIDFromID(id1)
@@ -207,15 +208,15 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 		[]byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
 	require.NoError(t, err)
 
-	require.Equal(t, DIDMethodPolygonIDOnChain.String(), did1.Method)
+	require.Equal(t, DIDMethodPolygonID.String(), did1.Method)
 	wantIDs := []string{"polygon", "mumbai",
-		"2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86"}
+		"2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x"}
 	require.Equal(t, wantIDs, did1.IDStrings)
 	id, err := IDFromDID(*did1)
 	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonIDOnChain, method)
+	require.Equal(t, DIDMethodPolygonID, method)
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, Polygon, blockchain)
@@ -228,17 +229,24 @@ func TestDID_PolygonID_ParseDIDFromID_OnChain(t *testing.T) {
 	require.Equal(t, addressBytesExp, ethAddr)
 
 	require.Equal(t,
-		"did:polygonid:polygon:mumbai:2z32DSAgDwCwCCrafvUsdwyt1m6esEKLHCHXoW8zo86",
+		"did:polygonid:polygon:mumbai:2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x",
 		did1.String())
 }
 
 func TestDecompose(t *testing.T) {
-	s := "did:polygonid:polygon:mumbai:2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6"
+	wantIDHex := "2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x"
+	ethAddrHex := "a51c1fc2f0d1a1b8494ed1fe312d7c3a78ed91c0"
+	genesis := genFromHex("00000000000000" + ethAddrHex)
+	tp, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
+	require.NoError(t, err)
+	id0 := NewID(tp, genesis)
+
+	s := fmt.Sprintf("did:polygonid:polygon:mumbai:%v", id0.String())
 
 	did3, err := did.Parse(s)
 	require.NoError(t, err)
 
-	wantID, err := IDFromString("2z39iB1bPjY2STTFSwbzvK8gqJQMsv5PLpvoSg3opa6")
+	wantID, err := IDFromString(wantIDHex)
 	require.NoError(t, err)
 
 	id, err := IDFromDID(*did3)
@@ -247,7 +255,7 @@ func TestDecompose(t *testing.T) {
 
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonIDOnChain, method)
+	require.Equal(t, DIDMethodPolygonID, method)
 
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
@@ -256,6 +264,10 @@ func TestDecompose(t *testing.T) {
 	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, Mumbai, networkID)
+
+	ethAddr, err := EthAddressFromID(id)
+	require.NoError(t, err)
+	require.Equal(t, ethAddrFromHex(ethAddrHex), ethAddr)
 }
 
 func helperBuildDIDFromType(t testing.TB, method DIDMethod,
@@ -304,14 +316,13 @@ func TestGenesisFromEthAddress(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wantGenesis, genesis[:])
 
-	tp2, err := BuildDIDType(DIDMethodPolygonIDOnChain, Polygon, Mumbai)
+	tp2, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
 	require.NoError(t, err)
 
 	id := NewID(tp2, genesis)
 	ethAddr2, err := EthAddressFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, ethAddr, ethAddr2)
-	t.Log(hex.EncodeToString(ethAddr2[:]))
 
 	var wantID ID
 	copy(wantID[:], tp2[:])
@@ -326,4 +337,24 @@ func TestGenesisFromEthAddress(t *testing.T) {
 	_, err = EthAddressFromID(id)
 	require.EqualError(t, err,
 		"can't get Ethereum address: high bytes of genesis are not zero")
+}
+
+func genFromHex(gh string) [genesisLn]byte {
+	genBytes, err := hex.DecodeString(gh)
+	if err != nil {
+		panic(err)
+	}
+	var gen [genesisLn]byte
+	copy(gen[:], genBytes)
+	return gen
+}
+
+func ethAddrFromHex(ea string) [20]byte {
+	eaBytes, err := hex.DecodeString(ea)
+	if err != nil {
+		panic(err)
+	}
+	var ethAddr [20]byte
+	copy(ethAddr[:], eaBytes)
+	return ethAddr
 }
