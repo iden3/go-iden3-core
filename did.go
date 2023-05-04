@@ -30,38 +30,16 @@ var (
 const DIDSchema = "did"
 
 // DIDMethod represents did methods
-type DIDMethod byte
+type DIDMethod string
 
 const (
 	// DIDMethodIden3
-	DIDMethodIden3 DIDMethod = 0b00000001
+	DIDMethodIden3 DIDMethod = "iden3"
 	// DIDMethodPolygonID
-	DIDMethodPolygonID DIDMethod = 0b00000010
+	DIDMethodPolygonID DIDMethod = "polygonid"
 	// DIDMethodOther any other method not listed before
-	DIDMethodOther DIDMethod = 0b11111111
+	DIDMethodOther DIDMethod = ""
 )
-
-var knownMethods = map[DIDMethod]struct{}{
-	DIDMethodIden3:     {},
-	DIDMethodPolygonID: {},
-}
-
-func (m DIDMethod) String() string {
-	switch m {
-	case DIDMethodIden3:
-		return "iden3"
-	case DIDMethodPolygonID:
-		return "polygonid"
-	case DIDMethodOther:
-		return ""
-	default:
-		return fmt.Sprintf("unknown<%v>", uint8(m))
-	}
-}
-
-func (m DIDMethod) Byte() byte {
-	return byte(m)
-}
 
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
@@ -94,8 +72,15 @@ const (
 	UnknownNetwork NetworkID = "unknown"
 
 	// NoNetwork should be used for readonly identity to build readonly flag
-	NoNetwork NetworkID = ""
+	NoNetwork NetworkID = "null"
 )
+
+// DIDMethodByte did method flag representation
+var DIDMethodByte = map[DIDMethod]byte{
+	DIDMethodIden3:     0b00000001,
+	DIDMethodPolygonID: 0b00000010,
+	DIDMethodOther:     0b11111111,
+}
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
 type DIDNetworkFlag struct {
@@ -132,13 +117,15 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 func BuildDIDType(method DIDMethod, blockchain Blockchain,
 	network NetworkID) ([2]byte, error) {
 
-	if _, ok := knownMethods[method]; !ok {
+	fb, ok := DIDMethodByte[method]
+	if !ok {
 		return [2]byte{}, ErrDIDMethodNotSupported
 	}
 
-	if blockchain == NoChain {
-		blockchain = ReadOnly
-	}
+	// If we uncomment this, there would be no way to create type 0xffff
+	//if blockchain == NoChain {
+	//	blockchain = ReadOnly
+	//}
 
 	netFlag := DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}
 	sb, ok := DIDMethodNetwork[method][netFlag]
@@ -146,7 +133,7 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain,
 		return [2]byte{}, ErrNetworkNotSupportedForDID
 	}
 
-	return [2]byte{method.Byte(), sb}, nil
+	return [2]byte{fb, sb}, nil
 }
 
 // FindNetworkIDForDIDMethodByValue finds network by byte value
@@ -177,6 +164,16 @@ func FindBlockchainForDIDMethodByValue(method DIDMethod, _v byte) (Blockchain, e
 	return UnknownChain, ErrBlockchainNotSupportedForDID
 }
 
+// FindDIDMethodByValue finds did method by its byte value
+func FindDIDMethodByValue(b byte) (DIDMethod, error) {
+	for k, v := range DIDMethodByte {
+		if v == b {
+			return k, nil
+		}
+	}
+	return DIDMethodOther, ErrDIDMethodNotSupported
+}
+
 // DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
 func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*didw3c.DID, error) {
 	id, err := IdGenesisFromIdenState(typ, state)
@@ -204,33 +201,28 @@ func newIDFromUnsupportedDID(did didw3c.DID) ID {
 	copy(genesis[:], hash[len(hash)-genesisLn:])
 	flg := DIDNetworkFlag{Blockchain: UnknownChain, NetworkID: UnknownNetwork}
 	var tp = [2]byte{
-		DIDMethodOther.Byte(),
+		DIDMethodByte[DIDMethodOther],
 		DIDMethodNetwork[DIDMethodOther][flg],
 	}
 	return NewID(tp, genesis)
 }
 
 func idFromDID(did didw3c.DID) (ID, error) {
-	found := false
-	for method := range knownMethods {
-		if method.String() == did.Method {
-			found = true
-			break
-		}
-	}
-	if !found {
+	method := DIDMethod(did.Method)
+	_, ok := DIDMethodByte[method]
+	if !ok || method == DIDMethodOther {
 		return ID{}, ErrMethodUnknown
 	}
 
 	var id ID
 
-	if len(did.IDStrings) > 3 || len(did.IDStrings) < 1 {
+	if len(did.IDStrings) != 3 {
 		return id, fmt.Errorf("%w: unexpected number of ID strings",
 			ErrIncorrectDID)
 	}
 
 	var err error
-	id, err = IDFromString(did.IDStrings[len(did.IDStrings)-1])
+	id, err = IDFromString(did.IDStrings[2])
 	if err != nil {
 		return id, fmt.Errorf("%w: can't parse ID string", ErrIncorrectDID)
 	}
@@ -239,22 +231,22 @@ func idFromDID(did didw3c.DID) (ID, error) {
 		return id, fmt.Errorf("%w: incorrect ID checksum", ErrIncorrectDID)
 	}
 
-	method, blockchain, networkID, err := decodeDIDPartsFromID(id)
+	method2, blockchain, networkID, err := decodeDIDPartsFromID(id)
 	if err != nil {
 		return id, err
 	}
 
-	if method.String() != did.Method {
+	if method2 != method {
 		return id, fmt.Errorf("%w: methods in ID and DID are different",
 			ErrIncorrectDID)
 	}
 
-	if len(did.IDStrings) > 1 && string(blockchain) != did.IDStrings[0] {
+	if string(blockchain) != did.IDStrings[0] {
 		return id, fmt.Errorf("%w: blockchains in ID and DID are different",
 			ErrIncorrectDID)
 	}
 
-	if len(did.IDStrings) > 2 && string(networkID) != did.IDStrings[1] {
+	if string(networkID) != did.IDStrings[1] {
 		return id, fmt.Errorf("%w: networkIDs in ID and DID are different",
 			ErrIncorrectDID)
 	}
@@ -279,7 +271,7 @@ func ParseDIDFromID(id ID) (*didw3c.DID, error) {
 			ErrMethodUnknown)
 	}
 
-	didParts := []string{DIDSchema, method.String(), string(blockchain)}
+	didParts := []string{DIDSchema, string(method), string(blockchain)}
 	if string(networkID) != "" {
 		didParts = append(didParts, string(networkID))
 	}
@@ -296,15 +288,17 @@ func ParseDIDFromID(id ID) (*didw3c.DID, error) {
 }
 
 func decodeDIDPartsFromID(id ID) (DIDMethod, Blockchain, NetworkID, error) {
-	method := DIDMethod(id[0])
-	networkByte := id[1]
-
-	blockchain, err := FindBlockchainForDIDMethodByValue(method, networkByte)
+	method, err := FindDIDMethodByValue(id[0])
 	if err != nil {
 		return DIDMethodOther, UnknownChain, UnknownNetwork, err
 	}
 
-	networkID, err := FindNetworkIDForDIDMethodByValue(method, networkByte)
+	blockchain, err := FindBlockchainForDIDMethodByValue(method, id[1])
+	if err != nil {
+		return DIDMethodOther, UnknownChain, UnknownNetwork, err
+	}
+
+	networkID, err := FindNetworkIDForDIDMethodByValue(method, id[1])
 	if err != nil {
 		return DIDMethodOther, UnknownChain, UnknownNetwork, err
 	}
