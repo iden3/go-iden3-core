@@ -37,8 +37,6 @@ const (
 	DIDMethodIden3 DIDMethod = 0b00000001
 	// DIDMethodPolygonID
 	DIDMethodPolygonID DIDMethod = 0b00000010
-	// DIDMethodPolygonIDOnChain
-	DIDMethodPolygonIDOnChain DIDMethod = 0b10000010
 	// DIDMethodOther any other method not listed before
 	DIDMethodOther DIDMethod = 0b11111111
 )
