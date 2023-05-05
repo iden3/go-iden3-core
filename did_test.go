@@ -33,7 +33,7 @@ func TestParseDID(t *testing.T) {
 	require.Equal(t, Mumbai, networkID)
 
 	// readonly did
-	didStr = "did:iden3:readonly:null:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
+	didStr = "did:iden3:readonly:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
 
 	did3, err = did.Parse(didStr)
 	require.NoError(t, err)
@@ -131,7 +131,23 @@ func TestDIDGenesisFromState(t *testing.T) {
 	require.Equal(t, NoNetwork, networkID)
 
 	require.Equal(t,
-		"did:iden3:readonly:null:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
+		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
+		did2.String())
+}
+
+func TestDIDFromID(t *testing.T) {
+	typ0, err := BuildDIDType(DIDMethodIden3, ReadOnly, NoNetwork)
+	require.NoError(t, err)
+
+	genesisState := big.NewInt(1)
+	id, err := IdGenesisFromIdenState(typ0, genesisState)
+	require.NoError(t, err)
+
+	did2, err := ParseDIDFromID(*id)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
 		did2.String())
 }
 
@@ -153,7 +169,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 	require.Equal(t,
-		"did:polygonid:readonly:null:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
+		"did:polygonid:readonly:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
 		did1.String())
 
 	// Polygon | Polygon chain, Main

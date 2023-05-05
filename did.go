@@ -72,7 +72,7 @@ const (
 	UnknownNetwork NetworkID = "unknown"
 
 	// NoNetwork should be used for readonly identity to build readonly flag
-	NoNetwork NetworkID = "null"
+	NoNetwork NetworkID = ""
 )
 
 // DIDMethodByte did method flag representation
@@ -121,11 +121,6 @@ func BuildDIDType(method DIDMethod, blockchain Blockchain,
 	if !ok {
 		return [2]byte{}, ErrDIDMethodNotSupported
 	}
-
-	// If we uncomment this, there would be no way to create type 0xffff
-	//if blockchain == NoChain {
-	//	blockchain = ReadOnly
-	//}
 
 	netFlag := DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}
 	sb, ok := DIDMethodNetwork[method][netFlag]
@@ -216,13 +211,13 @@ func idFromDID(did didw3c.DID) (ID, error) {
 
 	var id ID
 
-	if len(did.IDStrings) != 3 {
+	if len(did.IDStrings) > 3 || len(did.IDStrings) < 2 {
 		return id, fmt.Errorf("%w: unexpected number of ID strings",
 			ErrIncorrectDID)
 	}
 
 	var err error
-	id, err = IDFromString(did.IDStrings[2])
+	id, err = IDFromString(did.IDStrings[len(did.IDStrings)-1])
 	if err != nil {
 		return id, fmt.Errorf("%w: can't parse ID string", ErrIncorrectDID)
 	}
@@ -246,7 +241,7 @@ func idFromDID(did didw3c.DID) (ID, error) {
 			ErrIncorrectDID)
 	}
 
-	if string(networkID) != did.IDStrings[1] {
+	if len(did.IDStrings) > 2 && string(networkID) != did.IDStrings[1] {
 		return id, fmt.Errorf("%w: networkIDs in ID and DID are different",
 			ErrIncorrectDID)
 	}
