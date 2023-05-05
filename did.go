@@ -26,9 +26,6 @@ var (
 	ErrNetworkNotSupportedForDID = errors.New("not supported network")
 )
 
-// DIDSchema DID Schema
-const DIDSchema = "did"
-
 // DIDMethod represents did methods
 type DIDMethod string
 
@@ -266,7 +263,7 @@ func ParseDIDFromID(id ID) (*didw3c.DID, error) {
 			ErrMethodUnknown)
 	}
 
-	didParts := []string{DIDSchema, string(method), string(blockchain)}
+	didParts := []string{"did", string(method), string(blockchain)}
 	if string(networkID) != "" {
 		didParts = append(didParts, string(networkID))
 	}
