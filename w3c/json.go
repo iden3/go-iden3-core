@@ -1,4 +1,4 @@
-package did
+package w3c
 
 import "encoding/json"
 
@@ -9,7 +9,7 @@ func (did *DID) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 
-	did3, err := Parse(didStr)
+	did3, err := ParseDID(didStr)
 	if err != nil {
 		return err
 	}

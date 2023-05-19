@@ -1,5 +1,5 @@
 // Got from https://github.com/build-trust/did
-package did
+package w3c
 
 import (
 	"fmt"
@@ -160,28 +160,28 @@ func TestString(t *testing.T) {
 func TestParse(t *testing.T) {
 
 	t.Run("returns error if input is empty", func(t *testing.T) {
-		_, err := Parse("")
+		_, err := ParseDID("")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if input length is less than length 7", func(t *testing.T) {
-		_, err := Parse("did:")
+		_, err := ParseDID("did:")
 		assert(t, false, err == nil)
 
-		_, err = Parse("did:a")
+		_, err = ParseDID("did:a")
 		assert(t, false, err == nil)
 
-		_, err = Parse("did:a:")
+		_, err = ParseDID("did:a:")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if input does not have a second : to mark end of method", func(t *testing.T) {
-		_, err := Parse("did:aaaaaaaaaaa")
+		_, err := ParseDID("did:aaaaaaaaaaa")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if method is empty", func(t *testing.T) {
-		_, err := Parse("did::aaaaaaaaaaa")
+		_, err := ParseDID("did::aaaaaaaaaaa")
 		assert(t, false, err == nil)
 	})
 
@@ -194,53 +194,53 @@ func TestParse(t *testing.T) {
 			"did:a:123:#abc",
 		}
 		for _, did := range dids {
-			_, err := Parse(did)
+			_, err := ParseDID(did)
 			assert(t, false, err == nil, "Input: %s", did)
 		}
 	})
 
 	t.Run("returns error if input does not begin with did: scheme", func(t *testing.T) {
-		_, err := Parse("a:12345")
+		_, err := ParseDID("a:12345")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returned value is nil if input does not begin with did: scheme", func(t *testing.T) {
-		d, _ := Parse("a:12345")
+		d, _ := ParseDID("a:12345")
 		assert(t, true, d == nil)
 	})
 
 	t.Run("succeeds if it has did prefix and length is greater than 7", func(t *testing.T) {
-		d, err := Parse("did:a:1")
+		d, err := ParseDID("did:a:1")
 		assert(t, nil, err)
 		assert(t, true, d != nil)
 	})
 
 	t.Run("succeeds to extract method", func(t *testing.T) {
-		d, err := Parse("did:a:1")
+		d, err := ParseDID("did:a:1")
 		assert(t, nil, err)
 		assert(t, "a", d.Method)
 
-		d, err = Parse("did:abcdef:11111")
+		d, err = ParseDID("did:abcdef:11111")
 		assert(t, nil, err)
 		assert(t, "abcdef", d.Method)
 	})
 
 	t.Run("returns error if method has any other char than 0-9 or a-z", func(t *testing.T) {
-		_, err := Parse("did:aA:1")
+		_, err := ParseDID("did:aA:1")
 		assert(t, false, err == nil)
 
-		_, err = Parse("did:aa-aa:1")
+		_, err = ParseDID("did:aa-aa:1")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("succeeds to extract id", func(t *testing.T) {
-		d, err := Parse("did:a:1")
+		d, err := ParseDID("did:a:1")
 		assert(t, nil, err)
 		assert(t, "1", d.ID)
 	})
 
 	t.Run("succeeds to extract id parts", func(t *testing.T) {
-		d, err := Parse("did:a:123:456")
+		d, err := ParseDID("did:a:123:456")
 		assert(t, nil, err)
 
 		parts := d.IDStrings
@@ -249,39 +249,39 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("returns error if ID has an invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:1&&111")
+		_, err := ParseDID("did:a:1&&111")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if param name is empty", func(t *testing.T) {
-		_, err := Parse("did:a:123:456;")
+		_, err := ParseDID("did:a:123:456;")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if Param name has an invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:123:456;serv&ce")
+		_, err := ParseDID("did:a:123:456;serv&ce")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if Param value has an invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:123:456;service=ag&nt")
+		_, err := ParseDID("did:a:123:456;service=ag&nt")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if Param name has an invalid percent encoded", func(t *testing.T) {
-		_, err := Parse("did:a:123:456;ser%2ge")
+		_, err := ParseDID("did:a:123:456;ser%2ge")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if Param does not exist for value", func(t *testing.T) {
-		_, err := Parse("did:a:123:456;=value")
+		_, err := ParseDID("did:a:123:456;=value")
 		assert(t, false, err == nil)
 	})
 
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract generic param with name and value", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service==agent")
+		d, err := ParseDID("did:a:123:456;service==agent")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service=agent", d.Params[0].String())
@@ -292,7 +292,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract generic param with name only", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service")
+		d, err := ParseDID("did:a:123:456;service")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service", d.Params[0].String())
@@ -303,7 +303,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract generic param with name only and empty param", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service=")
+		d, err := ParseDID("did:a:123:456;service=")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service", d.Params[0].String())
@@ -314,7 +314,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract method param with name and value", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;foo:bar=baz")
+		d, err := ParseDID("did:a:123:456;foo:bar=baz")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "foo:bar=baz", d.Params[0].String())
@@ -325,7 +325,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract method param with name only", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;foo:bar")
+		d, err := ParseDID("did:a:123:456;foo:bar")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "foo:bar", d.Params[0].String())
@@ -336,7 +336,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds with percent encoded chars in param name and value", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;serv%20ice=val%20ue")
+		d, err := ParseDID("did:a:123:456;serv%20ice=val%20ue")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "serv%20ice=val%20ue", d.Params[0].String())
@@ -347,7 +347,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract multiple generic params with name only", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;foo;bar")
+		d, err := ParseDID("did:a:123:456;foo;bar")
 		assert(t, nil, err)
 		assert(t, 2, len(d.Params))
 		assert(t, "foo", d.Params[0].Name)
@@ -359,7 +359,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract multiple params with names and values", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service=agent;foo:bar=baz")
+		d, err := ParseDID("did:a:123:456;service=agent;foo:bar=baz")
 		assert(t, nil, err)
 		assert(t, 2, len(d.Params))
 		assert(t, "service", d.Params[0].Name)
@@ -371,7 +371,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract path after generic param", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service==value/a/b")
+		d, err := ParseDID("did:a:123:456;service==value/a/b")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service=value", d.Params[0].String())
@@ -386,7 +386,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract path after generic param name and no value", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service=/a/b")
+		d, err := ParseDID("did:a:123:456;service=/a/b")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service", d.Params[0].String())
@@ -401,7 +401,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract query after generic param", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service=value?abc")
+		d, err := ParseDID("did:a:123:456;service=value?abc")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service=value", d.Params[0].String())
@@ -413,7 +413,7 @@ func TestParse(t *testing.T) {
 	// nolint: dupl
 	// test for params look similar to linter
 	t.Run("succeeds to extract fragment after generic param", func(t *testing.T) {
-		d, err := Parse("did:a:123:456;service=value#xyz")
+		d, err := ParseDID("did:a:123:456;service=value#xyz")
 		assert(t, nil, err)
 		assert(t, 1, len(d.Params))
 		assert(t, "service=value", d.Params[0].String())
@@ -423,13 +423,13 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("succeeds to extract path", func(t *testing.T) {
-		d, err := Parse("did:a:123:456/someService")
+		d, err := ParseDID("did:a:123:456/someService")
 		assert(t, nil, err)
 		assert(t, "someService", d.Path)
 	})
 
 	t.Run("succeeds to extract path segements", func(t *testing.T) {
-		d, err := Parse("did:a:123:456/a/b")
+		d, err := ParseDID("did:a:123:456/a/b")
 		assert(t, nil, err)
 
 		segments := d.PathSegments
@@ -438,7 +438,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("succeeds with percent encoded chars in path", func(t *testing.T) {
-		d, err := Parse("did:a:123:456/a/%20a")
+		d, err := ParseDID("did:a:123:456/a/%20a")
 		assert(t, nil, err)
 		assert(t, "a/%20a", d.Path)
 	})
@@ -453,38 +453,38 @@ func TestParse(t *testing.T) {
 			"did:a:123:456/%A%",
 		}
 		for _, did := range dids {
-			_, err := Parse(did)
+			_, err := ParseDID(did)
 			assert(t, false, err == nil, "Input: %s", did)
 		}
 	})
 
 	t.Run("returns error if path is empty but there is a slash", func(t *testing.T) {
-		_, err := Parse("did:a:123:456/")
+		_, err := ParseDID("did:a:123:456/")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("returns error if first path segment is empty", func(t *testing.T) {
-		_, err := Parse("did:a:123:456//abc")
+		_, err := ParseDID("did:a:123:456//abc")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("does not fail if second path segment is empty", func(t *testing.T) {
-		_, err := Parse("did:a:123:456/abc//pqr")
+		_, err := ParseDID("did:a:123:456/abc//pqr")
 		assert(t, nil, err)
 	})
 
 	t.Run("returns error  if path has invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:123:456/ssss^sss")
+		_, err := ParseDID("did:a:123:456/ssss^sss")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("does not fail if path has atleast one segment and a trailing slash", func(t *testing.T) {
-		_, err := Parse("did:a:123:456/a/b/")
+		_, err := ParseDID("did:a:123:456/a/b/")
 		assert(t, nil, err)
 	})
 
 	t.Run("succeeds to extract query after idstring", func(t *testing.T) {
-		d, err := Parse("did:a:123?abc")
+		d, err := ParseDID("did:a:123?abc")
 		assert(t, nil, err)
 		assert(t, "a", d.Method)
 		assert(t, "123", d.ID)
@@ -492,7 +492,7 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("succeeds to extract query after path", func(t *testing.T) {
-		d, err := Parse("did:a:123/a/b/c?abc")
+		d, err := ParseDID("did:a:123/a/b/c?abc")
 		assert(t, nil, err)
 		assert(t, "a", d.Method)
 		assert(t, "123", d.ID)
@@ -501,14 +501,14 @@ func TestParse(t *testing.T) {
 	})
 
 	t.Run("succeeds to extract fragment after query", func(t *testing.T) {
-		d, err := Parse("did:a:123?abc#xyz")
+		d, err := ParseDID("did:a:123?abc#xyz")
 		assert(t, nil, err)
 		assert(t, "abc", d.Query)
 		assert(t, "xyz", d.Fragment)
 	})
 
 	t.Run("succeeds with percent encoded chars in query", func(t *testing.T) {
-		d, err := Parse("did:a:123?ab%20c")
+		d, err := ParseDID("did:a:123?ab%20c")
 		assert(t, nil, err)
 		assert(t, "ab%20c", d.Query)
 	})
@@ -523,24 +523,24 @@ func TestParse(t *testing.T) {
 			"did:a:123:456?%A%",
 		}
 		for _, did := range dids {
-			_, err := Parse(did)
+			_, err := ParseDID(did)
 			assert(t, false, err == nil, "Input: %s", did)
 		}
 	})
 
 	t.Run("returns error if query has invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:123:456?ssss^sss")
+		_, err := ParseDID("did:a:123:456?ssss^sss")
 		assert(t, false, err == nil)
 	})
 
 	t.Run("succeeds to extract fragment", func(t *testing.T) {
-		d, err := Parse("did:a:123:456#keys-1")
+		d, err := ParseDID("did:a:123:456#keys-1")
 		assert(t, nil, err)
 		assert(t, "keys-1", d.Fragment)
 	})
 
 	t.Run("succeeds with percent encoded chars in fragment", func(t *testing.T) {
-		d, err := Parse("did:a:123:456#aaaaaa%20a")
+		d, err := ParseDID("did:a:123:456#aaaaaa%20a")
 		assert(t, nil, err)
 		assert(t, "aaaaaa%20a", d.Fragment)
 	})
@@ -555,13 +555,13 @@ func TestParse(t *testing.T) {
 			"did:xyz:pqr#%A%",
 		}
 		for _, did := range dids {
-			_, err := Parse(did)
+			_, err := ParseDID(did)
 			assert(t, false, err == nil, "Input: %s", did)
 		}
 	})
 
 	t.Run("fails if fragment has invalid char", func(t *testing.T) {
-		_, err := Parse("did:a:123:456#ssss^sss")
+		_, err := ParseDID("did:a:123:456#ssss^sss")
 		assert(t, false, err == nil)
 	})
 }

@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strings"
 
-	didw3c "github.com/iden3/go-iden3-core/v2/did"
+	"github.com/iden3/go-iden3-core/v2/w3c"
 )
 
 var (
@@ -166,20 +166,22 @@ func FindDIDMethodByValue(b byte) (DIDMethod, error) {
 	return DIDMethodOther, ErrDIDMethodNotSupported
 }
 
-// DIDGenesisFromIdenState calculates the genesis ID from an Identity State and returns it as DID
-func DIDGenesisFromIdenState(typ [2]byte, state *big.Int) (*didw3c.DID, error) {
-	id, err := IdGenesisFromIdenState(typ, state)
+// NewDIDFromIdenState calculates the genesis ID from an Identity State and
+// returns it as a DID
+func NewDIDFromIdenState(typ [2]byte, state *big.Int) (*w3c.DID, error) {
+	id, err := NewIDFromIdenState(typ, state)
 	if err != nil {
 		return nil, err
 	}
 	return ParseDIDFromID(*id)
 }
 
-func DIDFromGenesis(typ [2]byte, genesis [genesisLn]byte) (*didw3c.DID, error) {
+// NewDID creates a new *w3c.DID from the type and the genesis
+func NewDID(typ [2]byte, genesis [genesisLn]byte) (*w3c.DID, error) {
 	return ParseDIDFromID(NewID(typ, genesis))
 }
 
-func IDFromDID(did didw3c.DID) (ID, error) {
+func IDFromDID(did w3c.DID) (ID, error) {
 	id, err := idFromDID(did)
 	if errors.Is(err, ErrMethodUnknown) {
 		return newIDFromUnsupportedDID(did), nil
@@ -187,7 +189,7 @@ func IDFromDID(did didw3c.DID) (ID, error) {
 	return id, err
 }
 
-func newIDFromUnsupportedDID(did didw3c.DID) ID {
+func newIDFromUnsupportedDID(did w3c.DID) ID {
 	hash := sha256.Sum256([]byte(did.String()))
 	var genesis [genesisLn]byte
 	copy(genesis[:], hash[len(hash)-genesisLn:])
@@ -199,7 +201,7 @@ func newIDFromUnsupportedDID(did didw3c.DID) ID {
 	return NewID(tp, genesis)
 }
 
-func idFromDID(did didw3c.DID) (ID, error) {
+func idFromDID(did w3c.DID) (ID, error) {
 	method := DIDMethod(did.Method)
 	_, ok := DIDMethodByte[method]
 	if !ok || method == DIDMethodOther {
@@ -247,7 +249,7 @@ func idFromDID(did didw3c.DID) (ID, error) {
 }
 
 // ParseDIDFromID returns DID from ID
-func ParseDIDFromID(id ID) (*didw3c.DID, error) {
+func ParseDIDFromID(id ID) (*w3c.DID, error) {
 
 	if !CheckChecksum(id) {
 		return nil, fmt.Errorf("%w: invalid checksum", ErrUnsupportedID)
@@ -272,7 +274,7 @@ func ParseDIDFromID(id ID) (*didw3c.DID, error) {
 
 	didString := strings.Join(didParts, ":")
 
-	did, err := didw3c.Parse(didString)
+	did, err := w3c.ParseDID(didString)
 	if err != nil {
 		return nil, err
 	}

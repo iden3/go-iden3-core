@@ -200,10 +200,8 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-// IdGenesisFromIdenState calculates the genesis ID from an Identity State.
-func IdGenesisFromIdenState(typ [2]byte, //nolint:revive
-	state *big.Int) (*ID, error) {
-
+// NewIDFromIdenState calculates the genesis ID from an Identity State.
+func NewIDFromIdenState(typ [2]byte, state *big.Int) (*ID, error) {
 	var idGenesisBytes [genesisLn]byte
 
 	idenStateData, err := NewElemBytesFromInt(state)
@@ -229,7 +227,7 @@ func CheckGenesisStateID(id, state *big.Int) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	identifier, err := IdGenesisFromIdenState(userID.Type(), state)
+	identifier, err := NewIDFromIdenState(userID.Type(), state)
 	if err != nil {
 		return false, err
 	}

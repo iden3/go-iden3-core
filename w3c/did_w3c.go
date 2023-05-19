@@ -1,7 +1,7 @@
-// Package core is a set of tools to work with Decentralized Identifiers (DIDs) as described
-// in the DID spec https://w3c.github.io/did-core/
+// Package w3c is a set of tools to work with Decentralized Identifiers (DIDs)
+// as described in the DID spec https://w3c.github.io/did-core/
 // Got from https://github.com/build-trust/did
-package did
+package w3c
 
 import (
 	"fmt"
@@ -161,9 +161,9 @@ func (d *DID) String() string {
 	return buf.String()
 }
 
-// Parse parses the input string into a DID structure.
-func Parse(input string) (*DID, error) {
-	// intialize the parser state
+// ParseDID parses the input string into a DID structure.
+func ParseDID(input string) (*DID, error) {
+	// initialize the parser state
 	p := &parser{input: input, out: &DID{}}
 
 	// the parser state machine is implemented as a loop over parser steps
@@ -201,7 +201,7 @@ func Parse(input string) (*DID, error) {
 //	+ `:` (1 char)
 //	+ atleast one idchar (1 char)
 //
-// i.e atleast 7 chars
+// i.e. at least 7 chars
 // The current specification does not take a position on maximum length of a DID.
 // https://w3c-ccg.github.io/did-spec/#upper-limits-on-did-character-length
 func (p *parser) checkLength() parserStep {
@@ -286,7 +286,7 @@ func (p *parser) parseMethod() parserStep {
 //	idstring          = 1*idchar
 //	idchar            = ALPHA / DIGIT / "." / "-"
 //
-// p.out.IDStrings is later concatented by the Parse function before it returns.
+// p.out.IDStrings is later concatented by the ParseDID function before it returns.
 func (p *parser) parseID() parserStep {
 	input := p.input
 	inputLength := len(input)
