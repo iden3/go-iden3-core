@@ -50,6 +50,8 @@ const (
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
 	ReadOnly Blockchain = "readonly"
+	// NoChain can be used for identity to build readonly flag
+	NoChain Blockchain = ""
 )
 
 // NetworkID is method specific network identifier
