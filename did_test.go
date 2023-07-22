@@ -365,3 +365,16 @@ func ethAddrFromHex(ea string) [20]byte {
 	copy(ethAddr[:], eaBytes)
 	return ethAddr
 }
+
+func TestSnipperGetDIDByAddress(t *testing.T) {
+	ethAddrHex := "5594abDa35bDb3B3C4aCc41d7f12DBD8C2C7a307"
+	genesis := genFromHex("00000000000000" + ethAddrHex)
+	tp, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
+	require.NoError(t, err)
+	id0 := NewID(tp, genesis)
+
+	s := fmt.Sprintf("did:polygonid:polygon:mumbai:%v", id0.String())
+	fmt.Println(s)
+	require.Equal(t,
+		"did:polygonid:polygon:mumbai:2qCU58EJgrELmnPiq6ofCHKudU7LoNxv6nG8Gmpata", s)
+}
