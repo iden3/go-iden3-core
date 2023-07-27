@@ -15,10 +15,6 @@ var (
 	// - first 2 bytes: `00000000 00000000`
 	TypeDefault = [2]byte{0x00, 0x00}
 
-	// TypeReadOnly specifies the readonly identity, this type of identity MUST not be published on chain
-	// - first 2 bytes: `00000000 00000001`
-	TypeReadOnly = [2]byte{0b00000000, 0b00000001}
-
 	// TypeDID specifies the identity with iden3 method in specific networks
 	// - first byte: did method e.g. 00000001 - iden3 did method
 	// - second byte - blockchain network
@@ -29,6 +25,7 @@ var (
 )
 
 const idLength = 31
+const genesisLn = 27
 
 // ID is a byte array with
 // [  type  | root_genesis | checksum ]
@@ -37,13 +34,13 @@ const idLength = 31
 type ID [idLength]byte
 
 // NewID creates a new ID from a type and genesis
-func NewID(typ [2]byte, genesis [27]byte) ID {
+func NewID(typ [2]byte, genesis [genesisLn]byte) ID {
 	checksum := CalculateChecksum(typ, genesis)
-	var b [31]byte
+	var b ID
 	copy(b[:2], typ[:])
 	copy(b[2:], genesis[:])
 	copy(b[29:], checksum[:])
-	return ID(b)
+	return b
 }
 
 // ProfileID calculates the Profile ID from the Identity and profile nonce. If nonce is empty or zero ID is returned
@@ -63,8 +60,8 @@ func ProfileID(id ID, nonce *big.Int) (ID, error) {
 		return ID{}, err
 	}
 
-	var genesis [27]byte
-	copy(genesis[:], firstNBytes(hash, 27))
+	var genesis [genesisLn]byte
+	copy(genesis[:], firstNBytes(hash, genesisLn))
 	return NewID(typ, genesis), nil
 }
 
@@ -163,10 +160,9 @@ func IDFromInt(i *big.Int) (ID, error) {
 }
 
 // DecomposeID returns type, genesis and checksum from an ID
-func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
-	var typ [2]byte
-	var genesis [27]byte
-	var checksum [2]byte
+func DecomposeID(id ID) (typ [2]byte, genesis [genesisLn]byte, checksum [2]byte,
+	err error) {
+
 	copy(typ[:], id[:2])
 	copy(genesis[:], id[2:len(id)-2])
 	copy(checksum[:], id[len(id)-2:])
@@ -177,7 +173,7 @@ func DecomposeID(id ID) ([2]byte, [27]byte, [2]byte, error) {
 // where checksum:
 //
 //	hash( [type | root_genesis ] )
-func CalculateChecksum(typ [2]byte, genesis [27]byte) [2]byte {
+func CalculateChecksum(typ [2]byte, genesis [genesisLn]byte) [2]byte {
 	var toChecksum [29]byte
 	copy(toChecksum[:], typ[:])
 	copy(toChecksum[2:], genesis[:])
@@ -204,11 +200,9 @@ func CheckChecksum(id ID) bool {
 	return bytes.Equal(c[:], checksum[:])
 }
 
-// IdGenesisFromIdenState calculates the genesis ID from an Identity State.
-func IdGenesisFromIdenState(typ [2]byte, //nolint:revive
-	state *big.Int) (*ID, error) {
-
-	var idGenesisBytes [27]byte
+// NewIDFromIdenState calculates the genesis ID from an Identity State.
+func NewIDFromIdenState(typ [2]byte, state *big.Int) (*ID, error) {
+	var idGenesisBytes [genesisLn]byte
 
 	idenStateData, err := NewElemBytesFromInt(state)
 	if err != nil {
@@ -216,7 +210,7 @@ func IdGenesisFromIdenState(typ [2]byte, //nolint:revive
 	}
 
 	// we take last 27 bytes, because of swapped endianness
-	copy(idGenesisBytes[:], idenStateData[len(idenStateData)-27:])
+	copy(idGenesisBytes[:], idenStateData[len(idenStateData)-genesisLn:])
 	id := NewID(typ, idGenesisBytes)
 	return &id, nil
 }
@@ -233,7 +227,7 @@ func CheckGenesisStateID(id, state *big.Int) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	identifier, err := IdGenesisFromIdenState(userID.Type(), state)
+	identifier, err := NewIDFromIdenState(userID.Type(), state)
 	if err != nil {
 		return false, err
 	}

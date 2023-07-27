@@ -1,4 +1,4 @@
-module github.com/iden3/go-iden3-core
+module github.com/iden3/go-iden3-core/v2
 
 go 1.18
 
