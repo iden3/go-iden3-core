@@ -65,6 +65,8 @@ const (
 
 	// Goerli is ethereum goerli test network
 	Goerli NetworkID = "goerli" // goerli
+	// Sepolia is ethereum Sepolia test network
+	Sepolia NetworkID = "sepolia"
 	// UnknownNetwork is used when it's not possible to retrieve network from identifier
 	UnknownNetwork NetworkID = "unknown"
 
@@ -93,8 +95,9 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
 		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 
-		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
-		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
+		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
+		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
+		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
 	},
 	DIDMethodPolygonID: {
 		{Blockchain: ReadOnly, NetworkID: NoNetwork}: 0b00000000,
@@ -102,8 +105,9 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
 		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
 
-		{Blockchain: Ethereum, NetworkID: Main}:   0b00100000 | 0b00000001,
-		{Blockchain: Ethereum, NetworkID: Goerli}: 0b00100000 | 0b00000010,
+		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
+		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
+		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
 	},
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,
