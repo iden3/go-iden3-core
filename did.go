@@ -71,7 +71,7 @@ const (
 	// Sepolia is ethereum Sepolia test network
 	Sepolia NetworkID = "sepolia"
 
-	// Test is test network for zkEVM
+	// Test is test network
 	Test NetworkID = "test"
 
 	// UnknownNetwork is used when it's not possible to retrieve network from identifier
