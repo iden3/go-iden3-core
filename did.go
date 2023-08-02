@@ -46,6 +46,8 @@ const (
 	Ethereum Blockchain = "eth"
 	// Polygon is polygon blockchain network
 	Polygon Blockchain = "polygon"
+	// ZkEVM is zkEVM blockchain network
+	ZkEVM Blockchain = "zkevm"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
@@ -58,8 +60,9 @@ const (
 type NetworkID string
 
 const (
-	// Main is ethereum main network
+	// Main is main network
 	Main NetworkID = "main"
+
 	// Mumbai is polygon mumbai test network
 	Mumbai NetworkID = "mumbai"
 
@@ -67,9 +70,12 @@ const (
 	Goerli NetworkID = "goerli" // goerli
 	// Sepolia is ethereum Sepolia test network
 	Sepolia NetworkID = "sepolia"
+
+	// Test is test network
+	Test NetworkID = "test"
+
 	// UnknownNetwork is used when it's not possible to retrieve network from identifier
 	UnknownNetwork NetworkID = "unknown"
-
 	// NoNetwork should be used for readonly identity to build readonly flag
 	NoNetwork NetworkID = ""
 )
@@ -98,6 +104,9 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
 		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
+
+		{Blockchain: ZkEVM, NetworkID: Main}: 0b00110000 | 0b00000001,
+		{Blockchain: ZkEVM, NetworkID: Test}: 0b00110000 | 0b00000010,
 	},
 	DIDMethodPolygonID: {
 		{Blockchain: ReadOnly, NetworkID: NoNetwork}: 0b00000000,
@@ -108,6 +117,9 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
 		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
 		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
+
+		{Blockchain: ZkEVM, NetworkID: Main}: 0b00110000 | 0b00000001,
+		{Blockchain: ZkEVM, NetworkID: Test}: 0b00110000 | 0b00000010,
 	},
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,

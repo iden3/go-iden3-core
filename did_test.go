@@ -180,6 +180,20 @@ func TestDID_PolygonID_Types(t *testing.T) {
 			net:     Mumbai,
 			wantDID: "did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b",
 		},
+		{
+			title:   "Polygon | zkEVM chain, main",
+			method:  DIDMethodPolygonID,
+			chain:   ZkEVM,
+			net:     Main,
+			wantDID: "did:polygonid:zkevm:main:2wQjmkL1SsgqC7AuZdUcaXsUVfEi1i58VEhm3r2r8F",
+		},
+		{
+			title:   "Polygon | zkEVM chain, test",
+			method:  DIDMethodPolygonID,
+			chain:   ZkEVM,
+			net:     Test,
+			wantDID: "did:polygonid:zkevm:test:2wcMpvr8NgWTfqN6ChaFEx1qRnLREXhjeoJ45pFyw5",
+		},
 	}
 
 	for i := range testCases {
