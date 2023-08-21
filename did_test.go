@@ -14,26 +14,26 @@ import (
 func TestParseDID(t *testing.T) {
 
 	// did
-	didStr := "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
+	didStr := "did:iofinnet:ioblockchain:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"
 
 	did, err := w3c.ParseDID(didStr)
 	require.NoError(t, err)
 
 	id, err := IDFromDID(*did)
 	require.NoError(t, err)
-	require.Equal(t, "wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ", id.String())
+	require.Equal(t, "3eha62DzGq3a8DFcagAjJPuqikuJvcwMue5ExD817x", id.String())
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodIden3, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Polygon, blockchain)
+	require.Equal(t, IoFinnet, blockchain)
 	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Mumbai, networkID)
+	require.Equal(t, IoBlockchain, networkID)
 
 	// readonly did
-	didStr = "did:iden3:readonly:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
+	didStr = "did:iofinnetid:readonly:tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa"
 
 	did, err = w3c.ParseDID(didStr)
 	require.NoError(t, err)
@@ -43,7 +43,7 @@ func TestParseDID(t *testing.T) {
 	require.Equal(t, "tN4jDinQUdMuJJo6GbVeKPNTPCJ7txyXTWU4T2tJa", id.String())
 	method, err = MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodIden3, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 	blockchain, err = BlockchainFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, ReadOnly, blockchain)
@@ -51,11 +51,11 @@ func TestParseDID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, NoNetwork, networkID)
 
-	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIden3], 0b0}, id.Type())
+	require.Equal(t, [2]byte{DIDMethodByte[DIDMethodIoFinnetID], 0b0}, id.Type())
 }
 
 func TestDID_MarshalJSON(t *testing.T) {
-	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
+	id, err := IDFromString("3eha62DzGq3a8DFcagAjJPuqikuJvcwMue5ExD817x")
 	require.NoError(t, err)
 	did, err := ParseDIDFromID(id)
 	require.NoError(t, err)
@@ -63,13 +63,13 @@ func TestDID_MarshalJSON(t *testing.T) {
 	b, err := did.MarshalJSON()
 	require.NoError(t, err)
 	require.Equal(t,
-		`"did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"`,
+		`"did:iofinnet:ioblockchain:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"`,
 		string(b))
 }
 
 func TestDID_UnmarshalJSON(t *testing.T) {
-	inBytes := `{"obj": "did:iden3:polygon:mumbai:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
-	id, err := IDFromString("wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ")
+	inBytes := `{"obj": "did:iofinnetid:iofinnet:ioblockchain:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
+	id, err := IDFromString("3eha62DzGq3a8DFcagAjJPuqikuJvcwMue5ExD817x")
 	require.NoError(t, err)
 	var obj struct {
 		Obj *w3c.DID `json:"obj"`
@@ -77,25 +77,25 @@ func TestDID_UnmarshalJSON(t *testing.T) {
 	err = json.Unmarshal([]byte(inBytes), &obj)
 	require.NoError(t, err)
 	require.NotNil(t, obj.Obj)
-	require.Equal(t, string(DIDMethodIden3), obj.Obj.Method)
+	require.Equal(t, string(DIDMethodIoFinnetID), obj.Obj.Method)
 
 	id2, err := IDFromDID(*obj.Obj)
 	require.NoError(t, err)
 	method, err := MethodFromID(id2)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodIden3, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 	blockchain, err := BlockchainFromID(id2)
 	require.NoError(t, err)
-	require.Equal(t, Polygon, blockchain)
+	require.Equal(t, IoFinnet, blockchain)
 	networkID, err := NetworkIDFromID(id2)
 	require.NoError(t, err)
-	require.Equal(t, Mumbai, networkID)
+	require.Equal(t, IoBlockchain, networkID)
 
 	require.Equal(t, id, id2)
 }
 
 func TestDID_UnmarshalJSON_Error(t *testing.T) {
-	inBytes := `{"obj": "did:iden3:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
+	inBytes := `{"obj": "did:iofinnetid:eth:goerli:wyFiV4w71QgWPn6bYLsZoysFay66gKtVa9kfu6yMZ"}`
 	var obj struct {
 		Obj *w3c.DID `json:"obj"`
 	}
@@ -104,25 +104,25 @@ func TestDID_UnmarshalJSON_Error(t *testing.T) {
 
 	//_, err = IDFromDID(*obj.Obj)
 	//require.EqualError(t, err, "invalid did format: blockchain mismatch: "+
-	//	"found polygon in ID but eth in DID")
+	//	"found IoFinnet in ID but eth in DID")
 }
 
 func TestDIDGenesisFromState(t *testing.T) {
 
-	typ0, err := BuildDIDType(DIDMethodIden3, ReadOnly, NoNetwork)
+	typ0, err := BuildDIDType(DIDMethodIoFinnetID, ReadOnly, NoNetwork)
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
 	did, err := NewDIDFromIdenState(typ0, genesisState)
 	require.NoError(t, err)
 
-	require.Equal(t, string(DIDMethodIden3), did.Method)
+	require.Equal(t, string(DIDMethodIoFinnetID), did.Method)
 
 	id, err := IDFromDID(*did)
 	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodIden3, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, ReadOnly, blockchain)
@@ -131,12 +131,12 @@ func TestDIDGenesisFromState(t *testing.T) {
 	require.Equal(t, NoNetwork, networkID)
 
 	require.Equal(t,
-		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
+		"did:iofinnetid:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
 		did.String())
 }
 
 func TestDIDFromID(t *testing.T) {
-	typ0, err := BuildDIDType(DIDMethodIden3, ReadOnly, NoNetwork)
+	typ0, err := BuildDIDType(DIDMethodIoFinnetID, ReadOnly, NoNetwork)
 	require.NoError(t, err)
 
 	genesisState := big.NewInt(1)
@@ -147,11 +147,11 @@ func TestDIDFromID(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		"did:iden3:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
+		"did:iofinnetid:readonly:tJ93RwaVfE1PEMxd5rpZZuPtLCwbEaDCrNBhAy8HM",
 		did.String())
 }
 
-func TestDID_PolygonID_Types(t *testing.T) {
+func TestDID_IoFinnetID_Types(t *testing.T) {
 	testCases := []struct {
 		title   string
 		method  DIDMethod
@@ -160,39 +160,18 @@ func TestDID_PolygonID_Types(t *testing.T) {
 		wantDID string
 	}{
 		{
-			title:   "Polygon no chain, no network",
-			method:  DIDMethodPolygonID,
+			title:   "IoFinnet no chain, no network",
+			method:  DIDMethodIoFinnetID,
 			chain:   ReadOnly,
 			net:     NoNetwork,
-			wantDID: "did:polygonid:readonly:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
+			wantDID: "did:iofinnetid:readonly:2mbH5rt9zKT1mTivFAie88onmfQtBU9RQhjNPLwFZh",
 		},
 		{
-			title:   "Polygon | Polygon chain, Main",
-			method:  DIDMethodPolygonID,
-			chain:   Polygon,
-			net:     Main,
-			wantDID: "did:polygonid:polygon:main:2pzr1wiBm3Qhtq137NNPPDFvdk5xwRsjDFnMxpnYHm",
-		},
-		{
-			title:   "Polygon | Polygon chain, Mumbai",
-			method:  DIDMethodPolygonID,
-			chain:   Polygon,
-			net:     Mumbai,
-			wantDID: "did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b",
-		},
-		{
-			title:   "Polygon | zkEVM chain, main",
-			method:  DIDMethodPolygonID,
-			chain:   ZkEVM,
-			net:     Main,
-			wantDID: "did:polygonid:zkevm:main:2wQjmkL1SsgqC7AuZdUcaXsUVfEi1i58VEhm3r2r8F",
-		},
-		{
-			title:   "Polygon | zkEVM chain, test",
-			method:  DIDMethodPolygonID,
-			chain:   ZkEVM,
-			net:     Test,
-			wantDID: "did:polygonid:zkevm:test:2wcMpvr8NgWTfqN6ChaFEx1qRnLREXhjeoJ45pFyw5",
+			title:   "IoFinnet | IoFinnet chain, IoBlockchain",
+			method:  DIDMethodIoFinnetID,
+			chain:   IoFinnet,
+			net:     IoBlockchain,
+			wantDID: "did:iofinnetid:iofinnet:ioblockchain:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b",
 		},
 	}
 
@@ -217,7 +196,7 @@ func TestDID_PolygonID_Types(t *testing.T) {
 	}
 }
 
-func TestDID_PolygonID_ParseDIDFromID(t *testing.T) {
+func TestDID_IoFinnetID_ParseDIDFromID(t *testing.T) {
 	id1, err := IDFromString("2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x")
 	require.NoError(t, err)
 
@@ -229,28 +208,28 @@ func TestDID_PolygonID_ParseDIDFromID(t *testing.T) {
 		[]byte("A51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"))
 	require.NoError(t, err)
 
-	require.Equal(t, string(DIDMethodPolygonID), did.Method)
-	wantIDs := []string{"polygon", "mumbai",
+	require.Equal(t, string(DIDMethodIoFinnetID), did.Method)
+	wantIDs := []string{"iofinnet", "ioblockchain",
 		"2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x"}
 	require.Equal(t, wantIDs, did.IDStrings)
 	id, err := IDFromDID(*did)
 	require.NoError(t, err)
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonID, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Polygon, blockchain)
+	require.Equal(t, IoFinnet, blockchain)
 	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Mumbai, networkID)
+	require.Equal(t, IoBlockchain, networkID)
 
 	ethAddr, err := EthAddressFromID(id)
 	require.NoError(t, err)
 	require.Equal(t, addressBytesExp, ethAddr)
 
 	require.Equal(t,
-		"did:polygonid:polygon:mumbai:2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x",
+		"did:iofinnetid:iofinnet:ioblockchain:2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x",
 		did.String())
 }
 
@@ -258,11 +237,11 @@ func TestDecompose(t *testing.T) {
 	wantIDHex := "2qCU58EJgrEM9NKvHkvg5NFWUiJPgN3M3LnCr98j3x"
 	ethAddrHex := "a51c1fc2f0d1a1b8494ed1fe312d7c3a78ed91c0"
 	genesis := genFromHex("00000000000000" + ethAddrHex)
-	tp, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
+	tp, err := BuildDIDType(DIDMethodIoFinnetID, IoFinnet, IoBlockchain)
 	require.NoError(t, err)
 	id0 := NewID(tp, genesis)
 
-	s := fmt.Sprintf("did:polygonid:polygon:mumbai:%v", id0.String())
+	s := fmt.Sprintf("did:iofinnetid:iofinnet:ioblockchain:%v", id0.String())
 
 	did, err := w3c.ParseDID(s)
 	require.NoError(t, err)
@@ -276,15 +255,15 @@ func TestDecompose(t *testing.T) {
 
 	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethodPolygonID, method)
+	require.Equal(t, DIDMethodIoFinnetID, method)
 
 	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Polygon, blockchain)
+	require.Equal(t, IoFinnet, blockchain)
 
 	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Mumbai, networkID)
+	require.Equal(t, IoBlockchain, networkID)
 
 	ethAddr, err := EthAddressFromID(id)
 	require.NoError(t, err)
@@ -337,7 +316,7 @@ func TestGenesisFromEthAddress(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wantGenesis, genesis[:])
 
-	tp2, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
+	tp2, err := BuildDIDType(DIDMethodIoFinnetID, IoFinnet, IoBlockchain)
 	require.NoError(t, err)
 
 	id := NewID(tp2, genesis)

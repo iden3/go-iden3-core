@@ -77,7 +77,7 @@ func TestIDparsers(t *testing.T) {
 }
 
 func TestIDAsDID(t *testing.T) {
-	typ, err := BuildDIDType(DIDMethodPolygonID, Polygon, Mumbai)
+	typ, err := BuildDIDType(DIDMethodIoFinnetID, IoFinnet, IoBlockchain)
 	require.NoError(t, err)
 	var genesis1 [27]byte
 	genesisbytes := hashBytes([]byte("genesistes1t2"))
@@ -219,20 +219,6 @@ func TestFirstNBytes(t *testing.T) {
 		want := []byte{240, 113, 6, 0, 0}
 		require.Equal(t, want, res)
 	})
-}
-
-func TestIDinDIDFormat(t *testing.T) {
-
-	typ, _ := BuildDIDType(DIDMethodIden3, Ethereum, Main)
-	var genesis [27]byte
-	genesis32bytes := hashBytes([]byte("genesistest"))
-	copy(genesis[:], genesis32bytes[:])
-
-	id := NewID(typ, genesis)
-
-	var checksum [2]byte
-	copy(checksum[:], id[len(id)-2:])
-	require.Equal(t, CalculateChecksum(typ, genesis), checksum)
 }
 
 func TestID_Type(t *testing.T) {

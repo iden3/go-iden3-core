@@ -30,10 +30,8 @@ var (
 type DIDMethod string
 
 const (
-	// DIDMethodIden3
-	DIDMethodIden3 DIDMethod = "iden3"
-	// DIDMethodPolygonID
-	DIDMethodPolygonID DIDMethod = "polygonid"
+	// DIDMethodIoFinnetID
+	DIDMethodIoFinnetID DIDMethod = "iofinnetid"
 	// DIDMethodOther any other method not listed before
 	DIDMethodOther DIDMethod = ""
 )
@@ -42,12 +40,8 @@ const (
 type Blockchain string
 
 const (
-	// Ethereum is ethereum blockchain network
-	Ethereum Blockchain = "eth"
-	// Polygon is polygon blockchain network
-	Polygon Blockchain = "polygon"
-	// ZkEVM is zkEVM blockchain network
-	ZkEVM Blockchain = "zkevm"
+	// IoBlockchain is IoBlockchain blockchain network
+	IoFinnet Blockchain = "iofinnet"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
@@ -63,13 +57,8 @@ const (
 	// Main is main network
 	Main NetworkID = "main"
 
-	// Mumbai is polygon mumbai test network
-	Mumbai NetworkID = "mumbai"
-
-	// Goerli is ethereum goerli test network
-	Goerli NetworkID = "goerli" // goerli
-	// Sepolia is ethereum Sepolia test network
-	Sepolia NetworkID = "sepolia"
+	// IoBlockchain is IoBlockchain ioblockchain test network
+	IoBlockchain NetworkID = "ioblockchain"
 
 	// Test is test network
 	Test NetworkID = "test"
@@ -82,9 +71,8 @@ const (
 
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
-	DIDMethodIden3:     0b00000001,
-	DIDMethodPolygonID: 0b00000010,
-	DIDMethodOther:     0b11111111,
+	DIDMethodIoFinnetID:    0b00000001,
+	DIDMethodOther:			0b00000010,
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -95,31 +83,10 @@ type DIDNetworkFlag struct {
 
 // DIDMethodNetwork is map for did methods and their blockchain networks
 var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
-	DIDMethodIden3: {
+	DIDMethodIoFinnetID: {
 		{Blockchain: ReadOnly, NetworkID: NoNetwork}: 0b00000000,
 
-		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
-		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
-
-		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
-		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
-		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
-
-		{Blockchain: ZkEVM, NetworkID: Main}: 0b00110000 | 0b00000001,
-		{Blockchain: ZkEVM, NetworkID: Test}: 0b00110000 | 0b00000010,
-	},
-	DIDMethodPolygonID: {
-		{Blockchain: ReadOnly, NetworkID: NoNetwork}: 0b00000000,
-
-		{Blockchain: Polygon, NetworkID: Main}:   0b00010000 | 0b00000001,
-		{Blockchain: Polygon, NetworkID: Mumbai}: 0b00010000 | 0b00000010,
-
-		{Blockchain: Ethereum, NetworkID: Main}:    0b00100000 | 0b00000001,
-		{Blockchain: Ethereum, NetworkID: Goerli}:  0b00100000 | 0b00000010,
-		{Blockchain: Ethereum, NetworkID: Sepolia}: 0b00100000 | 0b00000011,
-
-		{Blockchain: ZkEVM, NetworkID: Main}: 0b00110000 | 0b00000001,
-		{Blockchain: ZkEVM, NetworkID: Test}: 0b00110000 | 0b00000010,
+		{Blockchain: IoFinnet, NetworkID: IoBlockchain}:   0b00010000 | 0b00000001,
 	},
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,
