@@ -359,6 +359,22 @@ func NewClaim(sh SchemaHash, options ...Option) (*Claim, error) {
 	return c, nil
 }
 
+// NewClaimFromBigInts creates new Claim from bigInts.
+func NewClaimFromBigInts(raw [8]big.Int) (*Claim, error) {
+	var c Claim
+	for i := 0; i < 4; i++ {
+		err := c.index[i].SetInt(&raw[i])
+		if err != nil {
+			return nil, err
+		}
+		err = c.value[i].SetInt(&raw[i+4])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &c, nil
+}
+
 // WithMerklizedRoot sets root to value v_2 or index i_2
 // Returns ErrSlotOverflow if root value are too big.
 func WithMerklizedRoot(r *big.Int, pos MerklizedRootPosition) Option {
