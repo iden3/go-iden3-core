@@ -388,6 +388,8 @@ func TestDID_Custom_Parse_DID(t *testing.T) {
 	require.NoError(t, err)
 	err = RegisterDIDMethodWithByte("test_method", 0b00000011)
 	require.NoError(t, err)
+	err = RegisterChainID("test_chain", "test_net", 101)
+	require.NoError(t, err)
 	err = RegisterDIDMethodNetwork("test_method", "test_chain", "test_net", 0b0001_0001)
 	require.NoError(t, err)
 	err = RegisterDIDMethodWithByte("method", 0b0000_0100)
@@ -406,10 +408,17 @@ func TestDID_Custom_Parse_DID(t *testing.T) {
 	require.NoError(t, err)
 	n, err = GetNetwork("network")
 	require.NoError(t, err)
-
+	err = RegisterChainID(b, n, 102)
+	require.NoError(t, err)
 	err = RegisterDIDMethodNetwork(m, b, n, 0b0001_0001)
 	require.NoError(t, err)
+
+	err = RegisterChainID(b, Test, 103)
+	require.NoError(t, err)
+
 	err = RegisterDIDMethodNetwork(DIDMethodIden3, b, Test, 0b01000000|0b00000011)
+	require.NoError(t, err)
+	err = RegisterChainID(ReadOnly, n, 104)
 	require.NoError(t, err)
 	err = RegisterDIDMethodNetwork(DIDMethodIden3, ReadOnly, n, 0b01000000|0b00000011)
 	require.NoError(t, err)
@@ -423,6 +432,10 @@ func TestDID_Custom_Parse_DID(t *testing.T) {
 	require.NoError(t, err)
 	err = RegisterNetwork("network2")
 	require.NoError(t, err)
+
+	err = RegisterChainID("chain2", "network2", 105)
+	require.NoError(t, err)
+
 	err = RegisterDIDMethodNetwork("method2", "chain2", "network2", 0b0001_0001)
 	require.NoError(t, err)
 

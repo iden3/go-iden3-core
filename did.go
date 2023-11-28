@@ -235,6 +235,12 @@ func RegisterDIDMethodNetwork(method DIDMethod, blockchain Blockchain, network N
 		return fmt.Errorf("DID method network %s:%s:%s already registered", method, blockchain, network)
 	}
 
+	// check chainID
+	_, err := GetChainID(blockchain, network)
+	if err != nil {
+		return err
+	}
+
 	if _, ok := DIDMethodNetwork[method]; !ok {
 		DIDMethodNetwork[method] = map[DIDNetworkFlag]byte{}
 		DIDMethodNetwork[method][flg] = b
@@ -244,78 +250,6 @@ func RegisterDIDMethodNetwork(method DIDMethod, blockchain Blockchain, network N
 	DIDMethodNetwork[method][flg] = b
 	return nil
 
-}
-
-func RegisterDIDMethodNetworkImplicit(method DIDMethod, blockchain Blockchain, network NetworkID) error {
-	m := DIDMethod(method)
-	if _, ok := didMethods[m]; !ok {
-		didMethods[m] = m
-	}
-
-	b := Blockchain(blockchain)
-	if _, ok := blockchains[b]; !ok {
-		blockchains[b] = b
-	}
-
-	n := NetworkID(network)
-	if _, ok := networks[n]; !ok {
-		networks[n] = n
-	}
-
-	if _, ok := DIDMethodByte[m]; !ok {
-		preLatest := byte(0b00000000)
-		for k, v := range DIDMethodByte {
-			if v > preLatest && k != DIDMethodOther {
-				preLatest = v
-			}
-		}
-		preLatest++
-
-		if preLatest >= DIDMethodByte[DIDMethodOther] {
-			return fmt.Errorf("DID method byte %s already registered", method)
-		}
-		DIDMethodByte[m] = preLatest
-	}
-
-	flg := DIDNetworkFlag{Blockchain: b, NetworkID: n}
-
-	if _, ok := DIDMethodNetwork[m]; !ok {
-		DIDMethodNetwork[m] = map[DIDNetworkFlag]byte{}
-	}
-
-	if _, ok := DIDMethodNetwork[m][flg]; ok {
-		return fmt.Errorf("DID method network %s already registered", method)
-	}
-
-	flags := DIDMethodNetwork[m]
-
-	if len(flags) == 0 {
-		DIDMethodNetwork[m][flg] = 0b00010000 | 0b00000001
-		return nil
-	}
-	// find biggest flag byte
-	preLatest := byte(0b00000000)
-	for _, v := range flags {
-		if v > preLatest {
-			preLatest = v
-		}
-	}
-
-	// split flag byte to 2 parts
-	chainPart := (preLatest >> 4) + 1
-	networkPart := (preLatest & 0b00001111) + 1
-
-	if chainPart >= 0b1111 {
-		return fmt.Errorf(`Reached max number of blockchains for did method: %s`, method)
-	}
-
-	if networkPart >= 0b1111 {
-		return fmt.Errorf(`Reached max number of networks for did method: %s`, method)
-	}
-
-	// join parts
-	DIDMethodNetwork[m][flg] = (chainPart << 4) | networkPart
-	return nil
 }
 
 // BuildDIDType builds bytes type from chain and network
