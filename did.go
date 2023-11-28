@@ -292,7 +292,7 @@ func RegisterDIDMethodNetworkImplicit(method DIDMethod, blockchain Blockchain, n
 		return fmt.Errorf("DID method network %s already registered", method)
 	}
 
-	flags, _ := DIDMethodNetwork[m]
+	flags := DIDMethodNetwork[m]
 
 	if len(flags) == 0 {
 		DIDMethodNetwork[m][flg] = 0b00010000 | 0b00000001
