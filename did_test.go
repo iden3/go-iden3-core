@@ -381,61 +381,65 @@ func ethAddrFromHex(ea string) [20]byte {
 }
 
 func TestDID_Custom_Parse_DID(t *testing.T) {
-	net := "test_net"
-	met := "test_method"
-	chain := "test_chain"
 	var err error
-	err = RegisterBlockchain(chain)
+	err = RegisterBlockchain("test_chain")
 	require.NoError(t, err)
-	err = RegisterNetwork(net)
+	err = RegisterNetwork("test_net")
 	require.NoError(t, err)
-	err = RegisterDIDMethod(met)
+	err = RegisterDIDMethodWithByte("test_method", 0b00000011)
 	require.NoError(t, err)
-	err = RegisterDIDMethodByte(DIDMethod(met), 0b00000011)
+	err = RegisterDIDMethodNetwork("test_method", "test_chain", "test_net", 0b0001_0001)
 	require.NoError(t, err)
-	b, err := GetBlockchain(chain)
+	err = RegisterDIDMethodWithByte("method", 0b0000_0100)
 	require.NoError(t, err)
-	m, err := GetDIDMethod(met)
+	err = RegisterBlockchain("chain")
 	require.NoError(t, err)
-	n, err := GetNetwork(net)
+	err = RegisterNetwork("network")
 	require.NoError(t, err)
+
+	var m DIDMethod
+	var b Blockchain
+	var n NetworkID
+	m, err = GetDIDMethod("method")
+	require.NoError(t, err)
+	b, err = GetBlockchain("chain")
+	require.NoError(t, err)
+	n, err = GetNetwork("network")
+	require.NoError(t, err)
+
 	err = RegisterDIDMethodNetwork(m, b, n, 0b0001_0001)
 	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetworkImplicit("method", "chain", "network")
+	err = RegisterDIDMethodNetwork(DIDMethodIden3, b, Test, 0b01000000|0b00000011)
+	require.NoError(t, err)
+	err = RegisterDIDMethodNetwork(DIDMethodIden3, ReadOnly, n, 0b01000000|0b00000011)
 	require.NoError(t, err)
 
-	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, "chain", "network")
-	require.NoError(t, err)
+	err = RegisterDIDMethodNetwork(DIDMethodIden3, ReadOnly, n, 0b01010000|0b00000100)
+	require.EqualError(t, err, "DID method network iden3:readonly:network already registered")
 
-	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, "chain", Test)
+	err = RegisterDIDMethodWithByte("method2", 0b0000_0101)
 	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, ReadOnly, "network")
+	err = RegisterBlockchain("chain2")
 	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, ReadOnly, Test)
+	err = RegisterNetwork("network2")
 	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetworkImplicit("method2", "chain2", "network2")
+	err = RegisterDIDMethodNetwork("method2", "chain2", "network2", 0b0001_0001)
 	require.NoError(t, err)
 
 	d := helperBuildDIDFromType(t, "method2", "chain2", "network2")
-	require.Equal(t, "5UtG9EXvF25j3X5uycwr4uy7Hjhni8bMposv3Lgv8o", d.IDStrings[2])
-
+	require.Equal(t, d.IDStrings[2], "5UtG9EXvF25j3X5uycwr4uy7Hjhni8bMposv3Lgv8o")
 	did, err := w3c.ParseDID("did:method:chain:network:4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT")
 	require.NoError(t, err)
-	id, err := IDFromDID(*did)
+	id, err := idFromDID(*did)
 	require.NoError(t, err)
 	require.Equal(t, "4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT", id.String())
-
-	method, err := MethodFromID(id)
+	met, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, DIDMethod("method"), method)
-	blockchain, err := BlockchainFromID(id)
+	require.Equal(t, met, m)
+	bl, err := BlockchainFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, Blockchain("chain"), blockchain)
-	networkID, err := NetworkIDFromID(id)
+	require.Equal(t, bl, b)
+	net, err := NetworkIDFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, NetworkID("network"), networkID)
+	require.Equal(t, net, n)
 }
