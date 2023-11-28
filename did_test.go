@@ -379,3 +379,63 @@ func ethAddrFromHex(ea string) [20]byte {
 	copy(ethAddr[:], eaBytes)
 	return ethAddr
 }
+
+func TestDID_Custom_Parse_DID(t *testing.T) {
+	net := "test_net"
+	met := "test_method"
+	chain := "test_chain"
+	var err error
+	err = RegisterBlockchain(chain)
+	require.NoError(t, err)
+	err = RegisterNetwork(net)
+	require.NoError(t, err)
+	err = RegisterDIDMethod(met)
+	require.NoError(t, err)
+	err = RegisterDIDMethodByte(DIDMethod(met), 0b00000011)
+	require.NoError(t, err)
+	b, err := GetBlockchain(chain)
+	require.NoError(t, err)
+	m, err := GetDIDMethod(met)
+	require.NoError(t, err)
+	n, err := GetNetwork(net)
+	require.NoError(t, err)
+	err = RegisterDIDMethodNetwork(m, b, n, 0b0001_0001)
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit("method", "chain", "network")
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, "chain", "network")
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, "chain", Test)
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, ReadOnly, "network")
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit(DIDMethodIden3, ReadOnly, Test)
+	require.NoError(t, err)
+
+	err = RegisterDIDMethodNetworkImplicit("method2", "chain2", "network2")
+	require.NoError(t, err)
+
+	d := helperBuildDIDFromType(t, "method2", "chain2", "network2")
+	require.Equal(t, "5UtG9EXvF25j3X5uycwr4uy7Hjhni8bMposv3Lgv8o", d.IDStrings[2])
+
+	did, err := w3c.ParseDID("did:method:chain:network:4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT")
+	require.NoError(t, err)
+	id, err := IDFromDID(*did)
+	require.NoError(t, err)
+	require.Equal(t, "4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT", id.String())
+
+	method, err := MethodFromID(id)
+	require.NoError(t, err)
+	require.Equal(t, DIDMethod("method"), method)
+	blockchain, err := BlockchainFromID(id)
+	require.NoError(t, err)
+	require.Equal(t, Blockchain("chain"), blockchain)
+	networkID, err := NetworkIDFromID(id)
+	require.NoError(t, err)
+	require.Equal(t, NetworkID("network"), networkID)
+}

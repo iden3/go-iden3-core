@@ -38,6 +38,32 @@ const (
 	DIDMethodOther DIDMethod = ""
 )
 
+var didMethods = map[DIDMethod]DIDMethod{
+	DIDMethodIden3:     DIDMethodIden3,
+	DIDMethodPolygonID: DIDMethodPolygonID,
+	DIDMethodOther:     DIDMethodOther,
+}
+
+// GetDIDMethod returns DID method by name
+func GetDIDMethod(name string) (DIDMethod, error) {
+
+	method, ok := didMethods[DIDMethod(name)]
+	if !ok {
+		return DIDMethodOther, fmt.Errorf("DID method %s not found", name)
+	}
+	return method, nil
+}
+
+// RegisterDIDMethod registers new DID method
+func RegisterDIDMethod(method string) error {
+	m := DIDMethod(method)
+	if _, ok := didMethods[m]; ok {
+		return fmt.Errorf("DID method %s already registered", method)
+	}
+	didMethods[m] = m
+	return nil
+}
+
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
 
@@ -55,6 +81,32 @@ const (
 	// NoChain can be used for identity to build readonly flag
 	NoChain Blockchain = ""
 )
+
+var blockchains = map[Blockchain]Blockchain{
+	Ethereum:     Ethereum,
+	Polygon:      Polygon,
+	ZkEVM:        ZkEVM,
+	UnknownChain: UnknownChain,
+}
+
+// GetBlockchain returns blockchain by name
+func GetBlockchain(name string) (Blockchain, error) {
+	blockchain, ok := blockchains[Blockchain(name)]
+	if !ok {
+		return UnknownChain, fmt.Errorf("blockchain %s not found", name)
+	}
+	return blockchain, nil
+}
+
+// RegisterBlockchain registers new blockchain
+func RegisterBlockchain(blockchain string) error {
+	b := Blockchain(blockchain)
+	if _, ok := blockchains[b]; ok {
+		return fmt.Errorf("blockchain %s already registered", blockchain)
+	}
+	blockchains[b] = b
+	return nil
+}
 
 // NetworkID is method specific network identifier
 type NetworkID string
@@ -80,11 +132,53 @@ const (
 	NoNetwork NetworkID = ""
 )
 
+var networks = map[NetworkID]NetworkID{
+	Main:           Main,
+	Mumbai:         Mumbai,
+	Goerli:         Goerli,
+	Sepolia:        Sepolia,
+	Test:           Test,
+	UnknownNetwork: UnknownNetwork,
+}
+
+// GetNetwork returns network by name
+func GetNetwork(name string) (NetworkID, error) {
+	network, ok := networks[NetworkID(name)]
+	if !ok {
+		return UnknownNetwork, fmt.Errorf("network %s not found", name)
+	}
+	return network, nil
+}
+
+// RegisterNetwork registers new network
+func RegisterNetwork(name string) error {
+	n := NetworkID(name)
+	if _, ok := networks[n]; ok {
+		return fmt.Errorf("network %s already registered", n)
+	}
+	networks[n] = n
+	return nil
+}
+
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
 	DIDMethodIden3:     0b00000001,
 	DIDMethodPolygonID: 0b00000010,
 	DIDMethodOther:     0b11111111,
+}
+
+// RegisterDIDMethodByte did method network flag representation
+func RegisterDIDMethodByte(method DIDMethod, b byte) error {
+
+	if _, ok := didMethods[method]; !ok {
+		return fmt.Errorf("DID method %s not registered", method)
+	}
+
+	if _, ok := DIDMethodByte[method]; ok {
+		return fmt.Errorf("DID method byte %s already registered", method)
+	}
+	DIDMethodByte[method] = b
+	return nil
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -124,6 +218,109 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,
 	},
+}
+
+// RegisterDIDMethodNetwork registers new DID method network
+func RegisterDIDMethodNetwork(method DIDMethod, blockchain Blockchain, network NetworkID, b byte) error {
+
+	if _, ok := didMethods[method]; !ok {
+		return fmt.Errorf("DID method %s not registered", method)
+	}
+
+	if _, ok := blockchains[blockchain]; !ok {
+		return fmt.Errorf("blockchain %s not registered", blockchain)
+	}
+
+	if _, ok := networks[network]; !ok {
+		return fmt.Errorf("network %s not registered", network)
+	}
+
+	flg := DIDNetworkFlag{Blockchain: blockchain, NetworkID: network}
+	if _, ok := DIDMethodNetwork[method][flg]; ok {
+		return fmt.Errorf("DID method network %s already registered", method)
+	}
+
+	if _, ok := DIDMethodNetwork[method]; !ok {
+		DIDMethodNetwork[method] = map[DIDNetworkFlag]byte{}
+		DIDMethodNetwork[method][flg] = b
+		return nil
+	}
+
+	DIDMethodNetwork[method][flg] = b
+	return nil
+
+}
+
+func RegisterDIDMethodNetworkImplicit(method DIDMethod, blockchain Blockchain, network NetworkID) error {
+	m := DIDMethod(method)
+	if _, ok := didMethods[m]; !ok {
+		didMethods[m] = m
+	}
+
+	b := Blockchain(blockchain)
+	if _, ok := blockchains[b]; !ok {
+		blockchains[b] = b
+	}
+
+	n := NetworkID(network)
+	if _, ok := networks[n]; !ok {
+		networks[n] = n
+	}
+
+	if _, ok := DIDMethodByte[m]; !ok {
+		preLatest := byte(0b00000000)
+		for k, v := range DIDMethodByte {
+			if v > preLatest && k != DIDMethodOther {
+				preLatest = v
+			}
+		}
+		preLatest++
+
+		if preLatest >= DIDMethodByte[DIDMethodOther] {
+			return fmt.Errorf("DID method byte %s already registered", method)
+		}
+		DIDMethodByte[m] = preLatest
+	}
+
+	flg := DIDNetworkFlag{Blockchain: b, NetworkID: n}
+
+	if _, ok := DIDMethodNetwork[m]; !ok {
+		DIDMethodNetwork[m] = map[DIDNetworkFlag]byte{}
+	}
+
+	if _, ok := DIDMethodNetwork[m][flg]; ok {
+		return fmt.Errorf("DID method network %s already registered", method)
+	}
+
+	flags, _ := DIDMethodNetwork[m]
+
+	if len(flags) == 0 {
+		DIDMethodNetwork[m][flg] = 0b00010000 | 0b00000001
+		return nil
+	}
+	// find biggest flag byte
+	preLatest := byte(0b00000000)
+	for _, v := range flags {
+		if v > preLatest {
+			preLatest = v
+		}
+	}
+
+	// split flag byte to 2 parts
+	chainPart := (preLatest >> 4) + 1
+	networkPart := (preLatest & 0b00001111) + 1
+
+	if chainPart >= 0b1111 {
+		return fmt.Errorf(`Reached max number of blockchains for did method: %s`, method)
+	}
+
+	if networkPart >= 0b1111 {
+		return fmt.Errorf(`Reached max number of networks for did method: %s`, method)
+	}
+
+	// join parts
+	DIDMethodNetwork[m][flg] = (chainPart << 4) | networkPart
+	return nil
 }
 
 // BuildDIDType builds bytes type from chain and network
@@ -218,8 +415,11 @@ func newIDFromUnsupportedDID(did w3c.DID) ID {
 }
 
 func idFromDID(did w3c.DID) (ID, error) {
-	method := DIDMethod(did.Method)
-	_, ok := DIDMethodByte[method]
+	method, ok := didMethods[DIDMethod(did.Method)]
+	if !ok {
+		method = DIDMethodOther
+	}
+	_, ok = DIDMethodByte[method]
 	if !ok || method == DIDMethodOther {
 		return ID{}, ErrMethodUnknown
 	}
