@@ -380,79 +380,127 @@ func ethAddrFromHex(ea string) [20]byte {
 	return ethAddr
 }
 
+func intPtr(i int) *int {
+	return &i
+}
+func bPtr(i byte) *byte {
+	return &i
+}
+func strPtr(s string) *string {
+	return &s
+}
 func TestDID_Custom_Parse_DID(t *testing.T) {
-	var err error
-	err = RegisterBlockchain("test_chain")
-	require.NoError(t, err)
-	err = RegisterNetwork("test_net")
-	require.NoError(t, err)
-	err = RegisterDIDMethodWithByte("test_method", 0b00000011)
-	require.NoError(t, err)
-	err = RegisterChainID("test_chain", "test_net", 101)
-	require.NoError(t, err)
-	err = RegisterDIDMethodNetwork("test_method", "test_chain", "test_net", 0b0001_0001)
-	require.NoError(t, err)
-	err = RegisterDIDMethodWithByte("method", 0b0000_0100)
-	require.NoError(t, err)
-	err = RegisterBlockchain("chain")
-	require.NoError(t, err)
-	err = RegisterNetwork("network")
+	testCases := []struct {
+		Description string
+		Data        DIDMethodNetworkOpts
+		ErrorMsg    *string
+	}{
+		{
+			Description: "register new did method network",
+			Data: DIDMethodNetworkOpts{
+				Method:      "test_method",
+				Blockchain:  "test_chain",
+				Network:     "test_net",
+				ChainID:     intPtr(101),
+				MethodByte:  bPtr(0b00000011),
+				NetworkFlag: 0b0001_0001,
+			},
+		},
+		{
+			Description: "register one more new did method network",
+			Data: DIDMethodNetworkOpts{
+				Method:      "method",
+				Blockchain:  "chain",
+				Network:     "network",
+				ChainID:     intPtr(102),
+				MethodByte:  bPtr(0b00000100),
+				NetworkFlag: 0b0001_0001,
+			},
+		},
+		{
+			Description: "register network to existing did method",
+			Data: DIDMethodNetworkOpts{
+				Method:      DIDMethodIden3,
+				Blockchain:  "chain",
+				Network:     Test,
+				ChainID:     intPtr(103),
+				NetworkFlag: 0b01000000 | 0b00000011,
+			},
+		},
+		{
+			Description: "register one more network to existing did method",
+			Data: DIDMethodNetworkOpts{
+				Method:      DIDMethodIden3,
+				Blockchain:  ReadOnly,
+				Network:     "network",
+				ChainID:     intPtr(104),
+				NetworkFlag: 0b01000000 | 0b00000011,
+			},
+		},
+		{
+			Description: "register already registered did method network",
+			Data: DIDMethodNetworkOpts{
+				Method:      DIDMethodIden3,
+				Blockchain:  ReadOnly,
+				Network:     "network",
+				NetworkFlag: 0b01000000 | 0b00000011,
+			},
+			ErrorMsg: strPtr("DID method network iden3 with blockchain readonly and network network already registered"),
+		},
+		{
+			Description: "register exited chain",
+			Data: DIDMethodNetworkOpts{
+				Method:      DIDMethodIden3,
+				Blockchain:  ReadOnly,
+				Network:     "network",
+				ChainID:     intPtr(104),
+				NetworkFlag: 0b01000000 | 0b00000011,
+			},
+			ErrorMsg: strPtr("chainID readonly:network already registered"),
+		},
+		{
+			Description: "register known chain id to new did method",
+			Data: DIDMethodNetworkOpts{
+				Method:      "method2",
+				Blockchain:  Polygon,
+				Network:     Mumbai,
+				MethodByte:  bPtr(0b0000_0101),
+				NetworkFlag: 0b0001_0001,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Description, func(t *testing.T) {
+			err := RegisterDIDMethodNetwork(tc.Data)
+			if tc.ErrorMsg != nil {
+				require.EqualError(t, err, *tc.ErrorMsg)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+
+	d := helperBuildDIDFromType(t, "method", "chain", "network")
+	require.Equal(t, "4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT", d.IDStrings[2])
+
+	did3, err := w3c.ParseDID("did:method:chain:network:4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT")
 	require.NoError(t, err)
 
-	var m DIDMethod
-	var b Blockchain
-	var n NetworkID
-	m, err = GetDIDMethod("method")
-	require.NoError(t, err)
-	b, err = GetBlockchain("chain")
-	require.NoError(t, err)
-	n, err = GetNetwork("network")
-	require.NoError(t, err)
-	err = RegisterChainID(b, n, 102)
-	require.NoError(t, err)
-	err = RegisterDIDMethodNetwork(m, b, n, 0b0001_0001)
+	id, err := idFromDID(*did3)
 	require.NoError(t, err)
 
-	err = RegisterChainID(b, Test, 103)
-	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetwork(DIDMethodIden3, b, Test, 0b01000000|0b00000011)
-	require.NoError(t, err)
-	err = RegisterChainID(ReadOnly, n, 104)
-	require.NoError(t, err)
-	err = RegisterDIDMethodNetwork(DIDMethodIden3, ReadOnly, n, 0b01000000|0b00000011)
-	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetwork(DIDMethodIden3, ReadOnly, n, 0b01010000|0b00000100)
-	require.EqualError(t, err, "DID method network iden3:readonly:network already registered")
-
-	err = RegisterDIDMethodWithByte("method2", 0b0000_0101)
-	require.NoError(t, err)
-	err = RegisterBlockchain("chain2")
-	require.NoError(t, err)
-	err = RegisterNetwork("network2")
-	require.NoError(t, err)
-
-	err = RegisterChainID("chain2", "network2", 105)
-	require.NoError(t, err)
-
-	err = RegisterDIDMethodNetwork("method2", "chain2", "network2", 0b0001_0001)
-	require.NoError(t, err)
-
-	d := helperBuildDIDFromType(t, "method2", "chain2", "network2")
-	require.Equal(t, d.IDStrings[2], "5UtG9EXvF25j3X5uycwr4uy7Hjhni8bMposv3Lgv8o")
-	did, err := w3c.ParseDID("did:method:chain:network:4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT")
-	require.NoError(t, err)
-	id, err := idFromDID(*did)
-	require.NoError(t, err)
 	require.Equal(t, "4bb86obLkMrifHixMY62WM4iQQVr7u29cxWjMAinrT", id.String())
-	met, err := MethodFromID(id)
+	method, err := MethodFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, met, m)
-	bl, err := BlockchainFromID(id)
+	require.Equal(t, DIDMethod("method"), method)
+
+	blockchain, err := BlockchainFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, bl, b)
-	net, err := NetworkIDFromID(id)
+	require.Equal(t, Blockchain("chain"), blockchain)
+
+	networkID, err := NetworkIDFromID(id)
 	require.NoError(t, err)
-	require.Equal(t, net, n)
+	require.Equal(t, NetworkID("network"), networkID)
+
 }
