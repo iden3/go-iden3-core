@@ -380,66 +380,59 @@ func ethAddrFromHex(ea string) [20]byte {
 	return ethAddr
 }
 
-func intPtr(i int) *int {
-	return &i
-}
-func bPtr(i byte) *byte {
-	return &i
-}
 func strPtr(s string) *string {
 	return &s
 }
 func TestDID_Custom_Parse_DID(t *testing.T) {
 	testCases := []struct {
 		Description string
-		Data        DIDMethodNetworkOpts
+		Data        DIDMethodNetworkParams
 		ErrorMsg    *string
+		opts        []RegistrationOptions
 	}{
 		{
 			Description: "register new did method network",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      "test_method",
 				Blockchain:  "test_chain",
 				Network:     "test_net",
-				ChainID:     intPtr(101),
-				MethodByte:  bPtr(0b00000011),
 				NetworkFlag: 0b0001_0001,
 			},
+			opts: []RegistrationOptions{WithChainID(101), WithDIDMethodByte(0b00000011)},
 		},
 		{
 			Description: "register one more new did method network",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      "method",
 				Blockchain:  "chain",
 				Network:     "network",
-				ChainID:     intPtr(102),
-				MethodByte:  bPtr(0b00000100),
 				NetworkFlag: 0b0001_0001,
 			},
+			opts: []RegistrationOptions{WithChainID(102), WithDIDMethodByte(0b00000100)},
 		},
 		{
 			Description: "register network to existing did method",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      DIDMethodIden3,
 				Blockchain:  "chain",
 				Network:     Test,
-				ChainID:     intPtr(103),
 				NetworkFlag: 0b01000000 | 0b00000011,
 			},
+			opts: []RegistrationOptions{WithChainID(103)},
 		},
 		{
 			Description: "register one more network to existing did method",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      DIDMethodIden3,
 				Blockchain:  ReadOnly,
 				Network:     "network",
-				ChainID:     intPtr(104),
 				NetworkFlag: 0b01000000 | 0b00000011,
 			},
+			opts: []RegistrationOptions{WithChainID(104)},
 		},
 		{
 			Description: "register already registered did method network",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      DIDMethodIden3,
 				Blockchain:  ReadOnly,
 				Network:     "network",
@@ -449,30 +442,31 @@ func TestDID_Custom_Parse_DID(t *testing.T) {
 		},
 		{
 			Description: "register exited chain",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      DIDMethodIden3,
 				Blockchain:  ReadOnly,
 				Network:     "network",
-				ChainID:     intPtr(104),
 				NetworkFlag: 0b01000000 | 0b00000011,
 			},
+			opts: []RegistrationOptions{WithChainID(104)},
+
 			ErrorMsg: strPtr("chainID readonly:network already registered"),
 		},
 		{
 			Description: "register known chain id to new did method",
-			Data: DIDMethodNetworkOpts{
+			Data: DIDMethodNetworkParams{
 				Method:      "method2",
 				Blockchain:  Polygon,
 				Network:     Mumbai,
-				MethodByte:  bPtr(0b0000_0101),
 				NetworkFlag: 0b0001_0001,
 			},
+			opts: []RegistrationOptions{WithDIDMethodByte(1)},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Description, func(t *testing.T) {
-			err := RegisterDIDMethodNetwork(tc.Data)
+			err := RegisterDIDMethodNetwork(tc.Data, tc.opts...)
 			if tc.ErrorMsg != nil {
 				require.EqualError(t, err, *tc.ErrorMsg)
 				return

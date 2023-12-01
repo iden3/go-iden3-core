@@ -47,16 +47,13 @@ func ChainIDfromDID(did w3c.DID) (ChainID, error) {
 }
 
 // RegisterChainID registers chainID for blockchain and network
-func RegisterChainID(blockchain Blockchain, network NetworkID, chainID *int) error {
-	if chainID == nil {
-		return nil
-	}
+func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) error {
 
 	k := fmt.Sprintf("%s:%s", blockchain, network)
 	if _, ok := chainIDs[k]; ok {
 		return fmt.Errorf("chainID %s:%s already registered", blockchain, network)
 	}
-	chainIDs[k] = ChainID(*chainID)
+	chainIDs[k] = ChainID(chainID)
 
 	return nil
 }

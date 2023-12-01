@@ -140,18 +140,14 @@ var DIDMethodByte = map[DIDMethod]byte{
 }
 
 // RegisterDIDMethodWithByte registers new DID method with byte flag
-func RegisterDIDMethodWithByte(m DIDMethod, b *byte) error {
+func RegisterDIDMethodWithByte(m DIDMethod, b byte) error {
 	didMethods[m] = m
-
-	if b == nil {
-		return nil
-	}
 
 	if _, ok := DIDMethodByte[m]; ok {
 		return fmt.Errorf("DID method %s already registered", m)
 	}
 
-	DIDMethodByte[m] = *b
+	DIDMethodByte[m] = b
 
 	return nil
 }
@@ -195,28 +191,49 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 	},
 }
 
-// DIDMethodNetworkOpts is a structure to represent DID method network options
-type DIDMethodNetworkOpts struct {
+// DIDMethodNetworkParams is a structure to represent DID method network options
+type DIDMethodNetworkParams struct {
 	Method      DIDMethod
-	MethodByte  *byte
 	Blockchain  Blockchain
 	Network     NetworkID
 	NetworkFlag byte
-	ChainID     *int
+	chainID     *int
+	methodByte  *byte
+}
+
+// RegistrationOptions is a type for DID method network options
+type RegistrationOptions func(params *DIDMethodNetworkParams)
+
+func WithChainID(chainID int) RegistrationOptions {
+	return func(params *DIDMethodNetworkParams) {
+		params.chainID = &chainID
+	}
+}
+
+func WithDIDMethodByte(methodByte byte) RegistrationOptions {
+	return func(params *DIDMethodNetworkParams) {
+		params.methodByte = &methodByte
+	}
 }
 
 // RegisterDIDMethodNetwork registers new DID method network
-func RegisterDIDMethodNetwork(opts DIDMethodNetworkOpts) error {
+func RegisterDIDMethodNetwork(params DIDMethodNetworkParams, opts ...RegistrationOptions) error {
 
-	b := opts.Blockchain
-	n := opts.Network
-	m := opts.Method
+	for _, opt := range opts {
+		opt(&params)
+	}
+
+	b := params.Blockchain
+	n := params.Network
+	m := params.Method
 	blockchains[b] = b
 	networks[n] = n
 
-	err := RegisterDIDMethodWithByte(m, opts.MethodByte)
-	if err != nil {
-		return err
+	if params.methodByte != nil {
+		err := RegisterDIDMethodWithByte(m, *params.methodByte)
+		if err != nil {
+			return err
+		}
 	}
 
 	flg := DIDNetworkFlag{Blockchain: b, NetworkID: n}
@@ -225,10 +242,11 @@ func RegisterDIDMethodNetwork(opts DIDMethodNetworkOpts) error {
 		DIDMethodNetwork[m] = map[DIDNetworkFlag]byte{}
 	}
 
-	err = RegisterChainID(b, n, opts.ChainID)
-
-	if err != nil {
-		return err
+	if params.chainID != nil {
+		err := RegisterChainID(b, n, *params.chainID)
+		if err != nil {
+			return err
+		}
 	}
 
 	if _, ok := DIDMethodNetwork[m][flg]; ok {
@@ -236,7 +254,7 @@ func RegisterDIDMethodNetwork(opts DIDMethodNetworkOpts) error {
 			m, b, n)
 	}
 
-	DIDMethodNetwork[m][flg] = opts.NetworkFlag
+	DIDMethodNetwork[m][flg] = params.NetworkFlag
 	return nil
 
 }
