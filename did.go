@@ -121,6 +121,7 @@ var networks = map[NetworkID]NetworkID{
 	Sepolia:        Sepolia,
 	Test:           Test,
 	UnknownNetwork: UnknownNetwork,
+	NoNetwork:      NoNetwork,
 }
 
 // GetNetwork returns network by name
@@ -139,8 +140,8 @@ var DIDMethodByte = map[DIDMethod]byte{
 	DIDMethodOther:     0b11111111,
 }
 
-// RegisterDIDMethodWithByte registers new DID method with byte flag
-func RegisterDIDMethodWithByte(m DIDMethod, b byte) error {
+// RegisterDIDMethod registers new DID method with byte flag
+func RegisterDIDMethod(m DIDMethod, b byte) error {
 	didMethods[m] = m
 
 	if _, ok := DIDMethodByte[m]; ok {
@@ -230,7 +231,7 @@ func RegisterDIDMethodNetwork(params DIDMethodNetworkParams, opts ...Registratio
 	networks[n] = n
 
 	if params.methodByte != nil {
-		err := RegisterDIDMethodWithByte(m, *params.methodByte)
+		err := RegisterDIDMethod(m, *params.methodByte)
 		if err != nil {
 			return err
 		}
