@@ -51,7 +51,7 @@ func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) erro
 	k := fmt.Sprintf("%s:%s", blockchain, network)
 	existingChainID, ok := chainIDs[k]
 	if ok && existingChainID != ChainID(chainID) {
-		return fmt.Errorf("chainID %s:%s already registered", blockchain, network)
+		return fmt.Errorf("chainID '%s:%s' already registered with value %d", blockchain, network, existingChainID)
 	}
 	chainIDs[k] = ChainID(chainID)
 

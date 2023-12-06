@@ -506,7 +506,7 @@ func TestCustomDIDRegistration_Negative(t *testing.T) {
 				NetworkFlag: 0b0001_0001,
 			},
 			opts: []RegistrationOptions{WithChainID(1)},
-			err:  "chainID polygon:mumbai already registered",
+			err:  "chainID 'polygon:mumbai' already registered with value 80001",
 		},
 		{
 			Description: "try to overwrite existing DID method byte",
@@ -517,7 +517,7 @@ func TestCustomDIDRegistration_Negative(t *testing.T) {
 				NetworkFlag: 0b00100000 | 0b00000001,
 			},
 			opts: []RegistrationOptions{WithChainID(1), WithDIDMethodByte(0b00000010)},
-			err:  "DID method iden3 already registered",
+			err:  "DID method 'iden3' already registered with byte 1",
 		},
 		{
 			Description: "try to write max did method byte",
@@ -539,7 +539,7 @@ func TestCustomDIDRegistration_Negative(t *testing.T) {
 				NetworkFlag: 0b00100000 | 0b00000011,
 			},
 			opts: nil,
-			err:  "DID method network 'iden3' with blockchain 'eth' and network 'main' already registered",
+			err:  "DID method network 'iden3' with blockchain 'eth' and network 'main' already registered with another flag '100001'",
 		},
 	}
 
