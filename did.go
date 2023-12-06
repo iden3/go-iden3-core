@@ -150,8 +150,8 @@ var DIDMethodByte = map[DIDMethod]byte{
 
 // RegisterDIDMethod registers new DID method with byte flag
 func RegisterDIDMethod(m DIDMethod, b byte) error {
-
-	if existingByte, ok := DIDMethodByte[m]; ok && existingByte != b {
+	existingByte, ok := DIDMethodByte[m]
+	if ok && existingByte != b {
 		return fmt.Errorf("DID method %s already registered", m)
 	}
 
