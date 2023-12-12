@@ -38,6 +38,22 @@ const (
 	DIDMethodOther DIDMethod = ""
 )
 
+var didMethods = map[DIDMethod]DIDMethod{
+	DIDMethodIden3:     DIDMethodIden3,
+	DIDMethodPolygonID: DIDMethodPolygonID,
+	DIDMethodOther:     DIDMethodOther,
+}
+
+// GetDIDMethod returns DID method by name
+func GetDIDMethod(name string) (DIDMethod, error) {
+
+	method, ok := didMethods[DIDMethod(name)]
+	if !ok {
+		return DIDMethodOther, fmt.Errorf("DID method '%s' not found", name)
+	}
+	return method, nil
+}
+
 // Blockchain id of the network "eth", "polygon", etc.
 type Blockchain string
 
@@ -56,35 +72,98 @@ const (
 	NoChain Blockchain = ""
 )
 
+var blockchains = map[Blockchain]Blockchain{
+	Ethereum:     Ethereum,
+	Polygon:      Polygon,
+	ZkEVM:        ZkEVM,
+	UnknownChain: UnknownChain,
+	ReadOnly:     ReadOnly,
+	NoChain:      NoChain,
+}
+
+// GetBlockchain returns blockchain by name
+func GetBlockchain(name string) (Blockchain, error) {
+	blockchain, ok := blockchains[Blockchain(name)]
+	if !ok {
+		return UnknownChain, fmt.Errorf("blockchain '%s' not found", name)
+	}
+	return blockchain, nil
+}
+
+// RegisterBlockchain registers new blockchain
+func RegisterBlockchain(b Blockchain) error {
+	blockchains[b] = b
+	return nil
+}
+
 // NetworkID is method specific network identifier
 type NetworkID string
 
 const (
 	// Main is main network
 	Main NetworkID = "main"
-
 	// Mumbai is polygon mumbai test network
 	Mumbai NetworkID = "mumbai"
-
 	// Goerli is ethereum goerli test network
 	Goerli NetworkID = "goerli" // goerli
 	// Sepolia is ethereum Sepolia test network
 	Sepolia NetworkID = "sepolia"
-
 	// Test is test network
 	Test NetworkID = "test"
-
 	// UnknownNetwork is used when it's not possible to retrieve network from identifier
 	UnknownNetwork NetworkID = "unknown"
 	// NoNetwork should be used for readonly identity to build readonly flag
 	NoNetwork NetworkID = ""
 )
 
+var networks = map[NetworkID]NetworkID{
+	Main:           Main,
+	Mumbai:         Mumbai,
+	Goerli:         Goerli,
+	Sepolia:        Sepolia,
+	Test:           Test,
+	UnknownNetwork: UnknownNetwork,
+	NoNetwork:      NoNetwork,
+}
+
+// GetNetwork returns network by name
+func GetNetwork(name string) (NetworkID, error) {
+	network, ok := networks[NetworkID(name)]
+	if !ok {
+		return UnknownNetwork, fmt.Errorf("network '%s' not found", name)
+	}
+	return network, nil
+}
+
+// RegisterNetwork registers new network
+func RegisterNetwork(n NetworkID) error {
+	networks[n] = n
+	return nil
+}
+
 // DIDMethodByte did method flag representation
 var DIDMethodByte = map[DIDMethod]byte{
 	DIDMethodIden3:     0b00000001,
 	DIDMethodPolygonID: 0b00000010,
 	DIDMethodOther:     0b11111111,
+}
+
+// RegisterDIDMethod registers new DID method with byte flag
+func RegisterDIDMethod(m DIDMethod, b byte) error {
+	existingByte, ok := DIDMethodByte[m]
+	if ok && existingByte != b {
+		return fmt.Errorf("DID method '%s' already registered with byte %b", m, existingByte)
+	}
+
+	max := DIDMethodByte[DIDMethodOther]
+	if b >= max {
+		return fmt.Errorf("Can't register DID method byte: current %b, maximum byte allowed: %b", b, max-1)
+	}
+
+	didMethods[m] = m
+	DIDMethodByte[m] = b
+
+	return nil
 }
 
 // DIDNetworkFlag is a structure to represent DID blockchain and network id
@@ -124,6 +203,88 @@ var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b11111111,
 	},
+}
+
+// DIDMethodNetworkParams is a structure to represent DID method network options
+type DIDMethodNetworkParams struct {
+	Method      DIDMethod
+	Blockchain  Blockchain
+	Network     NetworkID
+	NetworkFlag byte
+}
+
+type registrationOptions struct {
+	chainID    *int
+	methodByte *byte
+}
+
+// RegistrationOptions is a type for DID method network options
+type RegistrationOptions func(params *registrationOptions)
+
+// WithChainID registers new chain ID method with byte flag
+func WithChainID(chainID int) RegistrationOptions {
+	return func(opts *registrationOptions) {
+		opts.chainID = &chainID
+	}
+}
+
+// WithDIDMethodByte registers new DID method with byte flag
+func WithDIDMethodByte(methodByte byte) RegistrationOptions {
+	return func(opts *registrationOptions) {
+		opts.methodByte = &methodByte
+	}
+}
+
+// RegisterDIDMethodNetwork registers new DID method network
+func RegisterDIDMethodNetwork(params DIDMethodNetworkParams, opts ...RegistrationOptions) error {
+	var err error
+	o := registrationOptions{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	b := params.Blockchain
+	n := params.Network
+	m := params.Method
+
+	err = RegisterBlockchain(b)
+	if err != nil {
+		return err
+	}
+
+	err = RegisterNetwork(n)
+	if err != nil {
+		return err
+	}
+
+	if o.methodByte != nil {
+		err = RegisterDIDMethod(m, *o.methodByte)
+		if err != nil {
+			return err
+		}
+	}
+
+	flg := DIDNetworkFlag{Blockchain: b, NetworkID: n}
+
+	if _, ok := DIDMethodNetwork[m]; !ok {
+		DIDMethodNetwork[m] = map[DIDNetworkFlag]byte{}
+	}
+
+	if o.chainID != nil {
+		err = RegisterChainID(b, n, *o.chainID)
+		if err != nil {
+			return err
+		}
+	}
+	existedFlag, ok := DIDMethodNetwork[m][flg]
+	if ok && existedFlag != params.NetworkFlag {
+		return fmt.Errorf("DID method network '%s' with blockchain '%s' and network '%s' already registered with another flag '%b'",
+			m, b, n, existedFlag)
+	}
+
+	DIDMethodNetwork[m][flg] = params.NetworkFlag
+	return nil
+
 }
 
 // BuildDIDType builds bytes type from chain and network
@@ -218,8 +379,11 @@ func newIDFromUnsupportedDID(did w3c.DID) ID {
 }
 
 func idFromDID(did w3c.DID) (ID, error) {
-	method := DIDMethod(did.Method)
-	_, ok := DIDMethodByte[method]
+	method, ok := didMethods[DIDMethod(did.Method)]
+	if !ok {
+		method = DIDMethodOther
+	}
+	_, ok = DIDMethodByte[method]
 	if !ok || method == DIDMethodOther {
 		return ID{}, ErrMethodUnknown
 	}
