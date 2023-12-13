@@ -150,6 +150,22 @@ type Claim struct {
 	value [4]ElemBytes
 }
 
+// NewClaimFromBigInts creates new Claim from bigInts.
+func NewClaimFromBigInts(raw [8]*big.Int) (*Claim, error) {
+	var c Claim
+	for i := 0; i < 4; i++ {
+		err := c.index[i].SetInt(raw[i])
+		if err != nil {
+			return nil, err
+		}
+		err = c.value[i].SetInt(raw[i+4])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &c, nil
+}
+
 // subjectFlag for the time being describes the location of ID (in index or value
 // slots or nowhere at all).
 //

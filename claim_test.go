@@ -672,3 +672,28 @@ func TestClaim_SetMerklizedRoot(t *testing.T) {
 	_, err = claim3.GetMerklizedRoot()
 	require.Error(t, ErrNoMerklizedRoot, err)
 }
+
+func TestNewClaimFromBigInts(t *testing.T) {
+	toBigInt := func(s string) *big.Int {
+		i, ok := new(big.Int).SetString(s, 10)
+		require.True(t, ok, s)
+		return i
+	}
+
+	c := [8]*big.Int{
+		toBigInt("3537648966163034177119037898189471968122"),
+		toBigInt("25999649578069426716666405683037372395789852830344252783677755850030715394"),
+		toBigInt("657065114158124047812701241180089030040156354062"),
+		toBigInt("1995762661"),
+		toBigInt("58718019808110235945021734914"),
+		toBigInt("0"),
+		toBigInt("0"),
+		toBigInt("0"),
+	}
+
+	claim, err := NewClaimFromBigInts(c)
+	require.NoError(t, err)
+	userID, err := claim.GetID()
+	require.NoError(t, err)
+	require.Equal(t, "2qNkLwz97jdzZBkdJYwVdXyGARGfVSGLJxELVC9ceH", userID.String())
+}
