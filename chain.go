@@ -50,9 +50,16 @@ func ChainIDfromDID(did w3c.DID) (ChainID, error) {
 func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) error {
 	k := fmt.Sprintf("%s:%s", blockchain, network)
 	existingChainID, ok := chainIDs[k]
-	if ok && existingChainID != ChainID(chainID) {
-		return fmt.Errorf("chainID '%s:%s' already registered with value %d", blockchain, network, existingChainID)
+	if ok && existingChainID == ChainID(chainID) {
+		return nil
 	}
+
+	for _, v := range chainIDs {
+		if v == ChainID(chainID) {
+			return fmt.Errorf(`can't register chain id %d for '%s' because it's already registered for another chain id`, chainID, k)
+		}
+	}
+
 	chainIDs[k] = ChainID(chainID)
 
 	return nil

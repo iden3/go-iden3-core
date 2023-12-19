@@ -150,14 +150,21 @@ var DIDMethodByte = map[DIDMethod]byte{
 
 // RegisterDIDMethod registers new DID method with byte flag
 func RegisterDIDMethod(m DIDMethod, b byte) error {
-	existingByte, ok := DIDMethodByte[m]
-	if ok && existingByte != b {
-		return fmt.Errorf("DID method '%s' already registered with byte %b", m, existingByte)
-	}
 
 	max := DIDMethodByte[DIDMethodOther]
 	if b >= max {
 		return fmt.Errorf("Can't register DID method byte: current %b, maximum byte allowed: %b", b, max-1)
+	}
+
+	existingByte, ok := DIDMethodByte[m]
+	if ok && existingByte == b {
+		return nil
+	}
+
+	for _, v := range DIDMethodByte {
+		if v == b {
+			return fmt.Errorf(`can't register method '%s' because DID method byte '%b' already registered for another method`, m, b)
+		}
 	}
 
 	didMethods[m] = m
@@ -277,9 +284,14 @@ func RegisterDIDMethodNetwork(params DIDMethodNetworkParams, opts ...Registratio
 		}
 	}
 	existedFlag, ok := DIDMethodNetwork[m][flg]
-	if ok && existedFlag != params.NetworkFlag {
-		return fmt.Errorf("DID method network '%s' with blockchain '%s' and network '%s' already registered with another flag '%b'",
-			m, b, n, existedFlag)
+	if ok && existedFlag == params.NetworkFlag {
+		return nil
+	}
+
+	for _, v := range DIDMethodNetwork[m] {
+		if v == params.NetworkFlag {
+			return fmt.Errorf(`DID network flag %b is already registered for the another network id for '%s' method`, v, m)
+		}
 	}
 
 	DIDMethodNetwork[m][flg] = params.NetworkFlag
