@@ -1,7 +1,9 @@
 package core
 
 import (
+	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/iden3/go-iden3-core/v2/w3c"
 )
@@ -9,15 +11,26 @@ import (
 // ChainID is alias for int32 that represents ChainID
 type ChainID int32
 
-// ChainIDs Object containing chain IDs for various blockchains and networks.
-var chainIDs = map[string]ChainID{
-	"eth:main":       1,
-	"eth:goerli":     5,
-	"eth:sepolia":    11155111,
-	"polygon:main":   137,
-	"polygon:mumbai": 80001,
-	"zkevm:main":     1101,
-	"zkevm:test":     1442,
+type chainIDKey struct {
+	blockchain Blockchain
+	networkID  NetworkID
+}
+
+var ErrChainIDNotRegistered = errors.New("chainID is not registered")
+
+var chainIDsLock sync.RWMutex
+
+// chainIDs Object containing chain IDs for various blockchains and networks.
+// It can be modified using RegisterChainID public function. So it is guarded
+// by chainIDsLock mutex.
+var chainIDs = map[chainIDKey]ChainID{
+	{Ethereum, Main}:    1,
+	{Ethereum, Goerli}:  5,
+	{Ethereum, Sepolia}: 11155111,
+	{Polygon, Main}:     137,
+	{Polygon, Mumbai}:   80001,
+	{ZkEVM, Main}:       1101,
+	{ZkEVM, Test}:       1442,
 }
 
 // ChainIDfromDID returns chain name from w3c.DID
@@ -38,17 +51,18 @@ func ChainIDfromDID(did w3c.DID) (ChainID, error) {
 		return 0, err
 	}
 
-	chainID, ok := chainIDs[fmt.Sprintf("%s:%s", blockchain, networkID)]
-	if !ok {
-		return 0, fmt.Errorf("chainID not found for %s:%s", blockchain, networkID)
-	}
-
-	return chainID, nil
+	return GetChainID(blockchain, networkID)
 }
 
 // RegisterChainID registers chainID for blockchain and network
 func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) error {
-	k := fmt.Sprintf("%s:%s", blockchain, network)
+	chainIDsLock.Lock()
+	defer chainIDsLock.Unlock()
+
+	k := chainIDKey{
+		blockchain: blockchain,
+		networkID:  network,
+	}
 	existingChainID, ok := chainIDs[k]
 	if ok && existingChainID == ChainID(chainID) {
 		return nil
@@ -67,10 +81,31 @@ func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) erro
 
 // GetChainID returns chainID for blockchain and network
 func GetChainID(blockchain Blockchain, network NetworkID) (ChainID, error) {
-	k := fmt.Sprintf("%s:%s", blockchain, network)
+	chainIDsLock.RLock()
+	defer chainIDsLock.RUnlock()
+
+	k := chainIDKey{
+		blockchain: blockchain,
+		networkID:  network,
+	}
 	if _, ok := chainIDs[k]; !ok {
-		return 0, fmt.Errorf("chainID not registered for %s:%s", blockchain, network)
+		return 0, fmt.Errorf("%w for %s:%s", ErrChainIDNotRegistered, blockchain,
+			network)
 	}
 
 	return chainIDs[k], nil
+}
+
+// NetworkByChainID returns blockchain and networkID for registered chain ID.
+// Or ErrChainIDNotRegistered error if chainID is not registered.
+func NetworkByChainID(chainID ChainID) (Blockchain, NetworkID, error) {
+	chainIDsLock.RLock()
+	defer chainIDsLock.RUnlock()
+
+	for k, v := range chainIDs {
+		if v == chainID {
+			return k.blockchain, k.networkID, nil
+		}
+	}
+	return NoChain, NoNetwork, ErrChainIDNotRegistered
 }
