@@ -569,8 +569,8 @@ func TestCustomDIDRegistration_Negative(t *testing.T) {
 				Network:     Main,
 				NetworkFlag: 0b0001_0001,
 			},
-			opts: []RegistrationOptions{WithChainID(101), WithDIDMethodByte(0b10000000)},
-			err:  "can't register chain id 101 for 'eth:main' because it's already registered for another chain id",
+			opts: []RegistrationOptions{WithChainID(137), WithDIDMethodByte(0b10000000)},
+			err:  "can't register chain id 137 for 'eth:main' because it's already registered for another chain id",
 		},
 		{
 			Description: "register new network and chain with existing networkFlag for existing existing did method",

@@ -70,7 +70,8 @@ func RegisterChainID(blockchain Blockchain, network NetworkID, chainID int) erro
 
 	for _, v := range chainIDs {
 		if v == ChainID(chainID) {
-			return fmt.Errorf(`can't register chain id %d for '%s' because it's already registered for another chain id`, chainID, k)
+			return fmt.Errorf(`can't register chain id %d for '%v:%v' because it's already registered for another chain id`,
+				chainID, k.blockchain, k.networkID)
 		}
 	}
 
