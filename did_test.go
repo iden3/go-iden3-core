@@ -181,6 +181,13 @@ func TestDID_PolygonID_Types(t *testing.T) {
 			wantDID: "did:polygonid:polygon:mumbai:2qCU58EJgrELNZCDkSU23dQHZsBgAFWLNpNezo1g6b",
 		},
 		{
+			title:   "Polygon | Polygon chain, Amoy",
+			method:  DIDMethodPolygonID,
+			chain:   Polygon,
+			net:     Amoy,
+			wantDID: "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR",
+		},
+		{
 			title:   "Polygon | zkEVM chain, main",
 			method:  DIDMethodPolygonID,
 			chain:   ZkEVM,

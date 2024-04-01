@@ -29,6 +29,7 @@ var chainIDs = map[chainIDKey]ChainID{
 	{Ethereum, Sepolia}: 11155111,
 	{Polygon, Main}:     137,
 	{Polygon, Mumbai}:   80001,
+	{Polygon, Amoy}:     80002,
 	{ZkEVM, Main}:       1101,
 	{ZkEVM, Test}:       1442,
 }
