@@ -135,7 +135,7 @@ func NewSchemaHashFromHex(s string) (SchemaHash, error) {
 func NewSchemaHashFromInt(i *big.Int) SchemaHash {
 	var sh SchemaHash
 	b := intToBytes(i)
-	copy(sh[len(sh)-len(b):], b)
+	copy(sh[:], b)
 
 	return sh
 }

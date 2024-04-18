@@ -697,3 +697,37 @@ func TestNewClaimFromBigInts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "2qNkLwz97jdzZBkdJYwVdXyGARGfVSGLJxELVC9ceH", userID.String())
 }
+
+func TestNewSchemaHashFromInt(t *testing.T) {
+	testCases := []struct {
+		title string
+		input string
+		want  string
+	}{
+		{
+			title: "very long int",
+			input: "3044275373607097841737703342662468617701234",
+			want:  "109319132382347594354104577870198015858",
+		},
+		{
+			title: "16-bytes int",
+			input: "304427537360709784173770334266246861770",
+			want:  "304427537360709784173770334266246861770",
+		},
+		{
+			title: "15-bytes int",
+			input: "1161257907061317498916776531476452695",
+			want:  "1161257907061317498916776531476452695",
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.title, func(t *testing.T) {
+			bi, ok := new(big.Int).SetString(tc.input, 10)
+			require.True(t, ok)
+			sc := NewSchemaHashFromInt(bi)
+			require.Equal(t, tc.want, bytesToInt(sc[:]).Text(10))
+		})
+	}
+}
