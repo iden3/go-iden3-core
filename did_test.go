@@ -151,7 +151,7 @@ func TestDIDFromID(t *testing.T) {
 		did.String())
 }
 
-func TestDID_PolygonID_Types(t *testing.T) {
+func TestDID_Build_From_Types(t *testing.T) {
 	testCases := []struct {
 		title   string
 		method  DIDMethod
@@ -200,6 +200,20 @@ func TestDID_PolygonID_Types(t *testing.T) {
 			chain:   ZkEVM,
 			net:     Test,
 			wantDID: "did:polygonid:zkevm:test:2wcMpvr8NgWTfqN6ChaFEx1qRnLREXhjeoJ45pFyw5",
+		},
+		{
+			title:   "Iden3 | Privado chain, main",
+			method:  DIDMethodIden3,
+			chain:   Privado,
+			net:     Main,
+			wantDID: "did:iden3:privado:main:2SZDsdYordSGMMQVXTVbCb7W834NBTBpkKZUAFRoGb",
+		},
+		{
+			title:   "Iden3 | Privado chain, test",
+			method:  DIDMethodIden3,
+			chain:   Privado,
+			net:     Test,
+			wantDID: "did:iden3:privado:test:2Skqvp4vnSFtq5bgAXbDs1Fs4AA5QGpRut9mCDew5R",
 		},
 	}
 
