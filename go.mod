@@ -3,7 +3,7 @@ module github.com/iden3/go-iden3-core/v2
 go 1.18
 
 require (
-	github.com/iden3/go-iden3-crypto v0.0.16
+	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/mr-tron/base58 v1.2.0
 	github.com/stretchr/testify v1.9.0
 )
