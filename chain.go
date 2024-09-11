@@ -30,10 +30,14 @@ var chainIDs = map[chainIDKey]ChainID{
 	{Polygon, Main}:     137,
 	{Polygon, Mumbai}:   80001,
 	{Polygon, Amoy}:     80002,
+	{Polygon, Zkevm}:    1101,
+	{Polygon, Cardona}:  1442,
 	{ZkEVM, Main}:       1101,
 	{ZkEVM, Test}:       1442,
 	{Privado, Main}:     21000,
 	{Privado, Test}:     21001,
+	{Linea, Main}:       59144,
+	{Linea, Sepolia}:    59141,
 }
 
 // ChainIDfromDID returns chain name from w3c.DID

@@ -67,6 +67,8 @@ const (
 	ZkEVM Blockchain = "zkevm"
 	// Privado is Privado blockchain network
 	Privado Blockchain = "privado"
+	// Linea is Linea blockchain network
+	Linea Blockchain = "linea"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
@@ -220,6 +222,9 @@ var blockchainNetworkMap = map[DIDNetworkFlag]byte{
 
 	{Blockchain: Privado, NetworkID: Main}: 0b1010_0000 | 0b0000_0001,
 	{Blockchain: Privado, NetworkID: Test}: 0b1010_0000 | 0b0000_0010,
+
+	{Blockchain: Linea, NetworkID: Main}:    0b0100_0000 | 0b0000_1001,
+	{Blockchain: Linea, NetworkID: Sepolia}: 0b0100_0000 | 0b0000_1000,
 }
 
 // DIDMethodNetwork is map for did methods and their blockchain networks

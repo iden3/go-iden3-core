@@ -202,6 +202,20 @@ func TestDID_Build_From_Types(t *testing.T) {
 			wantDID: "did:polygonid:zkevm:test:2wcMpvr8NgWTfqN6ChaFEx1qRnLREXhjeoJ45pFyw5",
 		},
 		{
+			title:   "Iden3 | Polygon chain, zkEVM chain, main",
+			method:  DIDMethodIden3,
+			chain:   Polygon,
+			net:     Zkevm,
+			wantDID: "did:iden3:polygon:zkevm:xJa94Ky3oeawnDdQVoTotncYnBA1fCLW6C4NZVpRu",
+		},
+		{
+			title:   "Iden3 | Polygon chain, zkEVM Cardona test",
+			method:  DIDMethodIden3,
+			chain:   Polygon,
+			net:     Cardona,
+			wantDID: "did:iden3:polygon:cardona:xWCCEr5ycUDRWQp3Zu6UJvyUuGsEUpwfenMQXixEj",
+		},
+		{
 			title:   "Iden3 | Privado chain, main",
 			method:  DIDMethodIden3,
 			chain:   Privado,
@@ -214,6 +228,20 @@ func TestDID_Build_From_Types(t *testing.T) {
 			chain:   Privado,
 			net:     Test,
 			wantDID: "did:iden3:privado:test:2Skqvp4vnSFtq5bgAXbDs1Fs4AA5QGpRut9mCDew5R",
+		},
+		{
+			title:   "Iden3 | Linea, Main",
+			method:  DIDMethodIden3,
+			chain:   Linea,
+			net:     Main,
+			wantDID: "did:iden3:linea:main:28vX3frJDbAvHLSMHEwxuxRk1GPpjBeUEsXdAwVxDm",
+		},
+		{
+			title:   "Iden3 | Linea, Sepolia",
+			method:  DIDMethodIden3,
+			chain:   Linea,
+			net:     Sepolia,
+			wantDID: "did:iden3:linea:sepolia:28itzVLBHnMHocFAeArLFYHP59J7WN1s5JwL8yGpQw",
 		},
 	}
 
