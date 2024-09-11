@@ -32,8 +32,6 @@ var chainIDs = map[chainIDKey]ChainID{
 	{Polygon, Amoy}:     80002,
 	{Polygon, Zkevm}:    1101,
 	{Polygon, Cardona}:  1442,
-	{ZkEVM, Main}:       1101,
-	{ZkEVM, Test}:       1442,
 	{Privado, Main}:     21000,
 	{Privado, Test}:     21001,
 	{Linea, Main}:       59144,

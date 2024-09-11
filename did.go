@@ -62,9 +62,6 @@ const (
 	Ethereum Blockchain = "eth"
 	// Polygon is polygon blockchain network
 	Polygon Blockchain = "polygon"
-	// ZkEVM is zkEVM blockchain network
-	// Note: deprecated in favor of a zkEVM network of Polygon, will be removed in the future
-	ZkEVM Blockchain = "zkevm"
 	// Privado is Privado blockchain network
 	Privado Blockchain = "privado"
 	// Linea is Linea blockchain network
@@ -80,8 +77,8 @@ const (
 var blockchains = map[Blockchain]Blockchain{
 	Ethereum:     Ethereum,
 	Polygon:      Polygon,
-	ZkEVM:        ZkEVM,
 	Privado:      Privado,
+	Linea:        Linea,
 	UnknownChain: UnknownChain,
 	ReadOnly:     ReadOnly,
 	NoChain:      NoChain,
@@ -215,10 +212,6 @@ var blockchainNetworkMap = map[DIDNetworkFlag]byte{
 	{Blockchain: Ethereum, NetworkID: Main}:    0b0010_0000 | 0b0000_0001,
 	{Blockchain: Ethereum, NetworkID: Goerli}:  0b0010_0000 | 0b0000_0010,
 	{Blockchain: Ethereum, NetworkID: Sepolia}: 0b0010_0000 | 0b0000_0011,
-
-	// deprecated in favor of a zkEVM network of Polygon, will be removed in the future
-	{Blockchain: ZkEVM, NetworkID: Main}: 0b0011_0000 | 0b0000_0001,
-	{Blockchain: ZkEVM, NetworkID: Test}: 0b0011_0000 | 0b0000_0010,
 
 	{Blockchain: Privado, NetworkID: Main}: 0b1010_0000 | 0b0000_0001,
 	{Blockchain: Privado, NetworkID: Test}: 0b1010_0000 | 0b0000_0010,

@@ -188,20 +188,6 @@ func TestDID_Build_From_Types(t *testing.T) {
 			wantDID: "did:polygonid:polygon:amoy:2qQ68JkRcf3xrHPQPWZei3YeVzHPP58wYNxx2mEouR",
 		},
 		{
-			title:   "Polygon | zkEVM chain, main",
-			method:  DIDMethodPolygonID,
-			chain:   ZkEVM,
-			net:     Main,
-			wantDID: "did:polygonid:zkevm:main:2wQjmkL1SsgqC7AuZdUcaXsUVfEi1i58VEhm3r2r8F",
-		},
-		{
-			title:   "Polygon | zkEVM chain, test",
-			method:  DIDMethodPolygonID,
-			chain:   ZkEVM,
-			net:     Test,
-			wantDID: "did:polygonid:zkevm:test:2wcMpvr8NgWTfqN6ChaFEx1qRnLREXhjeoJ45pFyw5",
-		},
-		{
 			title:   "Iden3 | Polygon chain, zkEVM chain, main",
 			method:  DIDMethodIden3,
 			chain:   Polygon,
