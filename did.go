@@ -62,10 +62,10 @@ const (
 	Ethereum Blockchain = "eth"
 	// Polygon is polygon blockchain network
 	Polygon Blockchain = "polygon"
-	// ZkEVM is zkEVM blockchain network
-	ZkEVM Blockchain = "zkevm"
 	// Privado is Privado blockchain network
 	Privado Blockchain = "privado"
+	// Linea is Linea blockchain network
+	Linea Blockchain = "linea"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
@@ -77,8 +77,8 @@ const (
 var blockchains = map[Blockchain]Blockchain{
 	Ethereum:     Ethereum,
 	Polygon:      Polygon,
-	ZkEVM:        ZkEVM,
 	Privado:      Privado,
+	Linea:        Linea,
 	UnknownChain: UnknownChain,
 	ReadOnly:     ReadOnly,
 	NoChain:      NoChain,
@@ -102,17 +102,10 @@ func RegisterBlockchain(b Blockchain) error {
 // NetworkID is method specific network identifier
 type NetworkID string
 
+// Generic NetworkIDs
 const (
 	// Main is main network
 	Main NetworkID = "main"
-	// Mumbai is polygon mumbai test network
-	Mumbai NetworkID = "mumbai"
-	// Amoy is polygon amoy test network
-	Amoy NetworkID = "amoy"
-	// Goerli is ethereum goerli test network
-	Goerli NetworkID = "goerli" // goerli
-	// Sepolia is ethereum Sepolia test network
-	Sepolia NetworkID = "sepolia"
 	// Test is test network
 	Test NetworkID = "test"
 	// UnknownNetwork is used when it's not possible to retrieve network from identifier
@@ -121,10 +114,32 @@ const (
 	NoNetwork NetworkID = ""
 )
 
+// Ethereum-specific NetworkIDs
+const (
+	// Goerli is Ethereum goerli test network
+	Goerli NetworkID = "goerli"
+	// Sepolia is Ethereum Sepolia test network
+	Sepolia NetworkID = "sepolia"
+)
+
+// Polygon-specific NetworkIDs
+const (
+	// Mumbai is Polygon mumbai test network
+	Mumbai NetworkID = "mumbai"
+	// Amoy is Polygon amoy test network
+	Amoy NetworkID = "amoy"
+	// Zkevm is zkEVM network in Polygon and potentially other blockchains
+	Zkevm NetworkID = "zkevm"
+	// Cardona is Polygon zkEVM Cardona test network
+	Cardona NetworkID = "cardona"
+)
+
 var networks = map[NetworkID]NetworkID{
 	Main:           Main,
 	Mumbai:         Mumbai,
 	Amoy:           Amoy,
+	Zkevm:          Zkevm,
+	Cardona:        Cardona,
 	Goerli:         Goerli,
 	Sepolia:        Sepolia,
 	Test:           Test,
@@ -188,19 +203,21 @@ type DIDNetworkFlag struct {
 var blockchainNetworkMap = map[DIDNetworkFlag]byte{
 	{Blockchain: ReadOnly, NetworkID: NoNetwork}: 0b0000_0000,
 
-	{Blockchain: Polygon, NetworkID: Main}:   0b0001_0000 | 0b0000_0001,
-	{Blockchain: Polygon, NetworkID: Mumbai}: 0b0001_0000 | 0b0000_0010,
-	{Blockchain: Polygon, NetworkID: Amoy}:   0b0001_0000 | 0b0000_0011,
+	{Blockchain: Polygon, NetworkID: Main}:    0b0001_0000 | 0b0000_0001,
+	{Blockchain: Polygon, NetworkID: Mumbai}:  0b0001_0000 | 0b0000_0010,
+	{Blockchain: Polygon, NetworkID: Amoy}:    0b0001_0000 | 0b0000_0011,
+	{Blockchain: Polygon, NetworkID: Zkevm}:   0b0001_0000 | 0b0000_0100,
+	{Blockchain: Polygon, NetworkID: Cardona}: 0b0001_0000 | 0b0000_0101,
 
 	{Blockchain: Ethereum, NetworkID: Main}:    0b0010_0000 | 0b0000_0001,
 	{Blockchain: Ethereum, NetworkID: Goerli}:  0b0010_0000 | 0b0000_0010,
 	{Blockchain: Ethereum, NetworkID: Sepolia}: 0b0010_0000 | 0b0000_0011,
 
-	{Blockchain: ZkEVM, NetworkID: Main}: 0b0011_0000 | 0b0000_0001,
-	{Blockchain: ZkEVM, NetworkID: Test}: 0b0011_0000 | 0b0000_0010,
-
 	{Blockchain: Privado, NetworkID: Main}: 0b1010_0000 | 0b0000_0001,
 	{Blockchain: Privado, NetworkID: Test}: 0b1010_0000 | 0b0000_0010,
+
+	{Blockchain: Linea, NetworkID: Main}:    0b0100_0000 | 0b0000_1001,
+	{Blockchain: Linea, NetworkID: Sepolia}: 0b0100_0000 | 0b0000_1000,
 }
 
 // DIDMethodNetwork is map for did methods and their blockchain networks
