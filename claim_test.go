@@ -2,12 +2,12 @@ package core
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
-	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -109,24 +109,24 @@ func TestClaim_GetFlagUpdatable(t *testing.T) {
 
 func TestClaim_GetVersion(t *testing.T) {
 	var sc SchemaHash
-	ver := uint32(rand.Int63n(math.MaxUint32))
+	ver := uint32(getRandomNumber(t, big.NewInt(math.MaxUint32)))
 	claim, err := NewClaim(sc, WithVersion(ver))
 	require.NoError(t, err)
 	require.Equal(t, ver, claim.GetVersion())
 
-	ver2 := uint32(rand.Int63n(math.MaxUint32))
+	ver2 := uint32(getRandomNumber(t, big.NewInt(math.MaxUint32)))
 	claim.SetVersion(ver2)
 	require.Equal(t, ver2, claim.GetVersion())
 }
 
 func TestClaim_GetRevocationNonce(t *testing.T) {
 	var sc SchemaHash
-	nonce := uint64(rand.Int63())
+	nonce := uint64(getRandomNumber(t, big.NewInt(math.MaxInt64)))
 	claim, err := NewClaim(sc, WithRevocationNonce(nonce))
 	require.NoError(t, err)
 	require.Equal(t, nonce, claim.GetRevocationNonce())
 
-	nonce2 := uint64(rand.Int63())
+	nonce2 := uint64(getRandomNumber(t, big.NewInt(math.MaxInt64)))
 	claim.SetRevocationNonce(nonce2)
 	require.Equal(t, nonce2, claim.GetRevocationNonce())
 }
@@ -730,4 +730,10 @@ func TestNewSchemaHashFromInt(t *testing.T) {
 			require.Equal(t, tc.want, bytesToInt(sc[:]).Text(10))
 		})
 	}
+}
+
+func getRandomNumber(t *testing.T, max *big.Int) int64 {
+	n, err := rand.Int(rand.Reader, max)
+	require.NoError(t, err)
+	return n.Int64()
 }
