@@ -40,12 +40,16 @@ var chainIDs = map[chainIDKey]ChainID{
 
 // ChainIDfromDID returns chain name from w3c.DID
 func ChainIDfromDID(did w3c.DID) (ChainID, error) {
-
 	id, err := IDFromDID(did)
 	if err != nil {
 		return 0, err
 	}
 
+	return ChainIDfromID(id)
+}
+
+// ChainIDfromID(id ID) returns chain name from ID
+func ChainIDfromID(id ID) (ChainID, error) {
 	blockchain, err := BlockchainFromID(id)
 	if err != nil {
 		return 0, err
