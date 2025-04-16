@@ -216,6 +216,20 @@ func TestDID_Build_From_Types(t *testing.T) {
 			wantDID: "did:iden3:privado:test:2Skqvp4vnSFtq5bgAXbDs1Fs4AA5QGpRut9mCDew5R",
 		},
 		{
+			title:   "Iden3 | Billions chain, main",
+			method:  DIDMethodIden3,
+			chain:   Billions,
+			net:     Main,
+			wantDID: "did:iden3:billions:main:2VmAkXrihYaKzzVRkb3hoFRH3zdjibHXPK2Ahm3xBq",
+		},
+		{
+			title:   "Iden3 | Billions chain, test",
+			method:  DIDMethodIden3,
+			chain:   Billions,
+			net:     Test,
+			wantDID: "did:iden3:billions:test:2VxnoiNqdMPxUigcPf9LTfZdz7jSwQv8YscTjjH5zf",
+		},
+		{
 			title:   "Iden3 | Linea, Main",
 			method:  DIDMethodIden3,
 			chain:   Linea,
