@@ -34,7 +34,7 @@ var chainIDs = map[chainIDKey]ChainID{
 	{Polygon, Cardona}:  2442,
 	{Privado, Main}:     21000,
 	{Privado, Test}:     21001,
-	{Billions, Main}:    6912,
+	{Billions, Main}:    45056,
 	{Billions, Test}:    6913,
 	{Linea, Main}:       59144,
 	{Linea, Sepolia}:    59141,
