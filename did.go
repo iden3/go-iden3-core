@@ -34,6 +34,8 @@ const (
 	DIDMethodIden3 DIDMethod = "iden3"
 	// DIDMethodPolygonID
 	DIDMethodPolygonID DIDMethod = "polygonid"
+	// DIDMethodReceptor
+	DIDMethodReceptor DIDMethod = "receptor"
 	// DIDMethodOther any other method not listed before
 	DIDMethodOther DIDMethod = ""
 )
@@ -41,6 +43,7 @@ const (
 var didMethods = map[DIDMethod]DIDMethod{
 	DIDMethodIden3:     DIDMethodIden3,
 	DIDMethodPolygonID: DIDMethodPolygonID,
+	DIDMethodReceptor: DIDMethodReceptor,
 	DIDMethodOther:     DIDMethodOther,
 }
 
@@ -68,6 +71,8 @@ const (
 	Billions Blockchain = "billions"
 	// Linea is Linea blockchain network
 	Linea Blockchain = "linea"
+	// Redbelly is Redbelly blockchain network
+	Redbelly Blockchain = "redbelly"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
 	// ReadOnly should be used for readonly identity to build readonly flag
@@ -82,6 +87,7 @@ var blockchains = map[Blockchain]Blockchain{
 	Privado:      Privado,
 	Billions:     Billions,
 	Linea:        Linea,
+	Redbelly:     Redbelly,
 	UnknownChain: UnknownChain,
 	ReadOnly:     ReadOnly,
 	NoChain:      NoChain,
@@ -137,6 +143,14 @@ const (
 	Cardona NetworkID = "cardona"
 )
 
+// Redbelly-specific NetworkIDs
+const (
+	// Mainnet is Redbelly mainnet
+	Mainnet NetworkID = "mainnet"
+	// Testnet is Redbelly testnet
+	Testnet NetworkID = "testnet"
+)
+
 var networks = map[NetworkID]NetworkID{
 	Main:           Main,
 	Mumbai:         Mumbai,
@@ -146,6 +160,8 @@ var networks = map[NetworkID]NetworkID{
 	Goerli:         Goerli,
 	Sepolia:        Sepolia,
 	Test:           Test,
+	Mainnet:       Mainnet,
+	Testnet:        Testnet,
 	UnknownNetwork: UnknownNetwork,
 	NoNetwork:      NoNetwork,
 }
@@ -169,6 +185,7 @@ func RegisterNetwork(n NetworkID) error {
 var DIDMethodByte = map[DIDMethod]byte{
 	DIDMethodIden3:     0b00000001,
 	DIDMethodPolygonID: 0b00000010,
+	DIDMethodReceptor:  0b10000011,
 	DIDMethodOther:     0b11111111,
 }
 
@@ -224,12 +241,16 @@ var blockchainNetworkMap = map[DIDNetworkFlag]byte{
 
 	{Blockchain: Linea, NetworkID: Main}:    0b0100_0000 | 0b0000_1001,
 	{Blockchain: Linea, NetworkID: Sepolia}: 0b0100_0000 | 0b0000_1000,
+
+	{Blockchain: Redbelly, NetworkID: Mainnet}: 0b01010111,
+    {Blockchain: Redbelly, NetworkID: Testnet}: 0b10000011,
 }
 
 // DIDMethodNetwork is map for did methods and their blockchain networks
 var DIDMethodNetwork = map[DIDMethod]map[DIDNetworkFlag]byte{
 	DIDMethodIden3:     blockchainNetworkMap,
 	DIDMethodPolygonID: blockchainNetworkMap,
+	DIDMethodReceptor:  blockchainNetworkMap,
 	DIDMethodOther: {
 		{Blockchain: UnknownChain, NetworkID: UnknownNetwork}: 0b1111_1111,
 	},
