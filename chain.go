@@ -38,6 +38,8 @@ var chainIDs = map[chainIDKey]ChainID{
 	{Billions, Test}:    6913,
 	{Linea, Main}:       59144,
 	{Linea, Sepolia}:    59141,
+	{Redbelly, Mainnet}:    151,
+	{Redbelly, Testnet}:    153,
 }
 
 // ChainIDfromDID returns chain name from w3c.DID
