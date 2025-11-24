@@ -243,6 +243,34 @@ func TestDID_Build_From_Types(t *testing.T) {
 			net:     Sepolia,
 			wantDID: "did:iden3:linea:sepolia:28itzVLBHnMHocFAeArLFYHP59J7WN1s5JwL8yGpQw",
 		},
+		{
+			title:   "Iden3 | Base, Main",
+			method:  DIDMethodIden3,
+			chain:   Base,
+			net:     Main,
+			wantDID: "did:iden3:base:main:2AXVV81Fe3jx79ypPoj2DHadUFBWVkhKZNFyShK2gP",
+		},
+		{
+			title:   "Iden3 | Base, Sepolia",
+			method:  DIDMethodIden3,
+			chain:   Base,
+			net:     Sepolia,
+			wantDID: "did:iden3:base:sepolia:2Aj7YJXNZrZaatB12speshizQNHDiaKvivrGUfYAVD",
+		},
+		{
+			title:   "Iden3 | Bnb, Main",
+			method:  DIDMethodIden3,
+			chain:   Bnb,
+			net:     Main,
+			wantDID: "did:iden3:bnb:main:2DjSN2KAUxt1ko4kcwH8owtQQCkt2to2CMifzCwBbd",
+		},
+		{
+			title:   "Iden3 | Bnb, Test",
+			method:  DIDMethodIden3,
+			chain:   Bnb,
+			net:     Test,
+			wantDID: "did:iden3:bnb:test:2Dw4RCqHQmheEXFwG1NmUN2mLKrbFiRdMvJy2BAKQT",
+		},
 	}
 
 	for i := range testCases {
