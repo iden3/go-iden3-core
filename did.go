@@ -70,6 +70,10 @@ const (
 	Linea Blockchain = "linea"
 	// UnknownChain is used when it's not possible to retrieve blockchain type from identifier
 	UnknownChain Blockchain = "unknown"
+	// Base is Base blockchain network
+	Base Blockchain = "base"
+	// Bnb is BNB Smart Chain blockchain network
+	Bnb Blockchain = "bnb"
 	// ReadOnly should be used for readonly identity to build readonly flag
 	ReadOnly Blockchain = "readonly"
 	// NoChain can be used for identity to build readonly flag
@@ -82,6 +86,8 @@ var blockchains = map[Blockchain]Blockchain{
 	Privado:      Privado,
 	Billions:     Billions,
 	Linea:        Linea,
+	Base:         Base,
+	Bnb:          Bnb,
 	UnknownChain: UnknownChain,
 	ReadOnly:     ReadOnly,
 	NoChain:      NoChain,
@@ -224,6 +230,12 @@ var blockchainNetworkMap = map[DIDNetworkFlag]byte{
 
 	{Blockchain: Linea, NetworkID: Main}:    0b0100_0000 | 0b0000_1001,
 	{Blockchain: Linea, NetworkID: Sepolia}: 0b0100_0000 | 0b0000_1000,
+
+	{Blockchain: Base, NetworkID: Main}:    0b0101_0000 | 0b0000_0001,
+	{Blockchain: Base, NetworkID: Sepolia}: 0b0101_0000 | 0b0000_0010,
+
+	{Blockchain: Bnb, NetworkID: Main}: 0b0110_0000 | 0b0000_0001,
+	{Blockchain: Bnb, NetworkID: Test}: 0b0110_0000 | 0b0000_0010,
 }
 
 // DIDMethodNetwork is map for did methods and their blockchain networks
